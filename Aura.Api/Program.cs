@@ -1,3 +1,5 @@
+using Aura.Api.Logging;
+using Aura.Api.Middleware;
 using Aura.Api.Serialization;
 using Aura.Core.Hardware;
 using Aura.Core.Models;
@@ -28,14 +30,8 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.PropertyNameCaseInsensitive = true;
 });
 
-// Configure Serilog
-Log.Logger = new LoggerConfiguration()
-    .ReadFrom.Configuration(builder.Configuration)
-    .WriteTo.Console()
-    .WriteTo.File("logs/aura-api-.log", 
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 7)
-    .CreateLogger();
+// Configure Serilog with correlation ID support
+Log.Logger = SerilogConfig.ConfigureLogger(builder.Configuration);
 
 builder.Host.UseSerilog();
 
@@ -136,6 +132,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+
+// Add correlation ID middleware
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 // Serve static files from wwwroot (must be before routing)
 var wwwrootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
@@ -1350,6 +1349,86 @@ apiGroup.MapPost("/providers/validate", async (
     }
 })
 .WithName("ValidateProviders")
+.WithOpenApi();
+
+// Log viewer endpoint - read recent log entries
+apiGroup.MapGet("/logs", (HttpContext context, int? limit, string? level, string? search) =>
+{
+    try
+    {
+        var logsDirectory = Path.Combine(Directory.GetCurrentDirectory(), "logs");
+        if (!Directory.Exists(logsDirectory))
+        {
+            return Results.Ok(new { logs = Array.Empty<object>() });
+        }
+
+        var logFiles = Directory.GetFiles(logsDirectory, "aura-api-*.log")
+            .OrderByDescending(f => new FileInfo(f).LastWriteTime)
+            .Take(3) // Only read the 3 most recent files
+            .ToList();
+
+        var logs = new List<object>();
+        var maxLines = limit ?? 500;
+
+        foreach (var logFile in logFiles)
+        {
+            try
+            {
+                var lines = File.ReadLines(logFile).Reverse().Take(maxLines).Reverse();
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+
+                    // Parse log line: {Timestamp} [{Level}] [{CorrelationId}] {Message} ...
+                    var parts = line.Split(new[] { '[', ']' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length < 2)
+                        continue;
+
+                    var timestamp = parts[0].Trim();
+                    var logLevel = parts.Length > 1 ? parts[1].Trim() : "INFO";
+                    var correlationId = parts.Length > 2 ? parts[2].Trim() : "";
+                    var message = parts.Length > 3 ? string.Join(" ", parts.Skip(3)) : line;
+
+                    // Filter by level if specified
+                    if (!string.IsNullOrEmpty(level) && !logLevel.Equals(level, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    // Filter by search term if specified
+                    if (!string.IsNullOrEmpty(search) && !message.Contains(search, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    logs.Add(new
+                    {
+                        timestamp,
+                        level = logLevel,
+                        correlationId,
+                        message,
+                        file = Path.GetFileName(logFile)
+                    });
+
+                    if (logs.Count >= maxLines)
+                        break;
+                }
+            }
+            catch (IOException ex)
+            {
+                Log.Warning(ex, "Could not read log file: {File}", logFile);
+            }
+
+            if (logs.Count >= maxLines)
+                break;
+        }
+
+        return Results.Ok(new { logs = logs.OrderByDescending(l => l.GetType().GetProperty("timestamp")?.GetValue(l)).Take(maxLines) });
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Error reading logs");
+        return Results.Problem("Error reading logs", statusCode: 500);
+    }
+})
+.WithName("GetLogs")
 .WithOpenApi();
 
 // Fallback to index.html for client-side routing (must be after all API routes)
