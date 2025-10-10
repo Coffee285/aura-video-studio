@@ -1,3 +1,4 @@
+using Aura.Api.ErrorHandling;
 using Aura.Api.Logging;
 using Aura.Api.Middleware;
 using Aura.Api.Serialization;
@@ -160,7 +161,7 @@ apiGroup.MapGet("/healthz", () => Results.Ok(new { status = "healthy", timestamp
     .WithOpenApi();
 
 // Capabilities endpoint
-apiGroup.MapGet("/capabilities", async (HardwareDetector detector) =>
+apiGroup.MapGet("/capabilities", async (HardwareDetector detector, HttpContext context) =>
 {
     try
     {
@@ -178,8 +179,14 @@ apiGroup.MapGet("/capabilities", async (HardwareDetector detector) =>
     }
     catch (Exception ex)
     {
-        Log.Error(ex, "Error detecting capabilities");
-        return Results.Problem("Error detecting system capabilities", statusCode: 500);
+        return ProblemDetailsHelper.CreateProblemWithCorrelation(
+            context, 
+            ex, 
+            ErrorCodes.InternalError, 
+            "Hardware Detection Failed",
+            "Error detecting system capabilities. Please check logs for details.",
+            500
+        );
     }
 })
 .WithName("GetCapabilities")
