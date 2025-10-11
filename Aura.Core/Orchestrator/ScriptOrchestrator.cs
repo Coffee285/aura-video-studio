@@ -111,10 +111,11 @@ public class ScriptOrchestrator
                 }
             }
 
-            // Finally, fall back to RuleBased (always available)
-            if (selection.SelectedProvider != "RuleBased" && _providers.ContainsKey("RuleBased"))
+            // Finally, fall back to RuleBased (always available - guaranteed fallback)
+            // Try this even if RuleBased is not in the providers dictionary
+            if (selection.SelectedProvider != "RuleBased")
             {
-                _logger.LogInformation("Falling back to RuleBased provider (final fallback)");
+                _logger.LogInformation("Falling back to RuleBased provider (final guaranteed fallback)");
                 result = await TryGenerateWithProviderAsync(
                     brief, spec, "RuleBased", true, requestedProvider,
                     $"All higher-tier providers failed, final fallback to RuleBased",
@@ -124,6 +125,10 @@ public class ScriptOrchestrator
                     _logger.LogWarning("Successfully downgraded from {Requested} to {Actual} (final fallback)", 
                         requestedProvider, result.ProviderUsed);
                     return result;
+                }
+                else
+                {
+                    _logger.LogError("CRITICAL: Even RuleBased fallback failed - no providers available");
                 }
             }
         }

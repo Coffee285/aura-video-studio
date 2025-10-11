@@ -41,7 +41,7 @@ public class LlmProviderFactory
     {
         var providers = new Dictionary<string, ILlmProvider>();
 
-        // Always available: RuleBased provider
+        // Always available: RuleBased provider (GUARANTEED - never allow this to fail)
         try
         {
             providers["RuleBased"] = CreateRuleBasedProvider(loggerFactory);
@@ -49,7 +49,40 @@ public class LlmProviderFactory
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create RuleBased provider");
+            _logger.LogCritical(ex, "CRITICAL: Failed to create RuleBased provider - attempting fallback instantiation");
+            
+            // Absolute last-resort: Try direct instantiation without reflection
+            try
+            {
+                // Dynamically load the Aura.Providers assembly and create RuleBasedLlmProvider
+                var providersAssembly = AppDomain.CurrentDomain.GetAssemblies()
+                    .FirstOrDefault(a => a.GetName().Name == "Aura.Providers");
+                
+                if (providersAssembly != null)
+                {
+                    var ruleBasedType = providersAssembly.GetType("Aura.Providers.Llm.RuleBasedLlmProvider");
+                    if (ruleBasedType != null)
+                    {
+                        var logger = loggerFactory.CreateLogger(ruleBasedType);
+                        var instance = Activator.CreateInstance(ruleBasedType, logger);
+                        if (instance is ILlmProvider llmProvider)
+                        {
+                            providers["RuleBased"] = llmProvider;
+                            _logger.LogWarning("RuleBased provider registered via fallback instantiation");
+                        }
+                    }
+                }
+                
+                // If we still don't have RuleBased, this is a critical configuration error
+                if (!providers.ContainsKey("RuleBased"))
+                {
+                    _logger.LogCritical("CRITICAL: Unable to instantiate RuleBased provider - system will have no guaranteed fallback!");
+                }
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogCritical(fallbackEx, "CRITICAL: Fallback instantiation of RuleBased provider also failed");
+            }
         }
 
         // Try to create Ollama provider (local)

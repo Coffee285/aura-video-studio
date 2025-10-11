@@ -311,4 +311,150 @@ public class ProviderMixerTests
         Assert.NotNull(visualSelection.SelectedProvider);
         Assert.True(visualSelection.SelectedProvider == "Slideshow"); // Ultimate fallback
     }
+
+    [Fact]
+    public void SelectLlmProvider_Should_ReturnRuleBasedForAllTiers_WhenNoProvidersAvailable()
+    {
+        // Arrange
+        var config = new ProviderMixingConfig { LogProviderSelection = false };
+        var mixer = new ProviderMixer(NullLogger<ProviderMixer>.Instance, config);
+        var emptyProviders = new Dictionary<string, ILlmProvider>();
+
+        // Act - Test all tier options
+        var proSelection = mixer.SelectLlmProvider(emptyProviders, "Pro");
+        var proIfAvailableSelection = mixer.SelectLlmProvider(emptyProviders, "ProIfAvailable");
+        var freeSelection = mixer.SelectLlmProvider(emptyProviders, "Free");
+        var emptySelection = mixer.SelectLlmProvider(emptyProviders, "");
+        var nullSelection = mixer.SelectLlmProvider(emptyProviders, null!);
+
+        // Assert - All should return RuleBased as guaranteed fallback
+        Assert.Equal("RuleBased", proSelection.SelectedProvider);
+        Assert.True(proSelection.IsFallback);
+        Assert.Equal("All providers", proSelection.FallbackFrom);
+
+        Assert.Equal("RuleBased", proIfAvailableSelection.SelectedProvider);
+        Assert.True(proIfAvailableSelection.IsFallback);
+
+        Assert.Equal("RuleBased", freeSelection.SelectedProvider);
+        Assert.True(freeSelection.IsFallback);
+
+        Assert.Equal("RuleBased", emptySelection.SelectedProvider);
+        Assert.True(emptySelection.IsFallback);
+
+        Assert.Equal("RuleBased", nullSelection.SelectedProvider);
+        Assert.True(nullSelection.IsFallback);
+    }
+
+    [Fact]
+    public void SelectTtsProvider_Should_ReturnWindowsForAllTiers_WhenNoProvidersAvailable()
+    {
+        // Arrange
+        var config = new ProviderMixingConfig { LogProviderSelection = false };
+        var mixer = new ProviderMixer(NullLogger<ProviderMixer>.Instance, config);
+        var emptyProviders = new Dictionary<string, ITtsProvider>();
+
+        // Act
+        var proSelection = mixer.SelectTtsProvider(emptyProviders, "Pro");
+        var proIfAvailableSelection = mixer.SelectTtsProvider(emptyProviders, "ProIfAvailable");
+        var freeSelection = mixer.SelectTtsProvider(emptyProviders, "Free");
+
+        // Assert - All should return Windows as guaranteed fallback
+        Assert.Equal("Windows", proSelection.SelectedProvider);
+        Assert.True(proSelection.IsFallback);
+        Assert.Equal("All TTS providers", proSelection.FallbackFrom);
+
+        Assert.Equal("Windows", proIfAvailableSelection.SelectedProvider);
+        Assert.True(proIfAvailableSelection.IsFallback);
+
+        Assert.Equal("Windows", freeSelection.SelectedProvider);
+        Assert.True(freeSelection.IsFallback);
+    }
+
+    [Fact]
+    public void SelectVisualProvider_Should_ReturnSlideshowForAllTiers_WhenNoProvidersAvailable()
+    {
+        // Arrange
+        var config = new ProviderMixingConfig { LogProviderSelection = false };
+        var mixer = new ProviderMixer(NullLogger<ProviderMixer>.Instance, config);
+        var emptyProviders = new Dictionary<string, object>();
+
+        // Act
+        var proSelection = mixer.SelectVisualProvider(emptyProviders, "Pro", false, 0);
+        var proIfAvailableSelection = mixer.SelectVisualProvider(emptyProviders, "ProIfAvailable", false, 0);
+        var freeSelection = mixer.SelectVisualProvider(emptyProviders, "Free", false, 0);
+        var stockOrLocalSelection = mixer.SelectVisualProvider(emptyProviders, "StockOrLocal", false, 0);
+
+        // Assert - All should return Slideshow as guaranteed fallback
+        Assert.Equal("Slideshow", proSelection.SelectedProvider);
+        Assert.True(proSelection.IsFallback);
+        Assert.Equal("All visual providers", proSelection.FallbackFrom);
+
+        Assert.Equal("Slideshow", proIfAvailableSelection.SelectedProvider);
+        Assert.True(proIfAvailableSelection.IsFallback);
+
+        Assert.Equal("Slideshow", freeSelection.SelectedProvider);
+        Assert.True(freeSelection.IsFallback);
+
+        Assert.Equal("Slideshow", stockOrLocalSelection.SelectedProvider);
+        Assert.True(stockOrLocalSelection.IsFallback);
+    }
+
+    [Fact]
+    public void SelectLlmProvider_Should_PreferHigherTierWhenAvailable()
+    {
+        // Arrange
+        var config = new ProviderMixingConfig { LogProviderSelection = false };
+        var mixer = new ProviderMixer(NullLogger<ProviderMixer>.Instance, config);
+
+        var allProviders = new Dictionary<string, ILlmProvider>
+        {
+            ["OpenAI"] = Mock.Of<ILlmProvider>(),
+            ["Azure"] = Mock.Of<ILlmProvider>(),
+            ["Gemini"] = Mock.Of<ILlmProvider>(),
+            ["Ollama"] = Mock.Of<ILlmProvider>(),
+            ["RuleBased"] = Mock.Of<ILlmProvider>()
+        };
+
+        // Act - Request Pro tier with all providers available
+        var selection = mixer.SelectLlmProvider(allProviders, "Pro");
+
+        // Assert - Should select OpenAI (highest priority Pro provider)
+        Assert.Equal("OpenAI", selection.SelectedProvider);
+        Assert.False(selection.IsFallback);
+    }
+
+    [Fact]
+    public void SelectLlmProvider_Should_FollowFallbackChain_ProTier()
+    {
+        // Arrange
+        var config = new ProviderMixingConfig { LogProviderSelection = false };
+        var mixer = new ProviderMixer(NullLogger<ProviderMixer>.Instance, config);
+
+        // Test fallback chain: OpenAI → Azure → Gemini → Ollama → RuleBased
+        
+        // Only Ollama and RuleBased available
+        var providers1 = new Dictionary<string, ILlmProvider>
+        {
+            ["Ollama"] = Mock.Of<ILlmProvider>(),
+            ["RuleBased"] = Mock.Of<ILlmProvider>()
+        };
+        var selection1 = mixer.SelectLlmProvider(providers1, "Pro");
+        Assert.Equal("Ollama", selection1.SelectedProvider);
+        Assert.True(selection1.IsFallback);
+
+        // Only RuleBased available
+        var providers2 = new Dictionary<string, ILlmProvider>
+        {
+            ["RuleBased"] = Mock.Of<ILlmProvider>()
+        };
+        var selection2 = mixer.SelectLlmProvider(providers2, "Pro");
+        Assert.Equal("RuleBased", selection2.SelectedProvider);
+        Assert.True(selection2.IsFallback);
+
+        // No providers available - should still return RuleBased
+        var providers3 = new Dictionary<string, ILlmProvider>();
+        var selection3 = mixer.SelectLlmProvider(providers3, "Pro");
+        Assert.Equal("RuleBased", selection3.SelectedProvider);
+        Assert.True(selection3.IsFallback);
+    }
 }
