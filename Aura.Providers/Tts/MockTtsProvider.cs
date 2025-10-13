@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Aura.Core.Audio;
 using Aura.Core.Models;
 using Aura.Core.Providers;
 using Microsoft.Extensions.Logging;
@@ -58,7 +59,7 @@ public class MockTtsProvider : ITtsProvider
         }
 
         // Generate a deterministic WAV file with the correct length
-        string outputFilePath = Path.Combine(_outputDirectory, $"narration_mock_{DateTime.Now:yyyyMMddHHmmss}.wav");
+        string outputFilePath = Path.Combine(_outputDirectory, $"narration_mock_{DateTime.Now:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}.wav");
         
         _logger.LogInformation("MockTtsProvider: Generating {Duration}s of mock audio for {Count} lines", 
             totalDuration.TotalSeconds, linesList.Count);
@@ -72,21 +73,15 @@ public class MockTtsProvider : ITtsProvider
     /// <summary>
     /// Generates a deterministic WAV file with silence/beep pattern.
     /// WAV format: 44.1kHz, 16-bit, mono
+    /// Uses atomic write to prevent incomplete files.
     /// </summary>
     private async Task GenerateWavFileAsync(string outputPath, TimeSpan duration, CancellationToken ct)
     {
         const int sampleRate = 44100;
-        const short bitsPerSample = 16;
         const short numChannels = 1;
 
         int numSamples = (int)(duration.TotalSeconds * sampleRate);
-        int dataSize = numSamples * numChannels * (bitsPerSample / 8);
-        
-        using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-        using var writer = new BinaryWriter(fileStream);
-
-        // Write WAV header
-        WriteWavHeader(writer, dataSize, sampleRate, bitsPerSample, numChannels);
+        short[] buffer = new short[numSamples * numChannels];
 
         // Generate deterministic audio samples (silence with occasional beeps)
         // This creates a predictable pattern for testing
@@ -94,8 +89,6 @@ public class MockTtsProvider : ITtsProvider
         {
             ct.ThrowIfCancellationRequested();
 
-            short sample;
-            
             // Generate a beep every second (simple sine wave at 440 Hz)
             // For the rest, generate silence
             double time = (double)i / sampleRate;
@@ -107,45 +100,16 @@ public class MockTtsProvider : ITtsProvider
                 // Generate 440 Hz sine wave (A4 note)
                 double frequency = 440.0;
                 double amplitude = 0.3; // 30% volume
-                sample = (short)(amplitude * short.MaxValue * Math.Sin(2.0 * Math.PI * frequency * time));
+                buffer[i] = (short)(amplitude * short.MaxValue * Math.Sin(2.0 * Math.PI * frequency * time));
             }
             else
             {
                 // Silence
-                sample = 0;
+                buffer[i] = 0;
             }
-
-            writer.Write(sample);
         }
 
-        await Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Writes a standard WAV file header.
-    /// </summary>
-    private void WriteWavHeader(BinaryWriter writer, int dataSize, int sampleRate, short bitsPerSample, short numChannels)
-    {
-        int byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-        short blockAlign = (short)(numChannels * (bitsPerSample / 8));
-
-        // RIFF header
-        writer.Write(new[] { 'R', 'I', 'F', 'F' });
-        writer.Write(36 + dataSize); // File size - 8
-        writer.Write(new[] { 'W', 'A', 'V', 'E' });
-
-        // fmt subchunk
-        writer.Write(new[] { 'f', 'm', 't', ' ' });
-        writer.Write(16); // Subchunk1Size (16 for PCM)
-        writer.Write((short)1); // AudioFormat (1 for PCM)
-        writer.Write(numChannels);
-        writer.Write(sampleRate);
-        writer.Write(byteRate);
-        writer.Write(blockAlign);
-        writer.Write(bitsPerSample);
-
-        // data subchunk
-        writer.Write(new[] { 'd', 'a', 't', 'a' });
-        writer.Write(dataSize);
+        // Use atomic write utility
+        await Task.Run(() => WavFileWriter.WriteFromPcmBuffer(outputPath, buffer, sampleRate, numChannels, _logger), ct);
     }
 }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Aura.Core.Audio;
 using Aura.Core.Models;
 using Aura.Core.Providers;
 using Microsoft.Extensions.Logging;
@@ -181,45 +182,9 @@ public class PiperTtsProvider : ITtsProvider
 
     private void CreateSilenceWav(string outputPath, int durationSeconds)
     {
-        // Create a minimal 16-bit PCM WAV file with silence
-        const int sampleRate = 22050;
-        const short channels = 1;
-        const short bitsPerSample = 16;
-        
-        int numSamples = sampleRate * durationSeconds;
-        int dataSize = numSamples * channels * (bitsPerSample / 8);
-
-        using var fs = new FileStream(outputPath, FileMode.Create);
-        using var writer = new BinaryWriter(fs);
-
-        // RIFF header
-        writer.Write(new[] { 'R', 'I', 'F', 'F' });
-        writer.Write(36 + dataSize); // File size - 8
-        writer.Write(new[] { 'W', 'A', 'V', 'E' });
-
-        // fmt chunk
-        writer.Write(new[] { 'f', 'm', 't', ' ' });
-        writer.Write(16); // Chunk size
-        writer.Write((short)1); // PCM format
-        writer.Write(channels);
-        writer.Write(sampleRate);
-        writer.Write(sampleRate * channels * (bitsPerSample / 8)); // Byte rate
-        writer.Write((short)(channels * (bitsPerSample / 8))); // Block align
-        writer.Write(bitsPerSample);
-
-        // data chunk
-        writer.Write(new[] { 'd', 'a', 't', 'a' });
-        writer.Write(dataSize);
-        
-        // Write silence (zeros)
-        byte[] silence = new byte[4096];
-        int remaining = dataSize;
-        while (remaining > 0)
-        {
-            int toWrite = Math.Min(remaining, silence.Length);
-            writer.Write(silence, 0, toWrite);
-            remaining -= toWrite;
-        }
+        // Use the atomic write utility for creating silent WAV files
+        int durationMs = durationSeconds * 1000;
+        WavFileWriter.WritePcm16Silent(outputPath, durationMs, sampleRate: 22050, channels: 1, logger: _logger);
     }
 
     private void MergeWavFiles(List<string> inputFiles, string outputFile)

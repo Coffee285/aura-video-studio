@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Aura.Core.Audio;
 using Aura.Core.Models;
 using Aura.Core.Providers;
 using Aura.Providers.Audio;
@@ -147,10 +148,31 @@ public class WindowsTtsProvider : ITtsProvider
         return outputFilePath;
 #else
         await Task.CompletedTask;
-        _logger.LogWarning("Windows TTS is not available on this platform. Returning stub file path.");
+        _logger.LogWarning("Windows TTS is not available on this platform. Generating silent stub WAV.");
+        
+        // Calculate total duration from script lines
+        var linesList = lines.ToList();
+        TimeSpan totalDuration = TimeSpan.Zero;
+        foreach (var line in linesList)
+        {
+            TimeSpan lineEnd = line.Start + line.Duration;
+            if (lineEnd > totalDuration)
+            {
+                totalDuration = lineEnd;
+            }
+        }
+        
+        // Default to 1 second if no duration calculated
+        int durationMs = totalDuration.TotalMilliseconds > 0 
+            ? (int)Math.Ceiling(totalDuration.TotalMilliseconds) 
+            : 1000;
+        
         string outputFilePath = Path.Combine(_outputDirectory, $"narration_{DateTime.Now:yyyyMMddHHmmss}.wav");
-        // Create an empty file as a placeholder
-        await File.WriteAllBytesAsync(outputFilePath, Array.Empty<byte>(), ct);
+        
+        // Write a valid silent WAV file instead of zero-byte file
+        WavFileWriter.WritePcm16Silent(outputFilePath, durationMs, sampleRate: 48000, channels: 2, logger: _logger);
+        
+        _logger.LogInformation("Generated stub WAV: {Path} ({Duration}ms)", outputFilePath, durationMs);
         return outputFilePath;
 #endif
     }
