@@ -91,9 +91,14 @@ public static class WavFileWriter
             WriteWavFile(tempPath, buffer, sampleRate, channels);
 
             // Verify the file was written correctly
+            if (!File.Exists(tempPath))
+            {
+                throw new IOException($"WAV file write failed: temp file does not exist at {tempPath}");
+            }
+            
             var fileInfo = new FileInfo(tempPath);
             const int minFileSize = 44; // WAV header minimum size
-            if (!fileInfo.Exists || fileInfo.Length < minFileSize)
+            if (fileInfo.Length < minFileSize)
             {
                 throw new IOException($"WAV file write failed: file is {fileInfo.Length} bytes (expected >={minFileSize})");
             }

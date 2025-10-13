@@ -59,7 +59,7 @@ public class MockTtsProvider : ITtsProvider
         }
 
         // Generate a deterministic WAV file with the correct length
-        string outputFilePath = Path.Combine(_outputDirectory, $"narration_mock_{DateTime.Now:yyyyMMddHHmmss}.wav");
+        string outputFilePath = Path.Combine(_outputDirectory, $"narration_mock_{DateTime.Now:yyyyMMddHHmmssfff}_{Guid.NewGuid():N}.wav");
         
         _logger.LogInformation("MockTtsProvider: Generating {Duration}s of mock audio for {Count} lines", 
             totalDuration.TotalSeconds, linesList.Count);
