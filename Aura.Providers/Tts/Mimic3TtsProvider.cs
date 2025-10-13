@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Aura.Core.Audio;
 using Aura.Core.Models;
 using Aura.Core.Providers;
 using Microsoft.Extensions.Logging;
