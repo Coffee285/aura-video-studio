@@ -38,6 +38,13 @@ public static class WavFileWriter
         // Create buffer with zeros for silent audio
         double durationSeconds = durationMs / 1000.0;
         int numSamples = (int)Math.Ceiling(durationSeconds * sampleRate);
+        
+        // Ensure at least 1 sample even for zero duration
+        if (numSamples == 0)
+        {
+            numSamples = 1;
+        }
+        
         short[] buffer = new short[numSamples * channels];
         
         WriteFromPcmBuffer(path, buffer, sampleRate, channels, logger);
@@ -85,9 +92,10 @@ public static class WavFileWriter
 
             // Verify the file was written correctly
             var fileInfo = new FileInfo(tempPath);
-            if (!fileInfo.Exists || fileInfo.Length < 128)
+            const int minFileSize = 44; // WAV header minimum size
+            if (!fileInfo.Exists || fileInfo.Length < minFileSize)
             {
-                throw new IOException($"WAV file write failed: file is {fileInfo.Length} bytes (expected >128)");
+                throw new IOException($"WAV file write failed: file is {fileInfo.Length} bytes (expected >={minFileSize})");
             }
 
             // Atomic move to final location
