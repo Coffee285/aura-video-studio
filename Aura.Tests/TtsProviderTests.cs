@@ -182,5 +182,128 @@ public class TtsProviderTests
         // Cleanup
         File.Delete(result);
     }
+#else
+    [Fact]
+    public async Task WindowsTtsProvider_Should_GenerateValidStubWav_OnNonWindows()
+    {
+        // Arrange
+        var provider = new WindowsTtsProvider(NullLogger<WindowsTtsProvider>.Instance);
+        var lines = new List<ScriptLine>
+        {
+            new ScriptLine(0, "Test", TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(1))
+        };
+        var voiceSpec = new VoiceSpec("Any Voice", 1.0, 0.0, PauseStyle.Natural);
+
+        // Act
+        var result = await provider.SynthesizeAsync(lines, voiceSpec, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(File.Exists(result));
+        
+        // Verify file is NOT zero-byte
+        var fileInfo = new FileInfo(result);
+        Assert.True(fileInfo.Length > 128, $"File should be >128 bytes but is {fileInfo.Length} bytes");
+        
+        // Verify it's a valid WAV file
+        using var stream = File.OpenRead(result);
+        using var reader = new BinaryReader(stream);
+        
+        var riff = new string(reader.ReadChars(4));
+        Assert.Equal("RIFF", riff);
+        
+        reader.ReadInt32(); // File size
+        
+        var wave = new string(reader.ReadChars(4));
+        Assert.Equal("WAVE", wave);
+        
+        // Cleanup
+        File.Delete(result);
+    }
 #endif
+
+    [Fact]
+    public async Task NullTtsProvider_Should_GenerateValidWav()
+    {
+        // Arrange
+        var provider = new NullTtsProvider(NullLogger<NullTtsProvider>.Instance);
+        var lines = new List<ScriptLine>
+        {
+            new ScriptLine(0, "Test", TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(2))
+        };
+        var voiceSpec = new VoiceSpec("Null (Silent)", 1.0, 0.0, PauseStyle.Natural);
+
+        // Act
+        var result = await provider.SynthesizeAsync(lines, voiceSpec, CancellationToken.None);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(File.Exists(result));
+        
+        // Verify file is NOT zero-byte
+        var fileInfo = new FileInfo(result);
+        Assert.True(fileInfo.Length > 128, $"File should be >128 bytes but is {fileInfo.Length} bytes");
+        
+        // Read and verify WAV header
+        using var stream = File.OpenRead(result);
+        using var reader = new BinaryReader(stream);
+        
+        var riff = new string(reader.ReadChars(4));
+        Assert.Equal("RIFF", riff);
+        
+        reader.ReadInt32(); // File size
+        
+        var wave = new string(reader.ReadChars(4));
+        Assert.Equal("WAVE", wave);
+        
+        // Read fmt chunk
+        var fmt = new string(reader.ReadChars(4)); // "fmt "
+        int fmtSize = reader.ReadInt32();
+        reader.ReadInt16(); // Audio format
+        short numChannels = reader.ReadInt16();
+        int sampleRate = reader.ReadInt32();
+        
+        // Verify it's 48kHz stereo as per spec
+        Assert.Equal(48000, sampleRate);
+        Assert.Equal(2, numChannels);
+        
+        // Cleanup
+        File.Delete(result);
+    }
+
+    [Fact]
+    public async Task AllTtsProviders_Should_GenerateMinimumFileSize()
+    {
+        // Arrange
+        var mockProvider = new MockTtsProvider(NullLogger<MockTtsProvider>.Instance);
+        var nullProvider = new NullTtsProvider(NullLogger<NullTtsProvider>.Instance);
+        var windowsProvider = new WindowsTtsProvider(NullLogger<WindowsTtsProvider>.Instance);
+        
+        var lines = new List<ScriptLine>
+        {
+            new ScriptLine(0, "Test", TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(0.25))
+        };
+        var voiceSpec = new VoiceSpec("Test Voice", 1.0, 0.0, PauseStyle.Natural);
+
+        // Act & Assert - MockTtsProvider
+        var mockResult = await mockProvider.SynthesizeAsync(lines, voiceSpec, CancellationToken.None);
+        Assert.True(File.Exists(mockResult));
+        var mockFileInfo = new FileInfo(mockResult);
+        Assert.True(mockFileInfo.Length > 128, $"MockTtsProvider file should be >128 bytes but is {mockFileInfo.Length}");
+        File.Delete(mockResult);
+
+        // Act & Assert - NullTtsProvider
+        var nullResult = await nullProvider.SynthesizeAsync(lines, voiceSpec, CancellationToken.None);
+        Assert.True(File.Exists(nullResult));
+        var nullFileInfo = new FileInfo(nullResult);
+        Assert.True(nullFileInfo.Length > 128, $"NullTtsProvider file should be >128 bytes but is {nullFileInfo.Length}");
+        File.Delete(nullResult);
+
+        // Act & Assert - WindowsTtsProvider (stub on non-Windows)
+        var windowsResult = await windowsProvider.SynthesizeAsync(lines, voiceSpec, CancellationToken.None);
+        Assert.True(File.Exists(windowsResult));
+        var windowsFileInfo = new FileInfo(windowsResult);
+        Assert.True(windowsFileInfo.Length > 128, $"WindowsTtsProvider file should be >128 bytes but is {windowsFileInfo.Length}");
+        File.Delete(windowsResult);
+    }
 }

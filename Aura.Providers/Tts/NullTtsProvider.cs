@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Aura.Core.Audio;
 using Aura.Core.Models;
 using Aura.Core.Providers;
 using Microsoft.Extensions.Logging;
@@ -48,51 +49,21 @@ public class NullTtsProvider : ITtsProvider
 
         var outputPath = Path.Combine(_outputDir, $"silent-{Guid.NewGuid()}.wav");
 
-        // Generate a simple WAV file with silence
-        // This is a minimal 16-bit PCM WAV with 1 second of silence at 44.1kHz
-        var sampleRate = 44100;
-        var channels = 1;
-        var bitsPerSample = 16;
-        var durationSeconds = (int)Math.Ceiling(totalDuration.TotalSeconds);
+        // Generate a silent WAV file with standard format: PCM 16-bit, 48kHz, stereo
+        int durationMs = totalDuration.TotalMilliseconds > 0 
+            ? (int)Math.Ceiling(totalDuration.TotalMilliseconds) 
+            : 1000; // Default to 1 second
         
-        var dataSize = sampleRate * channels * (bitsPerSample / 8) * durationSeconds;
-        var headerSize = 44;
-        var fileSize = headerSize + dataSize - 8;
+        // Use atomic write utility with standard format
+        await Task.Run(() => WavFileWriter.WritePcm16Silent(
+            outputPath, 
+            durationMs, 
+            sampleRate: 48000, 
+            channels: 2, 
+            logger: _logger), ct);
 
-        await using var stream = File.Create(outputPath);
-        await using var writer = new BinaryWriter(stream);
-
-        // WAV header
-        writer.Write(new[] { 'R', 'I', 'F', 'F' });
-        writer.Write(fileSize);
-        writer.Write(new[] { 'W', 'A', 'V', 'E' });
-        
-        // fmt chunk
-        writer.Write(new[] { 'f', 'm', 't', ' ' });
-        writer.Write(16); // Chunk size
-        writer.Write((short)1); // Audio format (PCM)
-        writer.Write((short)channels);
-        writer.Write(sampleRate);
-        writer.Write(sampleRate * channels * bitsPerSample / 8); // Byte rate
-        writer.Write((short)(channels * bitsPerSample / 8)); // Block align
-        writer.Write((short)bitsPerSample);
-        
-        // data chunk
-        writer.Write(new[] { 'd', 'a', 't', 'a' });
-        writer.Write(dataSize);
-        
-        // Write silence (zeros)
-        var buffer = new byte[4096];
-        var remaining = dataSize;
-        while (remaining > 0)
-        {
-            var toWrite = Math.Min(buffer.Length, remaining);
-            writer.Write(buffer, 0, toWrite);
-            remaining -= toWrite;
-        }
-
-        _logger.LogInformation("Generated silent audio: {Path}, Duration: {Duration}s", 
-            outputPath, durationSeconds);
+        _logger.LogInformation("Generated silent audio: {Path}, Duration: {Duration}ms", 
+            outputPath, durationMs);
         
         return outputPath;
     }
