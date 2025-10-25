@@ -3,7 +3,6 @@ import {
   FluentProvider,
   webLightTheme,
   webDarkTheme,
-  makeStyles,
   tokens,
 } from '@fluentui/react-components';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -27,7 +26,7 @@ import { ProviderHealthDashboard } from './pages/Health/ProviderHealthDashboard'
 import { AssetLibrary } from './pages/Assets/AssetLibrary';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { CommandPalette } from './components/CommandPalette';
-import { NotificationsToaster, useNotifications } from './components/Notifications/Toasts';
+import { NotificationsToaster } from './components/Notifications/Toasts';
 import { JobStatusBar } from './components/StatusBar/JobStatusBar';
 import { JobProgressDrawer } from './components/JobProgressDrawer';
 import { useJobState } from './state/jobState';
@@ -37,15 +36,6 @@ import { PlatformDashboard } from './components/Platform';
 import { QualityDashboard } from './components/dashboard';
 import { ContentPlanningDashboard } from './components/contentPlanning/ContentPlanningDashboard';
 import { VideoEditorPage } from './pages/VideoEditorPage';
-
-const useStyles = makeStyles({
-  root: {
-    height: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: tokens.colorNeutralBackground1,
-  },
-});
 
 interface ThemeContextType {
   isDarkMode: boolean;
@@ -62,8 +52,6 @@ export const ThemeContext = createContext<ThemeContextType>({
 export const useTheme = () => useContext(ThemeContext);
 
 function App() {
-  const styles = useStyles();
-  
   // Initialize dark mode from localStorage or system preference
   const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('darkMode');
@@ -76,7 +64,6 @@ function App() {
   
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const { toasterId } = useNotifications();
 
   // Job state for status bar
   const { currentJobId, status, progress, message } = useJobState();
