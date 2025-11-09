@@ -4,6 +4,7 @@ import { useTheme } from '../App';
 import { useSwipeGesture } from '../hooks/useSwipeGesture';
 import { Breadcrumbs } from './Breadcrumbs';
 import { NotificationCenter } from './dashboard/NotificationCenter';
+import { HealthStatusBadge } from './HealthStatus';
 import { MobileBottomNav } from './MobileBottomNav';
 import { MobileFAB } from './MobileFAB';
 import { ResultsTray } from './ResultsTray';
@@ -148,6 +149,7 @@ export function Layout({ children, showBreadcrumbs = true, statusBadge }: Layout
         <div className={styles.topBar}>
           <UndoRedoButtons />
           <div className={styles.topBarActions}>
+            <HealthStatusBadge />
             <NotificationCenter />
             <ResultsTray />
           </div>

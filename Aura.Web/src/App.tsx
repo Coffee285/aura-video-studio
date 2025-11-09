@@ -16,10 +16,12 @@ import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { Layout } from './components/Layout';
 import { NotificationsToaster } from './components/Notifications/Toasts';
 import { PlatformDashboard } from './components/Platform';
+import { StartupScreen } from './components/StartupScreen';
 import { JobStatusBar } from './components/StatusBar/JobStatusBar';
 import { ActionHistoryPanel } from './components/UndoRedo/ActionHistoryPanel';
 import { VideoCreationWizard } from './components/VideoWizard/VideoCreationWizard';
 import { env } from './config/env';
+import { SafeModeProvider } from './contexts/SafeModeContext';
 import { useGlobalUndoShortcuts } from './hooks/useGlobalUndoShortcuts';
 import { AestheticsPage } from './pages/Aesthetics/AestheticsPage';
 import { AIEditingPage } from './pages/AIEditing/AIEditingPage';
@@ -123,6 +125,10 @@ function App() {
   const [isCheckingFirstRun, setIsCheckingFirstRun] = useState(true);
   const [shouldShowOnboarding, setShouldShowOnboarding] = useState(false);
 
+  // Startup initialization state
+  const [shouldShowStartup, setShouldShowStartup] = useState(true);
+  const [startupInSafeMode, setStartupInSafeMode] = useState(false);
+
   // Job state for status bar
   const { currentJobId, status, progress, message } = useJobState();
   const [showDrawer, setShowDrawer] = useState(false);
@@ -140,6 +146,14 @@ function App() {
         // Check if user has completed first-run wizard
         const completed = await hasCompletedFirstRun();
         setShouldShowOnboarding(!completed);
+
+        // If first-run is completed, we still need to show startup screen
+        if (completed) {
+          setShouldShowStartup(true);
+        } else {
+          // If onboarding needed, skip startup screen
+          setShouldShowStartup(false);
+        }
       } catch (error) {
         console.error('Error checking first-run status:', error);
         // On error, check localStorage as fallback - if nothing is set, assume first run
@@ -147,6 +161,7 @@ function App() {
           localStorage.getItem('hasCompletedFirstRun') === 'true' ||
           localStorage.getItem('hasSeenOnboarding') === 'true';
         setShouldShowOnboarding(!localStatus);
+        setShouldShowStartup(localStatus);
       } finally {
         setIsCheckingFirstRun(false);
       }
@@ -431,14 +446,41 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
           <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-            <BrowserRouter>
-              <FirstRunWizard
-                onComplete={async () => {
-                  setShouldShowOnboarding(false);
-                  await markFirstRunCompleted();
+            <SafeModeProvider>
+              <BrowserRouter>
+                <FirstRunWizard
+                  onComplete={async () => {
+                    setShouldShowOnboarding(false);
+                    await markFirstRunCompleted();
+                    // After onboarding, show startup screen
+                    setShouldShowStartup(true);
+                  }}
+                />
+              </BrowserRouter>
+            </SafeModeProvider>
+          </FluentProvider>
+        </ThemeContext.Provider>
+      </QueryClientProvider>
+    );
+  }
+
+  // Show startup screen for health checks and initialization
+  if (shouldShowStartup && !startupInSafeMode) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+          <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
+            <SafeModeProvider>
+              <StartupScreen
+                onComplete={() => {
+                  setShouldShowStartup(false);
+                }}
+                onSafeModeRequested={() => {
+                  setStartupInSafeMode(true);
+                  setShouldShowStartup(false);
                 }}
               />
-            </BrowserRouter>
+            </SafeModeProvider>
           </FluentProvider>
         </ThemeContext.Provider>
       </QueryClientProvider>
@@ -449,146 +491,148 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
         <FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}>
-          <ActivityProvider>
-            <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-              <BrowserRouter>
-                {/* Status bar for job progress */}
-                <JobStatusBar
-                  status={status}
-                  progress={progress}
-                  message={message}
-                  onViewDetails={() => setShowDrawer(true)}
-                />
-                <Layout>
-                  <ErrorBoundary>
-                    <ConfigurationGate>
-                      <Routes>
-                        {/* First-run onboarding route - for re-entry via settings */}
-                        <Route path="/onboarding" element={<FirstRunWizard />} />
+          <SafeModeProvider>
+            <ActivityProvider>
+              <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <BrowserRouter>
+                  {/* Status bar for job progress */}
+                  <JobStatusBar
+                    status={status}
+                    progress={progress}
+                    message={message}
+                    onViewDetails={() => setShowDrawer(true)}
+                  />
+                  <Layout>
+                    <ErrorBoundary>
+                      <ConfigurationGate>
+                        <Routes>
+                          {/* First-run onboarding route - for re-entry via settings */}
+                          <Route path="/onboarding" element={<FirstRunWizard />} />
 
-                        {/* Main routes */}
-                        <Route path="/" element={<WelcomePage />} />
+                          {/* Main routes */}
+                          <Route path="/" element={<WelcomePage />} />
 
-                        {/* All other routes */}
-                        <Route path="/setup" element={<SetupWizard />} />
-                        <Route path="/dashboard" element={<DashboardPage />} />
-                        <Route path="/ideation" element={<IdeationDashboard />} />
-                        <Route path="/trending" element={<TrendingTopicsExplorer />} />
-                        <Route path="/content-planning" element={<ContentPlanningDashboard />} />
-                        <Route path="/create" element={<CreateWizard />} />
-                        <Route path="/create/new" element={<VideoCreationWizard />} />
-                        <Route path="/create/legacy" element={<CreatePage />} />
-                        <Route path="/templates" element={<TemplatesLibrary />} />
-                        <Route path="/templates/custom" element={<CustomTemplatesPage />} />
-                        <Route path="/editor/:jobId" element={<TimelineEditor />} />
-                        <Route path="/editor" element={<VideoEditorPage />} />
-                        <Route path="/pacing" element={<PacingAnalyzerPage />} />
-                        <Route path="/render" element={<RenderPage />} />
-                        <Route path="/platform" element={<PlatformDashboard />} />
-                        <Route path="/quality" element={<QualityDashboard />} />
+                          {/* All other routes */}
+                          <Route path="/setup" element={<SetupWizard />} />
+                          <Route path="/dashboard" element={<DashboardPage />} />
+                          <Route path="/ideation" element={<IdeationDashboard />} />
+                          <Route path="/trending" element={<TrendingTopicsExplorer />} />
+                          <Route path="/content-planning" element={<ContentPlanningDashboard />} />
+                          <Route path="/create" element={<CreateWizard />} />
+                          <Route path="/create/new" element={<VideoCreationWizard />} />
+                          <Route path="/create/legacy" element={<CreatePage />} />
+                          <Route path="/templates" element={<TemplatesLibrary />} />
+                          <Route path="/templates/custom" element={<CustomTemplatesPage />} />
+                          <Route path="/editor/:jobId" element={<TimelineEditor />} />
+                          <Route path="/editor" element={<VideoEditorPage />} />
+                          <Route path="/pacing" element={<PacingAnalyzerPage />} />
+                          <Route path="/render" element={<RenderPage />} />
+                          <Route path="/platform" element={<PlatformDashboard />} />
+                          <Route path="/quality" element={<QualityDashboard />} />
 
-                        <Route path="/projects" element={<ProjectsPage />} />
-                        <Route path="/export-history" element={<ExportHistoryPage />} />
-                        <Route path="/assets" element={<AssetLibrary />} />
-                        <Route path="/jobs" element={<RecentJobsPage />} />
-                        <Route path="/jobs/:jobId/telemetry" element={<RunDetailsPage />} />
-                        <Route path="/downloads" element={<DownloadsPage />} />
-                        <Route path="/health" element={<SystemHealthDashboard />} />
-                        <Route path="/health/providers" element={<ProviderHealthDashboard />} />
-                        <Route path="/ai-editing" element={<AIEditingPage />} />
-                        <Route path="/aesthetics" element={<AestheticsPage />} />
-                        <Route path="/localization" element={<TranslationPage />} />
-                        <Route path="/prompt-management" element={<PromptManagementPage />} />
-                        <Route path="/rag" element={<RagDocumentManager />} />
-                        <Route path="/voice-enhancement" element={<VoiceEnhancementPage />} />
-                        <Route
-                          path="/performance-analytics"
-                          element={<PerformanceAnalyticsPage />}
-                        />
-                        <Route path="/ml-lab" element={<MLLabPage />} />
-                        <Route path="/ab-tests" element={<ABTestManagementPage />} />
-                        <Route path="/audience" element={<AudienceManagementPage />} />
-                        <Route path="/learning" element={<LearningPage />} />
-                        <Route path="/quality-validation" element={<QualityValidationPage />} />
-                        <Route path="/validation" element={<ValidationPage />} />
-                        <Route path="/verification" element={<VerificationPage />} />
-                        {/* Diagnostics and system information */}
-                        <Route
-                          path="/diagnostics"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <DiagnosticDashboardPage />
-                            </Suspense>
-                          }
-                        />
-                        {/* Logs page - always available for diagnostics */}
-                        <Route
-                          path="/logs"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <LogViewerPage />
-                            </Suspense>
-                          }
-                        />
-                        {/* Development-only routes - lazy loaded */}
-                        {env.enableDevTools && (
-                          <>
-                            <Route
-                              path="/activity-demo"
-                              element={
-                                <Suspense fallback={<Spinner label="Loading..." />}>
-                                  <ActivityDemoPage />
-                                </Suspense>
-                              }
-                            />
-                            <Route
-                              path="/layout-demo"
-                              element={
-                                <Suspense fallback={<Spinner label="Loading..." />}>
-                                  <LayoutDemoPage />
-                                </Suspense>
-                              }
-                            />
-                          </>
-                        )}
-                        <Route path="/settings" element={<SettingsPage />} />
-                        <Route path="/models" element={<Navigate to="/settings" replace />} />
-                        <Route path="*" element={<NotFoundPage />} />
-                      </Routes>
-                    </ConfigurationGate>
-                  </ErrorBoundary>
-                </Layout>
+                          <Route path="/projects" element={<ProjectsPage />} />
+                          <Route path="/export-history" element={<ExportHistoryPage />} />
+                          <Route path="/assets" element={<AssetLibrary />} />
+                          <Route path="/jobs" element={<RecentJobsPage />} />
+                          <Route path="/jobs/:jobId/telemetry" element={<RunDetailsPage />} />
+                          <Route path="/downloads" element={<DownloadsPage />} />
+                          <Route path="/health" element={<SystemHealthDashboard />} />
+                          <Route path="/health/providers" element={<ProviderHealthDashboard />} />
+                          <Route path="/ai-editing" element={<AIEditingPage />} />
+                          <Route path="/aesthetics" element={<AestheticsPage />} />
+                          <Route path="/localization" element={<TranslationPage />} />
+                          <Route path="/prompt-management" element={<PromptManagementPage />} />
+                          <Route path="/rag" element={<RagDocumentManager />} />
+                          <Route path="/voice-enhancement" element={<VoiceEnhancementPage />} />
+                          <Route
+                            path="/performance-analytics"
+                            element={<PerformanceAnalyticsPage />}
+                          />
+                          <Route path="/ml-lab" element={<MLLabPage />} />
+                          <Route path="/ab-tests" element={<ABTestManagementPage />} />
+                          <Route path="/audience" element={<AudienceManagementPage />} />
+                          <Route path="/learning" element={<LearningPage />} />
+                          <Route path="/quality-validation" element={<QualityValidationPage />} />
+                          <Route path="/validation" element={<ValidationPage />} />
+                          <Route path="/verification" element={<VerificationPage />} />
+                          {/* Diagnostics and system information */}
+                          <Route
+                            path="/diagnostics"
+                            element={
+                              <Suspense fallback={<Spinner label="Loading..." />}>
+                                <DiagnosticDashboardPage />
+                              </Suspense>
+                            }
+                          />
+                          {/* Logs page - always available for diagnostics */}
+                          <Route
+                            path="/logs"
+                            element={
+                              <Suspense fallback={<Spinner label="Loading..." />}>
+                                <LogViewerPage />
+                              </Suspense>
+                            }
+                          />
+                          {/* Development-only routes - lazy loaded */}
+                          {env.enableDevTools && (
+                            <>
+                              <Route
+                                path="/activity-demo"
+                                element={
+                                  <Suspense fallback={<Spinner label="Loading..." />}>
+                                    <ActivityDemoPage />
+                                  </Suspense>
+                                }
+                              />
+                              <Route
+                                path="/layout-demo"
+                                element={
+                                  <Suspense fallback={<Spinner label="Loading..." />}>
+                                    <LayoutDemoPage />
+                                  </Suspense>
+                                }
+                              />
+                            </>
+                          )}
+                          <Route path="/settings" element={<SettingsPage />} />
+                          <Route path="/models" element={<Navigate to="/settings" replace />} />
+                          <Route path="*" element={<NotFoundPage />} />
+                        </Routes>
+                      </ConfigurationGate>
+                    </ErrorBoundary>
+                  </Layout>
 
-                {/* These components need to be inside BrowserRouter for navigation hooks */}
-                <KeyboardShortcutsModal
-                  isOpen={showShortcuts}
-                  onClose={() => setShowShortcuts(false)}
-                />
-                <KeyboardShortcutsPanel
-                  isOpen={showShortcutsPanel}
-                  onClose={() => setShowShortcutsPanel(false)}
-                />
-                <CommandPalette
-                  isOpen={showCommandPalette}
-                  onClose={() => setShowCommandPalette(false)}
-                />
-                <NotificationsToaster toasterId={toasterId} />
+                  {/* These components need to be inside BrowserRouter for navigation hooks */}
+                  <KeyboardShortcutsModal
+                    isOpen={showShortcuts}
+                    onClose={() => setShowShortcuts(false)}
+                  />
+                  <KeyboardShortcutsPanel
+                    isOpen={showShortcutsPanel}
+                    onClose={() => setShowShortcutsPanel(false)}
+                  />
+                  <CommandPalette
+                    isOpen={showCommandPalette}
+                    onClose={() => setShowCommandPalette(false)}
+                  />
+                  <NotificationsToaster toasterId={toasterId} />
 
-                {/* Job progress drawer */}
-                <JobProgressDrawer
-                  isOpen={showDrawer}
-                  onClose={() => setShowDrawer(false)}
-                  jobId={currentJobId || ''}
-                />
+                  {/* Job progress drawer */}
+                  <JobProgressDrawer
+                    isOpen={showDrawer}
+                    onClose={() => setShowDrawer(false)}
+                    jobId={currentJobId || ''}
+                  />
 
-                {/* Action history panel for undo/redo */}
-                <ActionHistoryPanel />
+                  {/* Action history panel for undo/redo */}
+                  <ActionHistoryPanel />
 
-                {/* Global activity status footer */}
-                <GlobalStatusFooter />
-              </BrowserRouter>
-            </div>
-          </ActivityProvider>
+                  {/* Global activity status footer */}
+                  <GlobalStatusFooter />
+                </BrowserRouter>
+              </div>
+            </ActivityProvider>
+          </SafeModeProvider>
         </FluentProvider>
         {/* React Query Devtools - only in development */}
         {env.isDevelopment && <ReactQueryDevtools initialIsOpen={false} />}

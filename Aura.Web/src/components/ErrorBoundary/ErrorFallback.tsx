@@ -26,6 +26,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { autoSaveService } from '../../services/autoSaveService';
 import { loggingService } from '../../services/loggingService';
+import { getErrorInfo } from '../../utils/errorCodes';
 
 const useStyles = makeStyles({
   container: {
@@ -93,6 +94,27 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     fontSize: '0.875rem',
   },
+  errorCode: {
+    padding: '0.5rem 1rem',
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRadius: tokens.borderRadiusMedium,
+    fontFamily: 'monospace',
+    fontSize: '0.875rem',
+    marginBottom: '1rem',
+    color: tokens.colorNeutralForeground2,
+  },
+  suggestions: {
+    textAlign: 'left',
+    padding: '1rem',
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: tokens.borderRadiusMedium,
+    marginBottom: '1rem',
+    maxWidth: '600px',
+  },
+  suggestionsList: {
+    paddingLeft: '1.5rem',
+    margin: '0.5rem 0 0 0',
+  },
 });
 
 export interface ErrorFallbackProps {
@@ -109,6 +131,10 @@ export function ErrorFallback({ error, errorInfo, onReset, onReport }: ErrorFall
   const [showDetails, setShowDetails] = useState(false);
   const [hasAutosave, setHasAutosave] = useState(false);
   const [autosaveVersion, setAutosaveVersion] = useState<number | null>(null);
+
+  // Get error code and information
+  const errorData = getErrorInfo(error);
+  const { code: errorCode, correlationId } = errorData;
 
   useEffect(() => {
     // Check if there's recoverable autosave data
@@ -158,11 +184,25 @@ export function ErrorFallback({ error, errorInfo, onReset, onReport }: ErrorFall
   return (
     <div className={styles.container}>
       <ErrorCircle24Regular className={styles.icon} />
-      <Title1 className={styles.title}>Something went wrong</Title1>
-      <Body1 className={styles.message}>
-        We&apos;re sorry, but an unexpected error occurred. Don&apos;t worry - your work may be
-        recoverable.
-      </Body1>
+      <Title1 className={styles.title}>{errorCode.title}</Title1>
+      <Body1 className={styles.message}>{errorCode.userMessage}</Body1>
+
+      <div className={styles.errorCode}>
+        Error Code: {errorCode.code} | Correlation ID: {correlationId.substring(0, 8)}
+      </div>
+
+      {errorCode.recoverySuggestions.length > 0 && (
+        <div className={styles.suggestions}>
+          <Body1 style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Recovery Suggestions:</Body1>
+          <ul className={styles.suggestionsList}>
+            {errorCode.recoverySuggestions.map((suggestion, index) => (
+              <li key={index}>
+                <Caption1>{suggestion}</Caption1>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {hasAutosave && autosaveVersion && (
         <div className={styles.recoveryInfo}>
