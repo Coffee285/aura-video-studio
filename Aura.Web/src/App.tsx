@@ -1,10 +1,12 @@
 import { FluentProvider, webLightTheme, webDarkTheme, Spinner } from '@fluentui/react-components';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useState, useEffect, createContext, useContext, lazy, Suspense } from 'react';
+import { useState, useEffect, createContext, useContext, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { queryClient } from './api/queryClient';
+import { KeyboardShortcutsCheatSheet } from './components/Accessibility/KeyboardShortcutsCheatSheet';
 import { CommandPalette } from './components/CommandPalette';
+import { SuspenseBoundary } from './components/Common/SuspenseBoundary';
 import { ConfigurationGate } from './components/ConfigurationGate';
 import { ContentPlanningDashboard } from './components/contentPlanning/ContentPlanningDashboard';
 import { QualityDashboard } from './components/dashboard';
@@ -15,7 +17,6 @@ import type { InitializationError } from './components/Initialization';
 import { JobProgressDrawer } from './components/JobProgressDrawer';
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcuts/KeyboardShortcutsPanel';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
-import { KeyboardShortcutsCheatSheet } from './components/Accessibility/KeyboardShortcutsCheatSheet';
 import { Layout } from './components/Layout';
 import { NotificationsToaster } from './components/Notifications/Toasts';
 import { PlatformDashboard } from './components/Platform';
@@ -23,15 +24,13 @@ import { JobStatusBar } from './components/StatusBar/JobStatusBar';
 import { ActionHistoryPanel } from './components/UndoRedo/ActionHistoryPanel';
 import { VideoCreationWizard } from './components/VideoWizard/VideoCreationWizard';
 import { env } from './config/env';
-import { useGlobalUndoShortcuts } from './hooks/useGlobalUndoShortcuts';
 import { AccessibilityProvider } from './contexts/AccessibilityContext';
-// Import critical pages for initial render
-import { FirstRunWizard } from './pages/Onboarding/FirstRunWizard';
-import { WelcomePage } from './pages/WelcomePage';
+import { useGlobalUndoShortcuts } from './hooks/useGlobalUndoShortcuts';
 import { DashboardPage } from './pages/DashboardPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { FirstRunWizard } from './pages/Onboarding/FirstRunWizard';
+import { WelcomePage } from './pages/WelcomePage';
 
-// Lazy load non-critical pages to reduce initial bundle size
 const AdminDashboardPage = lazy(() =>
   import('./pages/Admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage }))
 );
@@ -84,11 +83,11 @@ const MLLabPage = lazy(() =>
 const PacingAnalyzerPage = lazy(() =>
   import('./pages/PacingAnalyzerPage').then((m) => ({ default: m.PacingAnalyzerPage }))
 );
-const ABTestManagementPage = lazy(() =>
-  import('./pages/PerformanceAnalytics/ABTestManagementPage')
+const ABTestManagementPage = lazy(
+  () => import('./pages/PerformanceAnalytics/ABTestManagementPage')
 );
-const PerformanceAnalyticsPage = lazy(() =>
-  import('./pages/PerformanceAnalytics/PerformanceAnalyticsPage')
+const PerformanceAnalyticsPage = lazy(
+  () => import('./pages/PerformanceAnalytics/PerformanceAnalyticsPage')
 );
 const UsageAnalyticsPage = lazy(() =>
   import('./pages/Analytics/UsageAnalyticsPage').then((m) => ({ default: m.default }))
@@ -101,9 +100,7 @@ const PromptManagementPage = lazy(() =>
     default: m.PromptManagementPage,
   }))
 );
-const QualityValidationPage = lazy(() =>
-  import('./pages/QualityValidation/QualityValidationPage')
-);
+const QualityValidationPage = lazy(() => import('./pages/QualityValidation/QualityValidationPage'));
 const RagDocumentManager = lazy(() => import('./pages/RAG/RagDocumentManager'));
 const RecentJobsPage = lazy(() =>
   import('./pages/RecentJobsPage').then((m) => ({ default: m.RecentJobsPage }))
@@ -115,22 +112,18 @@ const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
 );
 const AccessibilitySettingsPage = lazy(() =>
-  import('./pages/AccessibilitySettingsPage').then((m) => ({ default: m.AccessibilitySettingsPage }))
+  import('./pages/AccessibilitySettingsPage').then((m) => ({
+    default: m.AccessibilitySettingsPage,
+  }))
 );
 const CustomTemplatesPage = lazy(() => import('./pages/Templates/CustomTemplatesPage'));
 const TemplatesLibrary = lazy(() => import('./pages/Templates/TemplatesLibrary'));
-const ValidationPage = lazy(() =>
-  import('./pages/Validation/ValidationPage')
-);
-const VerificationPage = lazy(() =>
-  import('./pages/Verification/VerificationPage')
-);
+const ValidationPage = lazy(() => import('./pages/Validation/ValidationPage'));
+const VerificationPage = lazy(() => import('./pages/Verification/VerificationPage'));
 const VideoEditorPage = lazy(() =>
   import('./pages/VideoEditorPage').then((m) => ({ default: m.VideoEditorPage }))
 );
-const VoiceEnhancementPage = lazy(() =>
-  import('./pages/VoiceEnhancement/VoiceEnhancementPage')
-);
+const VoiceEnhancementPage = lazy(() => import('./pages/VoiceEnhancement/VoiceEnhancementPage'));
 const CreateWizard = lazy(() =>
   import('./pages/Wizard/CreateWizard').then((m) => ({ default: m.CreateWizard }))
 );
@@ -209,7 +202,7 @@ function App() {
   // Initialize crash recovery on app mount
   useEffect(() => {
     const state = crashRecoveryService.initialize();
-    
+
     if (crashRecoveryService.shouldShowRecoveryScreen()) {
       setShowCrashRecovery(true);
       loggingService.warn(
@@ -247,7 +240,7 @@ function App() {
             // Backend says setup is not complete - clear any stale localStorage flags
             localStorage.removeItem('hasCompletedFirstRun');
             localStorage.removeItem('hasSeenOnboarding');
-            
+
             setShouldShowOnboarding(true);
             setIsCheckingFirstRun(false);
             return;
@@ -260,13 +253,13 @@ function App() {
             'Could not check system setup status, falling back to user wizard status:',
             error
           );
-          
+
           // If backend check fails, fall back to localStorage but be cautious
           // If we can't reach the backend, don't force the wizard unnecessarily
           const localStatus =
             localStorage.getItem('hasCompletedFirstRun') === 'true' ||
             localStorage.getItem('hasSeenOnboarding') === 'true';
-          
+
           if (!localStatus) {
             // No local completion flag and can't reach backend - assume first run
             setShouldShowOnboarding(true);
@@ -659,402 +652,399 @@ function App() {
           <AccessibilityProvider>
             <ActivityProvider>
               <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-              <BrowserRouter>
-                {/* Status bar for job progress */}
-                <JobStatusBar
-                  status={status}
-                  progress={progress}
-                  message={message}
-                  onViewDetails={() => setShowDrawer(true)}
-                />
-                <Layout>
-                  <ErrorBoundary>
-                    <ConfigurationGate>
-                      <Routes>
-                        {/* Setup wizard - unified entry point for first-run and reconfiguration */}
-                        <Route path="/setup" element={<FirstRunWizard />} />
-                        {/* Legacy route redirect for backward compatibility */}
-                        <Route path="/onboarding" element={<Navigate to="/setup" replace />} />
+                <BrowserRouter>
+                  {/* Status bar for job progress */}
+                  <JobStatusBar
+                    status={status}
+                    progress={progress}
+                    message={message}
+                    onViewDetails={() => setShowDrawer(true)}
+                  />
+                  <Layout>
+                    <ErrorBoundary>
+                      <ConfigurationGate>
+                        <Routes>
+                          {/* Setup wizard - unified entry point for first-run and reconfiguration */}
+                          <Route path="/setup" element={<FirstRunWizard />} />
+                          {/* Legacy route redirect for backward compatibility */}
+                          <Route path="/onboarding" element={<Navigate to="/setup" replace />} />
 
-                        {/* Main routes */}
-                        <Route path="/" element={<WelcomePage />} />
-                        <Route path="/dashboard" element={<DashboardPage />} />
-                        <Route
-                          path="/ideation"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <IdeationDashboard />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/trending"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <TrendingTopicsExplorer />
-                            </Suspense>
-                          }
-                        />
-                        <Route path="/content-planning" element={<ContentPlanningDashboard />} />
-                        <Route
-                          path="/create"
-                          element={<VideoCreationWizard />}
-                        />
-                        <Route 
-                          path="/create/advanced"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <CreateWizard />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/create/legacy"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <CreatePage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/templates"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <TemplatesLibrary />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/templates/custom"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <CustomTemplatesPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/editor/:jobId"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <TimelineEditor />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/editor"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <VideoEditorPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/pacing"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <PacingAnalyzerPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/render"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <RenderPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route path="/platform" element={<PlatformDashboard />} />
-                        <Route path="/quality" element={<QualityDashboard />} />
+                          {/* Main routes */}
+                          <Route path="/" element={<WelcomePage />} />
+                          <Route path="/dashboard" element={<DashboardPage />} />
+                          <Route
+                            path="/ideation"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <IdeationDashboard />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/trending"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <TrendingTopicsExplorer />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route path="/content-planning" element={<ContentPlanningDashboard />} />
+                          <Route path="/create" element={<VideoCreationWizard />} />
+                          <Route
+                            path="/create/advanced"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <CreateWizard />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/create/legacy"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <CreatePage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/templates"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <TemplatesLibrary />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/templates/custom"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <CustomTemplatesPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/editor/:jobId"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <TimelineEditor />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/editor"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <VideoEditorPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/pacing"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <PacingAnalyzerPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/render"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <RenderPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route path="/platform" element={<PlatformDashboard />} />
+                          <Route path="/quality" element={<QualityDashboard />} />
 
-                        <Route
-                          path="/projects"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <ProjectsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/export-history"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <ExportHistoryPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/assets"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <AssetLibrary />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/jobs"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <RecentJobsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/jobs/:jobId/telemetry"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <RunDetailsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/downloads"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <DownloadsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/health"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <SystemHealthDashboard />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/health/providers"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <ProviderHealthDashboard />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/ai-editing"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <AIEditingPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/aesthetics"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <AestheticsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/localization"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <TranslationPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/prompt-management"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <PromptManagementPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/rag"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <RagDocumentManager />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/voice-enhancement"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <VoiceEnhancementPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/performance-analytics"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <PerformanceAnalyticsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/usage-analytics"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <UsageAnalyticsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/ml-lab"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <MLLabPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/ab-tests"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <ABTestManagementPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/audience"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <AudienceManagementPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/learning"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <LearningPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/quality-validation"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <QualityValidationPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/validation"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <ValidationPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/verification"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <VerificationPage />
-                            </Suspense>
-                          }
-                        />
-                        {/* Diagnostics and system information */}
-                        <Route
-                          path="/diagnostics"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <DiagnosticDashboardPage />
-                            </Suspense>
-                          }
-                        />
-                        {/* Logs page - always available for diagnostics */}
-                        <Route
-                          path="/logs"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <LogViewerPage />
-                            </Suspense>
-                          }
-                        />
-                        {/* Development-only routes - lazy loaded */}
-                        {env.enableDevTools && (
-                          <>
-                            <Route
-                              path="/activity-demo"
-                              element={
-                                <Suspense fallback={<Spinner label="Loading..." />}>
-                                  <ActivityDemoPage />
-                                </Suspense>
-                              }
-                            />
-                            <Route
-                              path="/layout-demo"
-                              element={
-                                <Suspense fallback={<Spinner label="Loading..." />}>
-                                  <LayoutDemoPage />
-                                </Suspense>
-                              }
-                            />
-                          </>
-                        )}
-                        <Route
-                          path="/admin"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <AdminDashboardPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/settings"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <SettingsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route
-                          path="/settings/accessibility"
-                          element={
-                            <Suspense fallback={<Spinner label="Loading..." />}>
-                              <AccessibilitySettingsPage />
-                            </Suspense>
-                          }
-                        />
-                        <Route path="/models" element={<Navigate to="/settings" replace />} />
-                        <Route path="*" element={<NotFoundPage />} />
-                      </Routes>
-                    </ConfigurationGate>
-                  </ErrorBoundary>
-                </Layout>
+                          <Route
+                            path="/projects"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <ProjectsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/export-history"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <ExportHistoryPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/assets"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <AssetLibrary />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/jobs"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <RecentJobsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/jobs/:jobId/telemetry"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <RunDetailsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/downloads"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <DownloadsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/health"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <SystemHealthDashboard />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/health/providers"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <ProviderHealthDashboard />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/ai-editing"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <AIEditingPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/aesthetics"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <AestheticsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/localization"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <TranslationPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/prompt-management"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <PromptManagementPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/rag"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <RagDocumentManager />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/voice-enhancement"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <VoiceEnhancementPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/performance-analytics"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <PerformanceAnalyticsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/usage-analytics"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <UsageAnalyticsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/ml-lab"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <MLLabPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/ab-tests"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <ABTestManagementPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/audience"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <AudienceManagementPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/learning"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <LearningPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/quality-validation"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <QualityValidationPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/validation"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <ValidationPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/verification"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <VerificationPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          {/* Diagnostics and system information */}
+                          <Route
+                            path="/diagnostics"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <DiagnosticDashboardPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          {/* Logs page - always available for diagnostics */}
+                          <Route
+                            path="/logs"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <LogViewerPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          {/* Development-only routes - lazy loaded */}
+                          {env.enableDevTools && (
+                            <>
+                              <Route
+                                path="/activity-demo"
+                                element={
+                                  <SuspenseBoundary loadingMessage="Loading...">
+                                    <ActivityDemoPage />
+                                  </SuspenseBoundary>
+                                }
+                              />
+                              <Route
+                                path="/layout-demo"
+                                element={
+                                  <SuspenseBoundary loadingMessage="Loading...">
+                                    <LayoutDemoPage />
+                                  </SuspenseBoundary>
+                                }
+                              />
+                            </>
+                          )}
+                          <Route
+                            path="/admin"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <AdminDashboardPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/settings"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <SettingsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route
+                            path="/settings/accessibility"
+                            element={
+                              <SuspenseBoundary loadingMessage="Loading...">
+                                <AccessibilitySettingsPage />
+                              </SuspenseBoundary>
+                            }
+                          />
+                          <Route path="/models" element={<Navigate to="/settings" replace />} />
+                          <Route path="*" element={<NotFoundPage />} />
+                        </Routes>
+                      </ConfigurationGate>
+                    </ErrorBoundary>
+                  </Layout>
 
-                {/* These components need to be inside BrowserRouter for navigation hooks */}
-                <KeyboardShortcutsModal
-                  isOpen={showShortcuts}
-                  onClose={() => setShowShortcuts(false)}
-                />
-                <KeyboardShortcutsPanel
-                  isOpen={showShortcutsPanel}
-                  onClose={() => setShowShortcutsPanel(false)}
-                />
-                <KeyboardShortcutsCheatSheet
-                  open={showShortcutsCheatSheet}
-                  onClose={() => setShowShortcutsCheatSheet(false)}
-                />
-                <CommandPalette
-                  isOpen={showCommandPalette}
-                  onClose={() => setShowCommandPalette(false)}
-                />
-                <NotificationsToaster toasterId={toasterId} />
+                  {/* These components need to be inside BrowserRouter for navigation hooks */}
+                  <KeyboardShortcutsModal
+                    isOpen={showShortcuts}
+                    onClose={() => setShowShortcuts(false)}
+                  />
+                  <KeyboardShortcutsPanel
+                    isOpen={showShortcutsPanel}
+                    onClose={() => setShowShortcutsPanel(false)}
+                  />
+                  <KeyboardShortcutsCheatSheet
+                    open={showShortcutsCheatSheet}
+                    onClose={() => setShowShortcutsCheatSheet(false)}
+                  />
+                  <CommandPalette
+                    isOpen={showCommandPalette}
+                    onClose={() => setShowCommandPalette(false)}
+                  />
+                  <NotificationsToaster toasterId={toasterId} />
 
-                {/* Job progress drawer */}
-                <JobProgressDrawer
-                  isOpen={showDrawer}
-                  onClose={() => setShowDrawer(false)}
-                  jobId={currentJobId || ''}
-                />
+                  {/* Job progress drawer */}
+                  <JobProgressDrawer
+                    isOpen={showDrawer}
+                    onClose={() => setShowDrawer(false)}
+                    jobId={currentJobId || ''}
+                  />
 
-                {/* Action history panel for undo/redo */}
-                <ActionHistoryPanel />
+                  {/* Action history panel for undo/redo */}
+                  <ActionHistoryPanel />
 
-                {/* Global activity status footer */}
-                <footer id="global-footer">
-                  <GlobalStatusFooter />
-                </footer>
-              </BrowserRouter>
+                  {/* Global activity status footer */}
+                  <footer id="global-footer">
+                    <GlobalStatusFooter />
+                  </footer>
+                </BrowserRouter>
               </div>
             </ActivityProvider>
           </AccessibilityProvider>

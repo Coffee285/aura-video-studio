@@ -21,6 +21,7 @@ import {
   Clock24Regular,
   Play24Regular,
 } from '@fluentui/react-icons';
+import { memo, useCallback, useMemo } from 'react';
 import { useJobQueue } from '../../hooks/useJobQueue';
 
 const useStyles = makeStyles({
@@ -119,20 +120,16 @@ interface JobQueuePanelProps {
   onSettingsClick?: () => void;
 }
 
-export function JobQueuePanel({ onSettingsClick }: JobQueuePanelProps) {
+const JobQueuePanelComponent = ({ onSettingsClick }: JobQueuePanelProps) => {
   const styles = useStyles();
-  const {
-    statistics,
-    isConnected,
-    cancelJob,
-    pendingJobs,
-    processingJobs,
-  } = useJobQueue();
+  const { statistics, isConnected, cancelJob, pendingJobs, processingJobs } = useJobQueue();
 
-  // Show only active jobs (pending or processing)
-  const activeJobs = [...processingJobs, ...pendingJobs].slice(0, 5);
+  const activeJobs = useMemo(
+    () => [...processingJobs, ...pendingJobs].slice(0, 5),
+    [processingJobs, pendingJobs]
+  );
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = useCallback((status: string) => {
     switch (status) {
       case 'Completed':
         return <CheckmarkCircle24Regular style={{ color: tokens.colorPaletteGreenForeground1 }} />;
@@ -146,9 +143,9 @@ export function JobQueuePanel({ onSettingsClick }: JobQueuePanelProps) {
       default:
         return <Clock24Regular />;
     }
-  };
+  }, []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'Completed':
         return 'success';
@@ -162,15 +159,18 @@ export function JobQueuePanel({ onSettingsClick }: JobQueuePanelProps) {
       default:
         return 'subtle';
     }
-  };
+  }, []);
 
-  const handleCancelJob = async (jobId: string) => {
-    try {
-      await cancelJob(jobId);
-    } catch (error) {
-      console.error('Failed to cancel job:', error);
-    }
-  };
+  const handleCancelJob = useCallback(
+    async (jobId: string) => {
+      try {
+        await cancelJob(jobId);
+      } catch (error) {
+        console.error('Failed to cancel job:', error);
+      }
+    },
+    [cancelJob]
+  );
 
   return (
     <div className={styles.container}>
@@ -273,4 +273,6 @@ export function JobQueuePanel({ onSettingsClick }: JobQueuePanelProps) {
       )}
     </div>
   );
-}
+};
+
+export const JobQueuePanel = memo(JobQueuePanelComponent);

@@ -22,7 +22,8 @@ import {
   ArrowDownload24Regular,
   Delete24Regular,
 } from '@fluentui/react-icons';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
+import { Virtuoso } from 'react-virtuoso';
 
 const useStyles = makeStyles({
   container: {
@@ -136,6 +137,52 @@ interface LogsResponse {
   totalLines: number;
   message?: string;
 }
+
+interface LogEntryCardProps {
+  log: LogEntry;
+  copySuccess: string;
+  onCopy: (log: LogEntry) => void;
+  getLevelBadgeColor: (level: string) => 'danger' | 'warning' | 'success' | 'informative';
+}
+
+const LogEntryCard = memo(({ log, copySuccess, onCopy, getLevelBadgeColor }: LogEntryCardProps) => {
+  const styles = useStyles();
+
+  return (
+    <Card className={styles.logCard} onClick={() => onCopy(log)}>
+      <div className={styles.logEntry}>
+        <div className={styles.logHeader}>
+          <div className={styles.logMeta}>
+            <Badge
+              appearance="filled"
+              color={getLevelBadgeColor(log.level)}
+              className={styles.levelBadge}
+            >
+              {log.level}
+            </Badge>
+            <Caption1>{log.timestamp}</Caption1>
+            {log.correlationId && (
+              <Badge appearance="outline" color="informative">
+                {log.correlationId}
+              </Badge>
+            )}
+          </div>
+          <div>
+            {copySuccess === log.correlationId && (
+              <Caption1 style={{ color: tokens.colorPaletteGreenForeground1 }}>Copied!</Caption1>
+            )}
+            <Copy24Regular />
+          </div>
+        </div>
+        <div className={styles.logMessage}>
+          <Body1>{log.message}</Body1>
+        </div>
+      </div>
+    </Card>
+  );
+});
+
+LogEntryCard.displayName = 'LogEntryCard';
 
 export function LogViewerPage() {
   const styles = useStyles();
@@ -414,42 +461,19 @@ export function LogViewerPage() {
           <Text>No logs found matching your filters.</Text>
         </div>
       ) : (
-        <div>
-          {logs.map((log, index) => (
-            <Card key={index} className={styles.logCard} onClick={() => handleCopyLog(log)}>
-              <div className={styles.logEntry}>
-                <div className={styles.logHeader}>
-                  <div className={styles.logMeta}>
-                    <Badge
-                      appearance="filled"
-                      color={getLevelBadgeColor(log.level)}
-                      className={styles.levelBadge}
-                    >
-                      {log.level}
-                    </Badge>
-                    <Caption1>{log.timestamp}</Caption1>
-                    {log.correlationId && (
-                      <Badge appearance="outline" color="informative">
-                        {log.correlationId}
-                      </Badge>
-                    )}
-                  </div>
-                  <div>
-                    {copySuccess === log.correlationId && (
-                      <Caption1 style={{ color: tokens.colorPaletteGreenForeground1 }}>
-                        Copied!
-                      </Caption1>
-                    )}
-                    <Copy24Regular />
-                  </div>
-                </div>
-                <div className={styles.logMessage}>
-                  <Body1>{log.message}</Body1>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <Virtuoso
+          style={{ height: '600px' }}
+          data={logs}
+          itemContent={(index, log) => (
+            <LogEntryCard
+              key={log.correlationId || index}
+              log={log}
+              copySuccess={copySuccess}
+              onCopy={handleCopyLog}
+              getLevelBadgeColor={getLevelBadgeColor}
+            />
+          )}
+        />
       )}
     </div>
   );
