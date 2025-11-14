@@ -10,7 +10,7 @@ const net = require('net');
 const axios = require('axios');
 
 class BackendService {
-  constructor(app, isDev) {
+  constructor(app, isDev, childProcessManager = null) {
     this.app = app;
     this.isDev = isDev;
     this.process = null;
@@ -22,6 +22,7 @@ class BackendService {
     this.healthCheckInterval = null;
     this.pid = null;
     this.isWindows = process.platform === 'win32';
+    this.childProcessManager = childProcessManager;
     
     // Constants
     this.BACKEND_STARTUP_TIMEOUT = 60000; // 60 seconds
@@ -87,6 +88,11 @@ class BackendService {
       // Store PID for Windows process tree termination
       this.pid = this.process.pid;
 
+      // Register backend process with child process manager
+      if (this.childProcessManager) {
+        this.childProcessManager.register(this.pid, 'Backend API Service', this.process);
+      }
+
       // Setup process handlers
       this._setupProcessHandlers();
 
@@ -122,6 +128,11 @@ class BackendService {
       } catch (error) {
         console.error('Error terminating backend:', error);
       }
+    }
+
+    // Unregister from child process manager
+    if (this.childProcessManager && this.pid) {
+      this.childProcessManager.unregister(this.pid);
     }
 
     this.process = null;

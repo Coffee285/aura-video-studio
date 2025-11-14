@@ -178,13 +178,13 @@ function initializeProtocolHandler(windowManager, tracker, logger, crashLogger) 
 /**
  * Initialize BackendService with detailed error reporting
  */
-async function initializeBackendService(app, isDev, tracker, logger, crashLogger) {
+async function initializeBackendService(app, isDev, tracker, logger, crashLogger, childProcessManager = null) {
   const step = InitializationStep.BACKEND_SERVICE;
   tracker.startStep(step);
 
   try {
     const BackendService = require('./backend-service');
-    const backendService = new BackendService(app, isDev);
+    const backendService = new BackendService(app, isDev, childProcessManager);
     
     // Start backend with timeout
     const startPromise = backendService.start();

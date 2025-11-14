@@ -27,6 +27,10 @@ const TrayManager = require('./tray-manager');
 const MenuBuilder = require('./menu-builder');
 const WindowsSetupWizard = require('./windows-setup-wizard');
 
+// Import shutdown orchestration
+const ShutdownOrchestrator = require('./shutdown-orchestrator');
+const ChildProcessManager = require('./child-process-manager');
+
 // ========================================
 // Global State
 // ========================================
@@ -41,6 +45,8 @@ let trayManager = null;
 let menuBuilder = null;
 let protocolHandler = null;
 let windowsSetupWizard = null;
+let shutdownOrchestrator = null;
+let childProcessManager = null;
 
 let ipcHandlers = {
   config: null,
@@ -518,7 +524,7 @@ async function checkFirstRun() {
 // ========================================
 
 /**
- * Cleanup before quit
+ * Cleanup before quit using ShutdownOrchestrator
  */
 async function cleanup() {
   console.log('Cleaning up application resources...');
@@ -528,53 +534,17 @@ async function cleanup() {
   }
 
   try {
-    // Stop backend health checks
-    if (ipcHandlers.backend) {
-      ipcHandlers.backend.stopHealthChecks();
-      if (startupLogger) {
-        startupLogger.debug('Cleanup', 'Backend health checks stopped');
-      }
-    }
-
-    // Stop backend service (now async for proper Windows process termination)
-    if (backendService) {
-      console.log('Stopping backend service...');
-      if (startupLogger) {
-        startupLogger.info('Cleanup', 'Stopping backend service');
-      }
-      await backendService.stop();
-      console.log('Backend service stopped');
-      if (startupLogger) {
-        startupLogger.info('Cleanup', 'Backend service stopped successfully');
-      }
-    }
-
-    // Destroy tray
-    if (trayManager) {
-      trayManager.destroy();
-      if (startupLogger) {
-        startupLogger.debug('Cleanup', 'System tray destroyed');
-      }
-    }
-
-    // Cleanup temp files
-    const tempPath = path.join(app.getPath('temp'), 'aura-video-studio');
-    if (fs.existsSync(tempPath)) {
-      try {
-        fs.rmSync(tempPath, { recursive: true, force: true });
-        console.log('Temp files cleaned up');
-        if (startupLogger) {
-          startupLogger.debug('Cleanup', 'Temp files cleaned up', { tempPath });
-        }
-      } catch (error) {
-        console.warn('Failed to cleanup temp files:', error.message);
-        if (startupLogger) {
-          startupLogger.warn('Cleanup', 'Failed to cleanup temp files', { 
-            error: error.message,
-            tempPath 
-          });
-        }
-      }
+    if (shutdownOrchestrator) {
+      // Use shutdown orchestrator for coordinated cleanup
+      await shutdownOrchestrator.shutdown({
+        backendService,
+        ipcHandlers,
+        trayManager,
+        childProcessManager
+      });
+    } else {
+      // Fallback to legacy cleanup if orchestrator not initialized
+      await legacyCleanup();
     }
 
     console.log('Cleanup completed');
@@ -584,7 +554,61 @@ async function cleanup() {
   } catch (error) {
     console.error('Error during cleanup:', error);
     if (startupLogger) {
-      startupLogger.error('Cleanup', 'Error during cleanup', error);
+      startupLogger.error('Cleanup', 'Error during cleanup', error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+}
+
+/**
+ * Legacy cleanup (fallback when orchestrator unavailable)
+ */
+async function legacyCleanup() {
+  // Stop backend health checks
+  if (ipcHandlers.backend) {
+    ipcHandlers.backend.stopHealthChecks();
+    if (startupLogger) {
+      startupLogger.debug('Cleanup', 'Backend health checks stopped');
+    }
+  }
+
+  // Stop backend service
+  if (backendService) {
+    console.log('Stopping backend service...');
+    if (startupLogger) {
+      startupLogger.info('Cleanup', 'Stopping backend service');
+    }
+    await backendService.stop();
+    console.log('Backend service stopped');
+    if (startupLogger) {
+      startupLogger.info('Cleanup', 'Backend service stopped successfully');
+    }
+  }
+
+  // Destroy tray
+  if (trayManager) {
+    trayManager.destroy();
+    if (startupLogger) {
+      startupLogger.debug('Cleanup', 'System tray destroyed');
+    }
+  }
+
+  // Cleanup temp files
+  const tempPath = path.join(app.getPath('temp'), 'aura-video-studio');
+  if (fs.existsSync(tempPath)) {
+    try {
+      fs.rmSync(tempPath, { recursive: true, force: true });
+      console.log('Temp files cleaned up');
+      if (startupLogger) {
+        startupLogger.debug('Cleanup', 'Temp files cleaned up', { tempPath });
+      }
+    } catch (error) {
+      console.warn('Failed to cleanup temp files:', error.message);
+      if (startupLogger) {
+        startupLogger.warn('Cleanup', 'Failed to cleanup temp files', { 
+          error: error.message,
+          tempPath 
+        });
+      }
     }
   }
 }
@@ -713,6 +737,14 @@ async function startApplication() {
       appConfig.disableSafeMode();
     }
 
+    // Step 6b: Initialize child process manager
+    childProcessManager = new ChildProcessManager(startupLogger);
+    console.log('✓ Child process manager initialized');
+
+    // Step 6c: Initialize shutdown orchestrator
+    shutdownOrchestrator = new ShutdownOrchestrator(startupLogger);
+    console.log('✓ Shutdown orchestrator initialized');
+
     // Step 7: Initialize window manager
     const windowResult = SafeInit.initializeWindowManager(app, IS_DEV, initializationTracker, startupLogger, earlyCrashLogger);
     
@@ -755,7 +787,7 @@ async function startApplication() {
     }
 
     // Step 10: Start backend service
-    const backendResult = await SafeInit.initializeBackendService(app, IS_DEV, initializationTracker, startupLogger, earlyCrashLogger);
+    const backendResult = await SafeInit.initializeBackendService(app, IS_DEV, initializationTracker, startupLogger, earlyCrashLogger, childProcessManager);
     
     if (!backendResult.success) {
       // Critical failure - show detailed error and exit
