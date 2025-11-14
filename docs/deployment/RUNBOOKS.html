@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Deployment Runbooks | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Deployment Runbooks | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/deployment/RUNBOOKS.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="deployment-runbooks">Deployment Runbooks</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document contains step-by-step procedures for common deployment scenarios and incident response.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#standard-production-deployment">Standard Production Deployment</a></li>
+<li><a href="#emergency-hotfix-deployment">Emergency Hotfix Deployment</a></li>
+<li><a href="#rollback-procedure">Rollback Procedure</a></li>
+<li><a href="#database-migration">Database Migration</a></li>
+<li><a href="#scaling-operations">Scaling Operations</a></li>
+<li><a href="#incident-response">Incident Response</a></li>
+</ol>
+<hr>
+<h2 id="standard-production-deployment">Standard Production Deployment</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>[ ] All tests passing in CI</li>
+<li>[ ] Code review approved</li>
+<li>[ ] Security scan passed</li>
+<li>[ ] Staging deployment successful</li>
+<li>[ ] Change management ticket approved</li>
+<li>[ ] Deployment window scheduled</li>
+</ul>
+<h3 id="procedure">Procedure</h3>
+<h4 id="1-pre-deployment-t-30-minutes">1. Pre-deployment (T-30 minutes)</h4>
+<pre><code class="lang-bash"># Set deployment variables
+export VERSION=&quot;v1.2.3&quot;
+export ENVIRONMENT=&quot;production&quot;
+export DEPLOYMENT_STRATEGY=&quot;blue-green&quot;
+
+# Verify prerequisites
+./deploy/audit-deployment.sh $ENVIRONMENT $VERSION $DEPLOYMENT_STRATEGY initiated log
+</code></pre>
+<p><strong>Notifications</strong>:</p>
+<pre><code class="lang-bash"># Post in Slack
+/msg #deployments Starting production deployment v1.2.3 at $(date)
+
+# Email stakeholders
+cat &lt;&lt;EOF | mail -s &quot;Production Deployment Starting&quot; stakeholders@aura.studio
+Production deployment of v1.2.3 is starting.
+
+Expected duration: 15 minutes
+Deployment strategy: Blue-green
+Expected completion: $(date -d '+30 minutes')
+
+Monitor at: https://github.com/aura/aura/actions
+EOF
+</code></pre>
+<h4 id="2-backup-t-20-minutes">2. Backup (T-20 minutes)</h4>
+<pre><code class="lang-bash"># Backup production database
+docker exec aura-production-api \
+  sqlite3 /app/data/aura.db &quot;.backup /app/data/aura.db.backup&quot;
+
+# Verify backup
+docker exec aura-production-api \
+  sqlite3 /app/data/aura.db.backup &quot;SELECT COUNT(*) FROM videos&quot;
+
+# Backup configuration
+cp data/aura.db data/aura.db.backup.$(date +%Y%m%d_%H%M%S)
+</code></pre>
+<h4 id="3-deployment-t-0">3. Deployment (T-0)</h4>
+<pre><code class="lang-bash"># Trigger deployment via GitHub Actions
+gh workflow run production-deploy.yml \
+  --field environment=production \
+  --field version=$VERSION \
+  --field deployment_strategy=$DEPLOYMENT_STRATEGY
+
+# Or manual deployment
+./deploy/blue-green-deploy.sh $ENVIRONMENT $VERSION
+</code></pre>
+<p><strong>Monitor Progress</strong>:</p>
+<pre><code class="lang-bash"># Watch workflow
+gh run watch
+
+# Monitor logs
+gh run view --log
+
+# Check deployment status
+watch -n 10 ./deploy/validate-deployment.sh $ENVIRONMENT
+</code></pre>
+<h4 id="4-validation-t15-minutes">4. Validation (T+15 minutes)</h4>
+<pre><code class="lang-bash"># Run comprehensive validation
+export DEPLOY_VERSION=$VERSION
+./deploy/validate-deployment.sh production https://api.aura.studio
+
+# Check key metrics
+curl https://api.aura.studio/api/diagnostics/metrics | jq '.'
+
+# Verify version
+curl https://api.aura.studio/api/version | jq '.version'
+</code></pre>
+<h4 id="5-post-deployment-t20-minutes">5. Post-deployment (T+20 minutes)</h4>
+<pre><code class="lang-bash"># Update audit log
+./deploy/audit-deployment.sh $ENVIRONMENT $VERSION $DEPLOYMENT_STRATEGY success update
+
+# Cleanup old containers
+docker system prune -f
+
+# Send success notification
+cat &lt;&lt;EOF | mail -s &quot;Production Deployment Successful&quot; stakeholders@aura.studio
+Production deployment of v1.2.3 completed successfully.
+
+Deployment duration: 15 minutes
+Version deployed: v1.2.3
+Health check status: All systems operational
+
+Application URL: https://aura.studio
+Monitoring: https://monitoring.aura.studio
+EOF
+</code></pre>
+<h3 id="verification-steps">Verification Steps</h3>
+<ul>
+<li>[ ] API health check returns 200</li>
+<li>[ ] Web frontend loads successfully</li>
+<li>[ ] Database connectivity confirmed</li>
+<li>[ ] Redis connectivity confirmed</li>
+<li>[ ] All critical features working</li>
+<li>[ ] No error spikes in logs</li>
+<li>[ ] Response times within SLA</li>
+<li>[ ] Version number correct</li>
+</ul>
+<h3 id="success-criteria">Success Criteria</h3>
+<p>✅ Deployment successful if:</p>
+<ul>
+<li>All health checks passing</li>
+<li>No critical errors in logs</li>
+<li>Response time &lt; 2000ms (p95)</li>
+<li>Error rate &lt; 1%</li>
+<li>Zero downtime achieved</li>
+</ul>
+<hr>
+<h2 id="emergency-hotfix-deployment">Emergency Hotfix Deployment</h2>
+<h3 id="when-to-use">When to Use</h3>
+<ul>
+<li>Critical security vulnerability</li>
+<li>Data loss bug</li>
+<li>Complete service outage</li>
+<li>Critical business impact</li>
+</ul>
+<h3 id="procedure-1">Procedure</h3>
+<h4 id="1-incident-declaration-t-0">1. Incident Declaration (T-0)</h4>
+<pre><code class="lang-bash"># Declare incident
+INCIDENT_ID=&quot;INC-$(date +%Y%m%d-%H%M%S)&quot;
+echo &quot;Incident $INCIDENT_ID declared at $(date)&quot;
+
+# Notify on-call team
+# (Use PagerDuty, Slack, or configured alerting)
+</code></pre>
+<h4 id="2-fix-development-t5-minutes">2. Fix Development (T+5 minutes)</h4>
+<pre><code class="lang-bash"># Create hotfix branch
+git checkout main
+git pull origin main
+git checkout -b hotfix/critical-issue-$INCIDENT_ID
+
+# Make fix
+# ... code changes ...
+
+# Commit
+git add .
+git commit -m &quot;fix(critical): resolve data loss in video processing
+
+Closes $INCIDENT_ID&quot;
+</code></pre>
+<h4 id="3-fast-track-testing-t10-minutes">3. Fast-track Testing (T+10 minutes)</h4>
+<pre><code class="lang-bash"># Run focused tests
+dotnet test --filter &quot;FullyQualifiedName~CriticalTests&quot;
+
+# Quick E2E test
+npm run test:e2e:critical
+
+# Deploy to staging
+./deploy/blue-green-deploy.sh staging hotfix-$INCIDENT_ID
+</code></pre>
+<h4 id="4-emergency-deployment-t15-minutes">4. Emergency Deployment (T+15 minutes)</h4>
+<pre><code class="lang-bash"># Merge and tag
+git checkout main
+git merge hotfix/critical-issue-$INCIDENT_ID --no-ff
+git tag v1.2.4-hotfix
+git push origin main v1.2.4-hotfix
+
+# Fast deployment (skip non-critical checks)
+gh workflow run production-deploy.yml \
+  --field environment=production \
+  --field version=v1.2.4-hotfix \
+  --field skip_tests=true \
+  --field deployment_strategy=rolling
+</code></pre>
+<h4 id="5-verification-t20-minutes">5. Verification (T+20 minutes)</h4>
+<pre><code class="lang-bash"># Verify fix
+./deploy/validate-deployment.sh production
+
+# Monitor for 30 minutes
+watch -n 60 'curl -s https://api.aura.studio/api/health/system | jq .'
+</code></pre>
+<h4 id="6-post-incident-t1-hour">6. Post-incident (T+1 hour)</h4>
+<pre><code class="lang-bash"># Document incident
+cat &gt; incidents/$INCIDENT_ID.md &lt;&lt;EOF
+# Incident Report: $INCIDENT_ID
+
+## Summary
+Critical issue requiring emergency hotfix deployment
+
+## Timeline
+- T+0: Incident detected
+- T+5: Hotfix development started
+- T+15: Emergency deployment initiated
+- T+20: Fix verified
+
+## Root Cause
+[Description]
+
+## Resolution
+Deployed v1.2.4-hotfix
+
+## Preventive Measures
+- [ ] Add monitoring for similar issues
+- [ ] Improve testing coverage
+- [ ] Update runbooks
+EOF
+
+# Conduct post-mortem
+# Schedule within 48 hours
+</code></pre>
+<hr>
+<h2 id="rollback-procedure">Rollback Procedure</h2>
+<h3 id="when-to-rollback">When to Rollback</h3>
+<p>Immediate rollback if:</p>
+<ul>
+<li>Health checks failing for 3+ minutes</li>
+<li>Error rate &gt; 10%</li>
+<li>Response time &gt; 10 seconds</li>
+<li>Critical feature broken</li>
+<li>Data corruption detected</li>
+</ul>
+<h3 id="quick-rollback-blue-green">Quick Rollback (Blue-Green)</h3>
+<pre><code class="lang-bash"># Execute rollback
+./deploy/rollback.sh production &quot;Rollback due to [REASON]&quot;
+
+# This automatically:
+# 1. Switches traffic back to previous environment
+# 2. Verifies rollback
+# 3. Logs rollback action
+# 4. Sends notifications
+</code></pre>
+<h3 id="manual-rollback">Manual Rollback</h3>
+<p>If automated rollback fails:</p>
+<pre><code class="lang-bash"># 1. Identify previous version
+PREVIOUS_VERSION=$(git describe --tags --abbrev=0 HEAD^)
+
+# 2. Stop current deployment
+docker compose -p aura-production down
+
+# 3. Deploy previous version
+docker compose -p aura-production \
+  -f docker-compose.prod.yml \
+  up -d \
+  --build \
+  -e VERSION=$PREVIOUS_VERSION
+
+# 4. Wait for services
+sleep 60
+
+# 5. Verify rollback
+./deploy/validate-deployment.sh production
+</code></pre>
+<h3 id="database-rollback">Database Rollback</h3>
+<p>If database migration needs rollback:</p>
+<pre><code class="lang-bash"># 1. Stop API
+docker compose -p aura-production stop api
+
+# 2. Restore database
+cp data/aura.db.backup data/aura.db
+
+# Or rollback migration
+docker exec aura-production-api \
+  dotnet ef database update [PREVIOUS_MIGRATION]
+
+# 3. Restart API
+docker compose -p aura-production start api
+
+# 4. Verify
+curl https://api.aura.studio/api/health/system
+</code></pre>
+<h3 id="post-rollback">Post-rollback</h3>
+<pre><code class="lang-bash"># Document rollback
+./deploy/audit-deployment.sh production $VERSION rollback success
+
+# Create incident ticket
+gh issue create \
+  --title &quot;Production rollback - v$VERSION&quot; \
+  --body &quot;Rollback executed due to [REASON]&quot;
+
+# Notify team
+# Send notification via configured channels
+</code></pre>
+<hr>
+<h2 id="database-migration">Database Migration</h2>
+<h3 id="pre-migration">Pre-migration</h3>
+<pre><code class="lang-bash"># 1. Review migration
+dotnet ef migrations script &gt; migration.sql
+cat migration.sql  # Review changes
+
+# 2. Backup database
+docker exec aura-production-api \
+  sqlite3 /app/data/aura.db &quot;.backup /app/data/aura.db.backup&quot;
+
+# 3. Test migration in staging
+./deploy/blue-green-deploy.sh staging v1.2.3
+</code></pre>
+<h3 id="migration-deployment">Migration Deployment</h3>
+<pre><code class="lang-bash"># 1. Enable maintenance mode
+curl -X POST https://api.aura.studio/api/admin/maintenance \
+  -H &quot;Authorization: Bearer $ADMIN_TOKEN&quot; \
+  -d '{&quot;enabled&quot;: true, &quot;message&quot;: &quot;Database maintenance in progress&quot;}'
+
+# 2. Deploy with migration
+./deploy/blue-green-deploy.sh production v1.2.3
+
+# Migration runs automatically on startup
+
+# 3. Verify migration
+curl https://api.aura.studio/api/health/system | jq '.database'
+
+# 4. Disable maintenance mode
+curl -X POST https://api.aura.studio/api/admin/maintenance \
+  -H &quot;Authorization: Bearer $ADMIN_TOKEN&quot; \
+  -d '{&quot;enabled&quot;: false}'
+</code></pre>
+<h3 id="rollback-migration">Rollback Migration</h3>
+<pre><code class="lang-bash"># 1. Enable maintenance mode
+curl -X POST https://api.aura.studio/api/admin/maintenance \
+  -H &quot;Authorization: Bearer $ADMIN_TOKEN&quot; \
+  -d '{&quot;enabled&quot;: true}'
+
+# 2. Rollback to previous migration
+docker exec aura-production-api \
+  dotnet ef database update [PREVIOUS_MIGRATION]
+
+# 3. Verify
+docker exec aura-production-api \
+  dotnet ef migrations list
+
+# 4. Disable maintenance mode
+curl -X POST https://api.aura.studio/api/admin/maintenance \
+  -H &quot;Authorization: Bearer $ADMIN_TOKEN&quot; \
+  -d '{&quot;enabled&quot;: false}'
+</code></pre>
+<hr>
+<h2 id="scaling-operations">Scaling Operations</h2>
+<h3 id="scale-up-api-instances">Scale Up API Instances</h3>
+<pre><code class="lang-bash"># Increase replicas
+docker compose -p aura-production \
+  up -d --scale api=4
+
+# Or with Kubernetes
+kubectl scale deployment aura-api --replicas=4
+
+# Verify
+docker ps | grep aura-api
+# or
+kubectl get pods -l app=aura-api
+</code></pre>
+<h3 id="scale-down-api-instances">Scale Down API Instances</h3>
+<pre><code class="lang-bash"># Decrease replicas
+docker compose -p aura-production \
+  up -d --scale api=2
+
+# Or with Kubernetes
+kubectl scale deployment aura-api --replicas=2
+</code></pre>
+<h3 id="auto-scaling-configuration">Auto-scaling Configuration</h3>
+<pre><code class="lang-bash"># Configure horizontal pod autoscaler (Kubernetes)
+kubectl autoscale deployment aura-api \
+  --min=2 \
+  --max=10 \
+  --cpu-percent=70
+
+# Verify autoscaler
+kubectl get hpa
+</code></pre>
+<hr>
+<h2 id="incident-response">Incident Response</h2>
+<h3 id="severity-levels">Severity Levels</h3>
+<p><strong>SEV1 - Critical</strong>: Complete outage, data loss
+<strong>SEV2 - High</strong>: Major feature broken, performance degraded
+<strong>SEV3 - Medium</strong>: Minor feature issue, workaround available
+<strong>SEV4 - Low</strong>: Cosmetic issue, no user impact</p>
+<h3 id="sev1-response">SEV1 Response</h3>
+<pre><code class="lang-bash"># 1. Declare incident
+echo &quot;SEV1: $(date)&quot;
+
+# 2. Assess situation
+curl https://api.aura.studio/health
+docker ps
+docker logs aura-production-api --tail 100
+
+# 3. Immediate mitigation
+# Option A: Rollback
+./deploy/rollback.sh production &quot;SEV1 incident&quot;
+
+# Option B: Scale up
+docker compose up -d --scale api=6
+
+# Option C: Restart services
+docker compose restart
+
+# 4. Monitor recovery
+watch -n 10 './deploy/validate-deployment.sh production'
+
+# 5. Document incident
+./deploy/audit-deployment.sh production incident sev1 initiated
+</code></pre>
+<h3 id="communication-template">Communication Template</h3>
+<pre><code>🚨 Incident Alert
+
+Severity: SEV1
+Status: Investigating
+Impact: API unavailable
+Started: 2024-11-10 14:30 UTC
+
+Timeline:
+14:30 - Incident detected
+14:32 - Investigation started
+14:35 - Rollback initiated
+
+Current actions:
+- Rolling back to v1.2.2
+- Monitoring health checks
+
+Next update: 15:00 UTC
+</code></pre>
+<hr>
+<p><strong>Last Updated</strong>: 2024-11-10<br>
+<strong>Document Owner</strong>: DevOps Team<br>
+<strong>Emergency Contact</strong>: +1-555-0100</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/deployment/RUNBOOKS.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

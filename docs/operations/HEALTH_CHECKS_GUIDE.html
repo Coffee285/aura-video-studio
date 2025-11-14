@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Health Checks Implementation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Health Checks Implementation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/HEALTH_CHECKS_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="health-checks-implementation-guide">Health Checks Implementation Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Aura system implements comprehensive health checks to ensure operational visibility and automatic recovery. This guide covers the health check system architecture, endpoints, and operational procedures.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="health-check-components">Health Check Components</h3>
+<ol>
+<li><p><strong>Database Health Check</strong> (<code>DatabaseHealthCheck</code>)</p>
+<ul>
+<li>Validates database connectivity and responsiveness</li>
+<li>Measures query response times</li>
+<li>Reports connection status and performance metrics</li>
+</ul>
+</li>
+<li><p><strong>Memory Health Check</strong> (<code>MemoryHealthCheck</code>)</p>
+<ul>
+<li>Monitors application memory usage</li>
+<li>Tracks GC statistics</li>
+<li>Detects memory pressure and potential leaks</li>
+</ul>
+</li>
+<li><p><strong>Disk Space Health Check</strong> (<code>DiskSpaceHealthCheck</code>)</p>
+<ul>
+<li>Monitors available disk space</li>
+<li>Alerts on low disk space conditions</li>
+<li>Prevents disk exhaustion failures</li>
+</ul>
+</li>
+<li><p><strong>Dependency Health Check</strong> (<code>DependencyHealthCheck</code>)</p>
+<ul>
+<li>Validates FFmpeg availability and version</li>
+<li>Checks GPU availability and capabilities</li>
+<li>Verifies system tier configuration</li>
+</ul>
+</li>
+<li><p><strong>Provider Health Check</strong> (<code>ProviderHealthCheck</code>)</p>
+<ul>
+<li>Validates LLM provider configuration</li>
+<li>Checks TTS provider availability</li>
+<li>Verifies API key configuration</li>
+</ul>
+</li>
+<li><p><strong>Startup Health Check</strong> (<code>StartupHealthCheck</code>)</p>
+<ul>
+<li>Ensures application initialization is complete</li>
+<li>Used for Kubernetes readiness probes</li>
+<li>Prevents premature traffic routing</li>
+</ul>
+</li>
+</ol>
+<h2 id="health-check-endpoints">Health Check Endpoints</h2>
+<h3 id="liveness-probe">Liveness Probe</h3>
+<p><strong>Endpoint:</strong> <code>GET /health/live</code></p>
+<p>Returns a simple 200 OK if the application process is running.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-10T12:00:00Z&quot;
+}
+</code></pre>
+<p><strong>Use Case:</strong> Kubernetes liveness probe, basic uptime monitoring</p>
+<h3 id="readiness-probe">Readiness Probe</h3>
+<p><strong>Endpoint:</strong> <code>GET /health/ready</code></p>
+<p>Returns detailed status of all readiness checks.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-10T12:00:00Z&quot;,
+  &quot;duration&quot;: 123.45,
+  &quot;checks&quot;: [
+    {
+      &quot;name&quot;: &quot;Database&quot;,
+      &quot;status&quot;: &quot;healthy&quot;,
+      &quot;description&quot;: &quot;Database healthy (response: 23ms)&quot;,
+      &quot;duration&quot;: 25.3,
+      &quot;data&quot;: {
+        &quot;connection_available&quot;: true,
+        &quot;response_time_ms&quot;: 23,
+        &quot;project_count&quot;: 42
+      },
+      &quot;tags&quot;: [&quot;ready&quot;, &quot;db&quot;]
+    }
+  ]
+}
+</code></pre>
+<p><strong>Use Case:</strong> Kubernetes readiness probe, load balancer health checks</p>
+<h3 id="full-health-check">Full Health Check</h3>
+<p><strong>Endpoint:</strong> <code>GET /health</code></p>
+<p>Returns comprehensive health information including environment and version.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-10T12:00:00Z&quot;,
+  &quot;duration&quot;: 145.67,
+  &quot;environment&quot;: &quot;Production&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;checks&quot;: [...]
+}
+</code></pre>
+<p><strong>Use Case:</strong> Monitoring dashboards, detailed diagnostics</p>
+<h3 id="tag-based-health-checks">Tag-Based Health Checks</h3>
+<p><strong>Endpoint:</strong> <code>GET /health/{tag}</code></p>
+<p>Returns health checks filtered by tag (e.g., <code>db</code>, <code>infrastructure</code>, <code>providers</code>).</p>
+<pre><code class="lang-bash">GET /health/db
+GET /health/infrastructure
+GET /health/providers
+</code></pre>
+<p><strong>Use Case:</strong> Component-specific monitoring, targeted diagnostics</p>
+<h2 id="health-status-levels">Health Status Levels</h2>
+<h3 id="healthy">Healthy</h3>
+<p>All health checks pass. System is operating normally.</p>
+<h3 id="degraded">Degraded</h3>
+<p>Some non-critical issues detected. System is operational but may have reduced functionality or performance.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li>FFmpeg not available (video rendering disabled)</li>
+<li>Memory usage above warning threshold</li>
+<li>Slow database response times</li>
+</ul>
+<h3 id="unhealthy">Unhealthy</h3>
+<p>Critical issues detected. System may not function properly.</p>
+<p><strong>Examples:</strong></p>
+<ul>
+<li>Database connection failed</li>
+<li>Memory exhausted</li>
+<li>Disk space critically low</li>
+<li>No LLM providers configured</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<p>Health check thresholds are configured in <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;HealthChecks&quot;: {
+    &quot;DiskSpaceThresholdGB&quot;: 1.0,
+    &quot;DiskSpaceCriticalGB&quot;: 0.5,
+    &quot;MemoryWarningThresholdMB&quot;: 1024.0,
+    &quot;MemoryCriticalThresholdMB&quot;: 2048.0,
+    &quot;DatabaseWarningThresholdMs&quot;: 500,
+    &quot;DatabaseCriticalThresholdMs&quot;: 2000,
+    &quot;Timeout&quot;: &quot;00:00:10&quot;,
+    &quot;EnableDetailedLogging&quot;: false,
+    &quot;EnableAutoRecovery&quot;: true
+  }
+}
+</code></pre>
+<h3 id="configuration-parameters">Configuration Parameters</h3>
+<ul>
+<li><strong>DiskSpaceThresholdGB</strong>: Warning threshold for free disk space (GB)</li>
+<li><strong>DiskSpaceCriticalGB</strong>: Critical threshold for free disk space (GB)</li>
+<li><strong>MemoryWarningThresholdMB</strong>: Warning threshold for memory usage (MB)</li>
+<li><strong>MemoryCriticalThresholdMB</strong>: Critical threshold for memory usage (MB)</li>
+<li><strong>DatabaseWarningThresholdMs</strong>: Warning threshold for database response time (ms)</li>
+<li><strong>DatabaseCriticalThresholdMs</strong>: Critical threshold for database response time (ms)</li>
+<li><strong>Timeout</strong>: Maximum time for health checks to complete</li>
+<li><strong>EnableDetailedLogging</strong>: Enable verbose health check logging</li>
+<li><strong>EnableAutoRecovery</strong>: Enable automatic recovery attempts</li>
+</ul>
+<h2 id="frontend-integration">Frontend Integration</h2>
+<h3 id="health-dashboard">Health Dashboard</h3>
+<p>The system includes a comprehensive health dashboard at <code>/health-dashboard</code>:</p>
+<pre><code class="lang-tsx">import { HealthDashboard } from '@/components/Health/HealthDashboard';
+
+// The dashboard automatically polls health status every 30 seconds
+&lt;HealthDashboard /&gt;
+</code></pre>
+<h3 id="custom-health-monitoring-hook">Custom Health Monitoring Hook</h3>
+<pre><code class="lang-tsx">import { useHealthMonitoring } from '@/hooks/useHealthMonitoring';
+
+function MyComponent() {
+  const {
+    health,
+    loading,
+    error,
+    isMonitoring,
+    startMonitoring,
+    stopMonitoring,
+    refresh,
+  } = useHealthMonitoring({
+    pollingInterval: 30000,
+    enableAutoRetry: true,
+    autoStart: true,
+  });
+
+  return (
+    &lt;div&gt;
+      {health &amp;&amp; &lt;div&gt;Status: {health.status}&lt;/div&gt;}
+      &lt;button onClick={refresh}&gt;Refresh&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h2 id="monitoring-and-alerting">Monitoring and Alerting</h2>
+<h3 id="prometheus-integration">Prometheus Integration</h3>
+<p>Health check metrics are exposed for Prometheus scraping:</p>
+<pre><code class="lang-yaml"># prometheus.yml
+scrape_configs:
+  - job_name: 'aura-health'
+    scrape_interval: 30s
+    metrics_path: '/health'
+    static_configs:
+      - targets: ['localhost:5005']
+</code></pre>
+<h3 id="alert-rules">Alert Rules</h3>
+<p>Example Prometheus alert rules:</p>
+<pre><code class="lang-yaml">groups:
+  - name: aura_health
+    rules:
+      - alert: AuraUnhealthy
+        expr: aura_health_status != 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: &quot;Aura health check failing&quot;
+          description: &quot;{{ $labels.check }} health check has been failing for 5 minutes&quot;
+
+      - alert: AuraDegraded
+        expr: aura_health_status == 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: &quot;Aura running in degraded mode&quot;
+          description: &quot;{{ $labels.check }} health check is degraded&quot;
+</code></pre>
+<h2 id="kubernetes-integration">Kubernetes Integration</h2>
+<h3 id="liveness-and-readiness-probes">Liveness and Readiness Probes</h3>
+<pre><code class="lang-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aura-api
+spec:
+  template:
+    spec:
+      containers:
+        - name: aura-api
+          image: aura/api:latest
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 5005
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 5005
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3
+</code></pre>
+<h3 id="startup-probe">Startup Probe</h3>
+<p>For slow-starting applications:</p>
+<pre><code class="lang-yaml">startupProbe:
+  httpGet:
+    path: /health/ready
+    port: 5005
+  initialDelaySeconds: 0
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 30  # 30 * 5s = 150s max startup time
+</code></pre>
+<h2 id="load-balancer-configuration">Load Balancer Configuration</h2>
+<h3 id="azure-application-gateway">Azure Application Gateway</h3>
+<pre><code class="lang-json">{
+  &quot;healthProbe&quot;: {
+    &quot;protocol&quot;: &quot;Http&quot;,
+    &quot;path&quot;: &quot;/health/ready&quot;,
+    &quot;interval&quot;: 30,
+    &quot;timeout&quot;: 30,
+    &quot;unhealthyThreshold&quot;: 3,
+    &quot;pickHostNameFromBackendHttpSettings&quot;: true,
+    &quot;minServers&quot;: 0,
+    &quot;match&quot;: {
+      &quot;statusCodes&quot;: [&quot;200&quot;]
+    }
+  }
+}
+</code></pre>
+<h3 id="aws-alb">AWS ALB</h3>
+<pre><code class="lang-json">{
+  &quot;HealthCheckEnabled&quot;: true,
+  &quot;HealthCheckPath&quot;: &quot;/health/ready&quot;,
+  &quot;HealthCheckIntervalSeconds&quot;: 30,
+  &quot;HealthCheckTimeoutSeconds&quot;: 5,
+  &quot;HealthyThresholdCount&quot;: 2,
+  &quot;UnhealthyThresholdCount&quot;: 3,
+  &quot;Matcher&quot;: {
+    &quot;HttpCode&quot;: &quot;200&quot;
+  }
+}
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>See <a href="HEALTH_CHECKS_RUNBOOK.html">Health Check Runbook</a> for detailed troubleshooting procedures.</p>
+<h2 id="testing-health-checks">Testing Health Checks</h2>
+<h3 id="manual-testing">Manual Testing</h3>
+<pre><code class="lang-bash"># Check liveness
+curl http://localhost:5005/health/live
+
+# Check readiness
+curl http://localhost:5005/health/ready
+
+# Get full health details
+curl http://localhost:5005/health
+
+# Check specific components
+curl http://localhost:5005/health/db
+curl http://localhost:5005/health/infrastructure
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<p>Health checks are tested in the integration test suite:</p>
+<pre><code class="lang-csharp">[Fact]
+public async Task HealthCheck_ReturnsHealthy()
+{
+    var response = await _client.GetAsync(&quot;/health/ready&quot;);
+    response.EnsureSuccessStatusCode();
+    
+    var health = await response.Content.ReadFromJsonAsync&lt;HealthCheckResponse&gt;();
+    Assert.Equal(&quot;healthy&quot;, health.Status);
+}
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Set Appropriate Timeouts</strong>: Health checks should complete quickly (&lt; 10s)</li>
+<li><strong>Avoid False Positives</strong>: Configure thresholds to prevent unnecessary alerts</li>
+<li><strong>Monitor Check Duration</strong>: Slow health checks indicate system issues</li>
+<li><strong>Use Tags Effectively</strong>: Tag checks for targeted monitoring</li>
+<li><strong>Enable Auto-Recovery</strong>: Let the system attempt automatic recovery</li>
+<li><strong>Review Regularly</strong>: Periodically review health check logs and metrics</li>
+<li><strong>Test Failure Scenarios</strong>: Regularly test health check behavior during failures</li>
+</ol>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="HEALTH_CHECKS_RUNBOOK.html">Health Check Runbook</a></li>
+<li>Monitoring Guide</li>
+<li>Alerting Configuration</li>
+<li>Operational Readiness</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/HEALTH_CHECKS_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

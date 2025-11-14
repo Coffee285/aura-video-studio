@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>PR #1 Verification Checklist | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="PR #1 Verification Checklist | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/VERIFICATION_CHECKLIST.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="pr-1-verification-checklist">PR #1 Verification Checklist</h1>
+
+<p>Use this checklist to verify the local development environment setup works correctly.</p>
+<h2 id="pre-verification-setup">Pre-Verification Setup</h2>
+<ul>
+<li>[ ] Clean clone of repository OR <code>make clean</code> to start fresh</li>
+<li>[ ] Docker Desktop is running</li>
+<li>[ ] No services running on ports 3000, 5005, or 6379</li>
+</ul>
+<h2 id="installation-verification">Installation Verification</h2>
+<h3 id="1-setup-script">1. Setup Script</h3>
+<p><strong>Linux/macOS:</strong></p>
+<pre><code class="lang-bash">./scripts/setup-local.sh
+</code></pre>
+<p><strong>Windows:</strong></p>
+<pre><code class="lang-powershell">.\scripts\setup-local.ps1
+</code></pre>
+<p><strong>Expected Output:</strong></p>
+<ul>
+<li>[ ] ✓ Docker version detected</li>
+<li>[ ] ✓ Docker Compose detected</li>
+<li>[ ] ✓ All directories created (data, logs, temp-media)</li>
+<li>[ ] ✓ .env created from .env.example</li>
+<li>[ ] ✓ Ports 5005, 3000, 6379 reported as available</li>
+<li>[ ] ✓ Docker images pulled</li>
+<li>[ ] ✓ Helper scripts created</li>
+</ul>
+<p><strong>Time:</strong> Should complete in 1-3 minutes</p>
+<h3 id="2-service-startup">2. Service Startup</h3>
+<pre><code class="lang-bash">make dev
+</code></pre>
+<p><strong>Expected Output:</strong></p>
+<ul>
+<li>[ ] Redis container starts</li>
+<li>[ ] FFmpeg container starts</li>
+<li>[ ] API container starts and becomes healthy</li>
+<li>[ ] Web container starts and becomes healthy</li>
+<li>[ ] No error messages in logs</li>
+<li>[ ] All services show &quot;healthy&quot; status</li>
+</ul>
+<p><strong>Time:</strong> Should complete in 45-60 seconds</p>
+<h2 id="health-check-verification">Health Check Verification</h2>
+<h3 id="3-api-health">3. API Health</h3>
+<pre><code class="lang-bash">curl http://localhost:5005/health/live
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] HTTP 200 response</li>
+<li>[ ] JSON response with &quot;status&quot;: &quot;Healthy&quot;</li>
+</ul>
+<pre><code class="lang-bash">make health
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] ✓ API is healthy</li>
+<li>[ ] ✓ Redis is healthy</li>
+<li>[ ] ✓ Web is accessible</li>
+</ul>
+<h3 id="4-service-status">4. Service Status</h3>
+<pre><code class="lang-bash">make status
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] aura_api_1 - State: Up, Status: healthy</li>
+<li>[ ] aura_web_1 - State: Up, Status: healthy</li>
+<li>[ ] aura_redis_1 - State: Up, Status: healthy</li>
+<li>[ ] aura_ffmpeg_1 - State: Up</li>
+</ul>
+<h2 id="functionality-verification">Functionality Verification</h2>
+<h3 id="5-web-ui-access">5. Web UI Access</h3>
+<p><strong>Open browser to http://localhost:3000</strong></p>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] UI loads without errors</li>
+<li>[ ] No console errors in browser dev tools</li>
+<li>[ ] Can navigate between pages</li>
+<li>[ ] API requests succeed (check Network tab)</li>
+</ul>
+<h3 id="6-api-swagger-documentation">6. API Swagger Documentation</h3>
+<p><strong>Open browser to http://localhost:5005/swagger</strong></p>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Swagger UI loads</li>
+<li>[ ] API endpoints listed</li>
+<li>[ ] Can expand and view endpoint details</li>
+</ul>
+<h3 id="7-database-verification">7. Database Verification</h3>
+<pre><code class="lang-bash"># Check database file exists
+ls -la data/aura.db
+
+# Check sample data (requires sqlite3)
+sqlite3 data/aura.db &quot;SELECT COUNT(*) FROM Projects;&quot;
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] aura.db file exists in data/ directory</li>
+<li>[ ] Sample data returns count of 3 projects</li>
+<li>[ ] No database errors</li>
+</ul>
+<p><strong>Alternative (via API):</strong></p>
+<pre><code class="lang-bash">curl http://localhost:5005/api/v1/projects
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Returns JSON array</li>
+<li>[ ] Contains sample projects</li>
+</ul>
+<h3 id="8-logs-verification">8. Logs Verification</h3>
+<pre><code class="lang-bash">make logs | head -20
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Logs from all services visible</li>
+<li>[ ] Timestamps present</li>
+<li>[ ] No ERROR level messages</li>
+<li>[ ] Structured log format</li>
+</ul>
+<p><strong>Check log files:</strong></p>
+<pre><code class="lang-bash">ls -la logs/
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Log files created in logs/ directory</li>
+</ul>
+<h2 id="command-verification">Command Verification</h2>
+<h3 id="9-management-commands">9. Management Commands</h3>
+<pre><code class="lang-bash"># Stop services
+make stop
+</code></pre>
+<p><strong>Expected:</strong> All services stop gracefully</p>
+<pre><code class="lang-bash"># Restart services
+make restart
+</code></pre>
+<p><strong>Expected:</strong> All services restart and become healthy again</p>
+<pre><code class="lang-bash"># View individual logs
+make logs-api | head -10
+make logs-web | head -10
+</code></pre>
+<p><strong>Expected:</strong> Service-specific logs displayed</p>
+<h3 id="10-database-commands">10. Database Commands</h3>
+<pre><code class="lang-bash"># Run migrations (should be no-op after initial setup)
+make db-migrate
+</code></pre>
+<p><strong>Expected:</strong> Migrations reported as up-to-date</p>
+<h2 id="negative-testing">Negative Testing</h2>
+<h3 id="11-port-conflict-detection">11. Port Conflict Detection</h3>
+<pre><code class="lang-bash"># Start a service on port 5005 in another terminal
+nc -l 5005
+
+# In main terminal
+make dev
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Port conflict detected</li>
+<li>[ ] Clear error message</li>
+<li>[ ] Instructions to resolve</li>
+</ul>
+<h3 id="12-missing-environment-variable">12. Missing Environment Variable</h3>
+<pre><code class="lang-bash"># Remove a variable from .env
+# Try starting services
+make dev
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Services start with defaults OR</li>
+<li>[ ] Clear error message about missing config</li>
+</ul>
+<h2 id="vs-code-integration">VS Code Integration</h2>
+<h3 id="13-launch-configurations">13. Launch Configurations</h3>
+<p><strong>Open VS Code and:</strong></p>
+<ul>
+<li>[ ] Open Command Palette (Ctrl+Shift+P)</li>
+<li>[ ] Type &quot;Debug: Select and Start Debugging&quot;</li>
+<li>[ ] See &quot;Full Stack (Docker)&quot; configuration</li>
+<li>[ ] Can start debugging session</li>
+</ul>
+<h3 id="14-tasks">14. Tasks</h3>
+<p><strong>In VS Code:</strong></p>
+<ul>
+<li>[ ] Terminal → Run Task (Ctrl+Shift+P → &quot;Tasks: Run Task&quot;)</li>
+<li>[ ] See all custom tasks (start-all-services, stop-all-services, etc.)</li>
+<li>[ ] Can execute tasks successfully</li>
+</ul>
+<h2 id="documentation-verification">Documentation Verification</h2>
+<h3 id="15-documentation-completeness">15. Documentation Completeness</h3>
+<ul>
+<li>[ ] README.md has updated quick start section</li>
+<li>[ ] DEVELOPMENT.md exists and is comprehensive</li>
+<li>[ ] TROUBLESHOOTING.md exists with solutions</li>
+<li>[ ] QUICK_REFERENCE.md provides one-page reference</li>
+<li>[ ] All documentation renders correctly in Markdown</li>
+</ul>
+<h3 id="16-help-system">16. Help System</h3>
+<pre><code class="lang-bash">make help
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Clear list of all available commands</li>
+<li>[ ] Descriptions for each command</li>
+<li>[ ] Quick start instructions</li>
+<li>[ ] Colored output for readability</li>
+</ul>
+<h2 id="performance-verification">Performance Verification</h2>
+<h3 id="17-resource-usage">17. Resource Usage</h3>
+<pre><code class="lang-bash">docker stats --no-stream
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] Total CPU usage &lt; 50% (on 4+ core system)</li>
+<li>[ ] Total memory usage &lt; 2GB</li>
+<li>[ ] No services using excessive resources</li>
+</ul>
+<h3 id="18-startup-time">18. Startup Time</h3>
+<p><strong>Measure from <code>make dev</code> to all healthy:</strong></p>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] First run (with build): 2-3 minutes</li>
+<li>[ ] Subsequent runs: 45-60 seconds</li>
+<li>[ ] All services healthy within timeout</li>
+</ul>
+<h2 id="cleanup-verification">Cleanup Verification</h2>
+<h3 id="19-clean-shutdown">19. Clean Shutdown</h3>
+<pre><code class="lang-bash">make stop
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] All services stop gracefully</li>
+<li>[ ] No orphaned containers: <code>docker ps -a</code></li>
+<li>[ ] Data persists after stop</li>
+</ul>
+<h3 id="20-full-cleanup">20. Full Cleanup</h3>
+<pre><code class="lang-bash">make clean
+</code></pre>
+<p><strong>Expected:</strong></p>
+<ul>
+<li>[ ] All containers removed</li>
+<li>[ ] All volumes removed (if specified)</li>
+<li>[ ] Network removed</li>
+<li>[ ] Can restart cleanly with <code>make dev</code></li>
+</ul>
+<h2 id="cross-platform-verification">Cross-Platform Verification</h2>
+<h3 id="21-platform-specific">21. Platform-Specific</h3>
+<p><strong>Windows:</strong></p>
+<ul>
+<li>[ ] PowerShell scripts execute without errors</li>
+<li>[ ] Paths work with backslashes</li>
+<li>[ ] Docker Desktop integration works</li>
+</ul>
+<p><strong>macOS:</strong></p>
+<ul>
+<li>[ ] File watching works for hot reload</li>
+<li>[ ] No performance issues with Docker</li>
+<li>[ ] M1/M2 compatibility (if applicable)</li>
+</ul>
+<p><strong>Linux:</strong></p>
+<ul>
+<li>[ ] File permissions correct</li>
+<li>[ ] Docker socket accessible</li>
+<li>[ ] No SELinux issues</li>
+</ul>
+<h2 id="final-verification">Final Verification</h2>
+<h3 id="22-end-to-end-developer-experience">22. End-to-End Developer Experience</h3>
+<p><strong>Simulate a new developer:</strong></p>
+<ol>
+<li>[ ] Clone repository</li>
+<li>[ ] Run setup script</li>
+<li>[ ] Execute <code>make dev</code></li>
+<li>[ ] Open browser to http://localhost:3000</li>
+<li>[ ] Make a code change in Aura.Web/src</li>
+<li>[ ] Verify hot reload works</li>
+<li>[ ] Make a code change in Aura.Api</li>
+<li>[ ] Rebuild with <code>docker-compose up --build -d api</code></li>
+<li>[ ] View logs with <code>make logs</code></li>
+<li>[ ] Stop services with <code>make stop</code></li>
+</ol>
+<p><strong>Total time for new developer:</strong> &lt; 10 minutes</p>
+<h3 id="23-troubleshooting-guide-test">23. Troubleshooting Guide Test</h3>
+<p><strong>Pick 3 issues from TROUBLESHOOTING.md:</strong></p>
+<ul>
+<li>[ ] Follow solutions for each</li>
+<li>[ ] Verify solutions work</li>
+<li>[ ] Verify commands are correct</li>
+</ul>
+<h2 id="acceptance-criteria-review">Acceptance Criteria Review</h2>
+<ul>
+<li>[ ] ✅ Single command brings up all services</li>
+<li>[ ] ✅ All services report healthy within 60 seconds</li>
+<li>[ ] ✅ Frontend can make authenticated API calls</li>
+<li>[ ] ✅ Database has test data loaded</li>
+<li>[ ] ✅ Logs aggregated and visible via make logs</li>
+<li>[ ] ✅ Health checks for all dependencies</li>
+<li>[ ] ✅ Structured logging to ./logs/ directory</li>
+<li>[ ] ✅ Port collision detection and reporting</li>
+<li>[ ] ✅ Service startup order enforcement</li>
+<li>[ ] ✅ Secrets only in .env files (gitignored)</li>
+<li>[ ] ✅ Default passwords documented as insecure</li>
+<li>[ ] ✅ CORS properly configured for local dev</li>
+<li>[ ] ✅ Idempotent migration scripts</li>
+<li>[ ] ✅ Rollback script for each migration</li>
+<li>[ ] ✅ Migration version tracking table</li>
+</ul>
+<h2 id="sign-off">Sign-off</h2>
+<p><strong>Verified by:</strong> _________________</p>
+<p><strong>Date:</strong> _________________</p>
+<p><strong>Platform:</strong> [ ] Windows [ ] macOS [ ] Linux</p>
+<p><strong>Docker version:</strong> _________________</p>
+<p><strong>Issues found:</strong> _________________</p>
+<p><strong>Notes:</strong></p>
+<pre><code>[Space for additional notes]
+</code></pre>
+<hr>
+<h2 id="quick-verification-5-minutes">Quick Verification (5 minutes)</h2>
+<p>For a fast sanity check:</p>
+<pre><code class="lang-bash"># 1. Setup
+./scripts/setup-local.sh
+
+# 2. Start
+make dev-detached
+
+# 3. Wait 60 seconds, then check
+sleep 60 &amp;&amp; make health
+
+# 4. Open browser
+open http://localhost:3000  # macOS
+xdg-open http://localhost:3000  # Linux
+start http://localhost:3000  # Windows
+
+# 5. Check logs
+make logs | tail -50
+
+# 6. Cleanup
+make stop
+</code></pre>
+<p><strong>Expected:</strong> All green checkmarks, no errors.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/VERIFICATION_CHECKLIST.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

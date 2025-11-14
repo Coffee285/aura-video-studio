@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Alert Creation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Alert Creation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/monitoring/ALERT_CREATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="alert-creation-guide">Alert Creation Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide provides step-by-step instructions for creating effective alerts in Aura. Following these guidelines ensures alerts are actionable, minimize false positives, and enable rapid incident response.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#alert-design-principles">Alert Design Principles</a></li>
+<li><a href="#alert-lifecycle">Alert Lifecycle</a></li>
+<li><a href="#creating-alerts">Creating Alerts</a></li>
+<li><a href="#alert-types">Alert Types</a></li>
+<li><a href="#threshold-tuning">Threshold Tuning</a></li>
+<li><a href="#testing-alerts">Testing Alerts</a></li>
+<li><a href="#alert-best-practices">Alert Best Practices</a></li>
+</ul>
+<h2 id="alert-design-principles">Alert Design Principles</h2>
+<h3 id="1-every-alert-must-be-actionable">1. Every Alert Must Be Actionable</h3>
+<p><strong>Question to ask</strong>: &quot;If this alert fires at 3am, what specific action should the on-call engineer take?&quot;</p>
+<p><strong>Good Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;API Availability Below SLO&quot;,
+  &quot;description&quot;: &quot;API success rate dropped below 99.9%&quot;,
+  &quot;action&quot;: &quot;Check error logs, identify failing endpoints, escalate if needed&quot;,
+  &quot;runbook&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/api-availability&quot;
+}
+</code></pre>
+<p><strong>Bad Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;High Request Count&quot;,
+  &quot;description&quot;: &quot;API is receiving many requests&quot;,
+  &quot;action&quot;: &quot;???&quot; // Not actionable - high traffic might be normal
+}
+</code></pre>
+<h3 id="2-alert-on-symptoms-not-causes">2. Alert on Symptoms, Not Causes</h3>
+<p>Alert on user-visible problems, not the underlying causes.</p>
+<p><strong>Symptoms</strong> (alert on these):</p>
+<ul>
+<li>✅ API returning 500 errors</li>
+<li>✅ Job success rate below SLO</li>
+<li>✅ P95 latency exceeding target</li>
+</ul>
+<p><strong>Causes</strong> (don't directly alert, but monitor):</p>
+<ul>
+<li>❌ CPU usage at 70%</li>
+<li>❌ Memory at 1.5GB</li>
+<li>❌ Database connection pool 80% full</li>
+</ul>
+<p><strong>Why?</strong> Causes don't always lead to user impact. Alert on symptoms, then investigate causes.</p>
+<h3 id="3-set-appropriate-severity">3. Set Appropriate Severity</h3>
+<p><strong>Critical</strong> (Page immediately):</p>
+<ul>
+<li>Service outage</li>
+<li>Data loss</li>
+<li>Security breach</li>
+<li>SLO breach with user impact</li>
+</ul>
+<p><strong>Warning</strong> (Notify Slack):</p>
+<ul>
+<li>Degraded performance</li>
+<li>Approaching SLO threshold</li>
+<li>Non-critical failures</li>
+</ul>
+<p><strong>Info</strong> (Dashboard only):</p>
+<ul>
+<li>Usage trends</li>
+<li>Capacity planning metrics</li>
+<li>Informational events</li>
+</ul>
+<h2 id="alert-lifecycle">Alert Lifecycle</h2>
+<pre><code>1. Define → 2. Implement → 3. Test → 4. Deploy → 5. Monitor → 6. Tune → 7. Review
+     ↑                                                                      ↓
+     ←──────────────────────────────────────────────────────────────────────
+</code></pre>
+<h3 id="1-define">1. Define</h3>
+<ul>
+<li>Identify the problem to detect</li>
+<li>Define the metric and threshold</li>
+<li>Determine severity and notification channels</li>
+<li>Write the runbook</li>
+</ul>
+<h3 id="2-implement">2. Implement</h3>
+<ul>
+<li>Add metric collection code</li>
+<li>Create alert rule configuration</li>
+<li>Set up notification channels</li>
+</ul>
+<h3 id="3-test">3. Test</h3>
+<ul>
+<li>Inject failures to verify alert fires</li>
+<li>Confirm notifications are sent</li>
+<li>Validate runbook accuracy</li>
+</ul>
+<h3 id="4-deploy">4. Deploy</h3>
+<ul>
+<li>Roll out to staging first</li>
+<li>Monitor for false positives</li>
+<li>Adjust thresholds if needed</li>
+</ul>
+<h3 id="5-monitor">5. Monitor</h3>
+<ul>
+<li>Track alert firing frequency</li>
+<li>Measure false positive rate</li>
+<li>Gather feedback from on-call</li>
+</ul>
+<h3 id="6-tune">6. Tune</h3>
+<ul>
+<li>Adjust thresholds based on data</li>
+<li>Modify evaluation windows</li>
+<li>Update runbooks based on incidents</li>
+</ul>
+<h3 id="7-review">7. Review</h3>
+<ul>
+<li>Monthly review of all alerts</li>
+<li>Retire alerts that never fire or are not actionable</li>
+<li>Update based on system changes</li>
+</ul>
+<h2 id="creating-alerts">Creating Alerts</h2>
+<h3 id="step-1-identify-the-metric">Step 1: Identify the Metric</h3>
+<p><strong>Business Metrics</strong>:</p>
+<ul>
+<li><code>jobs.completed</code> (with <code>status</code> tag)</li>
+<li><code>video.generated</code></li>
+<li><code>llm.requests</code></li>
+<li><code>cost.usd</code></li>
+</ul>
+<p><strong>System Metrics</strong>:</p>
+<ul>
+<li><code>api.requests</code> (with <code>status_code</code> tag)</li>
+<li><code>api.request_duration_ms</code></li>
+<li><code>queue.depth</code></li>
+<li><code>provider.healthy</code></li>
+</ul>
+<p><strong>Performance Metrics</strong>:</p>
+<ul>
+<li>CPU usage</li>
+<li>Memory usage</li>
+<li>Database query duration</li>
+</ul>
+<h3 id="step-2-define-the-slo">Step 2: Define the SLO</h3>
+<pre><code class="lang-csharp">var slo = new ServiceLevelObjective
+{
+    Name = &quot;job_success_rate_target&quot;,
+    Description = &quot;Jobs should succeed 95% of the time&quot;,
+    SliName = &quot;job_success_rate&quot;, // References an SLI
+    Operator = SloOperator.GreaterThanOrEqual,
+    TargetValue = 95.0,
+    EvaluationWindow = TimeSpan.FromMinutes(15),
+    Severity = &quot;warning&quot;,
+    NotificationChannels = new List&lt;string&gt; { &quot;slack&quot; }
+};
+</code></pre>
+<h3 id="step-3-add-metric-collection">Step 3: Add Metric Collection</h3>
+<pre><code class="lang-csharp">// In your service code
+_businessMetrics.RecordJobCompleted(
+    jobType: &quot;video_generation&quot;,
+    success: true,
+    duration: TimeSpan.FromMinutes(5),
+    cost: 0.25m
+);
+</code></pre>
+<h3 id="step-4-write-the-runbook">Step 4: Write the Runbook</h3>
+<p>Create a runbook at <code>docs/runbooks/&lt;alert-name&gt;.md</code>:</p>
+<pre><code class="lang-markdown"># Job Failure Rate High
+
+## Alert Details
+- **Severity**: Warning
+- **SLO**: 95% job success rate
+- **Evaluation**: 15-minute window
+
+## Symptoms
+- Job failure rate exceeds 5%
+- Users may experience failed video generations
+
+## Investigation Steps
+1. Check recent error logs: `/api/logs?level=error`
+2. Review failing jobs: `/api/jobs?status=failed`
+3. Check provider health: `/api/health/providers`
+4. Review recent deployments
+
+## Common Causes
+- Provider API outages
+- Invalid user inputs
+- Insufficient resources
+- Code bugs in new deployment
+
+## Resolution Steps
+1. If provider outage: Switch to backup provider
+2. If resource issue: Scale up resources
+3. If recent deployment: Rollback to previous version
+4. If bug: Create hotfix and deploy
+
+## Escalation
+- After 30 minutes: Escalate to senior engineer
+- After 1 hour: Escalate to engineering manager
+</code></pre>
+<h3 id="step-5-configure-notification-channels">Step 5: Configure Notification Channels</h3>
+<p>In <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;NotificationChannels&quot;: {
+      &quot;Slack&quot;: {
+        &quot;Enabled&quot;: true,
+        &quot;WebhookUrl&quot;: &quot;https://hooks.slack.com/services/YOUR/WEBHOOK/URL&quot;,
+        &quot;Channel&quot;: &quot;#aura-alerts&quot;
+      },
+      &quot;PagerDuty&quot;: {
+        &quot;Enabled&quot;: true,
+        &quot;IntegrationKey&quot;: &quot;YOUR_INTEGRATION_KEY&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="step-6-test-the-alert">Step 6: Test the Alert</h3>
+<pre><code class="lang-bash"># Inject failures to test alert
+curl -X POST http://localhost:5005/api/test/inject-failures \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;failureType&quot;: &quot;job_failure&quot;, &quot;count&quot;: 10}'
+
+# Check if alert fired
+curl http://localhost:5005/api/monitoring/alerts/firing
+</code></pre>
+<h2 id="alert-types">Alert Types</h2>
+<h3 id="1-availability-alerts">1. Availability Alerts</h3>
+<p><strong>Purpose</strong>: Detect when service is unavailable</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;API Availability Below SLO&quot;,
+  &quot;query&quot;: &quot;requests | summarize AvailabilityRate = (count() - countif(resultCode &gt;= 500)) * 100.0 / count()&quot;,
+  &quot;threshold&quot;: 99.9,
+  &quot;operator&quot;: &quot;LessThan&quot;,
+  &quot;severity&quot;: &quot;Critical&quot;
+}
+</code></pre>
+<h3 id="2-latency-alerts">2. Latency Alerts</h3>
+<p><strong>Purpose</strong>: Detect slow responses</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;API Latency P95 Exceeded&quot;,
+  &quot;query&quot;: &quot;requests | summarize P95Latency = percentile(duration, 95)&quot;,
+  &quot;threshold&quot;: 2000,
+  &quot;operator&quot;: &quot;GreaterThan&quot;,
+  &quot;severity&quot;: &quot;Warning&quot;
+}
+</code></pre>
+<h3 id="3-error-rate-alerts">3. Error Rate Alerts</h3>
+<p><strong>Purpose</strong>: Detect increased errors</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;High Error Rate&quot;,
+  &quot;query&quot;: &quot;requests | summarize ErrorRate = countif(resultCode &gt;= 500) * 100.0 / count()&quot;,
+  &quot;threshold&quot;: 1.0,
+  &quot;operator&quot;: &quot;GreaterThan&quot;,
+  &quot;severity&quot;: &quot;Critical&quot;
+}
+</code></pre>
+<h3 id="4-saturation-alerts">4. Saturation Alerts</h3>
+<p><strong>Purpose</strong>: Detect resource exhaustion</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Queue Depth Critical&quot;,
+  &quot;query&quot;: &quot;customMetrics | where name == 'queue.depth' | summarize AvgDepth = avg(value)&quot;,
+  &quot;threshold&quot;: 100,
+  &quot;operator&quot;: &quot;GreaterThan&quot;,
+  &quot;severity&quot;: &quot;Warning&quot;
+}
+</code></pre>
+<h3 id="5-business-metric-alerts">5. Business Metric Alerts</h3>
+<p><strong>Purpose</strong>: Detect business KPI deviations</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Daily Revenue Below Target&quot;,
+  &quot;query&quot;: &quot;customMetrics | where name == 'revenue.usd' | summarize DailyRevenue = sum(value)&quot;,
+  &quot;threshold&quot;: 1000,
+  &quot;operator&quot;: &quot;LessThan&quot;,
+  &quot;severity&quot;: &quot;Warning&quot;
+}
+</code></pre>
+<h2 id="threshold-tuning">Threshold Tuning</h2>
+<h3 id="step-1-collect-baseline-data">Step 1: Collect Baseline Data</h3>
+<p>Run the system for at least 1 week to establish normal behavior:</p>
+<pre><code class="lang-bash"># Get histogram stats for a metric
+curl http://localhost:5005/api/monitoring/metrics/histogram/api.request_duration_ms
+</code></pre>
+<h3 id="step-2-calculate-percentiles">Step 2: Calculate Percentiles</h3>
+<pre><code class="lang-json">{
+  &quot;count&quot;: 10000,
+  &quot;min&quot;: 10,
+  &quot;max&quot;: 5000,
+  &quot;mean&quot;: 150,
+  &quot;p50&quot;: 100,
+  &quot;p90&quot;: 300,
+  &quot;p95&quot;: 500,
+  &quot;p99&quot;: 1200
+}
+</code></pre>
+<h3 id="step-3-set-threshold-above-normal">Step 3: Set Threshold Above Normal</h3>
+<p><strong>Rule of Thumb</strong>: Set threshold at P95 + 50% margin</p>
+<pre><code>P95 = 500ms
+Threshold = 500ms * 1.5 = 750ms
+</code></pre>
+<h3 id="step-4-monitor-false-positives">Step 4: Monitor False Positives</h3>
+<p>Track alert firing frequency:</p>
+<ul>
+<li><strong>Too many alerts</strong> (&gt; 5/day): Threshold too sensitive</li>
+<li><strong>Never alerts</strong>: Threshold too lenient</li>
+<li><strong>Sweet spot</strong>: 1-2 alerts/week that are genuine issues</li>
+</ul>
+<h3 id="step-5-iterate">Step 5: Iterate</h3>
+<p>Review monthly and adjust thresholds based on:</p>
+<ul>
+<li>System performance changes</li>
+<li>Business growth</li>
+<li>User expectations</li>
+</ul>
+<h2 id="testing-alerts">Testing Alerts</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-csharp">[Fact]
+public async Task AlertingEngine_ShouldFireAlert_WhenSloViolated()
+{
+    // Arrange
+    var metrics = new MetricsCollector(_logger);
+    var sloConfig = new SliSloConfiguration
+    {
+        Indicators = new List&lt;ServiceLevelIndicator&gt;
+        {
+            new ServiceLevelIndicator
+            {
+                Name = &quot;test_metric&quot;,
+                MetricName = &quot;test_metric&quot;,
+                Aggregation = SliAggregation.Average
+            }
+        },
+        Objectives = new List&lt;ServiceLevelObjective&gt;
+        {
+            new ServiceLevelObjective
+            {
+                Name = &quot;test_slo&quot;,
+                SliName = &quot;test_metric&quot;,
+                Operator = SloOperator.GreaterThan,
+                TargetValue = 100
+            }
+        }
+    };
+    var alerting = new AlertingEngine(metrics, sloConfig, _logger);
+
+    // Act: Record value that violates SLO
+    metrics.RecordGauge(&quot;test_metric&quot;, 50);
+    var alerts = await alerting.EvaluateAsync();
+
+    // Assert
+    Assert.NotEmpty(alerts);
+    Assert.Equal(&quot;test_slo&quot;, alerts[0].Name);
+}
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# test-alert-integration.sh
+
+echo &quot;Testing alert pipeline...&quot;
+
+# 1. Inject metric that violates SLO
+curl -X POST http://localhost:5005/api/test/inject-metric \
+  -d '{&quot;name&quot;: &quot;api.errors&quot;, &quot;value&quot;: 100}'
+
+# 2. Wait for alert evaluation (60 seconds)
+sleep 65
+
+# 3. Check if alert fired
+FIRING_ALERTS=$(curl -s http://localhost:5005/api/monitoring/alerts/firing | jq '. | length')
+
+if [ &quot;$FIRING_ALERTS&quot; -gt 0 ]; then
+  echo &quot;✅ Alert fired successfully&quot;
+else
+  echo &quot;❌ Alert did not fire&quot;
+  exit 1
+fi
+
+# 4. Check if notification sent (check Slack, email, etc.)
+echo &quot;Verify notification was sent to configured channels&quot;
+</code></pre>
+<h3 id="synthetic-monitoring">Synthetic Monitoring</h3>
+<p>Set up external health checks:</p>
+<pre><code class="lang-yaml"># synthetic-checks.yml
+checks:
+  - name: API Health Check
+    url: https://api.aura.studio/api/monitoring/health/synthetic
+    interval: 5m
+    timeout: 10s
+    expect:
+      status: 200
+      body_contains: '&quot;status&quot;:&quot;healthy&quot;'
+</code></pre>
+<h2 id="alert-best-practices">Alert Best Practices</h2>
+<h3 id="-do">✅ DO</h3>
+<ol>
+<li><p><strong>Include Context in Alerts</strong></p>
+<pre><code>ALERT: API Availability Below SLO
+Current: 98.5% | Target: 99.9%
+Impact: Users experiencing errors
+Runbook: https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/api-availability
+Dashboard: https://portal.azure.com/...
+</code></pre>
+</li>
+<li><p><strong>Use Flapping Protection</strong></p>
+<ul>
+<li>Require 3 consecutive violations before firing</li>
+<li>Prevents alerts from firing/clearing repeatedly</li>
+</ul>
+</li>
+<li><p><strong>Set Evaluation Windows</strong></p>
+<ul>
+<li>Use 5-minute windows for latency/errors</li>
+<li>Use 15-minute windows for business metrics</li>
+<li>Balance between quick detection and false positives</li>
+</ul>
+</li>
+<li><p><strong>Group Related Alerts</strong></p>
+<ul>
+<li>One incident shouldn't cause 10 alerts</li>
+<li>Use dependencies: &quot;Don't alert on database if API is already alerting&quot;</li>
+</ul>
+</li>
+<li><p><strong>Review and Retire</strong></p>
+<ul>
+<li>Monthly review of all alerts</li>
+<li>Retire alerts that never fire</li>
+<li>Update runbooks based on incident learnings</li>
+</ul>
+</li>
+</ol>
+<h3 id="-dont">❌ DON'T</h3>
+<ol>
+<li><p><strong>Don't Alert on Everything</strong></p>
+<ul>
+<li>Not every metric needs an alert</li>
+<li>Focus on user-impacting issues</li>
+</ul>
+</li>
+<li><p><strong>Don't Use Fixed Thresholds for Dynamic Systems</strong></p>
+<ul>
+<li>Traffic patterns change over time</li>
+<li>Use percentiles and rolling windows</li>
+</ul>
+</li>
+<li><p><strong>Don't Forget to Test</strong></p>
+<ul>
+<li>Untested alerts won't work when you need them</li>
+<li>Regularly inject failures to verify alerting</li>
+</ul>
+</li>
+<li><p><strong>Don't Set and Forget</strong></p>
+<ul>
+<li>Thresholds drift over time</li>
+<li>Review and tune regularly</li>
+</ul>
+</li>
+<li><p><strong>Don't Page for Non-Urgent Issues</strong></p>
+<ul>
+<li>Save PagerDuty for true emergencies</li>
+<li>Use Slack/email for warnings</li>
+</ul>
+</li>
+</ol>
+<h2 id="alert-template">Alert Template</h2>
+<p>Use this template for consistency:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;&lt;Short descriptive name&gt;&quot;,
+  &quot;description&quot;: &quot;&lt;What problem does this detect&gt;&quot;,
+  &quot;severity&quot;: &quot;Critical|Warning|Info&quot;,
+  &quot;evaluationFrequency&quot;: &quot;PT5M&quot;,
+  &quot;windowSize&quot;: &quot;PT5M&quot;,
+  &quot;query&quot;: &quot;&lt;KQL or metric query&gt;&quot;,
+  &quot;threshold&quot;: 0,
+  &quot;operator&quot;: &quot;GreaterThan|LessThan|Equal&quot;,
+  &quot;triggerType&quot;: &quot;Total|Consecutive&quot;,
+  &quot;actionGroups&quot;: [&quot;slack&quot;, &quot;pagerduty&quot;, &quot;email&quot;],
+  &quot;runbook&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/&lt;alert-name&gt;&quot;,
+  &quot;tags&quot;: {
+    &quot;component&quot;: &quot;api|job|provider&quot;,
+    &quot;impact&quot;: &quot;high|medium|low&quot;,
+    &quot;auto_resolve&quot;: &quot;true|false&quot;
+  }
+}
+</code></pre>
+<h2 id="troubleshooting-alerts">Troubleshooting Alerts</h2>
+<h3 id="alert-not-firing">Alert Not Firing</h3>
+<ol>
+<li><p><strong>Check metric is being collected</strong>:</p>
+<pre><code class="lang-bash">curl http://localhost:5005/api/monitoring/metrics
+</code></pre>
+</li>
+<li><p><strong>Verify SLO configuration</strong>:</p>
+<pre><code class="lang-bash">curl http://localhost:5005/api/monitoring/alerts
+</code></pre>
+</li>
+<li><p><strong>Check alert evaluation logs</strong>:</p>
+<pre><code class="lang-bash">tail -f logs/aura-api-*.log | grep &quot;Alert&quot;
+</code></pre>
+</li>
+</ol>
+<h3 id="too-many-false-positives">Too Many False Positives</h3>
+<ol>
+<li><strong>Increase threshold</strong></li>
+<li><strong>Extend evaluation window</strong></li>
+<li><strong>Add flapping protection</strong></li>
+<li><strong>Review baseline data</strong></li>
+</ol>
+<h3 id="alerts-too-slow">Alerts Too Slow</h3>
+<ol>
+<li><strong>Reduce evaluation frequency</strong> (e.g., 1min instead of 5min)</li>
+<li><strong>Use smaller time windows</strong></li>
+<li><strong>Alert on rate of change, not absolute values</strong></li>
+</ol>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="MONITORING_PHILOSOPHY.html">Monitoring Philosophy</a></li>
+<li><a href="INCIDENT_RESPONSE.html">Incident Response Procedures</a></li>
+<li>Runbook Template</li>
+<li>Dashboard Creation Guide</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>Creating effective alerts requires:</p>
+<ol>
+<li><strong>Actionability</strong>: Clear action required</li>
+<li><strong>Context</strong>: Enough information to diagnose</li>
+<li><strong>Appropriate Severity</strong>: Right notification channel</li>
+<li><strong>Testing</strong>: Verify alerts work</li>
+<li><strong>Continuous Improvement</strong>: Review and tune regularly</li>
+</ol>
+<p>Remember: <strong>The best alert is one that fires rarely, but when it does, it's always correct and actionable.</strong></p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/monitoring/ALERT_CREATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

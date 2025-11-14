@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Runbook: API Availability Below SLO | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Runbook: API Availability Below SLO | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/api-availability.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="runbook-api-availability-below-slo">Runbook: API Availability Below SLO</h1>
+
+<h2 id="alert-details">Alert Details</h2>
+<ul>
+<li><strong>Alert Name</strong>: API Availability Below SLO</li>
+<li><strong>Severity</strong>: Critical</li>
+<li><strong>SLO Target</strong>: 99.9% availability</li>
+<li><strong>Evaluation Window</strong>: 5 minutes</li>
+<li><strong>Notification</strong>: PagerDuty + Slack</li>
+</ul>
+<h2 id="symptoms">Symptoms</h2>
+<ul>
+<li>API success rate dropped below 99.9%</li>
+<li>Users experiencing 500 Internal Server Errors</li>
+<li>Increased error logs</li>
+<li>Health check endpoint may be returning errors</li>
+</ul>
+<h2 id="quick-response-first-5-minutes">Quick Response (First 5 Minutes)</h2>
+<pre><code class="lang-bash"># 1. Acknowledge the alert
+# (Done automatically in PagerDuty)
+
+# 2. Check current health status
+curl -s http://localhost:5005/api/health | jq .
+
+# 3. Check error rate
+curl -s http://localhost:5005/api/monitoring/metrics/histogram/api.errors.5xx | jq .
+
+# 4. Check recent errors
+tail -n 50 logs/errors-$(date +%Y-%m-%d).log
+
+# 5. Check if this is a deployment issue
+git log --since=&quot;1 hour ago&quot; --oneline
+</code></pre>
+<h2 id="investigation-steps">Investigation Steps</h2>
+<h3 id="1-identify-failing-endpoints">1. Identify Failing Endpoints</h3>
+<pre><code class="lang-bash"># Check which endpoints are failing
+grep -E &quot;Status: 5[0-9]{2}&quot; logs/aura-api-$(date +%Y-%m-%d).log | \
+  awk '{print $NF}' | sort | uniq -c | sort -rn | head -10
+</code></pre>
+<h3 id="2-check-system-resources">2. Check System Resources</h3>
+<pre><code class="lang-bash"># CPU and Memory
+docker stats --no-stream
+
+# Disk space
+df -h
+
+# Database connections
+curl -s http://localhost:5005/api/diagnostics/resources | jq '.databaseConnections'
+</code></pre>
+<h3 id="3-check-provider-health">3. Check Provider Health</h3>
+<pre><code class="lang-bash"># Check all provider health
+curl -s http://localhost:5005/api/health/providers | jq .
+
+# Check for provider failures
+curl -s http://localhost:5005/api/monitoring/metrics/gauge/provider.healthy | jq .
+</code></pre>
+<h3 id="4-review-recent-changes">4. Review Recent Changes</h3>
+<pre><code class="lang-bash"># Recent deployments
+git log --since=&quot;2 hours ago&quot; --oneline
+
+# Recent config changes
+git diff HEAD~5 -- Aura.Api/appsettings.json
+</code></pre>
+<h3 id="5-check-dependencies">5. Check Dependencies</h3>
+<pre><code class="lang-bash"># Database health
+curl -s http://localhost:5005/api/health | jq '.checks[] | select(.name == &quot;Database&quot;)'
+
+# External service health
+curl -s http://localhost:5005/api/health/providers | jq '.[] | select(.healthy == false)'
+</code></pre>
+<h2 id="common-causes-and-resolutions">Common Causes and Resolutions</h2>
+<h3 id="cause-1-recent-deployment-bug">Cause 1: Recent Deployment Bug</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Errors started immediately after deployment</li>
+<li>Specific endpoint pattern failing</li>
+<li>Stack traces in logs point to new code</li>
+</ul>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Rollback to previous version
+git log -10 --oneline
+git checkout &lt;previous-stable-commit&gt;
+
+# Rebuild and redeploy
+docker build -t aura-api:rollback .
+docker-compose up -d
+
+# Verify service restored
+curl http://localhost:5005/api/health
+
+# Monitor for 5 minutes
+watch -n 10 'curl -s http://localhost:5005/api/monitoring/alerts/firing'
+</code></pre>
+<h3 id="cause-2-provider-api-outage">Cause 2: Provider API Outage</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Logs show provider API timeouts</li>
+<li>Provider health check failing</li>
+<li>Specific provider-related endpoints failing</li>
+</ul>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Check which provider is down
+curl -s http://localhost:5005/api/health/providers | jq '.[] | select(.healthy == false)'
+
+# Disable failing provider (triggers failover)
+curl -X POST http://localhost:5005/api/providers/disable \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;provider&quot;: &quot;OpenAI&quot;, &quot;reason&quot;: &quot;API outage&quot;}'
+
+# Verify failover successful
+curl -s http://localhost:5005/api/health/providers | jq .
+
+# Test endpoint that was failing
+curl -X POST http://localhost:5005/api/script/generate \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;topic&quot;: &quot;test&quot;}'
+</code></pre>
+<h3 id="cause-3-resource-exhaustion">Cause 3: Resource Exhaustion</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>High CPU or memory usage</li>
+<li>Slow response times before failures</li>
+<li>OOM errors in logs</li>
+</ul>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Check resources
+docker stats --no-stream
+
+# If CPU/Memory high, scale up
+docker-compose up -d --scale api=5
+
+# If disk full, clear old logs/artifacts
+docker system prune -f
+rm -rf /tmp/*
+find logs/ -name &quot;*.log&quot; -mtime +7 -delete
+
+# If database connections exhausted
+curl -X POST http://localhost:5005/api/cache/clear
+docker-compose restart api
+</code></pre>
+<h3 id="cause-4-database-issues">Cause 4: Database Issues</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Timeouts on database queries</li>
+<li>Connection pool errors</li>
+<li>All endpoints affected</li>
+</ul>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Check database health
+curl -s http://localhost:5005/api/health | jq '.checks[] | select(.name == &quot;Database&quot;)'
+
+# Check connection pool
+curl -s http://localhost:5005/api/diagnostics/resources | jq '.databaseConnections'
+
+# Restart API to reset connections
+docker-compose restart api
+
+# If database itself is down, restart it
+docker-compose restart db
+
+# Verify restoration
+curl http://localhost:5005/api/health
+</code></pre>
+<h3 id="cause-5-high-traffic--ddos">Cause 5: High Traffic / DDoS</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Sudden spike in request rate</li>
+<li>Many requests from same IPs</li>
+<li>Slow responses across all endpoints</li>
+</ul>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Check request rate
+curl -s http://localhost:5005/api/metrics | jq '.[&quot;api.requests&quot;]'
+
+# Check top requesting IPs
+grep &quot;$(date +%Y-%m-%d)&quot; logs/aura-api-*.log | \
+  awk '{print $1}' | sort | uniq -c | sort -rn | head -20
+
+# If DDoS, enable rate limiting
+# (Already enabled by default, may need to tighten)
+
+# Scale up to handle legitimate traffic
+docker-compose up -d --scale api=10
+
+# If specific IPs are attacking, block them
+# (This would be done at firewall/load balancer level)
+</code></pre>
+<h2 id="escalation">Escalation</h2>
+<h3 id="escalate-after-30-minutes-if">Escalate After 30 Minutes If:</h3>
+<ul>
+<li>Cannot identify root cause</li>
+<li>Mitigation attempts unsuccessful</li>
+<li>Service not restored</li>
+</ul>
+<h3 id="escalation-path">Escalation Path:</h3>
+<ol>
+<li><strong>Secondary On-Call</strong>: Page via PagerDuty</li>
+<li><strong>Engineering Manager</strong>: Call directly</li>
+<li><strong>VP Engineering</strong>: For prolonged SEV-1 incidents</li>
+</ol>
+<h3 id="escalation-contact">Escalation Contact:</h3>
+<pre><code>Secondary On-Call: See PagerDuty schedule
+Engineering Manager: manager@aura.studio
+VP Engineering: vpe@aura.studio
+</code></pre>
+<h2 id="communication">Communication</h2>
+<h3 id="internal-slack-incident-active">Internal (Slack #incident-active)</h3>
+<pre><code>🚨 INCIDENT: API Availability Below SLO
+
+Severity: SEV-1
+Started: 14:30 UTC
+Current Availability: 98.5% (Target: 99.9%)
+Impact: Users experiencing 500 errors
+
+Status: Investigating
+Lead: @oncall-engineer
+
+Updates every 15 minutes.
+</code></pre>
+<h3 id="external-status-page">External (Status Page)</h3>
+<pre><code>⚠️ Service Disruption
+
+We are currently experiencing issues with our API.
+Some users may encounter errors when using the service.
+
+Our team is actively working on a resolution.
+
+Started: 14:30 UTC
+Updated: 14:45 UTC
+Next update: 15:00 UTC
+</code></pre>
+<h2 id="verification">Verification</h2>
+<p>After mitigation, verify service is fully restored:</p>
+<pre><code class="lang-bash"># 1. Check health endpoint
+curl http://localhost:5005/api/health
+# Expected: All checks &quot;Healthy&quot;
+
+# 2. Check error rate returned to normal
+curl -s http://localhost:5005/api/monitoring/metrics/histogram/api.errors.5xx | jq '.count'
+# Expected: Low or zero errors in last 5 min
+
+# 3. Check availability metric
+curl -s http://localhost:5005/api/monitoring/metrics | jq '.gauges[] | select(.name == &quot;api_availability&quot;)'
+# Expected: &gt; 99.9%
+
+# 4. Run smoke tests
+./scripts/smoke-tests.sh
+
+# 5. Monitor for 15 minutes to ensure stability
+watch -n 30 'curl -s http://localhost:5005/api/monitoring/alerts/firing | jq .'
+</code></pre>
+<h2 id="post-incident">Post-Incident</h2>
+<h3 id="immediate-actions">Immediate Actions</h3>
+<ol>
+<li><strong>Close Alert</strong>: Should auto-resolve when metrics return to normal</li>
+<li><strong>Update Status Page</strong>: Mark as resolved</li>
+<li><strong>Post in Slack</strong>: Incident resolved message</li>
+<li><strong>Create Post-Mortem Issue</strong>: In GitHub</li>
+</ol>
+<h3 id="post-mortem-within-48-hours">Post-Mortem (Within 48 Hours)</h3>
+<p>Create post-mortem covering:</p>
+<ul>
+<li>Timeline of events</li>
+<li>Root cause analysis</li>
+<li>What went well / what went wrong</li>
+<li>Action items to prevent recurrence</li>
+</ul>
+<p>See: <a href="../monitoring/INCIDENT_RESPONSE.html">Incident Response Procedures</a></p>
+<h2 id="related-runbooks">Related Runbooks</h2>
+<ul>
+<li><a href="high-error-rate.html">High Error Rate</a></li>
+<li><a href="high-latency.html">High Latency</a></li>
+<li>Provider Health</li>
+<li>Resource Exhaustion</li>
+</ul>
+<h2 id="monitoring">Monitoring</h2>
+<ul>
+<li><strong>Dashboard</strong>: Operational Dashboard</li>
+<li><strong>Metrics</strong>: <code>api.requests</code>, <code>api.errors.5xx</code>, <code>api_availability</code></li>
+<li><strong>Logs</strong>: <code>logs/errors-YYYY-MM-DD.log</code></li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>SLO Configuration</li>
+<li>Alert Rules</li>
+<li>Monitoring API</li>
+</ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-10
+<strong>Maintainer</strong>: Platform Team
+<strong>Tested</strong>: 2025-11-10</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/api-availability.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

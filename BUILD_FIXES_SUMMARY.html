@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Build Fixes Summary - Windows Desktop Build | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Build Fixes Summary - Windows Desktop Build | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/BUILD_FIXES_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="build-fixes-summary---windows-desktop-build">Build Fixes Summary - Windows Desktop Build</h1>
+
+<h2 id="critical-issues-fixed">Critical Issues Fixed</h2>
+<h3 id="1--backend-output-directory-mismatch-primary-issue">1. ❌ <strong>Backend Output Directory Mismatch</strong> (PRIMARY ISSUE)</h3>
+<p><strong>Problem</strong>: The build script was outputting backend binaries to <code>Aura.Desktop/backend/</code> but <code>package.json</code> expected them in <code>Aura.Desktop/resources/backend/</code>.</p>
+<p><strong>Impact</strong>: electron-builder couldn't find the backend binaries, causing the desktop app build to fail silently.</p>
+<p><strong>Fix</strong>:</p>
+<ul>
+<li>Updated <code>build-desktop.ps1</code> to build to <code>resources/backend/</code> instead of <code>backend/</code></li>
+<li>Updated <code>build-desktop.sh</code> for consistency</li>
+<li>Updated <code>scripts/build-backend-windows.ps1</code> to use correct path</li>
+<li>Created <code>resources/</code> directory with proper documentation</li>
+</ul>
+<p><strong>Files Changed</strong>:</p>
+<ul>
+<li><code>Aura.Desktop/build-desktop.ps1</code></li>
+<li><code>Aura.Desktop/build-desktop.sh</code></li>
+<li><code>Aura.Desktop/scripts/build-backend-windows.ps1</code></li>
+</ul>
+<h3 id="2--missing-resource-validation">2. ❌ <strong>Missing Resource Validation</strong></h3>
+<p><strong>Problem</strong>: Build scripts showed &quot;SUCCESS&quot; even when required resources were missing.</p>
+<p><strong>Impact</strong>: False success messages when builds actually failed.</p>
+<p><strong>Fix</strong>:</p>
+<ul>
+<li>Added validation step before electron-builder runs</li>
+<li>Checks for:
+<ul>
+<li>Frontend build (<code>Aura.Web/dist/index.html</code>)</li>
+<li>Backend binaries (<code>resources/backend/</code>)</li>
+</ul>
+</li>
+<li>Fails fast with clear error messages if resources are missing</li>
+</ul>
+<h3 id="3--cs9031-compilation-error">3. ❌ <strong>CS9031 Compilation Error</strong></h3>
+<p><strong>Problem</strong>: <code>BlurEffect.Type</code> property was hiding required <code>VideoEffect.Type</code> property.</p>
+<p><strong>Impact</strong>: All platform builds (macOS, Linux) failed to compile.</p>
+<p><strong>Fix</strong>: Renamed <code>BlurEffect.Type</code> to <code>BlurEffect.BlurStyle</code> to avoid property hiding.</p>
+<p><strong>File Changed</strong>: <code>Aura.Core/Models/VideoEffects/FilterEffect.cs</code></p>
+<h3 id="4--netsdk1087-framework-reference-error">4. ❌ <strong>NETSDK1087 Framework Reference Error</strong></h3>
+<p><strong>Problem</strong>: Duplicate <code>Microsoft.WindowsDesktop.App.WindowsForms</code> references when building for Windows.</p>
+<p><strong>Impact</strong>: Windows backend restore failed.</p>
+<p><strong>Fix</strong>: Consolidated duplicate ItemGroups into single conditional reference.</p>
+<p><strong>File Changed</strong>: <code>Aura.Core/Aura.Core.csproj</code></p>
+<h3 id="5--incorrect-error-handling">5. ❌ <strong>Incorrect Error Handling</strong></h3>
+<p><strong>Problem</strong>: Build scripts didn't check <code>$LASTEXITCODE</code> after dotnet/npm commands.</p>
+<p><strong>Impact</strong>: Failed builds reported as successful.</p>
+<p><strong>Fix</strong>:</p>
+<ul>
+<li>Added proper exit code checking after every critical command</li>
+<li>Script now exits immediately on first failure</li>
+<li>Clear error messages indicate which step failed</li>
+</ul>
+<h3 id="6--frontend-build-conflicts">6. ⚠️ <strong>Frontend Build Conflicts</strong></h3>
+<p><strong>Problem</strong>: <code>Aura.Api.csproj</code> automatically builds frontend during publish, conflicting with desktop build script.</p>
+<p><strong>Impact</strong>: Duplicate frontend builds, slower build times, potential race conditions.</p>
+<p><strong>Fix</strong>: Added <code>-p:SkipFrontendBuild=true</code> to all dotnet publish commands in desktop build scripts.</p>
+<h3 id="7--missing-optional-resources">7. ⚠️ <strong>Missing Optional Resources</strong></h3>
+<p><strong>Problem</strong>: <code>package.json</code> referenced non-existent <code>resources/ffmpeg/</code> and <code>resources/samples/</code>.</p>
+<p><strong>Impact</strong>: electron-builder warnings/errors about missing resources.</p>
+<p><strong>Fix</strong>:</p>
+<ul>
+<li>Removed optional resource references from <code>package.json</code></li>
+<li>FFmpeg and samples are now optional (app can download at runtime)</li>
+<li>Documented in <code>resources/README.md</code></li>
+</ul>
+<p><strong>File Changed</strong>: <code>Aura.Desktop/package.json</code></p>
+<h2 id="security-fixes">Security Fixes</h2>
+<h3 id="8--imagesharp-vulnerability">8. 🔒 <strong>ImageSharp Vulnerability</strong></h3>
+<p><strong>Issue</strong>: NU1902 - SixLabors.ImageSharp 3.1.9 has known moderate severity vulnerability.</p>
+<p><strong>Fix</strong>: Updated to version 3.1.10.</p>
+<p><strong>File Changed</strong>: <code>Aura.Core/Aura.Core.csproj</code></p>
+<h3 id="9--electron-vulnerability">9. 🔒 <strong>Electron Vulnerability</strong></h3>
+<p><strong>Issue</strong>: Electron 28.1.0 has ASAR integrity bypass vulnerability (GHSA-vmqv-hx8q-j7mg).</p>
+<p><strong>Fix</strong>: Updated to Electron 35.7.5.</p>
+<p><strong>File Changed</strong>: <code>Aura.Desktop/package.json</code></p>
+<h3 id="10--analyzer-warnings">10. 🔒 <strong>Analyzer Warnings</strong></h3>
+<p><strong>Issues</strong>:</p>
+<ul>
+<li>RS1032: Diagnostic message format warning</li>
+<li>RS2007: Invalid analyzer release header</li>
+</ul>
+<p><strong>Fix</strong>:</p>
+<ul>
+<li>Cleaned up diagnostic message format</li>
+<li>Fixed release header in AnalyzerReleases.Unshipped.md</li>
+</ul>
+<p><strong>Files Changed</strong>:</p>
+<ul>
+<li><code>Aura.Analyzers/DirectProviderUsageAnalyzer.cs</code></li>
+<li><code>Aura.Analyzers/AnalyzerReleases.Unshipped.md</code></li>
+</ul>
+<h2 id="new-files-created">New Files Created</h2>
+<ol>
+<li><strong><code>Aura.Desktop/resources/README.md</code></strong> - Documents resource directory structure</li>
+<li><strong><code>Aura.Desktop/resources/.gitkeep</code></strong> - Keeps resources directory in git</li>
+<li><strong><code>Aura.Desktop/resources/.gitignore</code></strong> - Prevents committing build artifacts</li>
+<li><strong><code>Aura.Desktop/.gitignore</code></strong> - Prevents committing build outputs</li>
+</ol>
+<h2 id="build-process-flow-after-fixes">Build Process Flow (After Fixes)</h2>
+<h3 id="windows-build-build-desktopps1">Windows Build (<code>build-desktop.ps1</code>)</h3>
+<pre><code>1. Check prerequisites (Node.js, .NET SDK)
+2. Build Frontend (Aura.Web)
+   - npm install (if needed)
+   - npm run build
+   - Verify dist/index.html exists
+3. Build Backend (Aura.Api)
+   - dotnet publish -r win-x64 -p:SkipFrontendBuild=true
+   - Output to: resources/backend/win-x64/
+   - Verify build succeeded
+4. Install Electron Dependencies
+   - npm install in Aura.Desktop
+5. Validate Resources
+   - Check frontend build exists
+   - Check backend binaries exist
+   - FAIL FAST if missing
+6. Build Installer
+   - electron-builder packages everything
+   - Output to: dist/
+</code></pre>
+<h2 id="testing-the-fix">Testing the Fix</h2>
+<h3 id="on-windows">On Windows</h3>
+<pre><code class="lang-powershell">cd Aura.Desktop
+.\build-desktop.ps1 -Target win
+</code></pre>
+<p>Expected output:</p>
+<pre><code>[INFO] Building React frontend...
+[SUCCESS] Frontend build complete
+
+[INFO] Building .NET backend...
+[INFO] Building backend for Windows (x64)...
+[SUCCESS] Windows backend build complete
+
+[INFO] Installing Electron dependencies...
+[SUCCESS] Electron dependencies ready
+
+[INFO] Validating required resources...
+[SUCCESS]   ✓ Frontend build found
+[SUCCESS]   ✓ Backend binaries found
+[SUCCESS] All required resources validated
+
+[INFO] Building Electron installers...
+[SUCCESS] Installer build complete
+
+[SUCCESS] Build Complete!
+</code></pre>
+<p>If any step fails, the script will exit immediately with a clear error message.</p>
+<h2 id="verification-checklist">Verification Checklist</h2>
+<p>After build completes successfully:</p>
+<ul>
+<li>[ ] Check <code>Aura.Desktop/resources/backend/win-x64/Aura.Api.exe</code> exists</li>
+<li>[ ] Check <code>Aura.Desktop/dist/</code> contains installer (<code>.exe</code> or <code>.nsis</code>)</li>
+<li>[ ] Frontend is included: <code>Aura.Desktop/dist/win-unpacked/resources/frontend/index.html</code></li>
+<li>[ ] Backend is included: <code>Aura.Desktop/dist/win-unpacked/resources/backend/Aura.Api.exe</code></li>
+<li>[ ] No compilation errors in output</li>
+<li>[ ] No NETSDK errors in output</li>
+<li>[ ] No npm vulnerabilities (or only low/info level)</li>
+</ul>
+<h2 id="common-issues--solutions">Common Issues &amp; Solutions</h2>
+<h3 id="issue-frontend-build-not-found">Issue: &quot;Frontend build not found&quot;</h3>
+<p><strong>Solution</strong>: Ensure Aura.Web builds successfully first:</p>
+<pre><code class="lang-powershell">cd Aura.Web
+npm install
+npm run build
+</code></pre>
+<h3 id="issue-backend-build-failed-with-exit-code-1">Issue: &quot;Backend build failed with exit code 1&quot;</h3>
+<p><strong>Solution</strong>: Check for compilation errors in the output. Common causes:</p>
+<ul>
+<li>Missing NuGet packages (run <code>dotnet restore</code>)</li>
+<li>C# compilation errors (check <code>Aura.Core</code>, <code>Aura.Api</code>)</li>
+<li>Framework reference issues (check <code>Aura.Core.csproj</code>)</li>
+</ul>
+<h3 id="issue-electron-builder-fails-with-cannot-find-module">Issue: electron-builder fails with &quot;Cannot find module&quot;</h3>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-powershell">cd Aura.Desktop
+Remove-Item -Recurse -Force node_modules
+npm install
+</code></pre>
+<h3 id="issue-multiple-frameworkreference-items-error">Issue: &quot;Multiple FrameworkReference items&quot; error</h3>
+<p><strong>Solution</strong>: This should be fixed. If it persists, ensure you have the latest <code>Aura.Core.csproj</code> changes.</p>
+<h2 id="summary">Summary</h2>
+<p>All critical build issues have been resolved:</p>
+<ul>
+<li>✅ Builds output to correct directory</li>
+<li>✅ Proper error handling and validation</li>
+<li>✅ Compilation errors fixed</li>
+<li>✅ Security vulnerabilities patched</li>
+<li>✅ Build scripts accurately report success/failure</li>
+<li>✅ Clear error messages when builds fail</li>
+</ul>
+<p>The desktop app should now build successfully on Windows!</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/BUILD_FIXES_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

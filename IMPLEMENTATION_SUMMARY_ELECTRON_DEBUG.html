@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Implementation Summary: Electron React Hydration Debugging | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Implementation Summary: Electron React Hydration Debugging | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/IMPLEMENTATION_SUMMARY_ELECTRON_DEBUG.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="implementation-summary-electron-react-hydration-debugging">Implementation Summary: Electron React Hydration Debugging</h1>
+
+<h2 id="problem-statement">Problem Statement</h2>
+<p>The React application was not rendering in the Electron BrowserWindow. The issue could be due to:</p>
+<ul>
+<li>Vite build output not being correctly loaded by Electron</li>
+<li>JavaScript errors during initialization preventing React from mounting</li>
+<li>Incorrect path resolution between dev and production builds</li>
+<li>Index.html not being found/loaded properly</li>
+<li>Content Security Policy blocking script execution</li>
+</ul>
+<h2 id="solution-implemented">Solution Implemented</h2>
+<h3 id="1-comprehensive-initialization-logging-maintsx">1. Comprehensive Initialization Logging (main.tsx)</h3>
+<p><strong>What:</strong> Added detailed console logging at every step of React initialization</p>
+<p><strong>Why:</strong> To identify exactly where the initialization process fails</p>
+<p><strong>Key Logs:</strong></p>
+<pre><code class="lang-javascript">[Main] ===== Aura Video Studio - React Initialization =====
+[Main] Timestamp: &lt;ISO timestamp&gt;
+[Main] Location: &lt;current URL&gt;
+[Main] Protocol: &lt;file:// or http://&gt;
+[Main] window.electron exists: &lt;true/false&gt;
+[Main] AURA_BACKEND_URL: &lt;backend URL&gt;
+[Main] AURA_IS_ELECTRON: &lt;true/false&gt;
+[Main] Root element exists: &lt;true/false&gt;
+[Main] Creating React root...
+[Main] Calling ReactDOM.createRoot...
+[Main] Rendering App component...
+[Main] ✓ React render call completed
+</code></pre>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>Can now see if script loads but React doesn't mount</li>
+<li>Can see if environment variables are missing</li>
+<li>Can see exact failure point in initialization</li>
+</ul>
+<h3 id="2-global-error-handlers-window-managerjs">2. Global Error Handlers (window-manager.js)</h3>
+<p><strong>What:</strong> Injected error handlers before React loads to catch all JavaScript errors</p>
+<p><strong>Why:</strong> To catch and log errors that would otherwise fail silently</p>
+<p><strong>Implementation:</strong></p>
+<pre><code class="lang-javascript">// Injected via executeJavaScript before environment variables
+window.addEventListener('error', function(event) {
+  console.error('[Global Error Handler] Uncaught error:', {
+    message, filename, lineno, colno, stack
+  });
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('[Global Error Handler] Unhandled promise rejection:', {
+    reason
+  });
+});
+</code></pre>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>All JavaScript errors logged with full stack traces</li>
+<li>Promise rejections caught and logged</li>
+<li>Errors visible even if React fails to mount</li>
+</ul>
+<h3 id="3-load-failure-detection-window-managerjs">3. Load Failure Detection (window-manager.js)</h3>
+<p><strong>What:</strong> Added did-fail-load event handler</p>
+<p><strong>Why:</strong> To catch failures at the Electron level before JavaScript executes</p>
+<p><strong>Implementation:</strong></p>
+<pre><code class="lang-javascript">mainWindow.webContents.on('did-fail-load', 
+  (event, errorCode, errorDescription, validatedURL, isMainFrame) =&gt; {
+    console.error('[WindowManager] ✗ Failed to load page!');
+    console.error('[WindowManager] Error code:', errorCode);
+    console.error('[WindowManager] Error description:', errorDescription);
+    console.error('[WindowManager] URL:', validatedURL);
+  });
+</code></pre>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>Can detect file not found errors</li>
+<li>Can detect permission errors</li>
+<li>Can detect network errors (in case of network-based loading)</li>
+</ul>
+<h3 id="4-console-message-forwarding-window-managerjs">4. Console Message Forwarding (window-manager.js)</h3>
+<p><strong>What:</strong> Forward all renderer console messages to main process</p>
+<p><strong>Why:</strong> To see renderer logs in the terminal where Electron is running</p>
+<p><strong>Implementation:</strong></p>
+<pre><code class="lang-javascript">mainWindow.webContents.on('console-message', 
+  (event, level, message, line, sourceId) =&gt; {
+    console.log(`[Renderer:${levelName}] ${message}`);
+  });
+</code></pre>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>Can see renderer logs without opening DevTools</li>
+<li>Useful for production builds where DevTools may not be available</li>
+<li>All main.tsx logs visible in terminal</li>
+</ul>
+<h3 id="5-url-verification-window-managerjs">5. URL Verification (window-manager.js)</h3>
+<p><strong>What:</strong> Log the actual URL that was loaded after loadFile()</p>
+<p><strong>Why:</strong> To verify the correct file path was resolved</p>
+<p><strong>Implementation:</strong></p>
+<pre><code class="lang-javascript">const loadedURL = this.mainWindow.webContents.getURL();
+console.log('[WindowManager] Loaded URL:', loadedURL);
+console.log('[WindowManager] URL protocol:', new URL(loadedURL).protocol);
+</code></pre>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>Can verify file:// protocol is used</li>
+<li>Can see exact file path that was loaded</li>
+<li>Can detect path resolution issues</li>
+</ul>
+<h3 id="6-content-security-policy-updates">6. Content Security Policy Updates</h3>
+<p><strong>What:</strong> Updated CSP to support file:// protocol</p>
+<p><strong>Why:</strong> Previous CSP might have been blocking script execution in Electron</p>
+<p><strong>Changes:</strong></p>
+<p><strong>index.html:</strong></p>
+<pre><code class="lang-html">&lt;!-- Before --&gt;
+default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval';
+
+&lt;!-- After --&gt;
+default-src 'self' file: data: blob:; 
+script-src 'self' 'unsafe-inline' 'unsafe-eval' file:;
+</code></pre>
+<p><strong>window-manager.js:</strong></p>
+<pre><code class="lang-javascript">// Added file: protocol to all CSP directives
+&quot;default-src 'self' file: data: blob:&quot;,
+&quot;script-src 'self' file:&quot;,
+&quot;style-src 'self' 'unsafe-inline' file:&quot;,
+// etc.
+</code></pre>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>Scripts can execute from file:// URLs</li>
+<li>Assets can be loaded from file:// URLs</li>
+<li>No CSP violations blocking initialization</li>
+</ul>
+<h3 id="7-devtools-auto-open-verification">7. DevTools Auto-Open Verification</h3>
+<p><strong>What:</strong> Verified and added logging for DevTools auto-open in dev mode</p>
+<p><strong>Why:</strong> To ensure developers can see console logs immediately</p>
+<p><strong>Implementation:</strong></p>
+<pre><code class="lang-javascript">if (this.isDev) {
+  console.log('[WindowManager] Development mode detected - opening DevTools');
+  this.mainWindow.webContents.openDevTools({ mode: 'detach' });
+}
+</code></pre>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>DevTools always open in development mode</li>
+<li>Console logs immediately visible</li>
+<li>No need to manually press F12</li>
+</ul>
+<h3 id="8-comprehensive-documentation">8. Comprehensive Documentation</h3>
+<p><strong>What:</strong> Created ELECTRON_REACT_HYDRATION_DEBUG_GUIDE.md</p>
+<p><strong>Why:</strong> To provide systematic debugging approach for future issues</p>
+<p><strong>Contents:</strong></p>
+<ul>
+<li>Overview of all changes</li>
+<li>Testing instructions for dev and production</li>
+<li>Troubleshooting guide with common issues</li>
+<li>Diagnostic checklist</li>
+<li>Expected console output</li>
+<li>Known limitations</li>
+</ul>
+<h2 id="how-to-use-this-implementation">How to Use This Implementation</h2>
+<h3 id="for-development-testing">For Development Testing</h3>
+<ol>
+<li><p><strong>Build the React app:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run build
+</code></pre>
+</li>
+<li><p><strong>Start Electron in dev mode:</strong></p>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm run dev
+</code></pre>
+</li>
+<li><p><strong>Check the logs:</strong></p>
+<ul>
+<li>Terminal will show main process logs from window-manager.js</li>
+<li>DevTools (auto-opened) will show renderer logs from main.tsx</li>
+<li>Look for the initialization sequence markers</li>
+</ul>
+</li>
+</ol>
+<h3 id="for-production-testing">For Production Testing</h3>
+<ol>
+<li><p><strong>Build the Electron app:</strong></p>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm run build:dir
+</code></pre>
+</li>
+<li><p><strong>Run the built app:</strong></p>
+<ul>
+<li>Navigate to dist/win-unpacked/</li>
+<li>Run Aura Video Studio.exe</li>
+</ul>
+</li>
+<li><p><strong>Check the logs:</strong></p>
+<ul>
+<li>Press F12 to open DevTools</li>
+<li>Check console for initialization sequence</li>
+<li>Check Network tab for asset loading</li>
+</ul>
+</li>
+</ol>
+<h3 id="diagnostic-process">Diagnostic Process</h3>
+<p>If React still doesn't hydrate, check logs in this order:</p>
+<ol>
+<li><p><strong>[WindowManager] Frontend path exists: true</strong></p>
+<ul>
+<li>If false: dist/index.html not built correctly</li>
+</ul>
+</li>
+<li><p><strong>[WindowManager] ✓ Frontend file loaded successfully</strong></p>
+<ul>
+<li>If missing: loadFile() failed (check did-fail-load logs)</li>
+</ul>
+</li>
+<li><p><strong>[WindowManager] Loaded URL: file://...</strong></p>
+<ul>
+<li>Verify protocol is file:// and path is correct</li>
+</ul>
+</li>
+<li><p><strong>[WindowManager] ✓ Environment variables injected</strong></p>
+<ul>
+<li>If missing: Script injection failed</li>
+</ul>
+</li>
+<li><p><strong>[Main] ===== Aura Video Studio - React Initialization =====</strong></p>
+<ul>
+<li>If missing: main.tsx script didn't execute (CSP or load issue)</li>
+</ul>
+</li>
+<li><p><strong>[Main] window.electron exists: true</strong></p>
+<ul>
+<li>If false: preload.js not working (contextBridge issue)</li>
+</ul>
+</li>
+<li><p><strong>[Main] AURA_BACKEND_URL: http://localhost:5005</strong></p>
+<ul>
+<li>If undefined: Environment variables not injected</li>
+</ul>
+</li>
+<li><p><strong>[Main] Creating React root...</strong></p>
+<ul>
+<li>If missing: Error before ReactDOM.createRoot (check error logs)</li>
+</ul>
+</li>
+<li><p><strong>[Main] ✓ React render call completed</strong></p>
+<ul>
+<li>If missing: Error during React rendering (check error logs)</li>
+</ul>
+</li>
+</ol>
+<h2 id="what-this-doesnt-fix">What This Doesn't Fix</h2>
+<p>This implementation adds <strong>diagnostic capability</strong> but doesn't fix the root cause. It enables:</p>
+<ul>
+<li>Identifying WHERE the failure occurs</li>
+<li>Seeing WHAT error is thrown</li>
+<li>Understanding WHY React doesn't mount</li>
+</ul>
+<p>Once the specific failure point is identified through the logs, a targeted fix can be implemented.</p>
+<h2 id="common-issues-that-can-now-be-diagnosed">Common Issues That Can Now Be Diagnosed</h2>
+<ol>
+<li><p><strong>File Not Found</strong></p>
+<ul>
+<li>Will show in did-fail-load with error code -6</li>
+<li>Check dist/index.html exists</li>
+</ul>
+</li>
+<li><p><strong>CSP Violation</strong></p>
+<ul>
+<li>Will show in console as CSP error</li>
+<li>Check if file: protocol is in CSP</li>
+</ul>
+</li>
+<li><p><strong>Script Load Failure</strong></p>
+<ul>
+<li>Will show in Network tab as failed request</li>
+<li>Check if dist/assets/ contains JavaScript files</li>
+</ul>
+</li>
+<li><p><strong>Environment Variable Missing</strong></p>
+<ul>
+<li>Will show in [Main] logs as undefined</li>
+<li>Check environment variable injection</li>
+</ul>
+</li>
+<li><p><strong>React Error During Mount</strong></p>
+<ul>
+<li>Will show in error handler logs with stack trace</li>
+<li>Check App.tsx for initialization errors</li>
+</ul>
+</li>
+<li><p><strong>Path Resolution Issue</strong></p>
+<ul>
+<li>Will show in Loaded URL log</li>
+<li>Check if path matches expected location</li>
+</ul>
+</li>
+</ol>
+<h2 id="security-considerations">Security Considerations</h2>
+<ul>
+<li>CSP still restricts external resources</li>
+<li>Only allows file:// protocol for local files</li>
+<li>Maintains 'unsafe-inline' and 'unsafe-eval' only for development compatibility</li>
+<li>Production build should have stricter CSP (but must still allow file://)</li>
+</ul>
+<h2 id="performance-impact">Performance Impact</h2>
+<ul>
+<li>Minimal: Logging only executed during initialization</li>
+<li>DevTools auto-open only in development</li>
+<li>Console message forwarding is lightweight</li>
+<li>No impact on production bundle size</li>
+</ul>
+<h2 id="maintenance-notes">Maintenance Notes</h2>
+<ul>
+<li>All logs prefixed with [Main] or [WindowManager] for easy filtering</li>
+<li>Logs can be removed or disabled once issue is resolved</li>
+<li>Error handlers can remain as defensive programming</li>
+<li>CSP changes should remain to support Electron</li>
+<li>Documentation should be updated if more changes made</li>
+</ul>
+<h2 id="success-criteria">Success Criteria</h2>
+<p>✅ Comprehensive logging at every initialization step
+✅ Error handlers catch all JavaScript errors
+✅ Load failures detected and logged
+✅ Console messages forwarded to main process
+✅ URL verification after load
+✅ CSP updated for file:// protocol
+✅ DevTools auto-open verified
+✅ Documentation complete</p>
+<p>⏳ Manual testing pending (requires Electron runtime environment)</p>
+<h2 id="next-steps">Next Steps</h2>
+<ol>
+<li>Test in Electron development mode</li>
+<li>Examine console logs for full initialization sequence</li>
+<li>If hydration fails, follow diagnostic process in documentation</li>
+<li>Identify specific failure point from logs</li>
+<li>Implement targeted fix for root cause</li>
+<li>Consider keeping diagnostic logging for future debugging</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/IMPLEMENTATION_SUMMARY_ELECTRON_DEBUG.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Health Checks Runbook | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Health Checks Runbook | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/HEALTH_CHECKS_RUNBOOK.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="health-checks-runbook">Health Checks Runbook</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This runbook provides step-by-step procedures for diagnosing and resolving common health check failures in the Aura system.</p>
+<h2 id="quick-reference">Quick Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Health Check</th>
+<th>Common Issues</th>
+<th>Quick Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Database</td>
+<td>Connection timeout, slow queries</td>
+<td>Restart database, check connection string</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>High usage, memory leaks</td>
+<td>Restart application, reduce load</td>
+</tr>
+<tr>
+<td>DiskSpace</td>
+<td>Low disk space</td>
+<td>Clean up temp files, expand storage</td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td>FFmpeg missing, GPU not detected</td>
+<td>Install dependencies, check drivers</td>
+</tr>
+<tr>
+<td>Providers</td>
+<td>API keys missing, rate limits</td>
+<td>Configure API keys, check quotas</td>
+</tr>
+<tr>
+<td>Startup</td>
+<td>Application not fully initialized</td>
+<td>Wait for initialization, check logs</td>
+</tr>
+</tbody>
+</table>
+<h2 id="diagnostic-procedures">Diagnostic Procedures</h2>
+<h3 id="step-1-check-overall-health-status">Step 1: Check Overall Health Status</h3>
+<pre><code class="lang-bash">curl -s http://localhost:5005/health | jq '.'
+</code></pre>
+<p>Look for:</p>
+<ul>
+<li>Overall status: <code>healthy</code>, <code>degraded</code>, or <code>unhealthy</code></li>
+<li>Which specific checks are failing</li>
+<li>Error messages in check descriptions</li>
+</ul>
+<h3 id="step-2-review-individual-check-details">Step 2: Review Individual Check Details</h3>
+<p>Get detailed information for failing checks:</p>
+<pre><code class="lang-bash"># Database health
+curl -s http://localhost:5005/health/db | jq '.'
+
+# Infrastructure health (disk, memory)
+curl -s http://localhost:5005/health/infrastructure | jq '.'
+
+# Provider health
+curl -s http://localhost:5005/health/providers | jq '.'
+</code></pre>
+<h3 id="step-3-check-application-logs">Step 3: Check Application Logs</h3>
+<pre><code class="lang-bash"># Recent errors
+tail -n 100 logs/errors-*.log
+
+# Health check specific logs
+grep &quot;Health&quot; logs/aura-api-*.log | tail -n 50
+
+# Performance issues
+tail -n 100 logs/performance-*.log
+</code></pre>
+<h2 id="common-failures-and-resolutions">Common Failures and Resolutions</h2>
+<h3 id="1-database-health-check-failure">1. Database Health Check Failure</h3>
+<h4 id="symptoms">Symptoms</h4>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Database&quot;,
+  &quot;status&quot;: &quot;unhealthy&quot;,
+  &quot;description&quot;: &quot;Cannot connect to database&quot;,
+  &quot;exception&quot;: &quot;SqliteException: unable to open database file&quot;
+}
+</code></pre>
+<h4 id="diagnosis">Diagnosis</h4>
+<ol>
+<li>Check database file exists and is accessible</li>
+<li>Verify file permissions</li>
+<li>Check disk space</li>
+<li>Review connection string</li>
+</ol>
+<h4 id="resolution">Resolution</h4>
+<p><strong>Quick Fix:</strong></p>
+<pre><code class="lang-bash"># Check database file
+ls -la aura.db
+
+# Fix permissions
+chmod 644 aura.db
+
+# Restart application
+systemctl restart aura-api
+</code></pre>
+<p><strong>If database is corrupted:</strong></p>
+<pre><code class="lang-bash"># Backup current database
+cp aura.db aura.db.backup
+
+# Run integrity check
+sqlite3 aura.db &quot;PRAGMA integrity_check;&quot;
+
+# If corrupted, restore from backup
+cp /backups/aura.db.latest aura.db
+systemctl restart aura-api
+</code></pre>
+<h4 id="prevention">Prevention</h4>
+<ul>
+<li>Regular database backups</li>
+<li>Monitor disk space</li>
+<li>Use WAL mode for better concurrency</li>
+</ul>
+<hr>
+<h3 id="2-memory-health-check-failure">2. Memory Health Check Failure</h3>
+<h4 id="symptoms-1">Symptoms</h4>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Memory&quot;,
+  &quot;status&quot;: &quot;unhealthy&quot;,
+  &quot;description&quot;: &quot;Critical memory usage: 2150 MB exceeds 2048 MB threshold&quot;,
+  &quot;data&quot;: {
+    &quot;working_set_mb&quot;: 2150,
+    &quot;gc_gen2_collections&quot;: 543
+  }
+}
+</code></pre>
+<h4 id="diagnosis-1">Diagnosis</h4>
+<ol>
+<li>Check current memory usage</li>
+<li>Review GC statistics</li>
+<li>Look for memory leaks</li>
+<li>Check for high load</li>
+</ol>
+<h4 id="resolution-1">Resolution</h4>
+<p><strong>Immediate Action:</strong></p>
+<pre><code class="lang-bash"># Restart application to reclaim memory
+systemctl restart aura-api
+
+# Check system memory
+free -h
+
+# Monitor memory usage
+watch -n 5 'ps aux | grep Aura.Api | grep -v grep'
+</code></pre>
+<p><strong>If memory leak suspected:</strong></p>
+<pre><code class="lang-bash"># Enable memory profiling
+export DOTNET_EnableEventLog=1
+export COMPlus_GCHeapCount=4
+
+# Capture memory dump for analysis
+dotnet-dump collect -p $(pidof Aura.Api)
+
+# Restart application
+systemctl restart aura-api
+</code></pre>
+<p><strong>Configuration Adjustment:</strong></p>
+<pre><code class="lang-json">// appsettings.json
+{
+  &quot;HealthChecks&quot;: {
+    &quot;MemoryWarningThresholdMB&quot;: 1536.0,
+    &quot;MemoryCriticalThresholdMB&quot;: 2560.0
+  }
+}
+</code></pre>
+<h4 id="prevention-1">Prevention</h4>
+<ul>
+<li>Monitor memory trends</li>
+<li>Set up alerts for gradual memory growth</li>
+<li>Regular application restarts (weekly)</li>
+<li>Optimize video processing pipelines</li>
+</ul>
+<hr>
+<h3 id="3-disk-space-health-check-failure">3. Disk Space Health Check Failure</h3>
+<h4 id="symptoms-2">Symptoms</h4>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;DiskSpace&quot;,
+  &quot;status&quot;: &quot;unhealthy&quot;,
+  &quot;description&quot;: &quot;Critical: Only 0.3 GB free on /dev/sda1. Need at least 0.5 GB.&quot;,
+  &quot;data&quot;: {
+    &quot;free_gb&quot;: 0.3,
+    &quot;total_gb&quot;: 50.0
+  }
+}
+</code></pre>
+<h4 id="diagnosis-2">Diagnosis</h4>
+<pre><code class="lang-bash"># Check disk usage
+df -h
+
+# Find large files
+du -h --max-depth=1 / | sort -hr | head -n 20
+
+# Check temp directories
+du -sh /tmp /var/tmp
+</code></pre>
+<h4 id="resolution-2">Resolution</h4>
+<p><strong>Clean Up Temporary Files:</strong></p>
+<pre><code class="lang-bash"># Clean temp directories
+find /tmp -type f -mtime +7 -delete
+find /var/tmp -type f -mtime +7 -delete
+
+# Clean old logs
+find logs/ -name &quot;*.log&quot; -mtime +30 -delete
+
+# Clean rendered videos (if backed up)
+find output/ -name &quot;*.mp4&quot; -mtime +14 -delete
+</code></pre>
+<p><strong>Expand Storage:</strong></p>
+<pre><code class="lang-bash"># AWS EBS
+aws ec2 modify-volume --volume-id vol-xxx --size 100
+
+# Azure Disk
+az disk update --name disk-name --resource-group rg --size-gb 100
+
+# After expanding, resize filesystem
+resize2fs /dev/sda1
+</code></pre>
+<p><strong>Archive Old Data:</strong></p>
+<pre><code class="lang-bash"># Archive old projects
+tar -czf projects-archive-$(date +%Y%m%d).tar.gz projects/
+aws s3 cp projects-archive-*.tar.gz s3://aura-backups/
+rm -rf projects/archived-*
+</code></pre>
+<h4 id="prevention-2">Prevention</h4>
+<ul>
+<li>Set up log rotation</li>
+<li>Implement automatic cleanup jobs</li>
+<li>Monitor disk usage trends</li>
+<li>Use external storage for rendered videos</li>
+</ul>
+<hr>
+<h3 id="4-dependencies-health-check-failure">4. Dependencies Health Check Failure</h3>
+<h4 id="symptoms-3">Symptoms</h4>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Dependencies&quot;,
+  &quot;status&quot;: &quot;degraded&quot;,
+  &quot;description&quot;: &quot;FFmpeg not available - video rendering disabled&quot;,
+  &quot;data&quot;: {
+    &quot;ffmpeg_available&quot;: false,
+    &quot;gpu_available&quot;: false
+  }
+}
+</code></pre>
+<h4 id="diagnosis-3">Diagnosis</h4>
+<pre><code class="lang-bash"># Check FFmpeg installation
+which ffmpeg
+ffmpeg -version
+
+# Check GPU availability
+nvidia-smi  # For NVIDIA GPUs
+lspci | grep VGA
+
+# Check search paths
+echo $PATH
+</code></pre>
+<h4 id="resolution-3">Resolution</h4>
+<p><strong>Install FFmpeg:</strong></p>
+<pre><code class="lang-bash"># Ubuntu/Debian
+sudo apt update
+sudo apt install ffmpeg
+
+# RHEL/CentOS
+sudo yum install epel-release
+sudo yum install ffmpeg
+
+# Windows (via Chocolatey)
+choco install ffmpeg
+
+# macOS
+brew install ffmpeg
+</code></pre>
+<p><strong>Configure FFmpeg Path:</strong></p>
+<pre><code class="lang-json">// appsettings.json
+{
+  &quot;FFmpeg&quot;: {
+    &quot;ExecutablePath&quot;: &quot;/usr/bin/ffmpeg&quot;,
+    &quot;SearchPaths&quot;: [
+      &quot;/usr/bin&quot;,
+      &quot;/usr/local/bin&quot;,
+      &quot;/opt/ffmpeg/bin&quot;
+    ]
+  }
+}
+</code></pre>
+<p><strong>Install GPU Drivers:</strong></p>
+<pre><code class="lang-bash"># NVIDIA CUDA drivers
+sudo apt install nvidia-driver-525
+sudo reboot
+
+# Verify installation
+nvidia-smi
+</code></pre>
+<h4 id="prevention-3">Prevention</h4>
+<ul>
+<li>Include FFmpeg in deployment packages</li>
+<li>Automate dependency installation</li>
+<li>Document system requirements</li>
+<li>Test on clean systems</li>
+</ul>
+<hr>
+<h3 id="5-providers-health-check-failure">5. Providers Health Check Failure</h3>
+<h4 id="symptoms-4">Symptoms</h4>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Providers&quot;,
+  &quot;status&quot;: &quot;degraded&quot;,
+  &quot;description&quot;: &quot;Provider configuration has 2 warning(s)&quot;,
+  &quot;data&quot;: {
+    &quot;llm_providers_available&quot;: 0,
+    &quot;warnings&quot;: [
+      &quot;No LLM providers configured - script generation will not work&quot;,
+      &quot;No API keys configured - only offline providers will work&quot;
+    ]
+  }
+}
+</code></pre>
+<h4 id="diagnosis-4">Diagnosis</h4>
+<ol>
+<li>Check provider configuration</li>
+<li>Verify API keys</li>
+<li>Test provider connectivity</li>
+<li>Check quota/rate limits</li>
+</ol>
+<h4 id="resolution-4">Resolution</h4>
+<p><strong>Configure API Keys:</strong></p>
+<pre><code class="lang-bash"># Set environment variables
+export OPENAI_API_KEY=&quot;sk-...&quot;
+export ELEVENLABS_API_KEY=&quot;...&quot;
+
+# Or update appsettings.json
+</code></pre>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;ApiKey&quot;: &quot;sk-...&quot;,
+      &quot;Model&quot;: &quot;gpt-4&quot;
+    }
+  }
+}
+</code></pre>
+<p><strong>Test Provider Connectivity:</strong></p>
+<pre><code class="lang-bash"># Test OpenAI
+curl https://api.openai.com/v1/models \
+  -H &quot;Authorization: Bearer $OPENAI_API_KEY&quot;
+
+# Test from application
+curl -X POST http://localhost:5005/api/providers/test \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;provider&quot;: &quot;OpenAI&quot;, &quot;test_type&quot;: &quot;connection&quot;}'
+</code></pre>
+<p><strong>Check Quota:</strong></p>
+<pre><code class="lang-bash"># OpenAI usage
+curl https://api.openai.com/v1/usage \
+  -H &quot;Authorization: Bearer $OPENAI_API_KEY&quot;
+</code></pre>
+<h4 id="prevention-4">Prevention</h4>
+<ul>
+<li>Store API keys securely (Key Vault, Secrets Manager)</li>
+<li>Monitor API usage and quotas</li>
+<li>Set up billing alerts</li>
+<li>Configure backup providers</li>
+</ul>
+<hr>
+<h3 id="6-startup-health-check-failure">6. Startup Health Check Failure</h3>
+<h4 id="symptoms-5">Symptoms</h4>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Startup&quot;,
+  &quot;status&quot;: &quot;unhealthy&quot;,
+  &quot;description&quot;: &quot;Application is still starting up&quot;,
+  &quot;data&quot;: {
+    &quot;ready&quot;: false
+  }
+}
+</code></pre>
+<h4 id="diagnosis-5">Diagnosis</h4>
+<pre><code class="lang-bash"># Check application logs
+tail -f logs/aura-api-*.log
+
+# Check startup progress
+journalctl -u aura-api -f
+
+# Check process status
+systemctl status aura-api
+</code></pre>
+<h4 id="resolution-5">Resolution</h4>
+<p><strong>If startup is taking too long:</strong></p>
+<ol>
+<li>Check for blocking operations in startup</li>
+<li>Review database migrations</li>
+<li>Check dependency downloads</li>
+<li>Verify network connectivity</li>
+</ol>
+<p><strong>Increase startup timeout (Kubernetes):</strong></p>
+<pre><code class="lang-yaml">startupProbe:
+  httpGet:
+    path: /health/ready
+    port: 5005
+  initialDelaySeconds: 0
+  periodSeconds: 10
+  failureThreshold: 60  # 600s total
+</code></pre>
+<p><strong>Force restart if hung:</strong></p>
+<pre><code class="lang-bash"># Graceful restart
+systemctl restart aura-api
+
+# Force kill if hung
+pkill -9 -f Aura.Api
+systemctl start aura-api
+</code></pre>
+<h4 id="prevention-5">Prevention</h4>
+<ul>
+<li>Optimize startup procedures</li>
+<li>Move heavy initialization to background</li>
+<li>Use startup probes with adequate timeout</li>
+<li>Monitor startup duration</li>
+</ul>
+<hr>
+<h2 id="emergency-procedures">Emergency Procedures</h2>
+<h3 id="complete-system-failure">Complete System Failure</h3>
+<p>If all health checks are failing:</p>
+<ol>
+<li><p><strong>Check system resources:</strong></p>
+<pre><code class="lang-bash">top
+df -h
+free -h
+</code></pre>
+</li>
+<li><p><strong>Review recent changes:</strong></p>
+<pre><code class="lang-bash">git log --oneline -10
+journalctl -u aura-api --since &quot;1 hour ago&quot;
+</code></pre>
+</li>
+<li><p><strong>Restart all services:</strong></p>
+<pre><code class="lang-bash">systemctl restart aura-api
+systemctl restart nginx  # if applicable
+</code></pre>
+</li>
+<li><p><strong>Rollback if needed:</strong></p>
+<pre><code class="lang-bash">git checkout previous-stable-tag
+dotnet publish -c Release
+systemctl restart aura-api
+</code></pre>
+</li>
+</ol>
+<h3 id="database-corruption">Database Corruption</h3>
+<ol>
+<li><p><strong>Stop application:</strong></p>
+<pre><code class="lang-bash">systemctl stop aura-api
+</code></pre>
+</li>
+<li><p><strong>Backup current state:</strong></p>
+<pre><code class="lang-bash">cp aura.db aura.db.$(date +%Y%m%d_%H%M%S)
+</code></pre>
+</li>
+<li><p><strong>Restore from backup:</strong></p>
+<pre><code class="lang-bash">cp /backups/aura.db.latest aura.db
+</code></pre>
+</li>
+<li><p><strong>Verify integrity:</strong></p>
+<pre><code class="lang-bash">sqlite3 aura.db &quot;PRAGMA integrity_check;&quot;
+</code></pre>
+</li>
+<li><p><strong>Restart application:</strong></p>
+<pre><code class="lang-bash">systemctl start aura-api
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2 id="escalation">Escalation</h2>
+<p>If issues persist after following this runbook:</p>
+<ol>
+<li><p><strong>Gather diagnostics:</strong></p>
+<pre><code class="lang-bash"># Create diagnostic bundle
+tar -czf diagnostics-$(date +%Y%m%d).tar.gz \
+  logs/ \
+  aura.db \
+  appsettings.json \
+  /var/log/syslog
+</code></pre>
+</li>
+<li><p><strong>Contact support:</strong></p>
+<ul>
+<li>Email: support@aura.studio</li>
+<li>Include: diagnostic bundle, error messages, steps taken</li>
+</ul>
+</li>
+<li><p><strong>Open incident:</strong></p>
+<ul>
+<li>GitHub Issues: <a href="https://github.com/aura/aura/issues">https://github.com/aura/aura/issues</a></li>
+<li>Slack: #aura-support</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="health-check-maintenance">Health Check Maintenance</h2>
+<h3 id="weekly-tasks">Weekly Tasks</h3>
+<ul>
+<li>Review health check logs</li>
+<li>Verify alert configurations</li>
+<li>Test manual failover procedures</li>
+</ul>
+<h3 id="monthly-tasks">Monthly Tasks</h3>
+<ul>
+<li>Review and adjust thresholds</li>
+<li>Analyze health check trends</li>
+<li>Update runbook with new issues</li>
+<li>Test disaster recovery procedures</li>
+</ul>
+<h3 id="quarterly-tasks">Quarterly Tasks</h3>
+<ul>
+<li>Chaos engineering tests</li>
+<li>Load test health checks</li>
+<li>Review and optimize check performance</li>
+<li>Update documentation</li>
+</ul>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="HEALTH_CHECKS_GUIDE.html">Health Checks Guide</a></li>
+<li>Monitoring Guide</li>
+<li>Disaster Recovery Plan</li>
+<li>Operational Procedures</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/HEALTH_CHECKS_RUNBOOK.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

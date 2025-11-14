@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Model Selection Architecture - Visual Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Model Selection Architecture - Visual Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/MODEL_SELECTION_ARCHITECTURE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="model-selection-architecture---visual-guide">Model Selection Architecture - Visual Guide</h1>
+
+<h2 id="system-overview">System Overview</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                         USER INTERFACE                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌────────────────┐  ┌──────────────────┐  ┌────────────────┐ │
+│  │ ModelsPage     │  │ ModelPicker      │  │ Job Details    │ │
+│  │                │  │                  │  │                │ │
+│  │ • Audit Log    │  │ • Badges/Tooltips│  │ • Audit Trail  │ │
+│  │ • Fallback ℹ️   │  │ • Test Model 🧪  │  │ • Per-Job View │ │
+│  └────────────────┘  └──────────────────┘  └────────────────┘ │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                          API LAYER                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  GET  /api/models/selection              → Get all selections  │
+│  POST /api/models/selection              → Set selection       │
+│  GET  /api/models/audit-log              → Global audit        │
+│  GET  /api/models/audit-log/job/{jobId}  → Job-specific audit │
+│  POST /api/models/test                   → Test model          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                       BUSINESS LOGIC                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ModelSelectionService                                          │
+│  ├─ ResolveModelAsync() ──────────────────┐                   │
+│  │  • Applies precedence rules             │                   │
+│  │  • Tracks fallback reasons              │                   │
+│  │  • Records audit trail                  │                   │
+│  │                                         ▼                   │
+│  ├─ SetModelSelectionAsync()    ┌──────────────────┐         │
+│  │  • Validates model exists      │ Precedence Logic│         │
+│  │  • Checks deprecation          │                 │         │
+│  │  • Stores selection            │ 1. Pinned Run   │         │
+│  │                                │ 2. Run Override │         │
+│  └─ GetAuditLogByJobIdAsync()    │ 3. Pinned Stage │         │
+│     • Retrieves job audit         │ 4. Project      │         │
+│                                   │ 5. Global       │         │
+│                                   │ 6. Auto-Fallback│         │
+│                                   └──────────────────┘         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      DATA PERSISTENCE                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ModelSelectionStore                                            │
+│  ├─ model-selections.json                                      │
+│  │  {                                                           │
+│  │    &quot;selections&quot;: [                                           │
+│  │      {                                                       │
+│  │        &quot;provider&quot;: &quot;OpenAI&quot;,                                 │
+│  │        &quot;stage&quot;: &quot;script&quot;,                                    │
+│  │        &quot;modelId&quot;: &quot;gpt-4&quot;,                                   │
+│  │        &quot;scope&quot;: &quot;Stage&quot;,                                     │
+│  │        &quot;isPinned&quot;: true                                      │
+│  │      }                                                       │
+│  │    ],                                                        │
+│  │    &quot;auditLog&quot;: [                                             │
+│  │      {                                                       │
+│  │        &quot;provider&quot;: &quot;OpenAI&quot;,                                 │
+│  │        &quot;stage&quot;: &quot;script&quot;,                                    │
+│  │        &quot;modelId&quot;: &quot;gpt-4o-mini&quot;,                             │
+│  │        &quot;source&quot;: &quot;AutomaticFallback&quot;,                        │
+│  │        &quot;fallbackReason&quot;: &quot;gpt-4 was unavailable&quot;,           │
+│  │        &quot;jobId&quot;: &quot;job-123&quot;,                                   │
+│  │        &quot;timestamp&quot;: &quot;2025-11-06T00:00:00Z&quot;                  │
+│  │      }                                                       │
+│  │    ],                                                        │
+│  │    &quot;allowAutomaticFallback&quot;: false                          │
+│  │  }                                                           │
+│  └─────────────────────────────────────────────────────────────│
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="resolution-flow">Resolution Flow</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                    Model Resolution Flow                         │
+└─────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │ Request      │
+    │ with stage   │
+    └──────┬───────┘
+           │
+           ▼
+    ┌─────────────────────────┐
+    │ Check Run Override      │◄─── CLI/API parameter
+    │ (Pinned?)               │
+    └──────┬──────────────────┘
+           │
+      ┌────┴────┐
+      │Available?│
+      └────┬────┘
+           │
+    ┌─────▼──────┐
+    │   YES      │                  ┌──────────────┐
+    │  ┌─────┐   │                  │   NO         │
+    │  │ USE │   │                  │  ┌────────┐  │
+    │  └─────┘   │                  │  │ BLOCK  │  │ ◄── Pinned
+    └────────────┘                  │  └────────┘  │
+                                    └──────────────┘
+           │
+           ▼
+    ┌─────────────────────────┐
+    │ Check Stage Pinned      │◄─── User configured
+    └──────┬──────────────────┘
+           │
+      ┌────┴────┐
+      │Available?│
+      └────┬────┘
+           │
+    ┌─────▼──────┐
+    │   YES      │                  ┌──────────────┐
+    │  ┌─────┐   │                  │   NO         │
+    │  │ USE │   │                  │  ┌────────┐  │
+    │  └─────┘   │                  │  │ BLOCK  │  │ ◄── Pinned
+    └────────────┘                  │  └────────┘  │
+                                    └──────────────┘
+           │
+           ▼
+    ┌─────────────────────────┐
+    │ Check Project Override  │◄─── Per-project setting
+    └──────┬──────────────────┘
+           │
+      ┌────┴────┐
+      │Available?│
+      └────┬────┘
+           │
+    ┌─────▼──────┐              ┌──────────────────┐
+    │   YES      │              │   NO             │
+    │  ┌─────┐   │              │  Record Fallback │
+    │  │ USE │   │              │  Continue ▼      │
+    │  └─────┘   │              └──────────────────┘
+    └────────────┘
+           │
+           ▼
+    ┌─────────────────────────┐
+    │ Check Global Default    │◄─── Application-wide
+    └──────┬──────────────────┘
+           │
+      ┌────┴────┐
+      │Available?│
+      └────┬────┘
+           │
+    ┌─────▼──────┐              ┌──────────────────┐
+    │   YES      │              │   NO             │
+    │  ┌─────┐   │              │  Record Fallback │
+    │  │ USE │   │              │  Continue ▼      │
+    │  └─────┘   │              └──────────────────┘
+    └────────────┘
+           │
+           ▼
+    ┌─────────────────────────┐
+    │ Auto-Fallback Enabled?  │◄─── User toggle
+    └──────┬──────────────────┘
+           │
+      ┌────┴────┐
+      │ Enabled?│
+      └────┬────┘
+           │
+    ┌─────▼──────┐              ┌──────────────────┐
+    │   YES      │              │   NO             │
+    │  Use Safe  │              │  ┌────────────┐  │
+    │  Default   │              │  │ BLOCK with │  │
+    │  ┌─────┐   │              │  │ Recommend  │  │
+    │  │ USE │   │              │  └────────────┘  │
+    │  └─────┘   │              └──────────────────┘
+    └────────────┘
+           │
+           ▼
+    ┌─────────────────────────┐
+    │  Record in Audit Log    │
+    │  • Source               │
+    │  • Reasoning            │
+    │  • Fallback Reason      │
+    │  • Timestamp            │
+    │  • Job ID               │
+    └─────────────────────────┘
+</code></pre>
+<h2 id="ui-components-structure">UI Components Structure</h2>
+<pre><code>┌───────────────────────────────────────────────────────────────┐
+│                     ModelsPage.tsx                            │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │ Per-Stage Model Configuration                           │ │
+│  ├─────────────────────────────────────────────────────────┤ │
+│  │                                                         │ │
+│  │  Script Generation                                      │ │
+│  │  ┌────────────────┐ ┌───┐ ┌──────┐                    │ │
+│  │  │ gpt-4          ▼│ │📌 │ │🧪Test│                    │ │
+│  │  └────────────────┘ └───┘ └──────┘                    │ │
+│  │  🔴 Pinned  🔵 Stage Override                          │ │
+│  │                                                         │ │
+│  │  Visual Prompts                                         │ │
+│  │  ┌────────────────┐ ┌───┐ ┌──────┐                    │ │
+│  │  │ gpt-4o         ▼│ │   │ │🧪Test│                    │ │
+│  │  └────────────────┘ └───┘ └──────┘                    │ │
+│  │  🔵 Project Override                                    │ │
+│  │                                                         │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │ Settings                                                │ │
+│  ├─────────────────────────────────────────────────────────┤ │
+│  │                                                         │ │
+│  │  Allow automatic fallback  [ON/OFF]                    │ │
+│  │                                                         │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │ Audit Log (Recent)                                      │ │
+│  ├─────────────────────────────────────────────────────────┤ │
+│  │                                                         │ │
+│  │  OpenAI / script → gpt-4o-mini                         │ │
+│  │  Source: AutomaticFallback (2025-11-06 12:00:00)      │ │
+│  │  Reasoning: Using automatic fallback                   │ │
+│  │  ℹ️ Fallback: Project-override 'gpt-4' unavailable     │ │
+│  │  Job ID: job-abc123                                    │ │
+│  │                                                         │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│                  RunDetailsPage.tsx                           │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  [Telemetry Data...]                                         │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │ Model Selection Audit Trail                             │ │
+│  ├─────────────────────────────────────────────────────────┤ │
+│  │                                                         │ │
+│  │  OpenAI / script                                        │ │
+│  │  Model: gpt-4                                           │ │
+│  │  🟡 Stage Pinned  🔒 Pinned  ✓ Used                    │ │
+│  │                                                         │ │
+│  │  Reasoning: Using stage-pinned model: gpt-4            │ │
+│  │  Selected at: 2025-11-06 12:00:00                      │ │
+│  │                                                         │ │
+│  │  ────────────────────────────────────────────────      │ │
+│  │                                                         │ │
+│  │  OpenAI / visual                                        │ │
+│  │  Model: gpt-4o-mini                                     │ │
+│  │  🟢 Automatic Fallback  ✓ Used                         │ │
+│  │                                                         │ │
+│  │  Reasoning: Using automatic fallback: Safe default     │ │
+│  │  ℹ️ Fallback: Project-override 'gpt-4o' unavailable    │ │
+│  │  Selected at: 2025-11-06 12:00:05                      │ │
+│  │                                                         │ │
+│  └─────────────────────────────────────────────────────────┘ │
+│                                                               │
+│  ℹ️ Selection Precedence: Run Override (Pinned) &gt; Run       │
+│     Override &gt; Stage Pinned &gt; Project Override &gt; Global     │
+│     Default &gt; Automatic Fallback                            │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+
+┌───────────────────────────────────────────────────────────────┐
+│            Test Model Dialog (ModelPicker)                    │
+├───────────────────────────────────────────────────────────────┤
+│                                                               │
+│  Test Model: gpt-4                                           │
+│  ─────────────────────────────────────────────────────────   │
+│                                                               │
+│  Test if the model gpt-4 from provider OpenAI is            │
+│  available and working properly.                             │
+│                                                               │
+│  API Key (required) *                                        │
+│  ┌────────────────────────────────────────────┐             │
+│  │ ••••••••••••••••••••••••••••••             │             │
+│  └────────────────────────────────────────────┘             │
+│                                                               │
+│  ℹ️ Note: Your API key is not stored and only used for      │
+│     this test.                                                │
+│                                                               │
+│  ✓ Model is available and working!                          │
+│    Context: 128,000 tokens                                   │
+│                                                               │
+│  ┌───────┐  ┌─────────────┐                                 │
+│  │ Close │  │ 🧪 Test Model│                                 │
+│  └───────┘  └─────────────┘                                 │
+│                                                               │
+└───────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="badge-legend">Badge Legend</h2>
+<pre><code>Badge Color &amp; Icon Key:
+
+🔴 Run Override (Pinned)     → Highest precedence, blocks if unavailable
+🟠 Run Override              → High precedence, falls back if unavailable
+🟡 Stage Pinned              → Per-stage lock, blocks if unavailable
+🔵 Project Override          → Project-level preference
+⚪ Global Default            → Application-wide default
+🟢 Automatic Fallback        → Safe catalog default (if enabled)
+
+🔒 Pinned                    → Will never auto-change
+⚠️ Deprecated                → Consider migrating
+✓ Used                       → Successfully used in job
+⚠️ Blocked                   → Unavailable and requires user action
+</code></pre>
+<h2 id="data-flow-example">Data Flow Example</h2>
+<pre><code>User Initiates Job
+       │
+       ▼
+┌──────────────────┐
+│ Stage: script    │
+│ Provider: OpenAI │
+└────────┬─────────┘
+         │
+         ▼
+┌─────────────────────────────────┐
+│ ResolveModelAsync()             │
+│ • No run override               │
+│ • Stage pinned: gpt-4           │
+│ • Check availability...         │
+└────────┬────────────────────────┘
+         │
+         ▼ (gpt-4 unavailable)
+┌─────────────────────────────────┐
+│ Pinned model unavailable!       │
+│ • Block execution               │
+│ • Return alternatives           │
+│ • Record audit entry            │
+└────────┬────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────┐
+│ Audit Entry                     │
+│ {                               │
+│   &quot;modelId&quot;: &quot;&quot;,                │
+│   &quot;source&quot;: &quot;StagePinned&quot;,      │
+│   &quot;isBlocked&quot;: true,            │
+│   &quot;blockReason&quot;: &quot;Stage-pinned  │
+│     model 'gpt-4' unavailable&quot;, │
+│   &quot;alternatives&quot;: [             │
+│     &quot;gpt-4o&quot;, &quot;gpt-4o-mini&quot;     │
+│   ]                             │
+│ }                               │
+└─────────────────────────────────┘
+</code></pre>
+<h2 id="api-requestresponse-examples">API Request/Response Examples</h2>
+<h3 id="test-model">Test Model</h3>
+<pre><code class="lang-http">POST /api/models/test
+Content-Type: application/json
+
+{
+  &quot;provider&quot;: &quot;OpenAI&quot;,
+  &quot;modelId&quot;: &quot;gpt-4&quot;,
+  &quot;apiKey&quot;: &quot;sk-...&quot;
+}
+
+Response 200 OK:
+{
+  &quot;provider&quot;: &quot;OpenAI&quot;,
+  &quot;modelId&quot;: &quot;gpt-4&quot;,
+  &quot;isAvailable&quot;: true,
+  &quot;isDeprecated&quot;: false,
+  &quot;contextWindow&quot;: 8192,
+  &quot;maxTokens&quot;: 8192,
+  &quot;testedAt&quot;: &quot;2025-11-06T00:00:00Z&quot;
+}
+</code></pre>
+<h3 id="get-job-audit">Get Job Audit</h3>
+<pre><code class="lang-http">GET /api/models/audit-log/job/job-abc123
+
+Response 200 OK:
+{
+  &quot;jobId&quot;: &quot;job-abc123&quot;,
+  &quot;entries&quot;: [
+    {
+      &quot;provider&quot;: &quot;OpenAI&quot;,
+      &quot;stage&quot;: &quot;script&quot;,
+      &quot;modelId&quot;: &quot;gpt-4&quot;,
+      &quot;source&quot;: &quot;StagePinned&quot;,
+      &quot;reasoning&quot;: &quot;Using stage-pinned model: gpt-4&quot;,
+      &quot;isPinned&quot;: true,
+      &quot;isBlocked&quot;: false,
+      &quot;timestamp&quot;: &quot;2025-11-06T00:00:00Z&quot;
+    },
+    {
+      &quot;provider&quot;: &quot;OpenAI&quot;,
+      &quot;stage&quot;: &quot;visual&quot;,
+      &quot;modelId&quot;: &quot;gpt-4o-mini&quot;,
+      &quot;source&quot;: &quot;AutomaticFallback&quot;,
+      &quot;reasoning&quot;: &quot;Using automatic fallback: Safe default&quot;,
+      &quot;fallbackReason&quot;: &quot;Project-override 'gpt-4o' was unavailable&quot;,
+      &quot;isPinned&quot;: false,
+      &quot;isBlocked&quot;: false,
+      &quot;timestamp&quot;: &quot;2025-11-06T00:00:05Z&quot;
+    }
+  ],
+  &quot;totalCount&quot;: 2
+}
+</code></pre>
+<hr>
+<p><strong>Architecture Version:</strong> 1.0<br>
+<strong>Last Updated:</strong> 2025-11-06<br>
+<strong>Status:</strong> ✅ Production-Ready</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/MODEL_SELECTION_ARCHITECTURE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

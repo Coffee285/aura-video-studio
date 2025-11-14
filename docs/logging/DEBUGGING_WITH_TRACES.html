@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Debugging with Distributed Traces | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Debugging with Distributed Traces | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/DEBUGGING_WITH_TRACES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="debugging-with-distributed-traces">Debugging with Distributed Traces</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide demonstrates how to use distributed tracing to debug issues across the Aura frontend and backend.</p>
+<h2 id="understanding-distributed-tracing">Understanding Distributed Tracing</h2>
+<h3 id="key-concepts">Key Concepts</h3>
+<ul>
+<li><strong>Trace</strong>: A complete journey of a request through the system</li>
+<li><strong>Span</strong>: A single operation within a trace (e.g., HTTP request, database query)</li>
+<li><strong>Trace ID</strong>: Unique identifier for an entire trace</li>
+<li><strong>Span ID</strong>: Unique identifier for a specific span within a trace</li>
+<li><strong>Parent Span ID</strong>: Links child spans to their parent</li>
+<li><strong>Correlation ID</strong>: Simplified identifier for tracking requests</li>
+</ul>
+<h3 id="trace-propagation-flow">Trace Propagation Flow</h3>
+<pre><code>Frontend             Backend              Database
+   |                    |                    |
+   |---&gt; Request ------&gt;|                    |
+   |    (TraceID: abc)  |                    |
+   |                    |---&gt; Query --------&gt;|
+   |                    |   (SpanID: def)    |
+   |                    |&lt;--- Result --------|
+   |&lt;--- Response ------|                    |
+</code></pre>
+<h2 id="finding-related-logs">Finding Related Logs</h2>
+<h3 id="by-correlation-id">By Correlation ID</h3>
+<p>Correlation IDs are the simplest way to track a request:</p>
+<ol>
+<li><strong>Get Correlation ID from Response Headers</strong></li>
+</ol>
+<pre><code class="lang-bash">curl -v https://api.example.com/api/projects
+# Look for: X-Correlation-ID: a1b2c3d4e5f6
+</code></pre>
+<ol start="2">
+<li><strong>Search Logs</strong></li>
+</ol>
+<pre><code class="lang-bash"># Search all log files
+grep &quot;a1b2c3d4e5f6&quot; logs/*.log
+
+# Search with context
+grep -C 10 &quot;a1b2c3d4e5f6&quot; logs/aura-api-*.log
+</code></pre>
+<ol start="3">
+<li><strong>Filter in Log Viewer</strong></li>
+</ol>
+<pre><code>CorrelationId == &quot;a1b2c3d4e5f6&quot;
+</code></pre>
+<h3 id="by-trace-id">By Trace ID</h3>
+<p>For distributed tracing across services:</p>
+<ol>
+<li><strong>Extract Trace ID</strong></li>
+</ol>
+<pre><code class="lang-bash"># From response headers
+X-Trace-ID: 7f8e9d0c1b2a
+</code></pre>
+<ol start="2">
+<li><strong>Search All Services</strong></li>
+</ol>
+<pre><code class="lang-bash"># Search backend logs
+grep &quot;TraceId.*7f8e9d0c1b2a&quot; logs/aura-api-*.log
+
+# Search frontend logs (if available)
+grep &quot;traceId.*7f8e9d0c1b2a&quot; logs/browser-*.log
+</code></pre>
+<ol start="3">
+<li><strong>Visualize Trace Timeline</strong></li>
+</ol>
+<pre><code>TraceId == &quot;7f8e9d0c1b2a&quot;
+| sort by Timestamp
+| project Timestamp, SpanId, ParentSpanId, Message, Duration
+</code></pre>
+<h2 id="common-debugging-scenarios">Common Debugging Scenarios</h2>
+<h3 id="scenario-1-slow-api-request">Scenario 1: Slow API Request</h3>
+<p><strong>Problem</strong>: API request taking too long</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><strong>Identify the slow request from frontend logs</strong></li>
+</ol>
+<pre><code class="lang-typescript">// Frontend automatically logs performance
+SLOW REQUEST DETECTED: GET /api/projects took 6234ms
+</code></pre>
+<ol start="2">
+<li><strong>Get correlation ID from browser network tab</strong></li>
+</ol>
+<pre><code>X-Correlation-ID: a1b2c3d4e5f6
+</code></pre>
+<ol start="3">
+<li><strong>Search backend logs</strong></li>
+</ol>
+<pre><code class="lang-bash">grep &quot;a1b2c3d4e5f6&quot; logs/aura-api-*.log | grep -E &quot;(Duration|Performance)&quot;
+</code></pre>
+<ol start="4">
+<li><strong>Analyze performance breakdown</strong></li>
+</ol>
+<pre><code>[INFO] [a1b2c3d4e5f6] Request completed: GET /api/projects - 200 in 6234ms
+[INFO] [a1b2c3d4e5f6] Performance: DatabaseQuery completed in 5800ms
+[WARN] [a1b2c3d4e5f6] SLOW REQUEST DETECTED: DatabaseQuery took 5800ms
+</code></pre>
+<ol start="5">
+<li><strong>Identify the bottleneck</strong></li>
+</ol>
+<pre><code class="lang-csharp">// Add more granular timing
+using (var timer = PerformanceTimer.Start(logger, &quot;GetProjects&quot;))
+{
+    timer.Checkpoint(&quot;BeforeDatabase&quot;);
+    var projects = await db.Projects.ToListAsync();
+    timer.Checkpoint(&quot;AfterDatabase&quot;);
+    
+    timer.Checkpoint(&quot;BeforeSerialization&quot;);
+    var result = mapper.Map&lt;List&lt;ProjectDto&gt;&gt;(projects);
+    timer.Checkpoint(&quot;AfterSerialization&quot;);
+}
+</code></pre>
+<h3 id="scenario-2-intermittent-error">Scenario 2: Intermittent Error</h3>
+<p><strong>Problem</strong>: Error occurs occasionally, hard to reproduce</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><strong>Find error in logs</strong></li>
+</ol>
+<pre><code class="lang-bash">grep &quot;ERROR&quot; logs/errors-*.log | tail -20
+</code></pre>
+<ol start="2">
+<li><strong>Extract correlation ID</strong></li>
+</ol>
+<pre><code>[ERROR] [xyz123] Failed to generate video for project proj_456
+</code></pre>
+<ol start="3">
+<li><strong>Get full request context</strong></li>
+</ol>
+<pre><code class="lang-bash">grep &quot;xyz123&quot; logs/aura-api-*.log
+</code></pre>
+<ol start="4">
+<li><strong>Analyze the complete flow</strong></li>
+</ol>
+<pre><code>[INFO] [xyz123] Request: POST /api/render from 192.168.1.100
+[INFO] [xyz123] Starting video generation for project proj_456
+[INFO] [xyz123] Processing 120 frames
+[WARN] [xyz123] Frame 87 processing slow: 2300ms
+[ERROR] [xyz123] Failed to encode frame 87: Out of memory
+[ERROR] [xyz123] Video generation failed
+[ERROR] [xyz123] Response: POST /api/render 500 in 245000ms
+</code></pre>
+<ol start="5">
+<li><strong>Identify pattern</strong></li>
+</ol>
+<pre><code class="lang-bash"># Check if it's memory-related
+grep &quot;Out of memory&quot; logs/*.log | wc -l
+
+# Check if it's specific to large projects
+grep &quot;xyz123&quot; logs/*.log | grep &quot;frames&quot;
+</code></pre>
+<h3 id="scenario-3-error-propagation-across-services">Scenario 3: Error Propagation Across Services</h3>
+<p><strong>Problem</strong>: Frontend error caused by backend issue</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><strong>Start from frontend error</strong></li>
+</ol>
+<pre><code class="lang-typescript">[ERROR] [Frontend] Failed to load dashboard
+TraceID: abc123, SpanID: def456
+Error: Network request failed
+</code></pre>
+<ol start="2">
+<li><strong>Find backend request with same trace ID</strong></li>
+</ol>
+<pre><code class="lang-bash">grep &quot;abc123&quot; logs/aura-api-*.log
+</code></pre>
+<ol start="3">
+<li><strong>Trace through backend operations</strong></li>
+</ol>
+<pre><code>[INFO] [abc123] [def456] Request: GET /api/dashboard
+[INFO] [abc123] [ghi789] Child span: DatabaseQuery
+[ERROR] [abc123] [ghi789] Database query timeout after 30s
+[ERROR] [abc123] [def456] Request failed: DatabaseQueryTimeout
+</code></pre>
+<ol start="4">
+<li><strong>Identify root cause</strong></li>
+</ol>
+<pre><code>Root cause: Database query timeout
+Span hierarchy:
+  - Frontend (def456) -&gt; Backend Request (ghi789) -&gt; Database Query
+</code></pre>
+<h3 id="scenario-4-user-reported-issue">Scenario 4: User-Reported Issue</h3>
+<p><strong>Problem</strong>: User reports &quot;Something went wrong&quot;</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><strong>Get information from user</strong></li>
+</ol>
+<pre><code>- Timestamp: 2024-01-15 14:30:00 UTC
+- Action: Tried to export project
+- Project ID: proj_789
+- User ID: user_123
+</code></pre>
+<ol start="2">
+<li><strong>Search logs by time window and user</strong></li>
+</ol>
+<pre><code class="lang-bash">grep &quot;user_123.*proj_789&quot; logs/aura-api-2024-01-15.log | \
+  grep -E &quot;14:2[5-9]|14:3[0-5]&quot;
+</code></pre>
+<ol start="3">
+<li><strong>Find the correlation ID</strong></li>
+</ol>
+<pre><code>[INFO] [corr_abc] User user_123 initiated export for project proj_789
+</code></pre>
+<ol start="4">
+<li><strong>Get complete trace</strong></li>
+</ol>
+<pre><code class="lang-bash">grep &quot;corr_abc&quot; logs/aura-api-2024-01-15.log
+</code></pre>
+<ol start="5">
+<li><strong>Analyze with context</strong></li>
+</ol>
+<pre><code>[INFO] [corr_abc] Export started
+[INFO] [corr_abc] Validating project structure
+[WARN] [corr_abc] Project contains invalid asset reference: asset_999
+[ERROR] [corr_abc] Export validation failed: InvalidAssetReference
+[ERROR] [corr_abc] Export failed for user user_123
+</code></pre>
+<h2 id="using-trace-context-programmatically">Using Trace Context Programmatically</h2>
+<h3 id="creating-child-spans">Creating Child Spans</h3>
+<h4 id="backend-c">Backend (C#)</h4>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+public async Task&lt;Video&gt; GenerateVideo(string projectId)
+{
+    // Main operation
+    logger.LogInformation(&quot;Starting video generation for {ProjectId}&quot;, projectId);
+    
+    // Create child span for sub-operation
+    using var childScope = TraceContext.Current?.CreateChildSpan(&quot;ProcessFrames&quot;);
+    try
+    {
+        var frames = await ProcessFrames(projectId);
+        logger.LogInformation(&quot;Processed {FrameCount} frames&quot;, frames.Count);
+        return frames;
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, &quot;Frame processing failed&quot;);
+        throw;
+    }
+}
+</code></pre>
+<h4 id="frontend-typescript">Frontend (TypeScript)</h4>
+<pre><code class="lang-typescript">async function loadProjectWithAssets(projectId: string) {
+  const componentLogger = logger.forComponent('ProjectLoader');
+  
+  // Create child span for project load
+  const projectSpan = logger.createChildSpan('LoadProject');
+  logger.setTraceContext(projectSpan);
+  
+  try {
+    const project = await fetchProject(projectId);
+    componentLogger.info('Project loaded', 'load', { projectId });
+    
+    // Create child span for assets
+    const assetsSpan = logger.createChildSpan('LoadAssets');
+    logger.setTraceContext(assetsSpan);
+    
+    const assets = await fetchAssets(project.assetIds);
+    componentLogger.info('Assets loaded', 'load', { count: assets.length });
+    
+    return { project, assets };
+  } catch (error) {
+    componentLogger.error('Failed to load project', error, 'load');
+    throw error;
+  }
+}
+</code></pre>
+<h2 id="log-aggregation-and-search">Log Aggregation and Search</h2>
+<h3 id="using-grep">Using grep</h3>
+<pre><code class="lang-bash"># Find all errors for a specific project
+grep &quot;proj_123&quot; logs/*.log | grep ERROR
+
+# Find slow requests
+grep &quot;SLOW REQUEST&quot; logs/aura-api-*.log
+
+# Find all logs for a time range
+grep &quot;2024-01-15 14:[3-4][0-9]&quot; logs/aura-api-*.log
+
+# Find errors with context
+grep -B 5 -A 5 &quot;ERROR.*proj_123&quot; logs/*.log
+
+# Find trace hierarchy
+grep &quot;abc123&quot; logs/*.log | sort
+</code></pre>
+<h3 id="using-log-query-language">Using Log Query Language</h3>
+<p>If using a log aggregation service (e.g., ELK, Splunk, Azure Log Analytics):</p>
+<pre><code class="lang-sql">-- Find all spans in a trace
+Logs
+| where TraceId == &quot;abc123&quot;
+| project Timestamp, Level, SpanId, ParentSpanId, Message, Duration
+| order by Timestamp asc
+
+-- Find slow operations
+Logs
+| where Level == &quot;Performance&quot; and DurationMs &gt; 3000
+| summarize count() by OperationName
+| order by count_ desc
+
+-- Find error patterns
+Logs
+| where Level == &quot;ERROR&quot;
+| summarize count() by ExceptionType
+| order by count_ desc
+
+-- Trace visualization
+Logs
+| where CorrelationId == &quot;xyz789&quot;
+| project Timestamp, Level, Message, Duration
+| render timechart
+</code></pre>
+<h2 id="best-practices-for-debugging">Best Practices for Debugging</h2>
+<h3 id="1-always-include-context">1. Always Include Context</h3>
+<pre><code class="lang-csharp">// ❌ Hard to debug
+logger.LogError(&quot;Operation failed&quot;);
+
+// ✅ Easy to debug
+logger.LogError(ex, 
+    &quot;Failed to generate video for project {ProjectId}, user {UserId}, resolution {Resolution}&quot;,
+    projectId, userId, resolution);
+</code></pre>
+<h3 id="2-use-consistent-naming">2. Use Consistent Naming</h3>
+<pre><code class="lang-csharp">// ✅ Consistent operation names
+logger.LogInformation(&quot;VideoGeneration started&quot;);
+// ... operation ...
+logger.LogInformation(&quot;VideoGeneration completed&quot;);
+
+// Easy to grep
+grep &quot;VideoGeneration&quot; logs/*.log
+</code></pre>
+<h3 id="3-log-at-state-transitions">3. Log at State Transitions</h3>
+<pre><code class="lang-csharp">public async Task ProcessVideo(string projectId)
+{
+    logger.LogInformation(&quot;Processing started for {ProjectId}&quot;, projectId);
+    
+    try
+    {
+        logger.LogInformation(&quot;Validating project {ProjectId}&quot;, projectId);
+        await ValidateProject(projectId);
+        
+        logger.LogInformation(&quot;Generating frames for {ProjectId}&quot;, projectId);
+        await GenerateFrames(projectId);
+        
+        logger.LogInformation(&quot;Encoding video for {ProjectId}&quot;, projectId);
+        await EncodeVideo(projectId);
+        
+        logger.LogInformation(&quot;Processing completed for {ProjectId}&quot;, projectId);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, &quot;Processing failed for {ProjectId}&quot;, projectId);
+        throw;
+    }
+}
+</code></pre>
+<h3 id="4-use-structured-properties">4. Use Structured Properties</h3>
+<pre><code class="lang-csharp">// Makes it easy to query and filter
+logger.LogInformation(
+    &quot;Video generated with {FrameCount} frames, {Duration}s, resolution {Resolution}&quot;,
+    frameCount, duration, resolution);
+</code></pre>
+<h2 id="troubleshooting-tips">Troubleshooting Tips</h2>
+<h3 id="cant-find-logs">Can't Find Logs</h3>
+<ol>
+<li><strong>Check log retention period</strong> (default: 30 days)</li>
+<li><strong>Verify log file paths</strong></li>
+<li><strong>Check log level configuration</strong></li>
+<li><strong>Ensure middleware is registered</strong></li>
+</ol>
+<h3 id="missing-correlation-ids">Missing Correlation IDs</h3>
+<ol>
+<li><strong>Verify CorrelationIdMiddleware is registered</strong> in <code>Program.cs</code></li>
+<li><strong>Check middleware order</strong> (should be early in pipeline)</li>
+<li><strong>Ensure frontend is sending</strong> <code>X-Correlation-ID</code> header</li>
+</ol>
+<h3 id="missing-trace-context">Missing Trace Context</h3>
+<ol>
+<li><strong>Verify TraceContext is set</strong> in middleware</li>
+<li><strong>Check async context flow</strong> (use <code>ConfigureAwait(false)</code> carefully)</li>
+<li><strong>Ensure enrichers are registered</strong> in Serilog configuration</li>
+</ol>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="LOGGING_BEST_PRACTICES.html">Logging Best Practices</a></li>
+<li><a href="LOG_QUERY_EXAMPLES.html">Log Query Examples</a></li>
+<li><a href="https://www.w3.org/TR/trace-context/">W3C Trace Context Specification</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/DEBUGGING_WITH_TRACES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

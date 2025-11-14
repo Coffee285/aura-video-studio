@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Health Check Endpoints | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Health Check Endpoints | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/health.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="health-check-endpoints">Health Check Endpoints</h1>
+
+<p>Aura Video Studio provides comprehensive health check endpoints to monitor application readiness and liveness using ASP.NET Core Health Checks framework.</p>
+<h2 id="endpoints">Endpoints</h2>
+<h3 id="healthlive"><code>/health/live</code></h3>
+<p><strong>Liveness probe</strong> - checks if the application process is running.</p>
+<p><strong>Purpose:</strong> Container orchestration liveness probe (Kubernetes, Docker)</p>
+<p><strong>Response:</strong> Always returns 200 OK if the process is alive. No dependency checks are performed.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;healthy&quot;
+}
+</code></pre>
+<h3 id="healthready"><code>/health/ready</code></h3>
+<p><strong>Readiness probe</strong> - checks if the application is ready to serve requests by validating all critical dependencies.</p>
+<p><strong>Purpose:</strong></p>
+<ul>
+<li>Container orchestration readiness probe (Kubernetes, Docker)</li>
+<li>Load balancer health checks</li>
+<li>Monitoring systems (Prometheus, Datadog, etc.)</li>
+</ul>
+<p><strong>Response:</strong></p>
+<ul>
+<li>200 OK when all critical checks pass (status: &quot;healthy&quot;)</li>
+<li>200 OK when some non-critical checks fail (status: &quot;degraded&quot;)</li>
+<li>503 Service Unavailable when critical checks fail (status: &quot;unhealthy&quot;)</li>
+</ul>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-28T04:00:00.000Z&quot;,
+  &quot;checks&quot;: [
+    {
+      &quot;name&quot;: &quot;Dependencies&quot;,
+      &quot;status&quot;: &quot;healthy&quot;,
+      &quot;description&quot;: &quot;All dependencies available&quot;,
+      &quot;data&quot;: {
+        &quot;ffmpeg_available&quot;: true,
+        &quot;ffmpeg_path&quot;: &quot;/usr/bin/ffmpeg&quot;,
+        &quot;ffmpeg_version&quot;: &quot;ffmpeg version 6.0&quot;,
+        &quot;platform&quot;: &quot;Unix&quot;,
+        &quot;gpu_available&quot;: true,
+        &quot;nvenc_available&quot;: true,
+        &quot;gpu_vendor&quot;: &quot;NVIDIA&quot;,
+        &quot;gpu_model&quot;: &quot;GeForce RTX 3080&quot;,
+        &quot;gpu_vram_gb&quot;: 10,
+        &quot;tier&quot;: &quot;High&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;DiskSpace&quot;,
+      &quot;status&quot;: &quot;healthy&quot;,
+      &quot;description&quot;: &quot;Sufficient disk space: 125.50 GB free on C:\\&quot;,
+      &quot;data&quot;: {
+        &quot;free_gb&quot;: 125.50,
+        &quot;total_gb&quot;: 500.00,
+        &quot;threshold_gb&quot;: 1.0,
+        &quot;critical_gb&quot;: 0.5,
+        &quot;drive&quot;: &quot;C:\\&quot;
+      }
+    }
+  ]
+}
+</code></pre>
+<p><strong>Degraded Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;degraded&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-28T04:00:00.000Z&quot;,
+  &quot;checks&quot;: [
+    {
+      &quot;name&quot;: &quot;Dependencies&quot;,
+      &quot;status&quot;: &quot;degraded&quot;,
+      &quot;description&quot;: &quot;FFmpeg not available - video rendering disabled&quot;,
+      &quot;data&quot;: {
+        &quot;ffmpeg_available&quot;: false,
+        &quot;platform&quot;: &quot;Unix&quot;,
+        &quot;gpu_available&quot;: false,
+        &quot;tier&quot;: &quot;Low&quot;
+      }
+    },
+    {
+      &quot;name&quot;: &quot;DiskSpace&quot;,
+      &quot;status&quot;: &quot;healthy&quot;,
+      &quot;description&quot;: &quot;Sufficient disk space: 10.25 GB free&quot;,
+      &quot;data&quot;: {
+        &quot;free_gb&quot;: 10.25,
+        &quot;total_gb&quot;: 500.00
+      }
+    }
+  ]
+}
+</code></pre>
+<h2 id="health-checks">Health Checks</h2>
+<h3 id="dependencies-check">Dependencies Check</h3>
+<p>Validates critical dependencies for video rendering:</p>
+<ul>
+<li><strong>FFmpeg availability</strong> - Required for video composition</li>
+<li><strong>GPU detection</strong> - Detects NVIDIA GPUs with NVENC support</li>
+<li><strong>System tier</strong> - Determines hardware tier (Low/Medium/High)</li>
+</ul>
+<p><strong>Critical:</strong> FFmpeg is required for core functionality. Returns <code>degraded</code> if missing.</p>
+<p><strong>Data provided:</strong></p>
+<ul>
+<li><code>ffmpeg_available</code> - Whether FFmpeg is found</li>
+<li><code>ffmpeg_path</code> - Path to FFmpeg executable (if available)</li>
+<li><code>ffmpeg_version</code> - FFmpeg version string (if available)</li>
+<li><code>platform</code> - Operating system platform</li>
+<li><code>gpu_available</code> - Whether a GPU is detected</li>
+<li><code>nvenc_available</code> - Whether NVIDIA NVENC is available</li>
+<li><code>gpu_vendor</code> - GPU vendor (e.g., &quot;NVIDIA&quot;, &quot;AMD&quot;, &quot;Intel&quot;)</li>
+<li><code>gpu_model</code> - GPU model name</li>
+<li><code>gpu_vram_gb</code> - GPU VRAM in GB</li>
+<li><code>tier</code> - System hardware tier</li>
+</ul>
+<h3 id="disk-space-check">Disk Space Check</h3>
+<p>Validates available disk space on the drive where the application is running.</p>
+<p><strong>Critical:</strong> Returns <code>unhealthy</code> if below critical threshold (0.5 GB default)</p>
+<p><strong>Thresholds:</strong></p>
+<ul>
+<li><strong>Warning</strong> (degraded): &lt; 1.0 GB free (configurable)</li>
+<li><strong>Critical</strong> (unhealthy): &lt; 0.5 GB free (configurable)</li>
+</ul>
+<p><strong>Data provided:</strong></p>
+<ul>
+<li><code>free_gb</code> - Free space in GB (rounded to 2 decimals)</li>
+<li><code>total_gb</code> - Total disk size in GB</li>
+<li><code>threshold_gb</code> - Warning threshold</li>
+<li><code>critical_gb</code> - Critical threshold</li>
+<li><code>drive</code> - Drive name/path</li>
+</ul>
+<h2 id="status-levels">Status Levels</h2>
+<h3 id="healthy">healthy</h3>
+<p>All checks passed. Application is fully operational and ready to serve requests.</p>
+<h3 id="degraded">degraded</h3>
+<p>Some non-critical checks failed. Application can operate with reduced functionality.</p>
+<ul>
+<li>Example: FFmpeg not available, but API endpoints still work</li>
+</ul>
+<h3 id="unhealthy">unhealthy</h3>
+<p>Critical checks failed. Application cannot serve requests properly.</p>
+<ul>
+<li>Example: Disk space critically low (&lt; 0.5 GB)</li>
+<li>Returns HTTP 503 Service Unavailable</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="health-check-settings">Health Check Settings</h3>
+<p>Configure disk space thresholds in <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;HealthChecks&quot;: {
+    &quot;DiskSpaceThresholdGB&quot;: 1.0,
+    &quot;DiskSpaceCriticalGB&quot;: 0.5,
+    &quot;Timeout&quot;: &quot;00:00:10&quot;
+  }
+}
+</code></pre>
+<p><strong>Settings:</strong></p>
+<ul>
+<li><code>DiskSpaceThresholdGB</code> - Warning threshold in GB (default: 1.0)</li>
+<li><code>DiskSpaceCriticalGB</code> - Critical threshold in GB (default: 0.5)</li>
+<li><code>Timeout</code> - Health check timeout (default: 10 seconds)</li>
+</ul>
+<h3 id="port-configuration">Port Configuration</h3>
+<p>The API listens on <code>http://127.0.0.1:5005</code> by default.</p>
+<p>Override with environment variables:</p>
+<ul>
+<li><code>AURA_API_URL</code> - Full URL (e.g., <code>http://localhost:8080</code>)</li>
+<li><code>ASPNETCORE_URLS</code> - ASP.NET Core standard (e.g., <code>http://0.0.0.0:8080</code>)</li>
+</ul>
+<h2 id="integration-with-monitoring">Integration with Monitoring</h2>
+<h3 id="kubernetesdocker">Kubernetes/Docker</h3>
+<p>Use health endpoints for container orchestration:</p>
+<pre><code class="lang-yaml">livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 5005
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 5005
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+</code></pre>
+<p><strong>Liveness probe:</strong></p>
+<ul>
+<li>Detects if the application has crashed or is deadlocked</li>
+<li>Kubernetes will restart the pod if it fails</li>
+<li>Should be simple and fast (no dependency checks)</li>
+</ul>
+<p><strong>Readiness probe:</strong></p>
+<ul>
+<li>Detects if the application is ready to serve traffic</li>
+<li>Kubernetes will remove pod from service endpoints if it fails</li>
+<li>Can include dependency checks</li>
+</ul>
+<h3 id="load-balancers">Load Balancers</h3>
+<p>Configure health checks to use <code>/health/ready</code>:</p>
+<ul>
+<li><strong>Healthy threshold:</strong> 2 consecutive successful checks</li>
+<li><strong>Unhealthy threshold:</strong> 2 consecutive failed checks</li>
+<li><strong>Timeout:</strong> 5 seconds</li>
+<li><strong>Interval:</strong> 10 seconds</li>
+<li><strong>Expected status:</strong> 200 OK</li>
+</ul>
+<h3 id="monitoring-systems">Monitoring Systems</h3>
+<h4 id="prometheus">Prometheus</h4>
+<p>Monitor health check status:</p>
+<pre><code class="lang-promql"># Alert when service is not healthy
+up{job=&quot;aura-api&quot;, health_status!=&quot;healthy&quot;} == 1
+</code></pre>
+<h4 id="datadog">Datadog</h4>
+<p>Configure synthetic monitoring:</p>
+<pre><code class="lang-yaml">- name: &quot;Aura API Health Check&quot;
+  request:
+    url: &quot;http://aura-api:5005/health/ready&quot;
+  assertions:
+    - type: statusCode
+      operator: is
+      target: 200
+    - type: body
+      operator: contains
+      target: '&quot;status&quot;:&quot;healthy&quot;'
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="ffmpeg-not-found">FFmpeg Not Found</h3>
+<p><strong>Symptom:</strong> <code>/health/ready</code> returns <code>degraded</code> with &quot;FFmpeg not available&quot;</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Install FFmpeg using the Download Center in the web UI</li>
+<li>Or manually install FFmpeg and ensure it's in your PATH</li>
+<li>Or configure <code>FFmpeg:ExecutablePath</code> in appsettings.json</li>
+</ol>
+<p><strong>Check attempted paths in response data to see where the application looked.</strong></p>
+<h3 id="disk-space-low">Disk Space Low</h3>
+<p><strong>Symptom:</strong> <code>/health/ready</code> returns <code>degraded</code> or <code>unhealthy</code> for disk space</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Free up disk space by deleting old render outputs</li>
+<li>Clean temporary files: <code>%TEMP%</code> (Windows) or <code>/tmp</code> (Linux/Mac)</li>
+<li>Move the application to a drive with more space</li>
+<li>Adjust thresholds in configuration if needed</li>
+</ol>
+<h3 id="health-check-timeout">Health Check Timeout</h3>
+<p><strong>Symptom:</strong> Health check takes too long or times out</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Check if FFmpeg detection is slow (network path, slow disk)</li>
+<li>Increase timeout in configuration: <code>HealthChecks:Timeout</code></li>
+<li>Check system resources (CPU, disk I/O)</li>
+</ol>
+<h3 id="service-returns-503-on-healthready">Service Returns 503 on /health/ready</h3>
+<p><strong>Symptom:</strong> Readiness probe returns 503 Service Unavailable</p>
+<p><strong>Cause:</strong> Critical health checks are failing (status: &quot;unhealthy&quot;)</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Check the response body for which checks are failing</li>
+<li>Address the failing checks (usually FFmpeg or disk space)</li>
+<li>Service will automatically recover when checks pass</li>
+</ol>
+<h2 id="testing-health-checks">Testing Health Checks</h2>
+<h3 id="manual-testing">Manual Testing</h3>
+<pre><code class="lang-bash"># Test liveness (should always return 200 if app is running)
+curl http://localhost:5005/health/live
+
+# Test readiness (returns status and details)
+curl http://localhost:5005/health/ready | jq
+
+# Test readiness with verbose output
+curl -v http://localhost:5005/health/ready
+</code></pre>
+<h3 id="expected-responses">Expected Responses</h3>
+<p><strong>Healthy response (200 OK):</strong></p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-28T04:00:00Z&quot;,
+  &quot;checks&quot;: [...]
+}
+</code></pre>
+<p><strong>Degraded response (200 OK):</strong></p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;degraded&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-28T04:00:00Z&quot;,
+  &quot;checks&quot;: [...]
+}
+</code></pre>
+<p><strong>Unhealthy response (503 Service Unavailable):</strong></p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;unhealthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-28T04:00:00Z&quot;,
+  &quot;checks&quot;: [...]
+}
+</code></pre>
+<h2 id="rate-limiting">Rate Limiting</h2>
+<p><strong>Note:</strong> Health check endpoints are exempt from rate limiting to ensure monitoring systems can check health frequently without being blocked.</p>
+<p>See <a href="rate-limits.html">Rate Limiting Documentation</a> for details on API rate limits.</p>
+<h2 id="legacy-compatibility">Legacy Compatibility</h2>
+<h3 id="apihealthlive-and-apihealthready">/api/health/live and /api/health/ready</h3>
+<p>The custom health check service endpoints at <code>/api/health/live</code> and <code>/api/health/ready</code> are still available for backward compatibility but may be deprecated in future versions. Use the new ASP.NET Core health check endpoints at <code>/health/live</code> and <code>/health/ready</code> instead.</p>
+<h3 id="healthz">/healthz</h3>
+<p>The legacy <code>/healthz</code> endpoint is maintained for backward compatibility:</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-28T04:00:00Z&quot;
+}
+</code></pre>
+<p>Use <code>/health/live</code> for new integrations.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/health.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Performance Optimization Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Performance Optimization Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/PERFORMANCE_OPTIMIZATION_GUIDE_PR9.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="performance-optimization-guide">Performance Optimization Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide documents the performance optimizations implemented in PR #9 to improve application load times, reduce memory usage, and enhance rendering efficiency.</p>
+<h2 id="key-improvements">Key Improvements</h2>
+<h3 id="1-frontend-performance-optimizations">1. Frontend Performance Optimizations</h3>
+<h4 id="code-splitting-and-lazy-loading">Code Splitting and Lazy Loading</h4>
+<ul>
+<li>All route components are lazy-loaded using React.lazy()</li>
+<li>Suspense boundaries with loading spinners</li>
+<li>Route-level code splitting reduces initial bundle size</li>
+</ul>
+<h4 id="custom-performance-hooks">Custom Performance Hooks</h4>
+<p>Location: <code>src/hooks/usePerformanceOptimization.ts</code></p>
+<p><strong>Available Hooks:</strong></p>
+<ul>
+<li><code>useDebounce&lt;T&gt;</code> - Delays value updates</li>
+<li><code>useDebouncedCallback</code> - Debounces callback functions</li>
+<li><code>useThrottledCallback</code> - Throttles callback execution</li>
+<li><code>useLazyInit&lt;T&gt;</code> - One-time expensive initialization</li>
+<li><code>useOptimizedMemo</code> - Memoization with performance tracking</li>
+<li><code>useLazyImage</code> - Lazy load images with intersection observer</li>
+<li><code>useIsInViewport</code> - Viewport visibility detection</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<pre><code class="lang-typescript">import { useDebounce, useDebouncedCallback } from '@/hooks/usePerformanceOptimization';
+
+// Debounce search input
+const [searchTerm, setSearchTerm] = useState('');
+const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+// Debounce API calls
+const handleSearch = useDebouncedCallback((query: string) =&gt; {
+  searchApi(query);
+}, 500);
+</code></pre>
+<h4 id="image-optimization">Image Optimization</h4>
+<p>Location: <code>src/hooks/useImageOptimization.ts</code></p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>LRU cache for loaded images (max 100 images)</li>
+<li>Lazy loading with intersection observer</li>
+<li>Progressive image loading (blur-up technique)</li>
+<li>Bulk image preloading</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<pre><code class="lang-typescript">import { useLazyLoadImage, useProgressiveImage } from '@/hooks/useImageOptimization';
+
+// Lazy load image
+const { imgRef, isLoaded, error } = useLazyLoadImage(imageUrl);
+
+// Progressive loading
+const { currentSrc, isHighQualityLoaded } = useProgressiveImage(
+  thumbnailUrl,
+  fullResUrl
+);
+</code></pre>
+<h4 id="api-request-pooling">API Request Pooling</h4>
+<p>Location: <code>src/hooks/useApiRequestPool.ts</code></p>
+<p>Limits concurrent API requests to prevent overwhelming the backend (default: 6 concurrent requests).</p>
+<p><strong>Example Usage:</strong></p>
+<pre><code class="lang-typescript">import { useApiRequestPool } from '@/hooks/useApiRequestPool';
+
+const { request, getStats } = useApiRequestPool(6);
+
+// Make pooled request
+const data = await request&lt;MyType&gt;({
+  url: '/api/endpoint',
+  method: 'GET'
+});
+
+// Check pool statistics
+const { activeRequests, queuedRequests } = getStats();
+</code></pre>
+<h4 id="react-component-optimization">React Component Optimization</h4>
+<p>Location: <code>src/components/Performance/OptimizedComponent.tsx</code></p>
+<p><strong>Available Utilities:</strong></p>
+<ul>
+<li><code>withOptimizedRendering&lt;P&gt;</code> - HOC for React.memo with custom comparison</li>
+<li><code>OptimizedListItem</code> - Optimized wrapper for list items</li>
+<li><code>withSelectiveUpdates&lt;P&gt;</code> - HOC that only updates on specific props</li>
+<li><code>shallowCompareIgnoringFunctions</code> - Comparison that ignores function props</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<pre><code class="lang-typescript">import { withOptimizedRendering, OptimizedListItem } from '@/components/Performance/OptimizedComponent';
+
+// Optimize expensive component
+const MyExpensiveComponent = withOptimizedRendering(
+  ({ data }) =&gt; {
+    // Render expensive UI
+  },
+  (prev, next) =&gt; prev.data.id === next.data.id
+);
+
+// Use optimized list item
+&lt;OptimizedListItem key={item.id} id={item.id}&gt;
+  &lt;ItemContent data={item} /&gt;
+&lt;/OptimizedListItem&gt;
+</code></pre>
+<h3 id="2-backend-performance-optimizations">2. Backend Performance Optimizations</h3>
+<h4 id="hardware-acceleration-for-ffmpeg">Hardware Acceleration for FFmpeg</h4>
+<p>Location: <code>Aura.Core/Services/FFmpeg/HardwareAccelerationOptimizer.cs</code></p>
+<p><strong>Supported Hardware:</strong></p>
+<ul>
+<li>NVIDIA NVENC (CUDA)</li>
+<li>AMD AMF</li>
+<li>Intel QuickSync (QSV)</li>
+<li>Apple VideoToolbox</li>
+<li>VAAPI (Linux)</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Automatic hardware detection</li>
+<li>Optimal encoder selection</li>
+<li>Thread count optimization</li>
+<li>Preset selection based on capabilities</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<pre><code class="lang-csharp">var optimizer = new HardwareAccelerationOptimizer(logger);
+
+// Detect capabilities
+var capabilities = await optimizer.DetectCapabilitiesAsync();
+
+// Optimize FFmpeg command
+var builder = new FFmpegCommandBuilder();
+builder = await optimizer.OptimizeForHardwareAsync(builder, &quot;h264&quot;);
+
+// Get optimal settings
+var threadCount = optimizer.GetOptimalThreadCount();
+var preset = optimizer.GetOptimalPreset(capabilities);
+</code></pre>
+<h4 id="object-pooling">Object Pooling</h4>
+<p>Location: <code>Aura.Core/Services/Performance/ObjectPool.cs</code></p>
+<p>Reduces GC pressure by reusing objects.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Synchronous <code>ObjectPool&lt;T&gt;</code></li>
+<li>Asynchronous <code>AsyncObjectPool&lt;T&gt;</code></li>
+<li>Automatic return on dispose via <code>PooledObject&lt;T&gt;</code></li>
+<li>Configurable max size</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<pre><code class="lang-csharp">// Create pool
+var pool = new ObjectPool&lt;StringBuilder&gt;(
+    () =&gt; new StringBuilder(),
+    sb =&gt; sb.Clear(),
+    maxSize: 50
+);
+
+// Use with automatic return
+using (var pooled = pool.Rent())
+{
+    pooled.Value.Append(&quot;Hello&quot;);
+    // Automatically returned on dispose
+}
+
+// Or manual management
+var obj = pool.Get();
+try {
+    // Use obj
+} finally {
+    pool.Return(obj);
+}
+</code></pre>
+<h4 id="enhanced-memory-monitoring">Enhanced Memory Monitoring</h4>
+<p>Location: <code>Aura.Core/Services/Performance/EnhancedMemoryMonitor.cs</code></p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Real-time memory usage tracking</li>
+<li>Automatic GC optimization</li>
+<li>Memory leak detection</li>
+<li>Performance recommendations</li>
+<li>Configurable thresholds</li>
+</ul>
+<p><strong>Example Usage:</strong></p>
+<pre><code class="lang-csharp">var monitor = new EnhancedMemoryMonitor(
+    logger,
+    memoryLimitMb: 500,
+    gcThresholdMb: 400,
+    monitorIntervalSeconds: 30
+);
+
+// Check memory
+var stats = monitor.GetMemoryStatistics();
+bool isOk = monitor.IsMemoryUsageAcceptable();
+
+// Force optimization
+monitor.OptimizeMemoryIfNeeded();
+
+// Detect leaks
+bool hasLeak = monitor.DetectPotentialLeak();
+
+// Get recommendations
+var recommendations = monitor.GetOptimizationRecommendations();
+</code></pre>
+<h3 id="3-performance-monitoring-dashboard">3. Performance Monitoring Dashboard</h3>
+<p>Location: <code>src/components/Performance/PerformanceMonitoringDashboard.tsx</code></p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Real-time memory usage display</li>
+<li>Render count tracking</li>
+<li>Load time metrics</li>
+<li>Manual GC trigger (dev mode)</li>
+<li>Performance warnings</li>
+</ul>
+<p><strong>Usage:</strong>
+Add to any page where performance monitoring is needed:</p>
+<pre><code class="lang-typescript">import { PerformanceMonitoringDashboard } from '@/components/Performance/PerformanceMonitoringDashboard';
+
+&lt;PerformanceMonitoringDashboard /&gt;
+</code></pre>
+<h2 id="performance-best-practices">Performance Best Practices</h2>
+<h3 id="general-guidelines">General Guidelines</h3>
+<ol>
+<li><p><strong>Use React.memo for expensive components</strong></p>
+<ul>
+<li>Components that render frequently</li>
+<li>Components with expensive render logic</li>
+<li>List item components</li>
+</ul>
+</li>
+<li><p><strong>Debounce user inputs</strong></p>
+<ul>
+<li>Search boxes</li>
+<li>Auto-save functionality</li>
+<li>Real-time validation</li>
+</ul>
+</li>
+<li><p><strong>Lazy load images</strong></p>
+<ul>
+<li>Use <code>useLazyLoadImage</code> for off-screen images</li>
+<li>Use <code>useProgressiveImage</code> for important images</li>
+<li>Preload critical images on mount</li>
+</ul>
+</li>
+<li><p><strong>Limit concurrent API requests</strong></p>
+<ul>
+<li>Use <code>useApiRequestPool</code> for batch operations</li>
+<li>Implement pagination for large datasets</li>
+<li>Cache API responses when appropriate</li>
+</ul>
+</li>
+<li><p><strong>Optimize FFmpeg operations</strong></p>
+<ul>
+<li>Use hardware acceleration when available</li>
+<li>Use optimal thread count</li>
+<li>Choose appropriate presets</li>
+<li>Clean up temporary files</li>
+</ul>
+</li>
+<li><p><strong>Monitor memory usage</strong></p>
+<ul>
+<li>Enable memory monitoring in production</li>
+<li>Set appropriate limits</li>
+<li>Respond to memory warnings</li>
+<li>Profile regularly during development</li>
+</ul>
+</li>
+</ol>
+<h3 id="component-optimization-checklist">Component Optimization Checklist</h3>
+<ul>
+<li>[ ] Component is memoized if it renders frequently</li>
+<li>[ ] Event handlers are wrapped in useCallback</li>
+<li>[ ] Expensive computations use useMemo</li>
+<li>[ ] Images are lazy loaded</li>
+<li>[ ] Lists are virtualized (for 100+ items)</li>
+<li>[ ] API calls are debounced/throttled</li>
+<li>[ ] Cleanup functions remove event listeners</li>
+<li>[ ] No memory leaks from intervals/timeouts</li>
+</ul>
+<h3 id="video-generation-performance">Video Generation Performance</h3>
+<ol>
+<li><p><strong>Hardware Acceleration</strong></p>
+<ul>
+<li>Always detect and use available hardware</li>
+<li>Fall back gracefully to software encoding</li>
+<li>Log which encoder is being used</li>
+</ul>
+</li>
+<li><p><strong>Resource Management</strong></p>
+<ul>
+<li>Use object pools for temporary objects</li>
+<li>Clean up temporary files after use</li>
+<li>Monitor memory during generation</li>
+<li>Implement resource limits</li>
+</ul>
+</li>
+<li><p><strong>Parallel Processing</strong></p>
+<ul>
+<li>Use optimal thread count</li>
+<li>Don't exceed available cores</li>
+<li>Leave headroom for the system</li>
+</ul>
+</li>
+</ol>
+<h2 id="measuring-performance">Measuring Performance</h2>
+<h3 id="frontend-metrics">Frontend Metrics</h3>
+<pre><code class="lang-typescript">import { performanceMonitor } from '@/utils/performanceMonitor';
+
+// Log current metrics
+performanceMonitor.logMetrics('My Component');
+
+// Get metrics programmatically
+const metrics = performanceMonitor.getMetrics();
+console.log('Memory:', metrics.memoryUsage);
+console.log('Renders:', metrics.renderCount);
+</code></pre>
+<h3 id="backend-metrics">Backend Metrics</h3>
+<pre><code class="lang-csharp">// Memory statistics
+var stats = memoryMonitor.GetMemoryStatistics();
+logger.LogInformation(
+    &quot;Memory: {MemoryMb} MB, Gen0: {Gen0}, Gen1: {Gen1}, Gen2: {Gen2}&quot;,
+    stats.CurrentMemoryMb, stats.Gen0Collections, 
+    stats.Gen1Collections, stats.Gen2Collections
+);
+
+// Hardware capabilities
+var capabilities = await hwOptimizer.DetectCapabilitiesAsync();
+logger.LogInformation(
+    &quot;Hardware acceleration: {Type}&quot;,
+    capabilities.GetBestAccelerationType()
+);
+</code></pre>
+<h2 id="performance-budgets">Performance Budgets</h2>
+<h3 id="load-time">Load Time</h3>
+<ul>
+<li><strong>Target:</strong> &lt; 3 seconds</li>
+<li><strong>Maximum:</strong> &lt; 5 seconds</li>
+</ul>
+<h3 id="memory-usage">Memory Usage</h3>
+<ul>
+<li><strong>Target:</strong> &lt; 500 MB</li>
+<li><strong>Maximum:</strong> &lt; 750 MB</li>
+<li><strong>Warning:</strong> &gt; 400 MB</li>
+</ul>
+<h3 id="rendering">Rendering</h3>
+<ul>
+<li><strong>Frame time:</strong> &lt; 16ms (60 FPS)</li>
+<li><strong>Component render:</strong> &lt; 100ms</li>
+<li><strong>API response:</strong> &lt; 200ms (fast), &lt; 1s (slow)</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="high-memory-usage">High Memory Usage</h3>
+<ol>
+<li>Check memory monitor dashboard</li>
+<li>Review recommendations</li>
+<li>Force garbage collection</li>
+<li>Clear image cache if needed</li>
+<li>Reduce concurrent operations</li>
+</ol>
+<h3 id="slow-rendering">Slow Rendering</h3>
+<ol>
+<li>Profile with React DevTools</li>
+<li>Check for unnecessary re-renders</li>
+<li>Ensure components are memoized</li>
+<li>Optimize expensive computations</li>
+<li>Use virtual scrolling for large lists</li>
+</ol>
+<h3 id="poor-video-generation-performance">Poor Video Generation Performance</h3>
+<ol>
+<li>Verify hardware acceleration is enabled</li>
+<li>Check thread count is optimal</li>
+<li>Monitor memory during generation</li>
+<li>Review FFmpeg command logs</li>
+<li>Check for resource bottlenecks</li>
+</ol>
+<h2 id="future-improvements">Future Improvements</h2>
+<ul>
+<li>Implement Web Workers for heavy computations</li>
+<li>Add service worker for offline caching</li>
+<li>Implement progressive rendering</li>
+<li>Add performance budget CI checks</li>
+<li>Create automated performance tests</li>
+<li>Implement chunk loading optimization</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/PERFORMANCE_OPTIMIZATION_GUIDE_PR9.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

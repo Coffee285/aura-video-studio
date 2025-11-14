@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>FFmpeg Download &amp; Installation API | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="FFmpeg Download &amp; Installation API | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/FFMPEG_INSTALL_API.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ffmpeg-download--installation-api">FFmpeg Download &amp; Installation API</h1>
+
+<p>This document describes the FFmpeg installation endpoints and how to use them.</p>
+<h2 id="overview">Overview</h2>
+<p>The FFmpeg installer provides three installation modes:</p>
+<ol>
+<li><strong>Managed</strong> - Download from official mirrors with automatic fallback</li>
+<li><strong>Local</strong> - Install from a local archive file</li>
+<li><strong>Attach</strong> - Attach an existing FFmpeg installation</li>
+</ol>
+<p>All installations are validated by running <code>ffmpeg -version</code> before being marked as successful. Installation metadata is stored in <code>install.json</code> for tracking.</p>
+<h2 id="installation-locations">Installation Locations</h2>
+<ul>
+<li><strong>Managed/Local installs</strong>: <code>%LOCALAPPDATA%\Aura\Tools\ffmpeg\{version}\</code></li>
+<li><strong>Attached installs</strong>: Original location (metadata written to that directory)</li>
+<li><strong>Logs</strong>: <code>%LOCALAPPDATA%\Aura\Logs\Tools\</code> and <code>%LOCALAPPDATA%\Aura\Logs\ffmpeg\</code></li>
+</ul>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="1-install-ffmpeg">1. Install FFmpeg</h3>
+<p><strong>POST</strong> <code>/api/downloads/ffmpeg/install</code></p>
+<p>Install FFmpeg using one of three modes.</p>
+<h4 id="request-body">Request Body</h4>
+<pre><code class="lang-json">{
+  &quot;mode&quot;: &quot;managed&quot;,        // &quot;managed&quot;, &quot;local&quot;, or &quot;attach&quot;
+  &quot;customUrl&quot;: &quot;https://...&quot;,  // Optional: custom download URL (managed mode only)
+  &quot;localArchivePath&quot;: &quot;C:\\path\\to\\ffmpeg.zip&quot;,  // Required for &quot;local&quot; mode
+  &quot;attachPath&quot;: &quot;C:\\path\\to\\ffmpeg.exe&quot;,  // Required for &quot;attach&quot; mode (can be exe or directory)
+  &quot;version&quot;: &quot;6.0&quot;          // Optional: version string (defaults to manifest version)
+}
+</code></pre>
+<h4 id="examples">Examples</h4>
+<p><strong>Managed Installation (default mirrors)</strong></p>
+<pre><code class="lang-bash">curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/install \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;mode&quot;:&quot;managed&quot;}'
+</code></pre>
+<p><strong>Managed Installation (custom URL)</strong></p>
+<pre><code class="lang-bash">curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/install \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;mode&quot;: &quot;managed&quot;,
+    &quot;customUrl&quot;: &quot;https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip&quot;
+  }'
+</code></pre>
+<p><strong>Local Archive Installation</strong></p>
+<pre><code class="lang-bash">curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/install \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;mode&quot;: &quot;local&quot;,
+    &quot;localArchivePath&quot;: &quot;C:\\Downloads\\ffmpeg-6.0-win64.zip&quot;
+  }'
+</code></pre>
+<p><strong>Attach Existing FFmpeg</strong></p>
+<pre><code class="lang-bash">curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/install \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;mode&quot;: &quot;attach&quot;,
+    &quot;attachPath&quot;: &quot;C:\\ffmpeg\\bin\\ffmpeg.exe&quot;
+  }'
+</code></pre>
+<p>Or attach by directory:</p>
+<pre><code class="lang-bash">curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/install \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;mode&quot;: &quot;attach&quot;,
+    &quot;attachPath&quot;: &quot;C:\\ffmpeg&quot;
+  }'
+</code></pre>
+<h4 id="success-response-200-ok">Success Response (200 OK)</h4>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;installPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0&quot;,
+  &quot;ffmpegPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0\\bin\\ffmpeg.exe&quot;,
+  &quot;ffprobePath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0\\bin\\ffprobe.exe&quot;,
+  &quot;validationOutput&quot;: &quot;ffmpeg version 6.0 Copyright (c)...&quot;,
+  &quot;sourceType&quot;: &quot;Network&quot;,
+  &quot;installedAt&quot;: &quot;2024-10-12T18:45:00Z&quot;,
+  &quot;logPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Logs\\Tools\\ffmpeg-install-20241012184500.log&quot;
+}
+</code></pre>
+<h4 id="error-response-400-bad-request">Error Response (400 Bad Request)</h4>
+<pre><code class="lang-json">{
+  &quot;success&quot;: false,
+  &quot;error&quot;: &quot;FFmpeg installation failed: Could not find ffmpeg.exe in extracted archive&quot;,
+  &quot;code&quot;: &quot;E302-FFMPEG_INSTALL_FAILED&quot;,
+  &quot;correlationId&quot;: &quot;0HN8...&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Try using a different mirror or custom URL&quot;,
+    &quot;Download FFmpeg manually and use 'Attach Existing' mode&quot;,
+    &quot;Check network connectivity and firewall settings&quot;,
+    &quot;Review install log for details&quot;
+  ],
+  &quot;logPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Logs\\Tools\\ffmpeg-install-20241012184500.log&quot;
+}
+</code></pre>
+<h3 id="2-get-ffmpeg-status">2. Get FFmpeg Status</h3>
+<p><strong>GET</strong> <code>/api/downloads/ffmpeg/status</code></p>
+<p>Get the current installation status of FFmpeg.</p>
+<h4 id="response">Response</h4>
+<pre><code class="lang-json">{
+  &quot;state&quot;: &quot;Installed&quot;,  // &quot;NotInstalled&quot;, &quot;Installed&quot;, &quot;PartiallyFailed&quot;, &quot;ExternalAttached&quot;
+  &quot;installPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0&quot;,
+  &quot;ffmpegPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0\\bin\\ffmpeg.exe&quot;,
+  &quot;ffprobePath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0\\bin\\ffprobe.exe&quot;,
+  &quot;version&quot;: &quot;6.0&quot;,
+  &quot;sourceType&quot;: &quot;Network&quot;,
+  &quot;installedAt&quot;: &quot;2024-10-12T18:45:00Z&quot;,
+  &quot;validated&quot;: true,
+  &quot;validationOutput&quot;: &quot;ffmpeg version 6.0...&quot;,
+  &quot;lastError&quot;: null
+}
+</code></pre>
+<h3 id="3-repair-ffmpeg-installation">3. Repair FFmpeg Installation</h3>
+<p><strong>POST</strong> <code>/api/downloads/ffmpeg/repair</code></p>
+<p>Re-download and reinstall FFmpeg using the manifest mirrors.</p>
+<h4 id="success-response-200-ok-1">Success Response (200 OK)</h4>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;FFmpeg repaired successfully&quot;,
+  &quot;ffmpegPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0\\bin\\ffmpeg.exe&quot;,
+  &quot;validationOutput&quot;: &quot;ffmpeg version 6.0...&quot;
+}
+</code></pre>
+<h3 id="4-get-install-log">4. Get Install Log</h3>
+<p><strong>GET</strong> <code>/api/downloads/ffmpeg/install-log?lines=100</code></p>
+<p>Get the most recent FFmpeg installation log.</p>
+<h4 id="query-parameters">Query Parameters</h4>
+<ul>
+<li><code>lines</code> (optional): Number of lines to return from the end of the log (default: 100)</li>
+</ul>
+<h4 id="response-1">Response</h4>
+<pre><code class="lang-json">{
+  &quot;log&quot;: &quot;[2024-10-12T18:45:00Z] Starting FFmpeg installation...\n[2024-10-12T18:45:05Z] Download complete\n...&quot;,
+  &quot;logPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Logs\\Tools\\ffmpeg-install-20241012184500.log&quot;,
+  &quot;totalLines&quot;: 45
+}
+</code></pre>
+<h2 id="installation-metadata-installjson">Installation Metadata (<code>install.json</code>)</h2>
+<p>Each installation creates an <code>install.json</code> file in the installation directory:</p>
+<pre><code class="lang-json">{
+  &quot;id&quot;: &quot;ffmpeg&quot;,
+  &quot;version&quot;: &quot;6.0&quot;,
+  &quot;installPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0&quot;,
+  &quot;ffmpegPath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0\\bin\\ffmpeg.exe&quot;,
+  &quot;ffprobePath&quot;: &quot;C:\\Users\\User\\AppData\\Local\\Aura\\Tools\\ffmpeg\\6.0\\bin\\ffprobe.exe&quot;,
+  &quot;sourceUrl&quot;: &quot;https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip&quot;,
+  &quot;sourceType&quot;: &quot;Network&quot;,
+  &quot;sha256&quot;: null,
+  &quot;installedAt&quot;: &quot;2024-10-12T18:45:00Z&quot;,
+  &quot;validated&quot;: true,
+  &quot;validationOutput&quot;: &quot;ffmpeg version 6.0 Copyright (c) 2000-2024 the FFmpeg developers...&quot;
+}
+</code></pre>
+<h2 id="mirror-fallback">Mirror Fallback</h2>
+<p>The managed installation mode tries mirrors in this order:</p>
+<ol>
+<li>Custom URL (if provided)</li>
+<li>Primary URL from manifest (Gyan.dev)</li>
+<li>Mirror URLs from manifest (BtbN, GitHub releases)</li>
+<li>Hardcoded fallback (Gyan.dev essentials)</li>
+</ol>
+<p>Each URL is retried up to 3 times with exponential backoff before moving to the next mirror.</p>
+<h2 id="validation">Validation</h2>
+<p>All installations are validated by:</p>
+<ol>
+<li>Checking that <code>ffmpeg.exe</code> exists and is executable</li>
+<li>Running <code>ffmpeg -version</code> and verifying exit code 0</li>
+<li>Checking that output contains &quot;ffmpeg version&quot;</li>
+</ol>
+<p>If validation fails, the installation is marked as failed and the target directory is cleaned up (for managed/local installs).</p>
+<h2 id="error-codes">Error Codes</h2>
+<ul>
+<li><code>E302-FFMPEG_INSTALL_FAILED</code> - Installation failed (download, extraction, or validation)</li>
+<li><code>E302-FFMPEG_INSTALL_ERROR</code> - Unexpected error during installation</li>
+<li><code>E302-FFMPEG_VALIDATION</code> - FFmpeg binary validation failed</li>
+<li><code>E302-FFMPEG_REPAIR_FAILED</code> - Repair operation failed</li>
+</ul>
+<h2 id="logs">Logs</h2>
+<p>Installation logs are written to:</p>
+<ul>
+<li><code>%LOCALAPPDATA%\Aura\Logs\Tools\ffmpeg-install-{timestamp}.log</code></li>
+</ul>
+<p>Render logs (when FFmpeg is used for video rendering) are written to:</p>
+<ul>
+<li><code>%LOCALAPPDATA%\Aura\Logs\ffmpeg\{jobId}.log</code></li>
+</ul>
+<h2 id="examples-1">Examples</h2>
+<h3 id="complete-workflow">Complete Workflow</h3>
+<ol>
+<li>Check status:</li>
+</ol>
+<pre><code class="lang-bash">curl http://127.0.0.1:5005/api/downloads/ffmpeg/status
+</code></pre>
+<ol start="2">
+<li>If not installed, install:</li>
+</ol>
+<pre><code class="lang-bash">curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/install \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;mode&quot;:&quot;managed&quot;}'
+</code></pre>
+<ol start="3">
+<li>Check install log if needed:</li>
+</ol>
+<pre><code class="lang-bash">curl http://127.0.0.1:5005/api/downloads/ffmpeg/install-log?lines=50
+</code></pre>
+<ol start="4">
+<li>Verify status again:</li>
+</ol>
+<pre><code class="lang-bash">curl http://127.0.0.1:5005/api/downloads/ffmpeg/status
+</code></pre>
+<h3 id="attach-existing-ffmpeg">Attach Existing FFmpeg</h3>
+<p>If you already have FFmpeg installed (e.g., via Chocolatey or manual download):</p>
+<pre><code class="lang-bash"># Find FFmpeg location
+where ffmpeg
+
+# Attach it
+curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/install \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;mode&quot;: &quot;attach&quot;,
+    &quot;attachPath&quot;: &quot;C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe&quot;
+  }'
+</code></pre>
+<h3 id="repair-corrupted-installation">Repair Corrupted Installation</h3>
+<pre><code class="lang-bash">curl -X POST http://127.0.0.1:5005/api/downloads/ffmpeg/repair
+</code></pre>
+<h2 id="integration-with-ffmpegvideocomposer">Integration with FfmpegVideoComposer</h2>
+<p>When <code>FfmpegVideoComposer</code> is used for rendering:</p>
+<ol>
+<li>It validates the FFmpeg binary at the start of each render job</li>
+<li>Runs <code>ffmpeg -version</code> to ensure it's working</li>
+<li>If validation fails, throws <code>E302-FFMPEG_VALIDATION</code> error with suggestions</li>
+<li>During rendering, captures stdout/stderr for diagnostics</li>
+<li>On crash (negative exit code), includes stderr snippet in error</li>
+<li>Writes full logs to <code>%LOCALAPPDATA%\Aura\Logs\ffmpeg\{jobId}.log</code></li>
+</ol>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>SHA256 verification is optional (set to null in manifest for dynamic builds)</li>
+<li>The installer handles nested folder structures in zip files automatically</li>
+<li>On attach, both <code>ffmpeg.exe</code> and <code>ffprobe.exe</code> are located if present</li>
+<li>CorrelationId is included in all API responses for tracing</li>
+<li>All timestamps are UTC</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/FFMPEG_INSTALL_API.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

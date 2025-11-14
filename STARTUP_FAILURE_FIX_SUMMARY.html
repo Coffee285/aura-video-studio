@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Desktop App Startup Failure Fix - Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Desktop App Startup Failure Fix - Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/STARTUP_FAILURE_FIX_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="desktop-app-startup-failure-fix---summary">Desktop App Startup Failure Fix - Summary</h1>
+
+<h2 id="problem">Problem</h2>
+<p>The Aura Video Studio desktop application was failing to start with exit code <strong>3762504530</strong> (0xE0434352), which is the .NET CLR unhandled exception code. The application would hang on the loading screen and then show a cryptic error dialog.</p>
+<h2 id="root-causes-identified">Root Causes Identified</h2>
+<ol>
+<li><p><strong>Critical Configuration Validation Failures:</strong></p>
+<ul>
+<li>Port availability check was marking port conflicts as <strong>Critical</strong> errors</li>
+<li>This caused <code>Environment.Exit(1)</code> to be called, terminating the app</li>
+</ul>
+</li>
+<li><p><strong>Unhandled Exceptions During Startup:</strong></p>
+<ul>
+<li>Multiple hosted services starting concurrently</li>
+<li>Some services accessing resources before they were fully initialized</li>
+<li>No proper exception handling around critical startup code</li>
+</ul>
+</li>
+<li><p><strong>Hostile Failure Mode:</strong></p>
+<ul>
+<li><code>StartupInitializationService</code> was calling <code>Environment.Exit(1)</code> on critical failures</li>
+<li>No graceful degradation - app would crash entirely</li>
+<li>Poor error messages with just exit codes</li>
+</ul>
+</li>
+<li><p><strong>Lack of Error Context:</strong></p>
+<ul>
+<li>Exit codes didn't provide actionable information</li>
+<li>No error logging before termination</li>
+<li>Users couldn't diagnose issues</li>
+</ul>
+</li>
+</ol>
+<h2 id="changes-made">Changes Made</h2>
+<h3 id="1-configuration-validation-configurationvalidatorcs">1. Configuration Validation (ConfigurationValidator.cs)</h3>
+<p><strong>File:</strong> <code>/workspace/Aura.Api/Validation/ConfigurationValidator.cs</code></p>
+<p><strong>Change:</strong> Port conflict severity downgrade</p>
+<pre><code class="lang-csharp">// BEFORE: Critical error that stops startup
+else if (!IsPortAvailable(port))
+{
+    AddIssue(&quot;ASPNETCORE_URLS:Port&quot;, $&quot;Port {port} is already in use&quot;, IssueSeverity.Critical);
+}
+
+// AFTER: Warning that allows startup to continue
+else if (!IsPortAvailable(port))
+{
+    AddIssue(&quot;ASPNETCORE_URLS:Port&quot;, $&quot;Port {port} appears to be in use. If startup fails, check for port conflicts.&quot;, IssueSeverity.Warning);
+}
+</code></pre>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Port checks can be flaky (app restarting, race conditions)</li>
+<li>Let the app try to bind to the port - if it fails, Kestrel will report the real error</li>
+<li>Users can recover via the UI instead of complete failure</li>
+</ul>
+<h3 id="2-startup-validation-error-handling-programcs">2. Startup Validation Error Handling (Program.cs)</h3>
+<p><strong>File:</strong> <code>/workspace/Aura.Api/Program.cs</code></p>
+<p><strong>Change:</strong> Wrapped configuration validation in try-catch</p>
+<pre><code class="lang-csharp">// BEFORE: Unhandled failures, Environment.Exit(1)
+var configValidator = app.Services.GetRequiredService&lt;ConfigurationValidator&gt;();
+var configResult = configValidator.Validate();
+if (!configResult.IsValid)
+{
+    // ... logging ...
+    Environment.Exit(1); // Abrupt termination!
+}
+
+// AFTER: Graceful handling with detailed logging
+try
+{
+    var configValidator = app.Services.GetRequiredService&lt;ConfigurationValidator&gt;();
+    var configResult = configValidator.Validate();
+    if (!configResult.IsValid)
+    {
+        // ... logging ...
+        foreach (var issue in configResult.Issues.Where(i =&gt; i.Severity == IssueSeverity.Critical))
+        {
+            Log.Error(&quot;CRITICAL: {Key} - {Message}&quot;, issue.Key, issue.Message);
+        }
+        await app.StopAsync(); // Graceful shutdown
+        return;
+    }
+}
+catch (Exception ex)
+{
+    Log.Error(ex, &quot;Configuration validation failed with exception. Continuing with startup...&quot;);
+    // Don't fail startup if validation itself fails
+}
+</code></pre>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Prevents unhandled exceptions from crashing the app</li>
+<li>Provides detailed error information for troubleshooting</li>
+<li>Graceful shutdown instead of <code>Environment.Exit()</code></li>
+</ul>
+<h3 id="3-startup-initialization-service-startupinitializationservicecs">3. Startup Initialization Service (StartupInitializationService.cs)</h3>
+<p><strong>File:</strong> <code>/workspace/Aura.Api/HostedServices/StartupInitializationService.cs</code></p>
+<p><strong>Change:</strong> Removed Environment.Exit, added graceful degradation</p>
+<pre><code class="lang-csharp">// BEFORE: Terminates entire process
+if (failedCritical)
+{
+    _logger.LogError(&quot;=== Service Initialization FAILED ===&quot;);
+    // ...
+    Environment.Exit(1); // Kills the process!
+}
+
+// AFTER: Logs and continues
+if (failedCritical)
+{
+    _logger.LogError(&quot;=== Service Initialization FAILED ===&quot;);
+    _logger.LogError(&quot;Critical services failed to initialize. Application cannot start properly.&quot;);
+    // ... detailed logging ...
+    _logger.LogWarning(&quot;Application will continue startup but may be unstable. Please check logs above for details.&quot;);
+    // No exit - let app try to start, users can troubleshoot via UI
+}
+</code></pre>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Graceful degradation is better than complete failure</li>
+<li>Users can access the UI to see diagnostics and fix issues</li>
+<li>Some features may work even if others fail</li>
+</ul>
+<h3 id="4-application-startup-error-handling-programcs">4. Application Startup Error Handling (Program.cs)</h3>
+<p><strong>File:</strong> <code>/workspace/Aura.Api/Program.cs</code></p>
+<p><strong>Change:</strong> Added comprehensive error handling around app.Run()</p>
+<pre><code class="lang-csharp">// BEFORE: Unhandled exceptions crash with CLR error code
+app.Run();
+
+// AFTER: Caught and logged with details
+try
+{
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, &quot;Application terminated unexpectedly&quot;);
+    Log.Fatal(&quot;Error details: {Message}&quot;, ex.Message);
+    Log.Fatal(&quot;Stack trace: {StackTrace}&quot;, ex.StackTrace);
+    
+    if (ex.InnerException != null)
+    {
+        Log.Fatal(&quot;Inner exception: {InnerMessage}&quot;, ex.InnerException.Message);
+        Log.Fatal(&quot;Inner stack trace: {InnerStackTrace}&quot;, ex.InnerException.StackTrace);
+    }
+    
+    await Task.Delay(1000); // Let logs flush
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
+</code></pre>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Catches all unhandled exceptions during runtime</li>
+<li>Logs full stack traces for debugging</li>
+<li>Ensures logs are flushed before exit</li>
+</ul>
+<h3 id="5-electron-error-messages-electronjs">5. Electron Error Messages (electron.js)</h3>
+<p><strong>File:</strong> <code>/workspace/Aura.Desktop/electron.js</code></p>
+<p><strong>Change:</strong> Enhanced error messages with exit code explanations</p>
+<pre><code class="lang-javascript">// BEFORE: Cryptic error message
+dialog.showErrorBox(
+  'Backend Error',
+  `The Aura backend server has stopped unexpectedly (exit code: ${code}). The application will now close.`
+);
+
+// AFTER: Detailed, actionable error messages
+let errorMessage = `The Aura backend server has stopped unexpectedly.\n\n`;
+
+if (code === 1) {
+  errorMessage += `Exit Code: ${code}\nLikely cause: Configuration validation failed or critical service initialization error.\n\n`;
+  errorMessage += `Please check:\n`;
+  errorMessage += `- Database file permissions\n`;
+  errorMessage += `- Port availability (default: 5005)\n`;
+  errorMessage += `- Disk space\n\n`;
+} else if (code === 3762504530 || code === -532459699) {
+  // 0xE0434352 (.NET CLR exception)
+  errorMessage += `Exit Code: ${code} (0xE0434352 - .NET CLR Exception)\n`;
+  errorMessage += `Likely cause: Unhandled exception during startup.\n\n`;
+  errorMessage += `Please check:\n`;
+  errorMessage += `- Application logs in: ${path.join(app.getPath('userData'), 'logs')}\n`;
+  errorMessage += `- Ensure all dependencies are installed\n`;
+  errorMessage += `- Try restarting the application\n\n`;
+}
+
+errorMessage += `Logs location: ${path.join(app.getPath('userData'), 'logs')}\n`;
+dialog.showErrorBox('Backend Error', errorMessage);
+</code></pre>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Users now get actionable troubleshooting steps</li>
+<li>Log locations are provided automatically</li>
+<li>Exit codes are explained in plain English</li>
+</ul>
+<h3 id="6-startup-log-collection-electronjs">6. Startup Log Collection (electron.js)</h3>
+<p><strong>File:</strong> <code>/workspace/Aura.Desktop/electron.js</code></p>
+<p><strong>Change:</strong> Added startup log collection for diagnostics</p>
+<pre><code class="lang-javascript">// Collect startup logs for diagnostics
+const startupLogs = [];
+const maxStartupLogs = 100;
+
+backendProcess.stdout.on('data', (data) =&gt; {
+  const message = data.toString().trim();
+  if (message) {
+    console.log(`[Backend] ${message}`);
+    if (startupLogs.length &lt; maxStartupLogs) {
+      startupLogs.push(`[INFO] ${message}`);
+    }
+  }
+});
+
+backendProcess.stderr.on('data', (data) =&gt; {
+  const message = data.toString().trim();
+  if (message) {
+    console.error(`[Backend Error] ${message}`);
+    if (startupLogs.length &lt; maxStartupLogs) {
+      startupLogs.push(`[ERROR] ${message}`);
+    }
+  }
+});
+</code></pre>
+<p><strong>Rationale:</strong></p>
+<ul>
+<li>Can display startup logs in error dialog if needed</li>
+<li>Helps diagnose backend crashes</li>
+<li>Keeps recent logs in memory for quick access</li>
+</ul>
+<h3 id="7-enhanced-backend-startup-errors-electronjs">7. Enhanced Backend Startup Errors (electron.js)</h3>
+<p><strong>File:</strong> <code>/workspace/Aura.Desktop/electron.js</code></p>
+<p><strong>Change:</strong> Better error messages in catch block</p>
+<pre><code class="lang-javascript">catch (error) {
+  console.error('Backend startup error:', error);
+  
+  let errorDetails = `Failed to start the Aura backend server.\n\n`;
+  errorDetails += `Error: ${error.message}\n\n`;
+  
+  if (error.message.includes('not found')) {
+    errorDetails += `The backend executable was not found. Please ensure the application is properly installed.\n`;
+    errorDetails += `Expected location: ${backendPath}\n\n`;
+  } else if (error.message.includes('Backend failed to start within')) {
+    errorDetails += `The backend server did not respond to health checks within the timeout period.\n`;
+    errorDetails += `This may indicate:\n`;
+    errorDetails += `- Port ${backendPort} is already in use\n`;
+    errorDetails += `- Firewall is blocking the application\n`;
+    errorDetails += `- Missing dependencies\n\n`;
+  }
+  
+  errorDetails += `Logs location: ${env.AURA_LOGS_PATH}\n`;
+  dialog.showErrorBox('Startup Error', errorDetails);
+  throw error;
+}
+</code></pre>
+<h2 id="testing-recommendations">Testing Recommendations</h2>
+<h3 id="1-port-conflict-test">1. Port Conflict Test</h3>
+<ol>
+<li>Start the app normally</li>
+<li>Start a second instance while first is running</li>
+<li><strong>Expected:</strong> Second instance shows warning in logs but attempts to start</li>
+<li><strong>Expected:</strong> If port is truly in use, Kestrel reports the error clearly</li>
+</ol>
+<h3 id="2-database-corruption-test">2. Database Corruption Test</h3>
+<ol>
+<li>Corrupt the <code>aura.db</code> file (or delete it)</li>
+<li>Start the app</li>
+<li><strong>Expected:</strong> Database initialization logs the issue</li>
+<li><strong>Expected:</strong> App attempts recovery or creates new database</li>
+<li><strong>Expected:</strong> App continues to run, showing status in UI</li>
+</ol>
+<h3 id="3-missing-dependency-test">3. Missing Dependency Test</h3>
+<ol>
+<li>Rename or remove FFmpeg binary</li>
+<li>Start the app</li>
+<li><strong>Expected:</strong> FFmpeg check fails (non-critical)</li>
+<li><strong>Expected:</strong> App starts in degraded mode</li>
+<li><strong>Expected:</strong> Warning shown in UI about missing FFmpeg</li>
+</ol>
+<h3 id="4-configuration-error-test">4. Configuration Error Test</h3>
+<ol>
+<li>Set an invalid configuration value (e.g., port 99999)</li>
+<li>Start the app</li>
+<li><strong>Expected:</strong> Configuration validation catches the error</li>
+<li><strong>Expected:</strong> Detailed error logged with issue details</li>
+<li><strong>Expected:</strong> App shuts down gracefully with actionable message</li>
+</ol>
+<h2 id="impact">Impact</h2>
+<h3 id="before">Before</h3>
+<ul>
+<li><strong>User Experience:</strong> Cryptic exit code 3762504530, no actionable information</li>
+<li><strong>Failure Mode:</strong> Complete crash, no recovery possible</li>
+<li><strong>Diagnostics:</strong> Difficult to troubleshoot, no clear error messages</li>
+<li><strong>Recovery:</strong> Reinstall or delete app data blindly</li>
+</ul>
+<h3 id="after">After</h3>
+<ul>
+<li><strong>User Experience:</strong> Clear error messages with troubleshooting steps</li>
+<li><strong>Failure Mode:</strong> Graceful degradation, UI accessible for diagnostics</li>
+<li><strong>Diagnostics:</strong> Detailed logs, error messages point to specific issues</li>
+<li><strong>Recovery:</strong> Users can fix issues via UI or follow clear instructions</li>
+</ul>
+<h2 id="files-modified">Files Modified</h2>
+<ol>
+<li><code>/workspace/Aura.Api/Program.cs</code> - Main startup error handling</li>
+<li><code>/workspace/Aura.Api/Validation/ConfigurationValidator.cs</code> - Port validation severity</li>
+<li><code>/workspace/Aura.Api/HostedServices/StartupInitializationService.cs</code> - Removed Environment.Exit</li>
+<li><code>/workspace/Aura.Desktop/electron.js</code> - Enhanced error messages and logging</li>
+</ol>
+<h2 id="documentation-added">Documentation Added</h2>
+<ol>
+<li><code>/workspace/DESKTOP_STARTUP_TROUBLESHOOTING.md</code> - User-facing troubleshooting guide</li>
+<li><code>/workspace/STARTUP_FAILURE_FIX_SUMMARY.md</code> - This developer summary</li>
+</ol>
+<h2 id="future-improvements">Future Improvements</h2>
+<ol>
+<li><strong>Health Check UI:</strong> Add a startup diagnostics page in the web UI</li>
+<li><strong>Auto-Recovery:</strong> Implement automatic recovery for common issues</li>
+<li><strong>Better Port Selection:</strong> Auto-select available port if configured port is in use</li>
+<li><strong>Startup Progress:</strong> Show detailed startup progress in splash screen</li>
+<li><strong>Log Viewer:</strong> Built-in log viewer in the app for easier diagnostics</li>
+</ol>
+<h2 id="notes">Notes</h2>
+<ul>
+<li>All changes maintain backward compatibility</li>
+<li>No breaking changes to APIs or configuration</li>
+<li>Existing functionality preserved, just more resilient</li>
+<li>Error handling is defensive - better to try and fail gracefully than not try at all</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/STARTUP_FAILURE_FIX_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

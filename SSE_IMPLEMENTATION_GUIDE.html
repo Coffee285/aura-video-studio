@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>SSE Event Stream Implementation for Video Generation Progress | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="SSE Event Stream Implementation for Video Generation Progress | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/SSE_IMPLEMENTATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="sse-event-stream-implementation-for-video-generation-progress">SSE Event Stream Implementation for Video Generation Progress</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the implementation of Server-Sent Events (SSE) for real-time video generation progress tracking in Aura Video Studio. The implementation provides live updates from the backend to the frontend without polling, resulting in immediate feedback and reduced server load.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend-sse-endpoint">Backend (SSE Endpoint)</h3>
+<p><strong>Endpoint</strong>: <code>GET /api/jobs/{jobId}/events</code></p>
+<p><strong>Location</strong>: <code>Aura.Api/Controllers/JobsController.cs</code></p>
+<p><strong>Headers</strong>:</p>
+<pre><code>Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+X-Accel-Buffering: no
+</code></pre>
+<p><strong>Event Types</strong>:</p>
+<ol>
+<li><code>job-status</code> - Overall job status and progress percentage</li>
+<li><code>step-progress</code> - Detailed progress within current step</li>
+<li><code>step-status</code> - Step start/completion notifications</li>
+<li><code>job-completed</code> - Success with video download information</li>
+<li><code>job-failed</code> - Error details and failure information</li>
+<li><code>job-cancelled</code> - Cancellation confirmation</li>
+<li><code>warning</code> - Non-critical warnings</li>
+<li><code>error</code> - Critical errors</li>
+</ol>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Heartbeat/keepalive comments every 10 seconds</li>
+<li>Event ID for reconnection support</li>
+<li>Polling job status every 500ms for updates</li>
+<li>Automatic cleanup on job completion/failure/cancellation</li>
+</ul>
+<h3 id="frontend-sse-client">Frontend (SSE Client)</h3>
+<p><strong>SSE Client Classes</strong>:</p>
+<ol>
+<li><code>SSEClient</code> - Legacy client with exponential backoff (in <code>sseClient.ts</code>)</li>
+<li><code>SseClient</code> - Modern event-driven client (in <code>sseClient.ts</code>)</li>
+</ol>
+<p><strong>Hook</strong>: <code>useSSEConnection</code> (in <code>hooks/useSSEConnection.ts</code>)</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Automatic reconnection with exponential backoff</li>
+<li>Last-Event-ID support for reconnection</li>
+<li>Multiple event type support</li>
+<li>Proper cleanup on unmount</li>
+<li>Connection state tracking</li>
+</ul>
+<h2 id="components">Components</h2>
+<h3 id="1-videogenerationprogress">1. VideoGenerationProgress</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/components/VideoGenerationProgress.tsx</code></p>
+<p><strong>Purpose</strong>: Complete SSE-based progress component for video generation monitoring</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Real-time progress updates via SSE (no polling)</li>
+<li>Stage-based progress indicators (5 stages)</li>
+<li>Visual progress bars for overall and per-stage progress</li>
+<li>Elapsed time and estimated time remaining display</li>
+<li>Cancel functionality with confirmation dialog</li>
+<li>Success state with download button</li>
+<li>Error state with detailed error messages</li>
+<li>Live connection indicator</li>
+</ul>
+<p><strong>Progress Stages</strong>:</p>
+<ol>
+<li><strong>Script Generation</strong> (0-15%): Generate video script from brief</li>
+<li><strong>Audio Synthesis</strong> (15-35%): Convert script to speech</li>
+<li><strong>Visual Generation</strong> (35-65%): Create video scenes</li>
+<li><strong>Timeline Composition</strong> (65-85%): Assemble audio and visuals</li>
+<li><strong>Video Rendering</strong> (85-100%): Final video encoding</li>
+</ol>
+<p><strong>Props</strong>:</p>
+<pre><code class="lang-typescript">interface VideoGenerationProgressProps {
+  jobId: string;
+  onComplete?: (result: { videoUrl: string; videoPath: string }) =&gt; void;
+  onError?: (error: Error) =&gt; void;
+  onCancel?: () =&gt; void;
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-tsx">import { VideoGenerationProgress } from '@/components/VideoGenerationProgress';
+
+function MyComponent() {
+  const [jobId, setJobId] = useState('');
+  
+  return (
+    &lt;VideoGenerationProgress
+      jobId={jobId}
+      onComplete={(result) =&gt; {
+        console.log('Video ready:', result.videoUrl);
+      }}
+      onError={(error) =&gt; {
+        console.error('Generation failed:', error.message);
+      }}
+      onCancel={() =&gt; {
+        console.log('Generation cancelled');
+      }}
+    /&gt;
+  );
+}
+</code></pre>
+<h3 id="2-jobprogressdrawer-enhanced">2. JobProgressDrawer (Enhanced)</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/components/JobProgressDrawer.tsx</code></p>
+<p><strong>Changes</strong>: Converted from REST API polling to SSE-based updates</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Real-time updates via <code>useSSEConnection</code> hook</li>
+<li>Drawer-style UI for compact progress display</li>
+<li>Log viewer showing recent activity</li>
+<li>Cancel job functionality</li>
+<li>Elapsed time and ETA display</li>
+</ul>
+<p><strong>Before</strong> (Polling):</p>
+<ul>
+<li>Polled <code>/api/jobs/{jobId}/progress</code> every 1 second</li>
+<li>Separate request for logs</li>
+<li>Higher server load</li>
+<li>Potential delays in updates</li>
+</ul>
+<p><strong>After</strong> (SSE):</p>
+<ul>
+<li>Single SSE connection to <code>/api/jobs/{jobId}/events</code></li>
+<li>Real-time event stream</li>
+<li>Minimal server load</li>
+<li>Instant updates</li>
+</ul>
+<h3 id="3-videogenerationprogressexample">3. VideoGenerationProgressExample</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/examples/VideoGenerationProgressExample.tsx</code></p>
+<p><strong>Purpose</strong>: Example component demonstrating SSE functionality</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Job ID input for monitoring existing jobs</li>
+<li>Start/Reset controls</li>
+<li>Success and error message display</li>
+<li>Comprehensive documentation:
+<ul>
+<li>How-to instructions</li>
+<li>SSE event descriptions</li>
+<li>API call examples</li>
+<li>Feature list</li>
+<li>Code samples</li>
+</ul>
+</li>
+</ul>
+<h2 id="event-flow">Event Flow</h2>
+<h3 id="1-job-creation">1. Job Creation</h3>
+<pre><code class="lang-typescript">// Frontend creates job
+const response = await fetch('/api/jobs', {
+  method: 'POST',
+  body: JSON.stringify(jobRequest)
+});
+
+const { jobId } = await response.json();
+</code></pre>
+<h3 id="2-sse-connection">2. SSE Connection</h3>
+<pre><code class="lang-typescript">// Frontend establishes SSE connection
+const eventSource = new EventSource(`/api/jobs/${jobId}/events`);
+</code></pre>
+<h3 id="3-event-stream">3. Event Stream</h3>
+<pre><code>Server → Client: event: job-status
+                 data: {&quot;status&quot;:&quot;Running&quot;,&quot;stage&quot;:&quot;Script&quot;,&quot;percent&quot;:5}
+                 id: 1699200000000-1
+
+Server → Client: event: step-progress
+                 data: {&quot;step&quot;:&quot;Script&quot;,&quot;progressPct&quot;:10,&quot;message&quot;:&quot;Generating...&quot;}
+                 id: 1699200000000-2
+
+Server → Client: : keepalive (heartbeat)
+
+Server → Client: event: step-progress
+                 data: {&quot;step&quot;:&quot;Script&quot;,&quot;progressPct&quot;:15,&quot;message&quot;:&quot;Complete&quot;}
+                 id: 1699200000000-3
+
+Server → Client: event: job-completed
+                 data: {&quot;jobId&quot;:&quot;abc123&quot;,&quot;output&quot;:{&quot;videoPath&quot;:&quot;/path/to/video.mp4&quot;}}
+                 id: 1699200000000-4
+</code></pre>
+<h3 id="4-component-updates">4. Component Updates</h3>
+<pre><code class="lang-typescript">// Frontend updates UI in real-time
+useSSEConnection({
+  onMessage: (message) =&gt; {
+    switch (message.type) {
+      case 'step-progress':
+        setProgress(message.data.progressPct);
+        break;
+      case 'job-completed':
+        setCompleted(true);
+        break;
+    }
+  }
+});
+</code></pre>
+<h2 id="reconnection-support">Reconnection Support</h2>
+<h3 id="last-event-id-header">Last-Event-ID Header</h3>
+<p>When a client reconnects after a network interruption, it sends the last event ID it received:</p>
+<pre><code>GET /api/jobs/{jobId}/events
+Last-Event-ID: 1699200000000-5
+</code></pre>
+<p>The server acknowledges the reconnection and resumes from the current state:</p>
+<ul>
+<li>Logs reconnection with event ID</li>
+<li>Sends current job status immediately</li>
+<li>Continues streaming new events</li>
+</ul>
+<h3 id="automatic-reconnection">Automatic Reconnection</h3>
+<p>The <code>useSSEConnection</code> hook provides automatic reconnection with exponential backoff:</p>
+<pre><code class="lang-typescript">// Connection lost
+→ Attempt 1 after 3 seconds
+→ Attempt 2 after 6 seconds  
+→ Attempt 3 after 12 seconds
+→ Attempt 4 after 24 seconds
+→ Attempt 5 after 48 seconds (max)
+</code></pre>
+<p>Default settings:</p>
+<ul>
+<li>Max reconnection attempts: 5</li>
+<li>Base delay: 3000ms</li>
+<li>Backoff multiplier: 2x</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<h3 id="manual-testing-checklist">Manual Testing Checklist</h3>
+<ol>
+<li><p><strong>Start Generation</strong></p>
+<ul>
+<li>[ ] Create video generation job via API</li>
+<li>[ ] Copy job ID</li>
+<li>[ ] Open VideoGenerationProgressExample</li>
+<li>[ ] Enter job ID and click &quot;Start Monitoring&quot;</li>
+</ul>
+</li>
+<li><p><strong>Progress Updates</strong></p>
+<ul>
+<li>[ ] Verify progress bar moves smoothly from 0-100%</li>
+<li>[ ] Confirm stage labels update correctly</li>
+<li>[ ] Check elapsed time updates every second</li>
+<li>[ ] Verify estimated time remaining appears</li>
+</ul>
+</li>
+<li><p><strong>Completion</strong></p>
+<ul>
+<li>[ ] Wait for job to complete</li>
+<li>[ ] Verify success message appears</li>
+<li>[ ] Check download button is displayed</li>
+<li>[ ] Click download and verify video downloads</li>
+</ul>
+</li>
+<li><p><strong>Cancellation</strong></p>
+<ul>
+<li>[ ] Start new job</li>
+<li>[ ] Click &quot;Cancel Generation&quot; button</li>
+<li>[ ] Confirm cancellation in dialog</li>
+<li>[ ] Verify job cancels and SSE connection closes</li>
+</ul>
+</li>
+<li><p><strong>Error Handling</strong></p>
+<ul>
+<li>[ ] Start job that will fail (e.g., invalid config)</li>
+<li>[ ] Verify error message appears</li>
+<li>[ ] Check error details are displayed</li>
+</ul>
+</li>
+<li><p><strong>Reconnection</strong></p>
+<ul>
+<li>[ ] Start job</li>
+<li>[ ] Disable network (simulate disconnection)</li>
+<li>[ ] Re-enable network</li>
+<li>[ ] Verify automatic reconnection</li>
+<li>[ ] Check progress continues from last state</li>
+</ul>
+</li>
+</ol>
+<h3 id="api-testing-with-curl">API Testing with cURL</h3>
+<p><strong>Start Job</strong>:</p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/jobs \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;brief&quot;: {
+      &quot;topic&quot;: &quot;Test Video&quot;,
+      &quot;audience&quot;: &quot;Developers&quot;,
+      &quot;goal&quot;: &quot;Test SSE&quot;,
+      &quot;tone&quot;: &quot;Technical&quot;,
+      &quot;language&quot;: &quot;en&quot;,
+      &quot;aspect&quot;: &quot;Widescreen16x9&quot;
+    },
+    &quot;planSpec&quot;: {
+      &quot;targetDuration&quot;: &quot;00:01:00&quot;,
+      &quot;pacing&quot;: &quot;Conversational&quot;,
+      &quot;density&quot;: &quot;Balanced&quot;,
+      &quot;style&quot;: &quot;Modern&quot;
+    },
+    &quot;voiceSpec&quot;: {
+      &quot;voiceName&quot;: &quot;David&quot;,
+      &quot;rate&quot;: 1.0,
+      &quot;pitch&quot;: 1.0,
+      &quot;pause&quot;: &quot;Natural&quot;
+    },
+    &quot;renderSpec&quot;: {
+      &quot;res&quot;: &quot;1080p&quot;,
+      &quot;container&quot;: &quot;mp4&quot;,
+      &quot;videoBitrateK&quot;: 5000,
+      &quot;audioBitrateK&quot;: 192,
+      &quot;fps&quot;: 30,
+      &quot;codec&quot;: &quot;h264&quot;,
+      &quot;qualityLevel&quot;: &quot;High&quot;
+    }
+  }'
+</code></pre>
+<p><strong>Monitor SSE Stream</strong>:</p>
+<pre><code class="lang-bash">curl -N http://localhost:5005/api/jobs/{jobId}/events
+</code></pre>
+<p><strong>Cancel Job</strong>:</p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/jobs/{jobId}/cancel
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="sse-connection-not-establishing">SSE Connection Not Establishing</h3>
+<p><strong>Symptom</strong>: Component shows &quot;Connecting&quot; but never connects</p>
+<p><strong>Possible Causes</strong>:</p>
+<ol>
+<li>Backend not running on expected port</li>
+<li>CORS configuration blocking SSE</li>
+<li>Job ID invalid or not found</li>
+</ol>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Verify backend is running: <code>curl http://localhost:5005/api/health</code></li>
+<li>Check browser console for CORS errors</li>
+<li>Verify job ID exists: <code>curl http://localhost:5005/api/jobs/{jobId}</code></li>
+</ol>
+<h3 id="progress-not-updating">Progress Not Updating</h3>
+<p><strong>Symptom</strong>: SSE connects but progress bar stays at 0%</p>
+<p><strong>Possible Causes</strong>:</p>
+<ol>
+<li>Job is queued but not running</li>
+<li>Backend not sending progress events</li>
+<li>Frontend not parsing events correctly</li>
+</ol>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Check job status: <code>curl http://localhost:5005/api/jobs/{jobId}</code></li>
+<li>Monitor SSE stream: <code>curl -N http://localhost:5005/api/jobs/{jobId}/events</code></li>
+<li>Check browser console for errors</li>
+</ol>
+<h3 id="reconnection-failing">Reconnection Failing</h3>
+<p><strong>Symptom</strong>: After network interruption, connection doesn't restore</p>
+<p><strong>Possible Causes</strong>:</p>
+<ol>
+<li>Max reconnection attempts exceeded</li>
+<li>Job completed during disconnection</li>
+<li>Backend restarted (job lost)</li>
+</ol>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Refresh page to reset reconnection counter</li>
+<li>Check job status to see if it completed</li>
+<li>Restart job if backend was restarted</li>
+</ol>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="server-load">Server Load</h3>
+<p><strong>Polling</strong> (Before):</p>
+<ul>
+<li>1 request/second per client</li>
+<li>3600 requests/hour per client</li>
+<li>86,400 requests/day per client</li>
+</ul>
+<p><strong>SSE</strong> (After):</p>
+<ul>
+<li>1 connection per client (long-lived)</li>
+<li>Heartbeat every 10 seconds</li>
+<li>~360 heartbeats/hour per client</li>
+<li>Significantly reduced load</li>
+</ul>
+<h3 id="network-efficiency">Network Efficiency</h3>
+<p><strong>Polling</strong>:</p>
+<ul>
+<li>Full HTTP request/response overhead each time</li>
+<li>Repeated headers, handshake, parsing</li>
+<li>High latency (minimum 1 second delay)</li>
+</ul>
+<p><strong>SSE</strong>:</p>
+<ul>
+<li>Single connection establishment</li>
+<li>Minimal overhead per event</li>
+<li>Near-instant updates (&lt; 100ms)</li>
+</ul>
+<h3 id="browser-compatibility">Browser Compatibility</h3>
+<p>SSE is supported in all modern browsers:</p>
+<ul>
+<li>Chrome 6+</li>
+<li>Firefox 6+</li>
+<li>Safari 5+</li>
+<li>Edge 79+</li>
+<li>Opera 11+</li>
+</ul>
+<p><strong>Not supported</strong>: Internet Explorer (use polyfill if needed)</p>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="authentication">Authentication</h3>
+<p>Current implementation uses correlation ID tracking. For production:</p>
+<ol>
+<li><p><strong>Add authentication</strong>:</p>
+<ul>
+<li>Require API key or JWT token</li>
+<li>Validate on SSE connection</li>
+<li>Use secure cookies for browser clients</li>
+</ul>
+</li>
+<li><p><strong>Job ownership</strong>:</p>
+<ul>
+<li>Associate jobs with user accounts</li>
+<li>Verify user can access job before streaming</li>
+<li>Return 403 Forbidden for unauthorized access</li>
+</ul>
+</li>
+<li><p><strong>Rate limiting</strong>:</p>
+<ul>
+<li>Limit concurrent SSE connections per user</li>
+<li>Prevent abuse of long-lived connections</li>
+<li>Monitor connection duration</li>
+</ul>
+</li>
+</ol>
+<h3 id="data-protection">Data Protection</h3>
+<ul>
+<li>Never send sensitive data in SSE events</li>
+<li>Sanitize error messages (no stack traces)</li>
+<li>Use HTTPS in production</li>
+<li>Implement proper CORS policy</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<h3 id="planned-improvements">Planned Improvements</h3>
+<ol>
+<li><p><strong>Batched Updates</strong></p>
+<ul>
+<li>Group multiple progress updates</li>
+<li>Reduce event frequency for bandwidth savings</li>
+<li>Configurable batch window (e.g., 100ms)</li>
+</ul>
+</li>
+<li><p><strong>Compression</strong></p>
+<ul>
+<li>Gzip event data for large payloads</li>
+<li>Reduce bandwidth usage</li>
+<li>Especially beneficial for logs/errors</li>
+</ul>
+</li>
+<li><p><strong>Multi-job Monitoring</strong></p>
+<ul>
+<li>Single SSE connection for multiple jobs</li>
+<li>Multiplexed event stream</li>
+<li>Reduced connection overhead</li>
+</ul>
+</li>
+<li><p><strong>Enhanced Reconnection</strong></p>
+<ul>
+<li>Event replay from Last-Event-ID</li>
+<li>Buffered events during disconnection</li>
+<li>Seamless continuation on reconnect</li>
+</ul>
+</li>
+<li><p><strong>WebSocket Fallback</strong></p>
+<ul>
+<li>Automatic fallback for older browsers</li>
+<li>Bi-directional communication support</li>
+<li>Enhanced real-time capabilities</li>
+</ul>
+</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events">MDN: Server-Sent Events</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/EventSource">EventSource API</a></li>
+<li><a href="https://html.spec.whatwg.org/multipage/server-sent-events.html">SSE Specification</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ol>
+<li>Check browser console for errors</li>
+<li>Review JobsController.cs logs</li>
+<li>Test SSE endpoint with cURL</li>
+<li>Open GitHub issue with details</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/SSE_IMPLEMENTATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

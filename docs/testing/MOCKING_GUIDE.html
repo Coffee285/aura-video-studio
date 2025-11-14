@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Mocking Best Practices | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Mocking Best Practices | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/testing/MOCKING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="mocking-best-practices">Mocking Best Practices</h1>
+
+<p>This guide covers mocking strategies and best practices for the Aura project.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#backend-mocking-net">Backend Mocking (.NET)</a></li>
+<li><a href="#frontend-mocking-typescript">Frontend Mocking (TypeScript)</a></li>
+<li><a href="#api-mocking">API Mocking</a></li>
+<li><a href="#common-patterns">Common Patterns</a></li>
+</ul>
+<h2 id="backend-mocking-net">Backend Mocking (.NET)</h2>
+<h3 id="using-moq">Using Moq</h3>
+<h4 id="basic-setup">Basic Setup</h4>
+<pre><code class="lang-csharp">using Moq;
+
+public class ServiceTests
+{
+    private readonly Mock&lt;IDependency&gt; _mockDependency;
+    private readonly ServiceUnderTest _sut;
+
+    public ServiceTests()
+    {
+        _mockDependency = new Mock&lt;IDependency&gt;();
+        _sut = new ServiceUnderTest(_mockDependency.Object);
+    }
+}
+</code></pre>
+<h4 id="method-setup">Method Setup</h4>
+<pre><code class="lang-csharp">// Simple return value
+_mockDependency
+    .Setup(d =&gt; d.GetValue())
+    .Returns(42);
+
+// Async method
+_mockDependency
+    .Setup(d =&gt; d.GetValueAsync())
+    .ReturnsAsync(42);
+
+// With parameters
+_mockDependency
+    .Setup(d =&gt; d.GetById(It.IsAny&lt;string&gt;()))
+    .Returns((string id) =&gt; new Entity { Id = id });
+
+// Conditional setup
+_mockDependency
+    .Setup(d =&gt; d.GetById(It.Is&lt;string&gt;(id =&gt; id.StartsWith(&quot;test&quot;))))
+    .Returns(testEntity);
+
+// Throwing exceptions
+_mockDependency
+    .Setup(d =&gt; d.GetById(&quot;invalid&quot;))
+    .Throws&lt;NotFoundException&gt;();
+
+// Callback
+_mockDependency
+    .Setup(d =&gt; d.Save(It.IsAny&lt;Entity&gt;()))
+    .Callback&lt;Entity&gt;(e =&gt; Console.WriteLine($&quot;Saving {e.Id}&quot;))
+    .Returns(true);
+</code></pre>
+<h4 id="verification">Verification</h4>
+<pre><code class="lang-csharp">// Verify method was called
+_mockDependency.Verify(
+    d =&gt; d.GetById(&quot;123&quot;),
+    Times.Once
+);
+
+// Verify never called
+_mockDependency.Verify(
+    d =&gt; d.Delete(It.IsAny&lt;string&gt;()),
+    Times.Never
+);
+
+// Verify call count
+_mockDependency.Verify(
+    d =&gt; d.Save(It.IsAny&lt;Entity&gt;()),
+    Times.Exactly(3)
+);
+
+// Verify no other calls
+_mockDependency.VerifyNoOtherCalls();
+</code></pre>
+<h3 id="mocking-httpclient">Mocking HttpClient</h3>
+<pre><code class="lang-csharp">using System.Net;
+using System.Net.Http;
+using Moq;
+using Moq.Protected;
+
+public class HttpClientTests
+{
+    [Fact]
+    public async Task GetData_ReturnsExpectedResult()
+    {
+        // Arrange
+        var mockHandler = new Mock&lt;HttpMessageHandler&gt;();
+        mockHandler
+            .Protected()
+            .Setup&lt;Task&lt;HttpResponseMessage&gt;&gt;(
+                &quot;SendAsync&quot;,
+                ItExpr.IsAny&lt;HttpRequestMessage&gt;(),
+                ItExpr.IsAny&lt;CancellationToken&gt;()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(&quot;{\&quot;value\&quot;:42}&quot;)
+            });
+
+        var httpClient = new HttpClient(mockHandler.Object);
+        var service = new HttpService(httpClient);
+
+        // Act
+        var result = await service.GetDataAsync();
+
+        // Assert
+        Assert.Equal(42, result.Value);
+    }
+}
+</code></pre>
+<h3 id="mocking-dbcontext">Mocking DbContext</h3>
+<pre><code class="lang-csharp">using Microsoft.EntityFrameworkCore;
+
+public class RepositoryTests
+{
+    [Fact]
+    public async Task GetAll_ReturnsAllEntities()
+    {
+        // Arrange - Use InMemory database
+        var options = new DbContextOptionsBuilder&lt;AppDbContext&gt;()
+            .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            .Options;
+
+        using var context = new AppDbContext(options);
+        context.Entities.AddRange(
+            new Entity { Id = &quot;1&quot;, Name = &quot;Test 1&quot; },
+            new Entity { Id = &quot;2&quot;, Name = &quot;Test 2&quot; }
+        );
+        await context.SaveChangesAsync();
+
+        var repository = new Repository(context);
+
+        // Act
+        var result = await repository.GetAllAsync();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+    }
+}
+</code></pre>
+<h2 id="frontend-mocking-typescript">Frontend Mocking (TypeScript)</h2>
+<h3 id="mocking-functions">Mocking Functions</h3>
+<pre><code class="lang-typescript">// Using jest.fn()
+const mockCallback = jest.fn();
+
+// With implementation
+const mockCallback = jest.fn((x) =&gt; x * 2);
+
+// With return value
+const mockGetValue = jest.fn().mockReturnValue(42);
+
+// With async return
+const mockFetchData = jest.fn().mockResolvedValue({ data: 'test' });
+
+// With rejection
+const mockFail = jest.fn().mockRejectedValue(new Error('Failed'));
+
+// Assertions
+expect(mockCallback).toHaveBeenCalled();
+expect(mockCallback).toHaveBeenCalledWith('arg1', 'arg2');
+expect(mockCallback).toHaveBeenCalledTimes(3);
+expect(mockCallback).not.toHaveBeenCalled();
+</code></pre>
+<h3 id="mocking-modules">Mocking Modules</h3>
+<pre><code class="lang-typescript">// Mock entire module
+jest.mock('@/services/api');
+
+// Mock with factory
+jest.mock('@/services/api', () =&gt; ({
+  fetchProjects: jest.fn().mockResolvedValue([]),
+  createProject: jest.fn(),
+}));
+
+// Partial mock
+jest.mock('@/services/api', () =&gt; ({
+  ...jest.requireActual('@/services/api'),
+  fetchProjects: jest.fn(),
+}));
+
+// Import mocked module
+import { fetchProjects } from '@/services/api';
+
+// Type-safe mock
+const mockFetchProjects = fetchProjects as jest.MockedFunction&lt;typeof fetchProjects&gt;;
+mockFetchProjects.mockResolvedValue([{ id: '1', name: 'Test' }]);
+</code></pre>
+<h3 id="mocking-react-query">Mocking React Query</h3>
+<pre><code class="lang-typescript">import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { renderWithProviders } from '@/test/utils/testUtils';
+
+describe('Component with queries', () =&gt; {
+  it('should display data from query', async () =&gt; {
+    // Create test query client
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+      },
+    });
+
+    // Pre-populate cache
+    queryClient.setQueryData(['projects'], [
+      { id: '1', name: 'Test Project' },
+    ]);
+
+    renderWithProviders(&lt;MyComponent /&gt;, { queryClient });
+
+    expect(screen.getByText('Test Project')).toBeInTheDocument();
+  });
+});
+</code></pre>
+<h3 id="mocking-zustand-stores">Mocking Zustand Stores</h3>
+<pre><code class="lang-typescript">import { renderHook } from '@testing-library/react';
+import { useStore } from '@/stores/myStore';
+
+// Mock store state
+jest.mock('@/stores/myStore', () =&gt; ({
+  useStore: jest.fn(),
+}));
+
+describe('Component using store', () =&gt; {
+  it('should use store data', () =&gt; {
+    // Setup mock store state
+    const mockStore = {
+      value: 42,
+      setValue: jest.fn(),
+    };
+    
+    (useStore as jest.Mock).mockReturnValue(mockStore);
+
+    const { result } = renderHook(() =&gt; useStore());
+    
+    expect(result.current.value).toBe(42);
+  });
+});
+</code></pre>
+<h2 id="api-mocking">API Mocking</h2>
+<h3 id="using-msw-mock-service-worker">Using MSW (Mock Service Worker)</h3>
+<pre><code class="lang-typescript">// src/test/mocks/handlers.ts
+import { rest } from 'msw';
+
+export const handlers = [
+  rest.get('/api/projects', (req, res, ctx) =&gt; {
+    return res(
+      ctx.status(200),
+      ctx.json([
+        { id: '1', name: 'Project 1' },
+        { id: '2', name: 'Project 2' },
+      ])
+    );
+  }),
+
+  rest.post('/api/projects', async (req, res, ctx) =&gt; {
+    const body = await req.json();
+    return res(
+      ctx.status(201),
+      ctx.json({ ...body, id: 'new-id' })
+    );
+  }),
+
+  rest.get('/api/projects/:id', (req, res, ctx) =&gt; {
+    const { id } = req.params;
+    return res(
+      ctx.status(200),
+      ctx.json({ id, name: `Project ${id}` })
+    );
+  }),
+
+  // Error response
+  rest.delete('/api/projects/:id', (req, res, ctx) =&gt; {
+    return res(
+      ctx.status(404),
+      ctx.json({ error: 'Project not found' })
+    );
+  }),
+];
+</code></pre>
+<pre><code class="lang-typescript">// src/test/mocks/server.ts
+import { setupServer } from 'msw/node';
+import { handlers } from './handlers';
+
+export const server = setupServer(...handlers);
+</code></pre>
+<pre><code class="lang-typescript">// src/test/setup.ts
+import { server } from './mocks/server';
+
+beforeAll(() =&gt; server.listen());
+afterEach(() =&gt; server.resetHandlers());
+afterAll(() =&gt; server.close());
+</code></pre>
+<pre><code class="lang-typescript">// In tests
+import { server } from '@/test/mocks/server';
+import { rest } from 'msw';
+
+describe('API Integration', () =&gt; {
+  it('should handle API error', async () =&gt; {
+    // Override handler for this test
+    server.use(
+      rest.get('/api/projects', (req, res, ctx) =&gt; {
+        return res(ctx.status(500), ctx.json({ error: 'Server error' }));
+      })
+    );
+
+    renderWithProviders(&lt;ProjectList /&gt;);
+
+    await waitFor(() =&gt; {
+      expect(screen.getByText(/error/i)).toBeInTheDocument();
+    });
+  });
+});
+</code></pre>
+<h3 id="axios-mock-adapter">Axios Mock Adapter</h3>
+<pre><code class="lang-typescript">import axios from 'axios';
+import MockAdapter from 'axios-mock-adapter';
+
+describe('API Service', () =&gt; {
+  let mock: MockAdapter;
+
+  beforeEach(() =&gt; {
+    mock = new MockAdapter(axios);
+  });
+
+  afterEach(() =&gt; {
+    mock.restore();
+  });
+
+  it('should fetch projects', async () =&gt; {
+    mock.onGet('/api/projects').reply(200, [
+      { id: '1', name: 'Test' },
+    ]);
+
+    const result = await fetchProjects();
+    
+    expect(result).toHaveLength(1);
+  });
+
+  it('should handle network error', async () =&gt; {
+    mock.onGet('/api/projects').networkError();
+
+    await expect(fetchProjects()).rejects.toThrow();
+  });
+
+  it('should handle timeout', async () =&gt; {
+    mock.onGet('/api/projects').timeout();
+
+    await expect(fetchProjects()).rejects.toThrow();
+  });
+});
+</code></pre>
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="mock-factory">Mock Factory</h3>
+<pre><code class="lang-csharp">public static class MockFactory
+{
+    public static Mock&lt;IRepository&lt;T&gt;&gt; CreateRepository&lt;T&gt;() where T : class
+    {
+        var mock = new Mock&lt;IRepository&lt;T&gt;&gt;();
+        mock.Setup(r =&gt; r.GetAllAsync()).ReturnsAsync(new List&lt;T&gt;());
+        return mock;
+    }
+
+    public static Mock&lt;ILogger&lt;T&gt;&gt; CreateLogger&lt;T&gt;()
+    {
+        return new Mock&lt;ILogger&lt;T&gt;&gt;();
+    }
+}
+</code></pre>
+<pre><code class="lang-typescript">// mockFactory.ts
+export const createMockApi = () =&gt; ({
+  fetchProjects: jest.fn().mockResolvedValue([]),
+  createProject: jest.fn().mockResolvedValue({ id: 'new' }),
+  updateProject: jest.fn().mockResolvedValue({}),
+  deleteProject: jest.fn().mockResolvedValue(undefined),
+});
+</code></pre>
+<h3 id="spy-pattern">Spy Pattern</h3>
+<pre><code class="lang-csharp">// Spy on real implementation
+var realService = new RealService();
+var spy = Mock.Get(realService);
+
+spy.Setup(s =&gt; s.MethodToSpy()).CallBase();
+
+// Use real service
+await realService.DoWork();
+
+// Verify spy
+spy.Verify(s =&gt; s.MethodToSpy(), Times.Once);
+</code></pre>
+<pre><code class="lang-typescript">// Jest spy
+const api = {
+  fetchData: () =&gt; Promise.resolve([1, 2, 3]),
+};
+
+const spy = jest.spyOn(api, 'fetchData');
+
+await api.fetchData();
+
+expect(spy).toHaveBeenCalled();
+spy.mockRestore();
+</code></pre>
+<h3 id="partial-mocking">Partial Mocking</h3>
+<pre><code class="lang-csharp">// Mock only specific methods
+var mock = new Mock&lt;IService&gt;();
+mock.CallBase = true; // Use real implementation for unmocked methods
+
+mock.Setup(s =&gt; s.SpecificMethod()).Returns(42);
+</code></pre>
+<pre><code class="lang-typescript">// Partial module mock
+jest.mock('@/services/api', () =&gt; ({
+  ...jest.requireActual('@/services/api'),
+  fetchProjects: jest.fn(), // Only mock this one
+}));
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Mock at the boundaries</strong>: Mock external dependencies, not internal logic</li>
+<li><strong>Use real objects when possible</strong>: Prefer in-memory databases over mocked DbContext</li>
+<li><strong>Reset mocks between tests</strong>: Avoid state leakage</li>
+<li><strong>Verify behavior, not implementation</strong>: Focus on observable outcomes</li>
+<li><strong>Keep mocks simple</strong>: Complex mocks indicate design problems</li>
+<li><strong>Document mock behavior</strong>: Explain why mocking is necessary</li>
+<li><strong>Avoid over-mocking</strong>: Too many mocks make tests brittle</li>
+<li><strong>Use test doubles appropriately</strong>:
+<ul>
+<li><strong>Stub</strong>: Provides predetermined responses</li>
+<li><strong>Mock</strong>: Verifies interactions</li>
+<li><strong>Spy</strong>: Records calls on real objects</li>
+<li><strong>Fake</strong>: Working implementation with shortcuts</li>
+</ul>
+</li>
+</ol>
+<h2 id="anti-patterns-to-avoid">Anti-Patterns to Avoid</h2>
+<pre><code class="lang-csharp">// ❌ Don't: Mock everything
+var mockA = new Mock&lt;IServiceA&gt;();
+var mockB = new Mock&lt;IServiceB&gt;();
+var mockC = new Mock&lt;IServiceC&gt;();
+// ... this is too much
+
+// ✅ Do: Mock only external dependencies
+var mockExternalApi = new Mock&lt;IExternalApi&gt;();
+var realServiceA = new ServiceA();
+var realServiceB = new ServiceB();
+</code></pre>
+<pre><code class="lang-typescript">// ❌ Don't: Mock implementation details
+const mock = jest.fn().mockImplementation(() =&gt; {
+  // Complex logic that duplicates production code
+});
+
+// ✅ Do: Mock at appropriate abstraction level
+const mock = jest.fn().mockResolvedValue(expectedResult);
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="mock-not-being-called">Mock Not Being Called</h3>
+<pre><code class="lang-csharp">// Check setup matches exactly
+_mock.Setup(s =&gt; s.Method(&quot;exact-string&quot;)).Returns(42);
+await _sut.DoWork(); // Calls Method(&quot;other-string&quot;)
+
+// Use It.IsAny for flexible matching
+_mock.Setup(s =&gt; s.Method(It.IsAny&lt;string&gt;())).Returns(42);
+</code></pre>
+<h3 id="async-method-not-awaited">Async Method Not Awaited</h3>
+<pre><code class="lang-csharp">// ❌ Wrong
+_mock.Setup(s =&gt; s.MethodAsync()).Returns(Task.FromResult(42));
+
+// ✅ Correct
+_mock.Setup(s =&gt; s.MethodAsync()).ReturnsAsync(42);
+</code></pre>
+<h3 id="mock-verification-fails">Mock Verification Fails</h3>
+<pre><code class="lang-csharp">// Check exact match
+_mock.Verify(s =&gt; s.Method(&quot;test&quot;), Times.Once);
+
+// Use ItExpr for flexible matching
+_mock.Verify(
+    s =&gt; s.Method(It.Is&lt;string&gt;(x =&gt; x.StartsWith(&quot;t&quot;))),
+    Times.Once
+);
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/testing/MOCKING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>SSE Event Flow Diagram | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="SSE Event Flow Diagram | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/SSE_EVENT_FLOW.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="sse-event-flow-diagram">SSE Event Flow Diagram</h1>
+
+<h2 id="architecture-overview">Architecture Overview</h2>
+<pre><code>┌─────────────────┐
+│   Frontend      │
+│   (React)       │
+└────────┬────────┘
+         │ EventSource
+         │ GET /api/jobs/{jobId}/events
+         ▼
+┌─────────────────────────────────────────────────┐
+│          JobsController.GetJobEvents()          │
+│  - Sets SSE headers (text/event-stream)        │
+│  - Polls job state every 1 second              │
+│  - Sends SSE events on changes                 │
+└────────┬────────────────────────────────────────┘
+         │ Polls
+         ▼
+┌─────────────────────────────────────────────────┐
+│            JobRunner.GetJob()                   │
+│  - Returns current job state                    │
+│  - Job includes: Status, Stage, Percent, etc.  │
+└────────┬────────────────────────────────────────┘
+         │
+         │ Job State
+         │
+┌────────▼────────────────────────────────────────┐
+│         JobRunner (Background Task)             │
+│  - Executes job through stages                  │
+│  - Publishes JobProgress events                 │
+│  - Updates job state in ArtifactManager         │
+└────────┬────────────────────────────────────────┘
+         │
+         │ Publishes JobProgressEventArgs
+         │
+┌────────▼────────────────────────────────────────┐
+│     JobProgress Event Subscribers               │
+│  - Event contains:                              │
+│    * JobId, Progress (0-100)                    │
+│    * Status, Stage, Message                     │
+│    * Timestamp, CorrelationId                   │
+└─────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="event-flow-sequence">Event Flow Sequence</h2>
+<h3 id="1-job-creation">1. Job Creation</h3>
+<pre><code>Client → POST /api/jobs
+       ↓
+   JobRunner.CreateAndStartJobAsync()
+       ↓
+   Task.Run(ExecuteJobAsync)
+       ↓
+   Returns Job { Id, Status: Queued, ... }
+</code></pre>
+<h3 id="2-sse-subscription">2. SSE Subscription</h3>
+<pre><code>Client → GET /api/jobs/{jobId}/events
+       ↓
+   JobsController.GetJobEvents()
+       ↓
+   Response.Headers[&quot;Content-Type&quot;] = &quot;text/event-stream&quot;
+       ↓
+   Start polling loop (every 1 second)
+</code></pre>
+<h3 id="3-job-execution--progress-updates">3. Job Execution &amp; Progress Updates</h3>
+<pre><code>ExecuteJobAsync()
+  ├─ UpdateJob(status: Running, stage: &quot;Initialization&quot;)
+  │   └─ Raises JobProgress event
+  │       └─ JobProgressEventArgs published
+  │
+  ├─ VideoOrchestrator.GenerateVideoAsync()
+  │   ├─ Reports: &quot;Generating script&quot;
+  │   │   └─ ParseProgressMessage() → stage: &quot;Script&quot;
+  │   │       └─ UpdateJob() → JobProgress event
+  │   │
+  │   ├─ Reports: &quot;Generating narration&quot;
+  │   │   └─ ParseProgressMessage() → stage: &quot;Voice&quot;
+  │   │       └─ UpdateJob() → JobProgress event
+  │   │
+  │   ├─ Reports: &quot;Generating visuals&quot;
+  │   │   └─ ParseProgressMessage() → stage: &quot;Visuals&quot;
+  │   │       └─ UpdateJob() → JobProgress event
+  │   │
+  │   └─ Reports: &quot;Rendering video&quot;
+  │       └─ ParseProgressMessage() → stage: &quot;Rendering&quot;
+  │           ├─ UpdateJob() → JobProgress event
+  │           └─ FfmpegVideoComposer.RenderAsync()
+  │               └─ Writes logs to Logs/ffmpeg/{jobId}.log
+  │
+  └─ UpdateJob(status: Done, percent: 100)
+      └─ Raises final JobProgress event
+</code></pre>
+<h3 id="4-sse-polling--event-emission">4. SSE Polling &amp; Event Emission</h3>
+<pre><code>JobsController.GetJobEvents() - Polling Loop
+  │
+  ├─ Every 1 second:
+  │   ├─ job = JobRunner.GetJob(jobId)
+  │   ├─ Compare with previous state
+  │   │
+  │   └─ If changed:
+  │       ├─ Status changed?
+  │       │   └─ SendSseEvent(&quot;job-status&quot;, { status, correlationId })
+  │       │
+  │       ├─ Stage changed?
+  │       │   └─ SendSseEvent(&quot;step-status&quot;, { step, status, correlationId })
+  │       │
+  │       └─ Percent changed?
+  │           └─ SendSseEvent(&quot;step-progress&quot;, { step, progressPct, correlationId })
+  │
+  └─ Job complete/failed:
+      ├─ Status: Done
+      │   └─ SendSseEvent(&quot;job-completed&quot;, { status, output, correlationId })
+      │
+      └─ Status: Failed
+          └─ SendSseEvent(&quot;job-failed&quot;, { status, errors, correlationId })
+</code></pre>
+<h3 id="5-frontend-event-handling">5. Frontend Event Handling</h3>
+<pre><code>subscribeToJobEvents(jobId, (event) =&gt; {
+  switch (event.type) {
+    case 'job-status':
+      // Update overall job status badge
+      break;
+      
+    case 'step-status':
+      // Update step status in progress list
+      break;
+      
+    case 'step-progress':
+      // Update progress bar for current step
+      break;
+      
+    case 'job-completed':
+      // Show success state with download button
+      break;
+      
+    case 'job-failed':
+      // Show error modal with remediation
+      break;
+  }
+})
+</code></pre>
+<h2 id="sse-message-format">SSE Message Format</h2>
+<h3 id="event-job-status">Event: job-status</h3>
+<pre><code>event: job-status
+data: {&quot;status&quot;:&quot;Running&quot;,&quot;correlationId&quot;:&quot;abc123&quot;}
+
+</code></pre>
+<h3 id="event-step-status">Event: step-status</h3>
+<pre><code>event: step-status
+data: {&quot;step&quot;:&quot;Rendering&quot;,&quot;status&quot;:&quot;Running&quot;,&quot;correlationId&quot;:&quot;abc123&quot;}
+
+</code></pre>
+<h3 id="event-step-progress">Event: step-progress</h3>
+<pre><code>event: step-progress
+data: {&quot;step&quot;:&quot;Rendering&quot;,&quot;progressPct&quot;:50,&quot;correlationId&quot;:&quot;abc123&quot;}
+
+</code></pre>
+<h3 id="event-job-completed">Event: job-completed</h3>
+<pre><code>event: job-completed
+data: {&quot;status&quot;:&quot;Succeeded&quot;,&quot;output&quot;:{&quot;videoPath&quot;:&quot;/path/to/video.mp4&quot;,&quot;sizeBytes&quot;:12345678},&quot;correlationId&quot;:&quot;abc123&quot;}
+
+</code></pre>
+<h3 id="event-job-failed">Event: job-failed</h3>
+<pre><code>event: job-failed
+data: {&quot;status&quot;:&quot;Failed&quot;,&quot;errors&quot;:[{&quot;code&quot;:&quot;E304-FFMPEG_RUNTIME&quot;,&quot;message&quot;:&quot;FFmpeg render failed&quot;,&quot;remediation&quot;:&quot;Check FFmpeg installation&quot;}],&quot;correlationId&quot;:&quot;abc123&quot;}
+
+</code></pre>
+<h2 id="stage-transitions">Stage Transitions</h2>
+<p>The <code>ParseProgressMessage()</code> method in JobRunner detects stage transitions from orchestrator messages:</p>
+<table>
+<thead>
+<tr>
+<th>Message Contains</th>
+<th>Stage</th>
+<th>Progress %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>&quot;Generating script&quot;</td>
+<td>Script</td>
+<td>10</td>
+</tr>
+<tr>
+<td>&quot;Generating narration&quot; or &quot;voice&quot;</td>
+<td>Voice</td>
+<td>30</td>
+</tr>
+<tr>
+<td>&quot;visual&quot; or &quot;image&quot;</td>
+<td>Visuals</td>
+<td>50</td>
+</tr>
+<tr>
+<td>&quot;render&quot; or &quot;composing video&quot;</td>
+<td>Rendering</td>
+<td>70</td>
+</tr>
+<tr>
+<td>&quot;postprocess&quot;</td>
+<td>Postprocessing</td>
+<td>90</td>
+</tr>
+</tbody>
+</table>
+<h2 id="ffmpeg-log-files">FFmpeg Log Files</h2>
+<p>Location: <code>~/.local/share/Aura/Logs/ffmpeg/{jobId}.log</code></p>
+<p>Example log content:</p>
+<pre><code>FFmpeg Render Log - Job ID: abc123def456
+Correlation ID: xyz789
+Started: 2025-10-20 12:34:56 UTC
+Resolution: 1920x1080
+FFmpeg Path: /usr/bin/ffmpeg
+Command: -i input.mp4 -c:v libx264 -preset medium output.mp4
+--------------------------------------------------------------------------------
+[stderr] ffmpeg version 4.4.2
+[stderr] Input #0, mp4, from 'input.mp4':
+[stderr]   Duration: 00:00:30.00, start: 0.000000, bitrate: 5000 kb/s
+[stderr] Stream #0:0: Video: h264, yuv420p, 1920x1080, 25 fps
+[stderr] frame=  100 fps= 25 q=28.0 size=    1024kB time=00:00:04.00 bitrate=2048.0kbits/s
+[stderr] frame=  200 fps= 25 q=28.0 size=    2048kB time=00:00:08.00 bitrate=2048.0kbits/s
+[stderr] video:10240kB audio:1536kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 0.5%
+--------------------------------------------------------------------------------
+Completed: 2025-10-20 12:35:30 UTC
+Exit Code: 0
+</code></pre>
+<h2 id="error-handling-flow">Error Handling Flow</h2>
+<pre><code>Exception in ExecuteJobAsync()
+  │
+  ├─ Catch OperationCanceledException
+  │   └─ UpdateJob(status: Failed, errorMessage: &quot;Job was cancelled&quot;)
+  │       └─ SSE sends job-failed event
+  │
+  └─ Catch Exception
+      ├─ CreateFailureDetails(job, ex)
+      │   ├─ Check if FFmpeg error
+      │   │   ├─ Yes: Read TryReadFfmpegLog(jobId)
+      │   │   │     └─ JobFailure with StderrSnippet, LogPath
+      │   │   └─ No: Generic JobFailure with SuggestedActions
+      │   │
+      │   └─ Return JobFailure object
+      │
+      └─ UpdateJob(status: Failed, failureDetails: details)
+          └─ SSE sends job-failed event with errors array
+</code></pre>
+<h2 id="correlation-id-flow">Correlation ID Flow</h2>
+<p>Correlation IDs flow through the entire system for traceability:</p>
+<pre><code>HTTP Request
+  └─ HttpContext.TraceIdentifier
+      └─ JobRunner.CreateAndStartJobAsync(correlationId)
+          └─ Job.CorrelationId
+              ├─ JobProgressEventArgs.CorrelationId
+              │   └─ SSE event data.correlationId
+              │
+              ├─ FFmpeg log: &quot;Correlation ID: xyz&quot;
+              │
+              └─ ErrorModel.CorrelationId
+                  └─ Error response JSON
+</code></pre>
+<h2 id="key-implementation-details">Key Implementation Details</h2>
+<h3 id="jobrunner-event-publishing">JobRunner Event Publishing</h3>
+<ul>
+<li>Events published on every <code>UpdateJob()</code> call</li>
+<li>Events contain full job state snapshot</li>
+<li>Correlation ID always included</li>
+<li>Timestamp automatically added</li>
+</ul>
+<h3 id="sse-polling-strategy">SSE Polling Strategy</h3>
+<ul>
+<li>Poll every 1 second (configurable)</li>
+<li>Only send events on state changes</li>
+<li>Connection kept alive with periodic checks</li>
+<li>Automatic cleanup on job completion</li>
+</ul>
+<h3 id="frontend-reconnection-recommended">Frontend Reconnection (Recommended)</h3>
+<pre><code class="lang-typescript">let retryCount = 0;
+const maxRetries = 5;
+const baseDelay = 1000;
+
+function connect() {
+  const unsubscribe = subscribeToJobEvents(
+    jobId,
+    handleEvent,
+    (error) =&gt; {
+      if (retryCount &lt; maxRetries) {
+        const delay = baseDelay * Math.pow(2, retryCount);
+        setTimeout(() =&gt; {
+          retryCount++;
+          connect();
+        }, delay);
+      }
+    }
+  );
+}
+</code></pre>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ol>
+<li><strong>Polling Interval</strong>: 1 second balances responsiveness vs. load</li>
+<li><strong>Event Filtering</strong>: Only send events when state actually changes</li>
+<li><strong>Connection Limits</strong>: Consider max concurrent SSE connections</li>
+<li><strong>Log File Size</strong>: FFmpeg logs can grow large for long renders</li>
+<li><strong>Memory</strong>: Job state kept in memory during execution</li>
+</ol>
+<h2 id="security-considerations">Security Considerations</h2>
+<ol>
+<li><strong>Authentication</strong>: SSE endpoint should require authentication</li>
+<li><strong>Authorization</strong>: Verify user owns the job before streaming events</li>
+<li><strong>Rate Limiting</strong>: Limit number of SSE connections per user</li>
+<li><strong>Correlation IDs</strong>: Don't expose sensitive information in IDs</li>
+<li><strong>Error Messages</strong>: Sanitize error messages before sending to client</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/SSE_EVENT_FLOW.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

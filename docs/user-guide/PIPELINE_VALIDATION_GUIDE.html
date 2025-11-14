@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Pipeline Validation Guide (Pull #188 / PR 32) | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Pipeline Validation Guide (Pull #188 / PR 32) | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PIPELINE_VALIDATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="pipeline-validation-guide-pull-188--pr-32">Pipeline Validation Guide (Pull #188 / PR 32)</h1>
+
+<p>This guide provides instructions for validating the complete video generation pipeline from brief submission to downloadable video.</p>
+<h2 id="overview">Overview</h2>
+<p>The pipeline validation tests ensure that:</p>
+<ol>
+<li>Complete pipeline executes from brief to video</li>
+<li>Generated video file plays with audio and video</li>
+<li>Progress updates appear during generation</li>
+<li>Error handling works gracefully for all failure scenarios</li>
+<li>Temporary files are cleaned up properly</li>
+<li>Logs capture all pipeline events and errors</li>
+</ol>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required">Required</h3>
+<ul>
+<li>.NET 8.0 SDK</li>
+<li>Node.js 18+ and npm</li>
+<li>FFmpeg installed and in PATH</li>
+</ul>
+<h3 id="provider-configuration-at-least-one-of-each">Provider Configuration (At least one of each)</h3>
+<ul>
+<li><strong>LLM Provider</strong>: Ollama (local) or OpenAI (cloud)</li>
+<li><strong>TTS Provider</strong>: System TTS (local) or ElevenLabs (cloud)</li>
+<li><strong>Image Provider</strong>: Stock images (built-in) or Stable Diffusion (local)</li>
+</ul>
+<p>For offline testing, Ollama is recommended for LLM and system TTS for audio.</p>
+<h2 id="running-the-validation">Running the Validation</h2>
+<h3 id="method-1-automated-script-recommended">Method 1: Automated Script (Recommended)</h3>
+<p>This script tests the complete pipeline through the running API:</p>
+<pre><code class="lang-bash"># Start the backend API
+cd Aura.Api
+dotnet run &amp;
+API_PID=$!
+cd ..
+
+# Wait for API to be ready
+sleep 5
+
+# Start the frontend (optional)
+cd Aura.Web
+npm install
+npm run dev &amp;
+FRONTEND_PID=$!
+cd ..
+
+# Wait for frontend to be ready
+sleep 5
+
+# Run validation script
+./scripts/validate_pipeline.sh
+
+# Cleanup
+kill $API_PID $FRONTEND_PID
+</code></pre>
+<p>The script will:</p>
+<ul>
+<li>Test API health</li>
+<li>Submit a Quick Demo video generation request</li>
+<li>Monitor job progress through all stages</li>
+<li>Verify script generation completes</li>
+<li>Verify TTS generates valid audio</li>
+<li>Verify image generation produces images</li>
+<li>Verify FFmpeg assembles the final video</li>
+<li>Download and verify the video file</li>
+<li>Test job cancellation</li>
+<li>Check temporary file cleanup</li>
+<li>Verify logging captures events</li>
+</ul>
+<h3 id="method-2-unit-tests">Method 2: Unit Tests</h3>
+<p>Run the E2E test suite:</p>
+<pre><code class="lang-bash">cd Aura.E2E
+dotnet test --configuration Release
+</code></pre>
+<p>Available test filters:</p>
+<pre><code class="lang-bash"># Run only pipeline validation tests
+dotnet test --filter &quot;FullyQualifiedName~PipelineValidationTests&quot;
+
+# Run specific tests
+dotnet test --filter &quot;FullyQualifiedName~TemporaryFiles&quot;
+dotnet test --filter &quot;FullyQualifiedName~Logging&quot;
+</code></pre>
+<h3 id="method-3-manual-ui-testing">Method 3: Manual UI Testing</h3>
+<ol>
+<li><p><strong>Start Backend</strong>:</p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet run
+</code></pre>
+</li>
+<li><p><strong>Start Frontend</strong>:</p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run dev
+</code></pre>
+</li>
+<li><p><strong>Access UI</strong>: Open browser to <code>http://localhost:5173</code></p>
+</li>
+<li><p><strong>Submit Quick Demo</strong>:</p>
+<ul>
+<li>Navigate to Quick Demo section</li>
+<li>Fill in brief details:
+<ul>
+<li>Topic: &quot;Pipeline Validation Test&quot;</li>
+<li>Audience: &quot;Developers&quot;</li>
+<li>Goal: &quot;Test pipeline&quot;</li>
+<li>Tone: &quot;Professional&quot;</li>
+</ul>
+</li>
+<li>Click &quot;Generate Video&quot;</li>
+</ul>
+</li>
+<li><p><strong>Monitor Progress</strong>:</p>
+<ul>
+<li>Watch progress bar advance through stages</li>
+<li>Verify stage names appear (Script, Audio, Visuals, Render)</li>
+<li>Note progress percentages update</li>
+</ul>
+</li>
+<li><p><strong>Download Video</strong>:</p>
+<ul>
+<li>Wait for completion</li>
+<li>Click download button</li>
+<li>Verify video downloads</li>
+<li>Play video in media player to verify audio and video</li>
+</ul>
+</li>
+<li><p><strong>Test Cancellation</strong>:</p>
+<ul>
+<li>Start a new video generation</li>
+<li>Click &quot;Cancel&quot; button during generation</li>
+<li>Verify job stops and shows cancelled status</li>
+</ul>
+</li>
+</ol>
+<h2 id="test-coverage">Test Coverage</h2>
+<h3 id="task-1-2-service-startup">Task 1-2: Service Startup</h3>
+<ul>
+<li>✅ Backend starts successfully</li>
+<li>✅ Frontend starts successfully</li>
+<li>✅ API health check passes</li>
+<li>✅ Frontend serves UI</li>
+</ul>
+<h3 id="task-3-4-job-creation-and-progress">Task 3-4: Job Creation and Progress</h3>
+<ul>
+<li>✅ Quick Demo request submitted</li>
+<li>✅ Job ID returned</li>
+<li>✅ Progress tracking works</li>
+<li>✅ Progress updates received</li>
+</ul>
+<h3 id="task-5-script-generation">Task 5: Script Generation</h3>
+<ul>
+<li>✅ LLM provider generates script</li>
+<li>✅ Script contains valid content</li>
+<li>✅ Script stage completes</li>
+</ul>
+<h3 id="task-6-tts-generation">Task 6: TTS Generation</h3>
+<ul>
+<li>✅ TTS generates WAV files</li>
+<li>✅ WAV files &gt; 128 bytes</li>
+<li>✅ Audio stage completes</li>
+</ul>
+<h3 id="task-7-image-generation">Task 7: Image Generation</h3>
+<ul>
+<li>✅ Images generated for scenes</li>
+<li>✅ Valid image files created</li>
+<li>✅ Visual stage completes</li>
+</ul>
+<h3 id="task-8-ffmpeg-assembly">Task 8: FFmpeg Assembly</h3>
+<ul>
+<li>✅ FFmpeg command executes</li>
+<li>✅ Video file created</li>
+<li>✅ Render stage completes</li>
+</ul>
+<h3 id="task-9-video-download">Task 9: Video Download</h3>
+<ul>
+<li>✅ Video file downloadable</li>
+<li>✅ Video plays with audio</li>
+<li>✅ Video quality acceptable</li>
+</ul>
+<h3 id="task-10-job-cancellation">Task 10: Job Cancellation</h3>
+<ul>
+<li>✅ Cancel button works</li>
+<li>✅ Job stops execution</li>
+<li>✅ Status updates to cancelled</li>
+</ul>
+<h3 id="task-11-llm-provider-error-handling">Task 11: LLM Provider Error Handling</h3>
+<ul>
+<li>⚠️ Requires manual test (stop Ollama)</li>
+<li>✅ Error message displayed</li>
+<li>✅ User-friendly message</li>
+</ul>
+<h3 id="task-12-tts-provider-error-handling">Task 12: TTS Provider Error Handling</h3>
+<ul>
+<li>⚠️ Requires manual test (disable TTS)</li>
+<li>✅ Error message displayed</li>
+<li>✅ User-friendly message</li>
+</ul>
+<h3 id="task-13-image-provider-error-handling">Task 13: Image Provider Error Handling</h3>
+<ul>
+<li>⚠️ Requires manual test (disable image gen)</li>
+<li>✅ Error message displayed</li>
+<li>✅ User-friendly message</li>
+</ul>
+<h3 id="task-14-error-message-ux">Task 14: Error Message UX</h3>
+<ul>
+<li>✅ Errors show in UI</li>
+<li>✅ Messages are user-friendly</li>
+<li>✅ No stack traces in UI</li>
+</ul>
+<h3 id="task-15-temporary-file-cleanup">Task 15: Temporary File Cleanup</h3>
+<ul>
+<li>✅ Temp files created during generation</li>
+<li>✅ Temp files cleaned after completion</li>
+<li>✅ No file leaks</li>
+</ul>
+<h3 id="task-16-logging">Task 16: Logging</h3>
+<ul>
+<li>✅ All stages logged</li>
+<li>✅ Errors captured in logs</li>
+<li>✅ Progress events logged</li>
+<li>✅ Provider selection logged</li>
+</ul>
+<h2 id="error-handling-tests">Error Handling Tests</h2>
+<p>To test error handling manually:</p>
+<h3 id="test-llm-provider-unavailable">Test LLM Provider Unavailable</h3>
+<ol>
+<li>Stop Ollama service (if using)</li>
+<li>Or remove OpenAI API key from config</li>
+<li>Submit video generation</li>
+<li>Verify user-friendly error message appears</li>
+<li>Check logs for detailed error</li>
+</ol>
+<h3 id="test-tts-provider-unavailable">Test TTS Provider Unavailable</h3>
+<ol>
+<li>Disable system TTS service</li>
+<li>Or remove ElevenLabs API key</li>
+<li>Submit video generation</li>
+<li>Verify error message during audio stage</li>
+<li>Check logs for error details</li>
+</ol>
+<h3 id="test-image-provider-unavailable">Test Image Provider Unavailable</h3>
+<ol>
+<li>Configure to use Stable Diffusion</li>
+<li>Stop Stable Diffusion service</li>
+<li>Submit video generation</li>
+<li>Verify error message during visual stage</li>
+<li>Check logs for error details</li>
+</ol>
+<h2 id="success-criteria">Success Criteria</h2>
+<p>✅ <strong>Complete Pipeline</strong>: Video generated end-to-end without errors
+✅ <strong>Video Quality</strong>: Generated video plays with both audio and video
+✅ <strong>Progress Updates</strong>: UI shows progress through all stages
+✅ <strong>Error Handling</strong>: Graceful failures with user-friendly messages
+✅ <strong>Cleanup</strong>: No temporary files left after completion
+✅ <strong>Logging</strong>: All events and errors captured in logs</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="api-not-starting">API Not Starting</h3>
+<ul>
+<li>Check port 5000 is not in use</li>
+<li>Verify .NET 8.0 SDK installed</li>
+<li>Check appsettings.json configuration</li>
+</ul>
+<h3 id="frontend-not-starting">Frontend Not Starting</h3>
+<ul>
+<li>Check port 5173 is not in use</li>
+<li>Run <code>npm install</code> in Aura.Web</li>
+<li>Verify Node.js 18+ installed</li>
+</ul>
+<h3 id="video-generation-fails">Video Generation Fails</h3>
+<ul>
+<li>Check FFmpeg is installed and in PATH</li>
+<li>Verify at least one LLM provider configured</li>
+<li>Verify at least one TTS provider configured</li>
+<li>Check logs in Aura.Api/logs or console output</li>
+</ul>
+<h3 id="job-hangs">Job Hangs</h3>
+<ul>
+<li>Check provider services are running (Ollama, etc.)</li>
+<li>Verify network connectivity for cloud providers</li>
+<li>Check system resources (CPU, memory, disk space)</li>
+<li>Review logs for stuck operations</li>
+</ul>
+<h3 id="cancellation-doesnt-work">Cancellation Doesn't Work</h3>
+<ul>
+<li>Verify cancel endpoint is accessible</li>
+<li>Check job is in Running state before cancelling</li>
+<li>Review JobRunner logs for cancellation handling</li>
+</ul>
+<h2 id="output-files">Output Files</h2>
+<p>After running validation:</p>
+<ul>
+<li><code>test-output/pipeline-validation/job_id.txt</code> - Job ID used</li>
+<li><code>test-output/pipeline-validation/stages_seen.txt</code> - Stages detected</li>
+<li><code>test-output/pipeline-validation/test_video.mp4</code> - Generated video</li>
+<li><code>test-output/pipeline-validation/api_logs.txt</code> - API logs (if available)</li>
+</ul>
+<h2 id="additional-testing">Additional Testing</h2>
+<h3 id="performance-testing">Performance Testing</h3>
+<ul>
+<li>Time complete pipeline execution</li>
+<li>Monitor CPU/memory usage during generation</li>
+<li>Test with different video lengths (10s, 30s, 60s)</li>
+</ul>
+<h3 id="stress-testing">Stress Testing</h3>
+<ul>
+<li>Submit multiple jobs concurrently</li>
+<li>Verify queue handling</li>
+<li>Check resource cleanup under load</li>
+</ul>
+<h3 id="platform-testing">Platform Testing</h3>
+<ul>
+<li>Test on Windows, macOS, Linux</li>
+<li>Verify portable distribution works</li>
+<li>Test with different FFmpeg versions</li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ol>
+<li>Check logs in Aura.Api console output</li>
+<li>Review browser console for frontend errors</li>
+<li>Check GitHub Issues for known problems</li>
+<li>Create new issue with logs and error details</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PIPELINE_VALIDATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

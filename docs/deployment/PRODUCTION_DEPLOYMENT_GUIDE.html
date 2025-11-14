@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Production Deployment Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Production Deployment Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="production-deployment-guide">Production Deployment Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide covers the complete production deployment process for Aura Video Studio, including deployment strategies, rollback procedures, and operational best practices.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#deployment-strategies">Deployment Strategies</a></li>
+<li><a href="#deployment-process">Deployment Process</a></li>
+<li><a href="#rollback-procedures">Rollback Procedures</a></li>
+<li><a href="#monitoring-and-validation">Monitoring and Validation</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required-access">Required Access</h3>
+<ul>
+<li>GitHub repository write access</li>
+<li>Cloud provider credentials (Azure/AWS/GCP)</li>
+<li>Container registry access</li>
+<li>Kubernetes cluster access (if using K8s)</li>
+<li>Production environment secrets</li>
+</ul>
+<h3 id="required-tools">Required Tools</h3>
+<pre><code class="lang-bash"># Install required tools
+# Docker
+docker --version  # &gt;= 24.0.0
+
+# Kubernetes CLI (if using K8s)
+kubectl version --client  # &gt;= 1.28.0
+
+# Azure CLI (if using Azure)
+az --version  # &gt;= 2.50.0
+
+# Terraform (for IaC)
+terraform --version  # &gt;= 1.5.0
+
+# GitHub CLI
+gh --version  # &gt;= 2.30.0
+</code></pre>
+<h3 id="environment-configuration">Environment Configuration</h3>
+<p>Ensure all required environment variables and secrets are configured:</p>
+<ul>
+<li><code>DOCKER_REGISTRY</code>: Container registry URL</li>
+<li><code>REDIS_PASSWORD</code>: Redis authentication password</li>
+<li><code>AURA_OPENAI_API_KEY</code>: OpenAI API key</li>
+<li><code>AURA_STABILITY_API_KEY</code>: Stability AI API key</li>
+<li>API keys for other providers</li>
+<li><code>SENTRY_DSN</code>: Error tracking DSN</li>
+<li><code>APPLICATION_INSIGHTS_KEY</code>: Azure monitoring key</li>
+</ul>
+<h2 id="deployment-strategies">Deployment Strategies</h2>
+<h3 id="1-blue-green-deployment-default">1. Blue-Green Deployment (Default)</h3>
+<p><strong>Best for</strong>: Production deployments requiring zero downtime</p>
+<p><strong>Process</strong>:</p>
+<ol>
+<li>Deploy new version to inactive environment (green)</li>
+<li>Validate health and functionality</li>
+<li>Switch traffic from active (blue) to new (green)</li>
+<li>Monitor for issues</li>
+<li>Keep old environment for quick rollback</li>
+</ol>
+<p><strong>Command</strong>:</p>
+<pre><code class="lang-bash">./deploy/blue-green-deploy.sh production v1.2.3
+</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul>
+<li>Zero downtime</li>
+<li>Instant rollback capability</li>
+<li>Full validation before traffic switch</li>
+</ul>
+<p><strong>Cons</strong>:</p>
+<ul>
+<li>Requires double infrastructure temporarily</li>
+<li>Database migrations need special handling</li>
+</ul>
+<h3 id="2-canary-deployment">2. Canary Deployment</h3>
+<p><strong>Best for</strong>: High-risk changes, gradual rollout</p>
+<p><strong>Process</strong>:</p>
+<ol>
+<li>Deploy to 5% of instances</li>
+<li>Monitor for 10 minutes</li>
+<li>Increase to 50% of instances</li>
+<li>Monitor for 10 minutes</li>
+<li>Deploy to 100% of instances</li>
+</ol>
+<p><strong>Command</strong>:</p>
+<pre><code class="lang-bash">./deploy/canary-deploy.sh production 15m
+</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul>
+<li>Gradual exposure to production traffic</li>
+<li>Early detection of issues</li>
+<li>Automatic rollback on failure</li>
+</ul>
+<p><strong>Cons</strong>:</p>
+<ul>
+<li>Longer deployment time (30-40 minutes)</li>
+<li>Requires careful monitoring</li>
+</ul>
+<h3 id="3-rolling-deployment">3. Rolling Deployment</h3>
+<p><strong>Best for</strong>: Non-critical updates, smaller deployments</p>
+<p><strong>Process</strong>:</p>
+<ol>
+<li>Deploy to one instance at a time</li>
+<li>Validate health after each instance</li>
+<li>Continue to next instance</li>
+<li>Rollback all on failure</li>
+</ol>
+<p><strong>Command</strong>:</p>
+<pre><code class="lang-bash">./deploy/rolling-deploy.sh production v1.2.3
+</code></pre>
+<p><strong>Pros</strong>:</p>
+<ul>
+<li>No additional infrastructure needed</li>
+<li>Gradual rollout</li>
+</ul>
+<p><strong>Cons</strong>:</p>
+<ul>
+<li>Mixed versions during deployment</li>
+<li>Slower rollback</li>
+</ul>
+<h2 id="deployment-process">Deployment Process</h2>
+<h3 id="automated-deployment-recommended">Automated Deployment (Recommended)</h3>
+<h4 id="via-github-actions">Via GitHub Actions</h4>
+<ol>
+<li><strong>Tag-based deployment</strong> (automatic on version tag):</li>
+</ol>
+<pre><code class="lang-bash"># Create and push a version tag
+git tag v1.2.3
+git push origin v1.2.3
+
+# GitHub Actions will automatically:
+# - Build and test
+# - Create Docker images
+# - Deploy to staging
+# - Wait for approval
+# - Deploy to production
+</code></pre>
+<ol start="2">
+<li><strong>Manual deployment</strong> (workflow dispatch):</li>
+</ol>
+<pre><code class="lang-bash"># Using GitHub CLI
+gh workflow run production-deploy.yml \
+  --field environment=production \
+  --field version=v1.2.3 \
+  --field deployment_strategy=blue-green
+
+# Or via GitHub UI:
+# Actions &gt; Production Deployment Pipeline &gt; Run workflow
+</code></pre>
+<h3 id="manual-deployment">Manual Deployment</h3>
+<h4 id="step-1-pre-deployment-checks">Step 1: Pre-deployment Checks</h4>
+<pre><code class="lang-bash"># 1. Verify clean working directory
+git status
+
+# 2. Check version to deploy
+VERSION=&quot;v1.2.3&quot;
+
+# 3. Run pre-deployment validation
+./deploy/validate-deployment.sh staging
+
+# 4. Create deployment audit record
+./deploy/audit-deployment.sh production $VERSION blue-green initiated
+</code></pre>
+<h4 id="step-2-build-and-push-images">Step 2: Build and Push Images</h4>
+<pre><code class="lang-bash"># 1. Build production images
+docker build -f Aura.Api/Dockerfile.prod -t aura-api:$VERSION .
+docker build -f Aura.Web/Dockerfile.prod -t aura-web:$VERSION ./Aura.Web
+
+# 2. Tag for registry
+docker tag aura-api:$VERSION $DOCKER_REGISTRY/aura-api:$VERSION
+docker tag aura-web:$VERSION $DOCKER_REGISTRY/aura-web:$VERSION
+
+# 3. Push to registry
+docker push $DOCKER_REGISTRY/aura-api:$VERSION
+docker push $DOCKER_REGISTRY/aura-web:$VERSION
+</code></pre>
+<h4 id="step-3-deploy">Step 3: Deploy</h4>
+<pre><code class="lang-bash"># Deploy using blue-green strategy
+./deploy/blue-green-deploy.sh production $VERSION
+
+# Or deploy using canary strategy
+./deploy/canary-deploy.sh production 15m
+</code></pre>
+<h4 id="step-4-post-deployment-validation">Step 4: Post-deployment Validation</h4>
+<pre><code class="lang-bash"># Run comprehensive validation
+export DEPLOY_VERSION=$VERSION
+./deploy/validate-deployment.sh production https://api.aura.studio
+
+# Update audit trail
+./deploy/audit-deployment.sh production $VERSION blue-green success update
+</code></pre>
+<h2 id="rollback-procedures">Rollback Procedures</h2>
+<h3 id="automatic-rollback">Automatic Rollback</h3>
+<p>Automatic rollback is triggered when:</p>
+<ul>
+<li>Health checks fail for 3 consecutive attempts</li>
+<li>Error rate exceeds 300% of baseline</li>
+<li>Response time exceeds threshold</li>
+<li>System status shows &quot;Down&quot;</li>
+</ul>
+<h3 id="manual-rollback">Manual Rollback</h3>
+<h4 id="quick-rollback-blue-green">Quick Rollback (Blue-Green)</h4>
+<pre><code class="lang-bash"># Immediate traffic switch to previous environment
+./deploy/rollback.sh production &quot;Manual rollback due to [REASON]&quot;
+
+# Verify rollback
+./deploy/validate-deployment.sh production
+</code></pre>
+<h4 id="version-rollback">Version Rollback</h4>
+<pre><code class="lang-bash"># Rollback to specific version
+PREVIOUS_VERSION=&quot;v1.2.2&quot;
+
+# Deploy previous version
+./deploy/blue-green-deploy.sh production $PREVIOUS_VERSION
+
+# Update audit trail
+./deploy/audit-deployment.sh production $PREVIOUS_VERSION rollback success
+</code></pre>
+<h3 id="database-rollback">Database Rollback</h3>
+<p>If database migrations were applied:</p>
+<pre><code class="lang-bash"># 1. Stop API instances
+docker compose -p aura-production stop api
+
+# 2. Restore database backup
+cp data/aura.db.backup data/aura.db
+
+# 3. Restart API
+docker compose -p aura-production start api
+
+# 4. Verify database state
+curl -sf https://api.aura.studio/api/diagnostics/system | jq '.database'
+</code></pre>
+<h2 id="monitoring-and-validation">Monitoring and Validation</h2>
+<h3 id="health-checks">Health Checks</h3>
+<pre><code class="lang-bash"># Liveness check (is the service running?)
+curl https://api.aura.studio/health/live
+
+# Readiness check (can it serve traffic?)
+curl https://api.aura.studio/health/ready
+
+# System health (detailed status)
+curl https://api.aura.studio/health/system
+</code></pre>
+<h3 id="key-metrics-to-monitor">Key Metrics to Monitor</h3>
+<ol>
+<li><p><strong>Response Times</strong></p>
+<ul>
+<li>Target: &lt; 2000ms (p95)</li>
+<li>Alert threshold: &gt; 5000ms</li>
+</ul>
+</li>
+<li><p><strong>Error Rate</strong></p>
+<ul>
+<li>Target: &lt; 1%</li>
+<li>Alert threshold: &gt; 5%</li>
+</ul>
+</li>
+<li><p><strong>Availability</strong></p>
+<ul>
+<li>Target: 99.9%</li>
+<li>Alert threshold: &lt; 99%</li>
+</ul>
+</li>
+<li><p><strong>Resource Utilization</strong></p>
+<ul>
+<li>CPU: &lt; 70%</li>
+<li>Memory: &lt; 80%</li>
+<li>Disk: &lt; 85%</li>
+</ul>
+</li>
+</ol>
+<h3 id="monitoring-tools">Monitoring Tools</h3>
+<ul>
+<li><strong>Application Insights</strong>: Real-time application monitoring</li>
+<li><strong>Azure Monitor</strong>: Infrastructure metrics</li>
+<li><strong>Sentry</strong>: Error tracking and alerting</li>
+<li><strong>Custom dashboards</strong>: <code>/api/diagnostics/metrics</code></li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="common-issues">Common Issues</h3>
+<h4 id="1-deployment-hangs">1. Deployment Hangs</h4>
+<p><strong>Symptom</strong>: Deployment script doesn't progress</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Check container status
+docker ps -a
+
+# Check logs
+docker logs aura-api-blue
+docker logs aura-web-blue
+
+# Check health endpoints
+curl localhost:5005/health/live
+</code></pre>
+<h4 id="2-health-checks-failing">2. Health Checks Failing</h4>
+<p><strong>Symptom</strong>: &quot;Health check failed&quot; errors</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Check API logs
+docker logs --tail 100 aura-api-blue
+
+# Check database connectivity
+docker exec aura-api-blue dotnet Aura.Api.dll --test-db
+
+# Check Redis connectivity
+docker exec aura-redis redis-cli ping
+</code></pre>
+<h4 id="3-traffic-not-switching">3. Traffic Not Switching</h4>
+<p><strong>Symptom</strong>: Old version still serving traffic</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Check load balancer configuration
+docker exec aura-loadbalancer cat /etc/nginx/upstream.conf
+
+# Reload nginx
+docker exec aura-loadbalancer nginx -s reload
+
+# Verify upstream
+curl -I https://api.aura.studio/api/version
+</code></pre>
+<h4 id="4-database-migration-failures">4. Database Migration Failures</h4>
+<p><strong>Symptom</strong>: Database migration errors in logs</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># 1. Create backup
+cp data/aura.db data/aura.db.backup
+
+# 2. Check migration status
+docker exec aura-api-blue dotnet ef migrations list
+
+# 3. Rollback migration if needed
+docker exec aura-api-blue dotnet ef database update [PREVIOUS_MIGRATION]
+
+# 4. Restart API
+docker restart aura-api-blue
+</code></pre>
+<h2 id="emergency-procedures">Emergency Procedures</h2>
+<h3 id="critical-outage-response">Critical Outage Response</h3>
+<ol>
+<li><p><strong>Immediate Actions</strong> (&lt; 5 minutes)</p>
+<pre><code class="lang-bash"># Execute rollback
+./deploy/rollback.sh production &quot;Critical outage&quot;
+
+# Verify service restoration
+./deploy/validate-deployment.sh production
+</code></pre>
+</li>
+<li><p><strong>Incident Communication</strong></p>
+<ul>
+<li>Notify stakeholders</li>
+<li>Update status page</li>
+<li>Create incident ticket</li>
+</ul>
+</li>
+<li><p><strong>Post-Incident</strong></p>
+<ul>
+<li>Root cause analysis</li>
+<li>Update runbooks</li>
+<li>Implement preventive measures</li>
+</ul>
+</li>
+</ol>
+<h3 id="degraded-performance-response">Degraded Performance Response</h3>
+<ol>
+<li><p><strong>Assess Impact</strong></p>
+<pre><code class="lang-bash"># Check current metrics
+curl https://api.aura.studio/api/diagnostics/metrics
+
+# Check resource utilization
+docker stats
+</code></pre>
+</li>
+<li><p><strong>Scale Up (if needed)</strong></p>
+<pre><code class="lang-bash"># Increase replicas
+docker compose -p aura-production up -d --scale api=4
+</code></pre>
+</li>
+<li><p><strong>Investigate Root Cause</strong></p>
+<ul>
+<li>Check logs for errors</li>
+<li>Review recent changes</li>
+<li>Analyze performance metrics</li>
+</ul>
+</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="pre-deployment">Pre-deployment</h3>
+<ul>
+<li>[ ] Review all changes in PR</li>
+<li>[ ] Ensure all tests pass</li>
+<li>[ ] Update version numbers</li>
+<li>[ ] Generate changelog</li>
+<li>[ ] Backup production database</li>
+<li>[ ] Schedule deployment during low-traffic period</li>
+<li>[ ] Notify team of deployment window</li>
+</ul>
+<h3 id="during-deployment">During Deployment</h3>
+<ul>
+<li>[ ] Monitor health checks continuously</li>
+<li>[ ] Watch error rates and logs</li>
+<li>[ ] Keep rollback plan ready</li>
+<li>[ ] Document any issues encountered</li>
+</ul>
+<h3 id="post-deployment">Post-deployment</h3>
+<ul>
+<li>[ ] Verify all features working</li>
+<li>[ ] Check monitoring dashboards</li>
+<li>[ ] Update deployment audit log</li>
+<li>[ ] Monitor for 24 hours</li>
+<li>[ ] Remove old containers/images</li>
+<li>[ ] Document lessons learned</li>
+</ul>
+<h2 id="compliance-and-audit">Compliance and Audit</h2>
+<h3 id="deployment-approval">Deployment Approval</h3>
+<p>Production deployments require:</p>
+<ul>
+<li>Code review approval</li>
+<li>QA sign-off</li>
+<li>Change management ticket</li>
+<li>Deployment window approval</li>
+</ul>
+<h3 id="audit-trail">Audit Trail</h3>
+<p>All deployments are logged to:</p>
+<ul>
+<li><code>deploy/deployment-audit.log</code> (CSV format)</li>
+<li><code>deploy/audit-records/*.json</code> (JSON format)</li>
+</ul>
+<p>Generate audit report:</p>
+<pre><code class="lang-bash">./deploy/audit-deployment.sh production v1.2.3 blue-green success report
+</code></pre>
+<h3 id="compliance-checks">Compliance Checks</h3>
+<ul>
+<li>✅ All secrets stored securely in Key Vault</li>
+<li>✅ No hardcoded credentials</li>
+<li>✅ HTTPS enforced for all endpoints</li>
+<li>✅ Security headers configured</li>
+<li>✅ Rate limiting enabled</li>
+<li>✅ Audit logging enabled</li>
+</ul>
+<h2 id="support-and-escalation">Support and Escalation</h2>
+<h3 id="deployment-support">Deployment Support</h3>
+<ul>
+<li><strong>Primary</strong>: DevOps team</li>
+<li><strong>Secondary</strong>: Platform team</li>
+<li><strong>On-call</strong>: [On-call schedule]</li>
+</ul>
+<h3 id="escalation-path">Escalation Path</h3>
+<ol>
+<li>Level 1: Team lead</li>
+<li>Level 2: Engineering manager</li>
+<li>Level 3: CTO</li>
+</ol>
+<h3 id="contact-information">Contact Information</h3>
+<ul>
+<li>Slack: #aura-deployments</li>
+<li>Email: devops@aura.studio</li>
+<li>PagerDuty: Production alerts</li>
+</ul>
+<hr>
+<p><strong>Last Updated</strong>: 2024-11-10<br>
+<strong>Document Owner</strong>: DevOps Team<br>
+<strong>Review Cycle</strong>: Monthly</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

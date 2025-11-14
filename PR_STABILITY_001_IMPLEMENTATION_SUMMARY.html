@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>PR-STABILITY-001: Error Handling &amp; Logging Infrastructure | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="PR-STABILITY-001: Error Handling &amp; Logging Infrastructure | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/PR_STABILITY_001_IMPLEMENTATION_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="pr-stability-001-error-handling--logging-infrastructure">PR-STABILITY-001: Error Handling &amp; Logging Infrastructure</h1>
+
+<h2 id="implementation-summary">Implementation Summary</h2>
+<p>This document provides a comprehensive overview of the error handling and logging infrastructure implemented for the Aura Video Studio application.</p>
+<h2 id="objectives">Objectives</h2>
+<ul>
+<li>✅ Implement structured logging with Serilog for Windows</li>
+<li>✅ Add error boundary components in React frontend</li>
+<li>✅ Ensure all unhandled exceptions are logged</li>
+<li>✅ Implement crash reporting mechanism</li>
+<li>✅ Add diagnostic information collection</li>
+</ul>
+<h2 id="implementation-details">Implementation Details</h2>
+<h3 id="1-structured-logging-with-serilog-backend">1. Structured Logging with Serilog (Backend)</h3>
+<h4 id="windows-event-log-support">Windows Event Log Support</h4>
+<p><strong>Package Added:</strong></p>
+<ul>
+<li><code>Serilog.Sinks.EventLog</code> v4.0.0</li>
+</ul>
+<p><strong>Configuration (<code>Aura.Api/Program.cs</code>):</strong></p>
+<pre><code class="lang-csharp">// Add Windows Event Log sink on Windows platforms
+if (OperatingSystem.IsWindows())
+{
+    try
+    {
+        loggerConfig.WriteTo.EventLog(
+            source: &quot;Aura.Api&quot;,
+            logName: &quot;Application&quot;,
+            restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Warning,
+            manageEventSource: false
+        );
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($&quot;Warning: Could not configure Windows Event Log sink: {ex.Message}&quot;);
+    }
+}
+</code></pre>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Logs warnings and errors to Windows Event Log</li>
+<li>Graceful fallback if Event Log is unavailable (permissions)</li>
+<li>Automatic platform detection (Windows-only)</li>
+</ul>
+<h4 id="existing-serilog-configuration">Existing Serilog Configuration</h4>
+<p>The application already had comprehensive Serilog logging:</p>
+<p><strong>Log Files:</strong></p>
+<ul>
+<li><code>logs/aura-api-.log</code> - All logs (rolling daily, 30 days retention)</li>
+<li><code>logs/errors-.log</code> - Error level and above (rolling daily, 30 days retention)</li>
+<li><code>logs/warnings-.log</code> - Warning level and above (rolling daily, 30 days retention)</li>
+<li><code>logs/performance-.log</code> - Performance metrics (rolling daily, 30 days retention)</li>
+<li><code>logs/audit-.log</code> - Audit logs (rolling daily, 90 days retention)</li>
+</ul>
+<p><strong>Enrichers:</strong></p>
+<ul>
+<li>Machine name</li>
+<li>Thread ID</li>
+<li>Process ID</li>
+<li>Trace context</li>
+<li>Performance metrics</li>
+<li>Request context</li>
+<li>Operation context</li>
+<li>Correlation IDs</li>
+</ul>
+<p><strong>Filtering:</strong></p>
+<ul>
+<li>Sensitive data filtering (API keys, tokens, passwords)</li>
+<li>Log sampling for verbose/debug logs</li>
+</ul>
+<h3 id="2-error-boundary-components-frontend">2. Error Boundary Components (Frontend)</h3>
+<h4 id="existing-components">Existing Components</h4>
+<p>The React frontend already has comprehensive error boundaries:</p>
+<p><strong><code>GlobalErrorBoundary.tsx</code>:</strong></p>
+<ul>
+<li>Catches all unhandled errors in the application</li>
+<li>Logs errors with component stack traces</li>
+<li>Provides fallback UI with error details</li>
+<li>Supports custom fallback components</li>
+</ul>
+<p><strong>Other Error Boundaries:</strong></p>
+<ul>
+<li><code>RouteErrorBoundary</code> - Route-level error handling</li>
+<li><code>ComponentErrorBoundary</code> - Component-level error handling</li>
+<li><code>EnhancedErrorFallback</code> - User-friendly error display with recovery options</li>
+</ul>
+<p><strong>Integration:</strong></p>
+<ul>
+<li>Error boundaries wrap the entire app and critical components</li>
+<li>Integrates with <code>loggingService</code> for centralized logging</li>
+<li>Provides error recovery mechanisms (reset, retry)</li>
+</ul>
+<h4 id="global-error-handlers-apptsx">Global Error Handlers (<code>App.tsx</code>)</h4>
+<p><strong>Uncaught Error Handler:</strong></p>
+<pre><code class="lang-typescript">window.addEventListener('error', (event: ErrorEvent) =&gt; {
+  event.preventDefault();
+  loggingService.error('Uncaught error', event.error, 'window', 'error', {
+    message: event.message,
+    filename: event.filename,
+    lineno: event.lineno,
+    colno: event.colno,
+  });
+});
+</code></pre>
+<p><strong>Unhandled Promise Rejection Handler:</strong></p>
+<pre><code class="lang-typescript">window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) =&gt; {
+  event.preventDefault();
+  const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+  loggingService.error('Unhandled promise rejection', error, 'window', 'unhandledrejection', {
+    reason: event.reason,
+  });
+});
+</code></pre>
+<h3 id="3-unhandled-exception-logging-backend">3. Unhandled Exception Logging (Backend)</h3>
+<h4 id="global-exception-handlers">Global Exception Handlers</h4>
+<p><strong><code>GlobalExceptionHandler.cs</code>:</strong></p>
+<ul>
+<li>Implements <code>IExceptionHandler</code> interface</li>
+<li>Catches all unhandled exceptions in the ASP.NET Core pipeline</li>
+<li>Logs exceptions with correlation IDs and context</li>
+<li>Returns standardized <code>ProblemDetails</code> responses</li>
+</ul>
+<p><strong><code>ExceptionHandlingMiddleware.cs</code>:</strong></p>
+<ul>
+<li>Comprehensive exception mapping to HTTP status codes</li>
+<li>Handles all Aura-specific exceptions (ProviderException, RenderException, etc.)</li>
+<li>Logs exceptions with appropriate severity levels</li>
+<li>Includes error metrics collection</li>
+</ul>
+<p><strong>Registration:</strong></p>
+<pre><code class="lang-csharp">builder.Services.AddExceptionHandler&lt;GlobalExceptionHandler&gt;();
+builder.Services.AddProblemDetails();
+</code></pre>
+<p><strong>Middleware Pipeline:</strong></p>
+<pre><code class="lang-csharp">app.UseExceptionHandler(); // ASP.NET Core exception handler
+</code></pre>
+<h3 id="4-crash-reporting-mechanism">4. Crash Reporting Mechanism</h3>
+<h4 id="frontend-crash-detection">Frontend Crash Detection</h4>
+<p><strong><code>crashRecoveryService.ts</code>:</strong></p>
+<ul>
+<li>Detects unclean shutdowns (browser crashes, unexpected tab closures)</li>
+<li>Tracks consecutive crashes</li>
+<li>Shows recovery screen after 3+ consecutive crashes</li>
+<li>Provides recovery suggestions</li>
+<li>Stores crash history in localStorage</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Session tracking</li>
+<li>Crash counter with time window</li>
+<li>Recovery state persistence</li>
+<li>User-friendly recovery UI</li>
+<li>Automatic reset on successful recovery</li>
+</ul>
+<h4 id="backend-crash-reporting">Backend Crash Reporting</h4>
+<p><strong>New Files Created:</strong></p>
+<ol>
+<li><p><strong><code>ClientErrorReport.cs</code></strong> - Data models for client-side error reports</p>
+<ul>
+<li>Captures error details, browser info, user actions, logs</li>
+<li>Includes stack traces and context</li>
+</ul>
+</li>
+<li><p><strong><code>CrashReportService.cs</code></strong> - Service for handling crash reports</p>
+<ul>
+<li>Saves client error reports to disk</li>
+<li>Provides statistics and analytics</li>
+<li>Exports reports as ZIP archives</li>
+<li>Automatic cleanup of old reports</li>
+</ul>
+</li>
+</ol>
+<p><strong>API Endpoint (<code>ErrorReportController.cs</code>):</strong></p>
+<ul>
+<li><code>POST /api/error-report</code> - Submit error report from frontend</li>
+<li><code>GET /api/error-report</code> - List error reports</li>
+<li><code>GET /api/error-report/{id}</code> - Get specific report</li>
+<li><code>DELETE /api/error-report/cleanup</code> - Cleanup old reports</li>
+</ul>
+<p><strong>Service Registration:</strong></p>
+<pre><code class="lang-csharp">builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.CrashReportService&gt;();
+</code></pre>
+<h3 id="5-diagnostic-information-collection">5. Diagnostic Information Collection</h3>
+<h4 id="system-diagnostics-service">System Diagnostics Service</h4>
+<p><strong><code>SystemDiagnosticsService.cs</code>:</strong></p>
+<p>Collects comprehensive system information:</p>
+<p><strong>Operating System:</strong></p>
+<ul>
+<li>Platform, architecture, version</li>
+<li>Windows-specific version details</li>
+<li>Machine name</li>
+</ul>
+<p><strong>Hardware:</strong></p>
+<ul>
+<li>CPU name and core count</li>
+<li>Total physical memory</li>
+<li>Platform-specific hardware detection</li>
+</ul>
+<p><strong>Runtime:</strong></p>
+<ul>
+<li>.NET Framework version</li>
+<li>Runtime identifier</li>
+<li>Process architecture</li>
+<li>Base directory</li>
+</ul>
+<p><strong>Process Information:</strong></p>
+<ul>
+<li>Process ID, name, start time</li>
+<li>Thread count, handle count</li>
+<li>Memory usage (working set, private, virtual)</li>
+<li>Real-time CPU usage calculation</li>
+</ul>
+<p><strong>Environment:</strong></p>
+<ul>
+<li>User name, domain name</li>
+<li>System directories</li>
+<li>Environment variables (sanitized - sensitive data redacted)</li>
+</ul>
+<p><strong>Network:</strong></p>
+<ul>
+<li>Host name</li>
+<li>IP addresses</li>
+</ul>
+<p><strong>Disk:</strong></p>
+<ul>
+<li>Drive information for all available drives</li>
+<li>Total and free space</li>
+<li>Drive type and format</li>
+</ul>
+<p><strong>Export Formats:</strong></p>
+<ul>
+<li>JSON (structured)</li>
+<li>Plain text (human-readable)</li>
+</ul>
+<h4 id="existing-diagnostic-services">Existing Diagnostic Services</h4>
+<p><strong><code>DiagnosticReportGenerator.cs</code>:</strong></p>
+<ul>
+<li>Generates comprehensive diagnostic reports as ZIP files</li>
+<li>Includes system info, error summary, performance metrics</li>
+<li>Collects recent log entries (redacted)</li>
+<li>FFmpeg version information</li>
+<li>Automatic cleanup of expired reports</li>
+</ul>
+<p><strong><code>ErrorAggregationService.cs</code>:</strong></p>
+<ul>
+<li>Aggregates errors by signature</li>
+<li>Provides error statistics</li>
+<li>Tracks error frequency and trends</li>
+</ul>
+<p><strong><code>PerformanceTrackingService.cs</code>:</strong></p>
+<ul>
+<li>Tracks operation performance metrics</li>
+<li>Identifies slow operations</li>
+<li>Provides percentile statistics (P50, P95, P99)</li>
+</ul>
+<p><strong><code>FailureAnalysisService.cs</code>:</strong></p>
+<ul>
+<li>Analyzes failure patterns</li>
+<li>Provides diagnostic insights</li>
+<li>Suggests remediation actions</li>
+</ul>
+<p><strong><code>DiagnosticBundleService.cs</code>:</strong></p>
+<ul>
+<li>Creates comprehensive diagnostic bundles</li>
+<li>Combines multiple diagnostic sources</li>
+</ul>
+<h4 id="service-registration">Service Registration</h4>
+<p>All diagnostic services are registered as singletons:</p>
+<pre><code class="lang-csharp">builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.ErrorAggregationService&gt;();
+builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.PerformanceTrackingService&gt;();
+builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.DiagnosticReportGenerator&gt;();
+builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.DiagnosticBundleService&gt;();
+builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.FailureAnalysisService&gt;();
+builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.CrashReportService&gt;();
+builder.Services.AddSingleton&lt;Aura.Core.Services.Diagnostics.SystemDiagnosticsService&gt;();
+</code></pre>
+<h3 id="6-frontend-logging-infrastructure">6. Frontend Logging Infrastructure</h3>
+<h4 id="logging-service-loggingservicets">Logging Service (<code>loggingService.ts</code>)</h4>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Multiple log levels (debug, info, warn, error)</li>
+<li>Structured logging with context</li>
+<li>Performance tracking</li>
+<li>Log persistence to localStorage</li>
+<li>Console output with formatting</li>
+<li>Log filtering by level</li>
+<li>Log export capabilities</li>
+</ul>
+<p><strong>Log Entry Structure:</strong></p>
+<pre><code class="lang-typescript">interface LogEntry {
+  timestamp: string;
+  level: LogLevel;
+  component?: string;
+  action?: string;
+  message: string;
+  context?: Record&lt;string, unknown&gt;;
+  error?: { message: string; stack?: string; name?: string; };
+  performance?: { duration: number; operation: string; };
+}
+</code></pre>
+<h4 id="error-reporting-service-errorreportingservicets">Error Reporting Service (<code>errorReportingService.ts</code>)</h4>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Error severity levels (info, warning, error, critical)</li>
+<li>User-friendly error notifications</li>
+<li>Error report queue with persistence</li>
+<li>Automatic error submission to backend</li>
+<li>Browser and app state collection</li>
+<li>Recent log attachment</li>
+<li>Notification system integration</li>
+</ul>
+<p><strong>Error Report Structure:</strong></p>
+<pre><code class="lang-typescript">interface ErrorReport {
+  id: string;
+  severity: ErrorSeverity;
+  title: string;
+  message: string;
+  technicalDetails?: string;
+  timestamp: string;
+  userAction?: string;
+  browserInfo: BrowserInfo;
+  appState?: Record&lt;string, unknown&gt;;
+  logs?: LogEntry[];
+  stackTrace?: string;
+}
+</code></pre>
+<h2 id="testing-recommendations">Testing Recommendations</h2>
+<h3 id="backend-testing">Backend Testing</h3>
+<ol>
+<li><p><strong>Exception Handling:</strong></p>
+<ul>
+<li>Test <code>GlobalExceptionHandler</code> with various exception types</li>
+<li>Verify correlation IDs are preserved in error responses</li>
+<li>Test error aggregation and statistics</li>
+</ul>
+</li>
+<li><p><strong>Logging:</strong></p>
+<ul>
+<li>Verify Windows Event Log entries on Windows</li>
+<li>Test log file rotation and retention</li>
+<li>Verify sensitive data filtering</li>
+</ul>
+</li>
+<li><p><strong>Crash Reporting:</strong></p>
+<ul>
+<li>Submit client error reports via API</li>
+<li>Verify reports are saved correctly</li>
+<li>Test report cleanup functionality</li>
+</ul>
+</li>
+<li><p><strong>Diagnostics:</strong></p>
+<ul>
+<li>Generate diagnostic reports</li>
+<li>Verify system diagnostics collection</li>
+<li>Test diagnostic bundle creation</li>
+</ul>
+</li>
+</ol>
+<h3 id="frontend-testing">Frontend Testing</h3>
+<ol>
+<li><p><strong>Error Boundaries:</strong></p>
+<ul>
+<li>Throw errors in components to test error boundaries</li>
+<li>Verify error logging and reporting</li>
+<li>Test recovery mechanisms</li>
+</ul>
+</li>
+<li><p><strong>Global Error Handlers:</strong></p>
+<ul>
+<li>Test uncaught errors</li>
+<li>Test unhandled promise rejections</li>
+<li>Verify error reporting to backend</li>
+</ul>
+</li>
+<li><p><strong>Crash Recovery:</strong></p>
+<ul>
+<li>Simulate browser crashes (force close tab)</li>
+<li>Verify crash detection on restart</li>
+<li>Test recovery screen display</li>
+</ul>
+</li>
+<li><p><strong>Logging:</strong></p>
+<ul>
+<li>Test logging at all levels</li>
+<li>Verify log persistence</li>
+<li>Test log export functionality</li>
+</ul>
+</li>
+</ol>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="backend---structured-logging">Backend - Structured Logging</h3>
+<pre><code class="lang-csharp">// Log with context
+_logger.LogStructured(
+    LogLevel.Information,
+    &quot;User action completed&quot;,
+    new Dictionary&lt;string, object&gt;
+    {
+        [&quot;UserId&quot;] = userId,
+        [&quot;Action&quot;] = &quot;CreateVideo&quot;,
+        [&quot;Duration&quot;] = duration
+    });
+
+// Log performance
+_logger.LogPerformance(&quot;VideoGeneration&quot;, duration, true, new Dictionary&lt;string, object&gt;
+{
+    [&quot;VideoId&quot;] = videoId,
+    [&quot;Resolution&quot;] = &quot;1080p&quot;
+});
+
+// Log audit event
+_logger.LogAudit(&quot;VideoCreated&quot;, userId, videoId);
+</code></pre>
+<h3 id="frontend---error-reporting">Frontend - Error Reporting</h3>
+<pre><code class="lang-typescript">// Report an error
+errorReportingService.error(
+  'Video Generation Failed',
+  'Failed to generate video due to provider error',
+  error,
+  {
+    userAction: 'GenerateVideo',
+    appState: { videoId, projectId }
+  }
+);
+
+// Show notification
+errorReportingService.warning(
+  'Performance Warning',
+  'Video generation is taking longer than usual',
+  { duration: 5000 }
+);
+</code></pre>
+<h3 id="frontend---crash-recovery">Frontend - Crash Recovery</h3>
+<pre><code class="lang-typescript">// Initialize crash recovery
+const state = crashRecoveryService.initialize();
+
+if (crashRecoveryService.shouldShowRecoveryScreen()) {
+  // Show recovery UI
+}
+
+// Mark clean shutdown
+window.addEventListener('beforeunload', () =&gt; {
+  crashRecoveryService.markCleanShutdown();
+});
+</code></pre>
+<h2 id="files-modified">Files Modified</h2>
+<h3 id="backend">Backend</h3>
+<ul>
+<li><code>Aura.Api/Aura.Api.csproj</code> - Added Serilog.Sinks.EventLog package</li>
+<li><code>Aura.Api/Program.cs</code> - Added Windows Event Log sink configuration and service registrations</li>
+<li><code>Aura.Api/Controllers/ErrorReportController.cs</code> - Updated to use CrashReportService</li>
+</ul>
+<h3 id="backend-new-files">Backend (New Files)</h3>
+<ul>
+<li><code>Aura.Core/Models/Diagnostics/ClientErrorReport.cs</code> - Client error report models</li>
+<li><code>Aura.Core/Services/Diagnostics/CrashReportService.cs</code> - Crash reporting service</li>
+<li><code>Aura.Core/Services/Diagnostics/SystemDiagnosticsService.cs</code> - System diagnostics collection</li>
+</ul>
+<h3 id="frontend-existing---already-implemented">Frontend (Existing - Already Implemented)</h3>
+<ul>
+<li><code>Aura.Web/src/App.tsx</code> - Global error handlers</li>
+<li><code>Aura.Web/src/components/ErrorBoundary/GlobalErrorBoundary.tsx</code> - Error boundary</li>
+<li><code>Aura.Web/src/services/loggingService.ts</code> - Logging service</li>
+<li><code>Aura.Web/src/services/errorReportingService.ts</code> - Error reporting service</li>
+<li><code>Aura.Web/src/services/crashRecoveryService.ts</code> - Crash recovery service</li>
+</ul>
+<h2 id="architecture-diagram">Architecture Diagram</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     Frontend (React)                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────────┐    ┌─────────────────────────┐      │
+│  │ Error Boundaries │    │  Global Error Handlers  │      │
+│  │  - Global        │    │  - Uncaught Errors      │      │
+│  │  - Route         │    │  - Promise Rejections   │      │
+│  │  - Component     │    └──────────┬──────────────┘      │
+│  └────────┬─────────┘               │                      │
+│           │                         │                      │
+│  ┌────────▼─────────────────────────▼──────────────────┐  │
+│  │          Logging &amp; Error Reporting Services         │  │
+│  │  - loggingService.ts                                │  │
+│  │  - errorReportingService.ts                         │  │
+│  │  - crashRecoveryService.ts                          │  │
+│  └────────────────────────┬────────────────────────────┘  │
+│                           │                                │
+└───────────────────────────┼────────────────────────────────┘
+                            │ HTTP POST /api/error-report
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Backend (ASP.NET Core)                  │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────────────────────────────────────────┐      │
+│  │          Exception Handling Middleware           │      │
+│  │  - GlobalExceptionHandler                        │      │
+│  │  - ExceptionHandlingMiddleware                   │      │
+│  └────────────────────┬─────────────────────────────┘      │
+│                       │                                     │
+│  ┌────────────────────▼─────────────────────────────┐      │
+│  │              Serilog Logging                     │      │
+│  │  - File Sinks (API, Errors, Warnings, etc.)     │      │
+│  │  - Windows Event Log Sink                       │      │
+│  │  - Console Sink                                 │      │
+│  │  - Enrichers (Correlation ID, Performance)      │      │
+│  └────────────────────┬─────────────────────────────┘      │
+│                       │                                     │
+│  ┌────────────────────▼─────────────────────────────┐      │
+│  │         Diagnostic Services                      │      │
+│  │  - CrashReportService                           │      │
+│  │  - SystemDiagnosticsService                     │      │
+│  │  - DiagnosticReportGenerator                    │      │
+│  │  - ErrorAggregationService                      │      │
+│  │  - PerformanceTrackingService                   │      │
+│  │  - FailureAnalysisService                       │      │
+│  └──────────────────────────────────────────────────┘      │
+│                                                             │
+│  ┌──────────────────────────────────────────────────┐      │
+│  │              Error Report API                    │      │
+│  │  POST   /api/error-report                       │      │
+│  │  GET    /api/error-report                       │      │
+│  │  GET    /api/error-report/{id}                  │      │
+│  │  DELETE /api/error-report/cleanup               │      │
+│  └──────────────────────────────────────────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="benefits">Benefits</h2>
+<ol>
+<li><p><strong>Comprehensive Error Visibility:</strong></p>
+<ul>
+<li>All errors are captured, logged, and reported</li>
+<li>Multiple log sinks ensure redundancy</li>
+<li>Correlation IDs enable request tracing</li>
+</ul>
+</li>
+<li><p><strong>Production Debugging:</strong></p>
+<ul>
+<li>Detailed diagnostic information</li>
+<li>Client and server-side error reports</li>
+<li>System diagnostics collection</li>
+</ul>
+</li>
+<li><p><strong>User Experience:</strong></p>
+<ul>
+<li>Graceful error handling with recovery options</li>
+<li>User-friendly error messages</li>
+<li>Crash recovery mechanism</li>
+</ul>
+</li>
+<li><p><strong>Operations:</strong></p>
+<ul>
+<li>Windows Event Log integration for monitoring</li>
+<li>Automated diagnostic report generation</li>
+<li>Error aggregation and analytics</li>
+</ul>
+</li>
+<li><p><strong>Security:</strong></p>
+<ul>
+<li>Sensitive data filtering</li>
+<li>Environment variable sanitization</li>
+<li>Controlled error information exposure</li>
+</ul>
+</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><p><strong>Telemetry Integration:</strong></p>
+<ul>
+<li>Application Insights integration</li>
+<li>Metrics and dashboards</li>
+<li>Alerting and notifications</li>
+</ul>
+</li>
+<li><p><strong>Error Analytics:</strong></p>
+<ul>
+<li>Error trend analysis</li>
+<li>Anomaly detection</li>
+<li>Predictive error prevention</li>
+</ul>
+</li>
+<li><p><strong>Advanced Diagnostics:</strong></p>
+<ul>
+<li>Memory dump capture on critical errors</li>
+<li>Performance profiling</li>
+<li>Network diagnostics</li>
+</ul>
+</li>
+<li><p><strong>User Feedback:</strong></p>
+<ul>
+<li>In-app feedback mechanism</li>
+<li>Error report submission with user comments</li>
+<li>Automatic bug report creation</li>
+</ul>
+</li>
+</ol>
+<h2 id="conclusion">Conclusion</h2>
+<p>The error handling and logging infrastructure provides comprehensive visibility into application health and behavior. All objectives have been successfully implemented:</p>
+<ul>
+<li>✅ Structured logging with Serilog for Windows (Event Log sink)</li>
+<li>✅ Error boundary components in React frontend (already existed, verified)</li>
+<li>✅ All unhandled exceptions logged (GlobalExceptionHandler, global error handlers)</li>
+<li>✅ Crash reporting mechanism (frontend + backend integration)</li>
+<li>✅ Diagnostic information collection (system diagnostics service)</li>
+</ul>
+<p>The implementation follows best practices for error handling, logging, and diagnostics in both ASP.NET Core and React applications.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/PR_STABILITY_001_IMPLEMENTATION_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

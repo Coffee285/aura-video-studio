@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Electron Routing &amp; Navigation State Finalization - Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Electron Routing &amp; Navigation State Finalization - Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/ELECTRON_ROUTING_FINALIZATION_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="electron-routing--navigation-state-finalization---implementation-summary">Electron Routing &amp; Navigation State Finalization - Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This implementation finalizes the routing architecture for the Electron application after multiple interim fixes. It provides a comprehensive navigation system with route guards, state persistence, and safe mode override.</p>
+<h2 id="core-components">Core Components</h2>
+<h3 id="1-navigationservice-srcservicesnavigationservicets">1. NavigationService (<code>src/services/navigationService.ts</code>)</h3>
+<p><strong>Purpose</strong>: Centralized navigation abstraction that wraps React Router with additional functionality.</p>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li><strong>Typed Route Definitions</strong>: Route metadata with requirements (firstRun, FFmpeg, settings)</li>
+<li><strong>Route Guards</strong>: Async guard functions that check prerequisites before navigation</li>
+<li><strong>State Persistence</strong>: Saves route and state to localStorage for restoration after restart</li>
+<li><strong>Safe Mode Override</strong>: Forces /diagnostics route when crash recovery is triggered</li>
+<li><strong>Navigation Listeners</strong>: Subscribe to navigation events</li>
+<li><strong>Guard Timeout</strong>: 250ms timeout for guard execution with fallback</li>
+</ul>
+<p><strong>API</strong>:</p>
+<pre><code class="lang-typescript">// Initialize with React Router's navigate
+navigationService.setNavigate(navigateFn);
+
+// Navigation
+await navigationService.push('/route', options);
+await navigationService.replace('/route', options);
+navigationService.goBack();
+navigationService.goForward();
+
+// Route information
+navigationService.getCurrentPath();
+navigationService.getCurrentRouteMeta();
+navigationService.getRouteMeta(path);
+
+// Persistence
+navigationService.getPersistedRoute();
+navigationService.clearPersistedRoute();
+navigationService.getInitialRoute(); // Considers safe mode
+
+// Route requirements
+navigationService.requiresFirstRun(path);
+navigationService.requiresFFmpeg(path);
+navigationService.requiresSettings(path);
+
+// Listeners
+navigationService.addNavigationListener(listener);
+navigationService.removeNavigationListener(listener);
+</code></pre>
+<p><strong>Storage Keys</strong>:</p>
+<ul>
+<li><code>aura_last_route</code>: Stores last navigation state</li>
+</ul>
+<h3 id="2-navigationcontext-srccontextsnavigationcontexttsx">2. NavigationContext (<code>src/contexts/NavigationContext.tsx</code>)</h3>
+<p><strong>Purpose</strong>: React context provider that exposes navigation service throughout the application.</p>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-typescript">import { useNavigation } from '@/contexts/NavigationContext';
+
+function MyComponent() {
+  const { push, replace, getCurrentPath, getCurrentRouteMeta } = useNavigation();
+  
+  const handleNavigate = async () =&gt; {
+    await push('/dashboard');
+  };
+  
+  return &lt;button onClick={handleNavigate}&gt;Go to Dashboard&lt;/button&gt;;
+}
+</code></pre>
+<p><strong>Integration</strong>: Must be rendered inside Router context (MemoryRouter/BrowserRouter).</p>
+<h3 id="3-routeguard-component-srccomponentsrouteguardtsx">3. RouteGuard Component (<code>src/components/RouteGuard.tsx</code>)</h3>
+<p><strong>Purpose</strong>: Enforces route guards before rendering protected content.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Async guard execution</li>
+<li>Loading state during guard checks</li>
+<li>Automatic redirect on guard failure</li>
+<li>Context-aware redirects (first-run → /setup, FFmpeg → /downloads, settings → /settings)</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-typescript">&lt;RouteGuard path=&quot;/create&quot; fallbackRoute=&quot;/setup&quot;&gt;
+  &lt;CreateWizard /&gt;
+&lt;/RouteGuard&gt;
+
+// Or as HOC
+const ProtectedCreate = withRouteGuard(CreateWizard, '/create', '/setup');
+</code></pre>
+<h3 id="4-route-configuration-with-guards-srcconfigrouteswithguardsts">4. Route Configuration with Guards (<code>src/config/routesWithGuards.ts</code>)</h3>
+<p><strong>Purpose</strong>: Enhanced route definitions with metadata and guard functions.</p>
+<p><strong>Guard Functions</strong>:</p>
+<ul>
+<li><code>firstRunGuard()</code>: Checks if first-run setup is completed</li>
+<li><code>ffmpegGuard()</code>: Checks if FFmpeg is available</li>
+<li><code>settingsGuard()</code>: Checks if API keys are configured</li>
+</ul>
+<p><strong>Example Route Metadata</strong>:</p>
+<pre><code class="lang-typescript">{
+  path: '/create',
+  title: 'Create',
+  description: 'Create a new video project',
+  requiresFirstRun: true,
+  requiresFFmpeg: true,
+  requiresSettings: true,
+  guards: [firstRunGuard, ffmpegGuard, settingsGuard],
+}
+</code></pre>
+<h2 id="integration-points">Integration Points</h2>
+<h3 id="apptsx">App.tsx</h3>
+<p><strong>Changes</strong>:</p>
+<ol>
+<li>Import and initialize navigation service with route metadata</li>
+<li>Use <code>navigationService.getInitialRoute()</code> for MemoryRouter initial entry</li>
+<li>Replace <code>window.location</code> with <code>navigationService.push()</code> in keyboard shortcuts</li>
+</ol>
+<pre><code class="lang-typescript">// Initialize routes
+useEffect(() =&gt; {
+  navigationService.registerRoutes(ROUTE_METADATA_ENHANCED);
+}, []);
+
+// Get initial route (considers persistence and safe mode)
+const initialRoute = navigationService.getInitialRoute();
+
+// Router with initial route
+&lt;MemoryRouter initialEntries={[initialRoute]}&gt;
+  &lt;AppRouterContent /&gt;
+&lt;/MemoryRouter&gt;
+</code></pre>
+<h3 id="approutercontenttsx">AppRouterContent.tsx</h3>
+<p><strong>Changes</strong>:</p>
+<ol>
+<li>Wrap content with NavigationProvider</li>
+<li>Split into two components to properly use hooks inside provider</li>
+</ol>
+<pre><code class="lang-typescript">&lt;NavigationProvider&gt;
+  &lt;AppRouterContentInner {...props} /&gt;
+&lt;/NavigationProvider&gt;
+</code></pre>
+<h2 id="route-persistence-flow">Route Persistence Flow</h2>
+<h3 id="navigation">Navigation</h3>
+<ol>
+<li>User navigates to <code>/projects</code></li>
+<li><code>navigationService.push('/projects')</code> called</li>
+<li>Route persisted to localStorage with timestamp</li>
+<li>Navigation listeners notified</li>
+</ol>
+<h3 id="restart">Restart</h3>
+<ol>
+<li>App starts, checks crash recovery</li>
+<li>If safe mode (3+ consecutive crashes): return <code>/diagnostics</code></li>
+<li>Otherwise, check localStorage for <code>aura_last_route</code></li>
+<li>Exclude setup/onboarding routes from restoration</li>
+<li>Return persisted route or default <code>/</code></li>
+</ol>
+<h3 id="safe-mode-override">Safe Mode Override</h3>
+<ol>
+<li>Crash detected (session active but unclean shutdown)</li>
+<li>Consecutive crash counter incremented</li>
+<li>If &gt;= 3 consecutive crashes, <code>shouldShowRecoveryScreen()</code> returns true</li>
+<li><code>getInitialRoute()</code> forces <code>/diagnostics</code> route</li>
+<li>User can fix issues, clear recovery data</li>
+</ol>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p><strong>NavigationService</strong> (<code>src/services/__tests__/navigationService.test.ts</code>):</p>
+<ul>
+<li>22 tests covering all major functionality</li>
+<li>Route registration and metadata</li>
+<li>Navigation operations (push, replace, goBack, goForward)</li>
+<li>Route guards (allow, block, bypass)</li>
+<li>Route persistence and restoration</li>
+<li>Navigation listeners</li>
+</ul>
+<p><strong>RouteGuard Component</strong> (<code>src/components/__tests__/RouteGuard.test.tsx</code>):</p>
+<ul>
+<li>7 tests covering guard behavior</li>
+<li>No guards (immediate render)</li>
+<li>Loading state during guard check</li>
+<li>Guards pass (render children)</li>
+<li>Guards fail (redirect)</li>
+<li>Context-aware redirects</li>
+<li>Guard error handling</li>
+</ul>
+<h3 id="integration-tests">Integration Tests</h3>
+<p><strong>Route Persistence</strong> (<code>src/test/routePersistence.integration.test.tsx</code>):</p>
+<ul>
+<li>Route state persistence and restoration</li>
+<li>Safe mode override</li>
+<li>Route state serialization</li>
+<li>Wizard resume scenario</li>
+<li>Project reopen scenario</li>
+</ul>
+<p><strong>Test Coverage</strong>: 29+ tests, all passing</p>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="basic-navigation">Basic Navigation</h3>
+<pre><code class="lang-typescript">import { useNavigation } from '@/contexts/NavigationContext';
+
+function MyComponent() {
+  const { push } = useNavigation();
+  
+  return &lt;button onClick={() =&gt; push('/create')}&gt;Create Video&lt;/button&gt;;
+}
+</code></pre>
+<h3 id="protected-route">Protected Route</h3>
+<pre><code class="lang-typescript">// In route definition
+{
+  path: '/create',
+  title: 'Create',
+  requiresFirstRun: true,
+  requiresFFmpeg: true,
+  guards: [firstRunGuard, ffmpegGuard],
+}
+
+// Component automatically protected by guards
+</code></pre>
+<h3 id="navigation-with-state">Navigation with State</h3>
+<pre><code class="lang-typescript">await push('/editor/123', {
+  state: {
+    projectId: '123',
+    fromWizard: true,
+  }
+});
+
+// Access state in target component
+const location = useLocation();
+const { projectId, fromWizard } = location.state || {};
+</code></pre>
+<h3 id="bypassing-guards">Bypassing Guards</h3>
+<pre><code class="lang-typescript">// Emergency navigation (admin override)
+await push('/admin', { bypassGuards: true });
+</code></pre>
+<h3 id="custom-guard">Custom Guard</h3>
+<pre><code class="lang-typescript">async function customGuard(): Promise&lt;boolean&gt; {
+  const hasPermission = await checkUserPermission();
+  return hasPermission;
+}
+
+navigationService.registerRoute({
+  path: '/admin',
+  title: 'Admin',
+  guards: [customGuard],
+});
+</code></pre>
+<h2 id="migration-guide">Migration Guide</h2>
+<h3 id="before-old-pattern">Before (Old Pattern)</h3>
+<pre><code class="lang-typescript">// Direct window.location usage
+window.location.href = '/dashboard';
+
+// useNavigate without guards
+const navigate = useNavigate();
+navigate('/create');
+</code></pre>
+<h3 id="after-new-pattern">After (New Pattern)</h3>
+<pre><code class="lang-typescript">// Using navigation service
+import { useNavigation } from '@/contexts/NavigationContext';
+
+const { push } = useNavigation();
+await push('/dashboard'); // Respects guards, persists state
+</code></pre>
+<h2 id="benefits">Benefits</h2>
+<ol>
+<li><strong>Type Safety</strong>: Typed route definitions prevent navigation to non-existent routes</li>
+<li><strong>Prerequisites</strong>: Guards ensure users can't access routes they're not ready for</li>
+<li><strong>Persistence</strong>: Users resume where they left off after restart</li>
+<li><strong>Safe Mode</strong>: Automatic recovery route after crashes</li>
+<li><strong>Centralized</strong>: Single source of truth for navigation logic</li>
+<li><strong>Testable</strong>: Easy to mock and test navigation behavior</li>
+<li><strong>Performance</strong>: Guard timeout prevents hanging on slow checks</li>
+<li><strong>Flexible</strong>: Supports custom guards, bypass options, state serialization</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements for future PRs:</p>
+<ol>
+<li><strong>Deep Linking</strong>: Handle URL scheme navigation (e.g., <code>aura://create/video</code>)</li>
+<li><strong>Navigation History</strong>: Track and visualize navigation history</li>
+<li><strong>Route Analytics</strong>: Track most visited routes, time spent per route</li>
+<li><strong>Guard Caching</strong>: Cache guard results to avoid repeated checks</li>
+<li><strong>Route Preloading</strong>: Preload route components while guard checks run</li>
+<li><strong>Navigation Middleware</strong>: Plugin system for custom navigation logic</li>
+<li><strong>Breadcrumb Support</strong>: Auto-generate breadcrumbs from route hierarchy</li>
+<li><strong>Route Permissions</strong>: Role-based access control for routes</li>
+</ol>
+<h2 id="known-limitations">Known Limitations</h2>
+<ol>
+<li><strong>Keyboard Shortcuts</strong>: Some keyboard shortcut handlers still use direct navigation service calls from App.tsx instead of useNavigation hook (acceptable since App.tsx is root level)</li>
+<li><strong>Guard Execution Time</strong>: 250ms timeout may be too short for slow network conditions</li>
+<li><strong>State Serialization</strong>: Complex objects with functions or DOM references cannot be persisted</li>
+<li><strong>Browser History</strong>: MemoryRouter doesn't provide browser back/forward button support</li>
+</ol>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ol>
+<li><strong>Guard Timeout</strong>: 250ms timeout prevents UI blocking</li>
+<li><strong>Async Guards</strong>: Guards run asynchronously without blocking render</li>
+<li><strong>Lazy Loading</strong>: Route guard checks only run when navigating to the route</li>
+<li><strong>Storage</strong>: localStorage operations are synchronous but fast (&lt;5ms)</li>
+<li><strong>Memory</strong>: Navigation listeners cleaned up on unmount to prevent leaks</li>
+</ol>
+<h2 id="security-considerations">Security Considerations</h2>
+<ol>
+<li><strong>Guard Bypass</strong>: Only use <code>bypassGuards: true</code> for trusted admin actions</li>
+<li><strong>State Serialization</strong>: Don't persist sensitive data (passwords, tokens) in route state</li>
+<li><strong>Storage</strong>: localStorage is accessible to any code on the same origin</li>
+<li><strong>Guard Order</strong>: Execute most restrictive guards first to fail fast</li>
+</ol>
+<h2 id="maintenance">Maintenance</h2>
+<h3 id="adding-a-new-route">Adding a New Route</h3>
+<ol>
+<li>Add route metadata to <code>ROUTE_METADATA_ENHANCED</code> in <code>routesWithGuards.ts</code></li>
+<li>Add route to React Router routes in <code>AppRouterContent.tsx</code></li>
+<li>Create any necessary guards if new requirements</li>
+<li>Test navigation to and from the route</li>
+</ol>
+<h3 id="adding-a-new-guard">Adding a New Guard</h3>
+<ol>
+<li>Create guard function in <code>routesWithGuards.ts</code></li>
+<li>Return <code>Promise&lt;boolean&gt;</code> (true = allow, false = block)</li>
+<li>Add to route's <code>guards</code> array</li>
+<li>Test guard behavior (pass and fail cases)</li>
+</ol>
+<h3 id="debugging-navigation-issues">Debugging Navigation Issues</h3>
+<ol>
+<li>Check browser console for navigation logs</li>
+<li>Verify route is registered: <code>navigationService.getRouteMeta(path)</code></li>
+<li>Test guards manually: <code>await guardFunction()</code></li>
+<li>Check localStorage for <code>aura_last_route</code></li>
+<li>Verify crash recovery state: <code>crashRecoveryService.getRecoveryState()</code></li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://reactrouter.com/en/main">React Router v6 Documentation</a></li>
+<li><a href="https://reactrouter.com/en/main/router-components/memory-router">MemoryRouter API</a></li>
+<li><a href="https://www.electronjs.org/docs/latest/tutorial/launch-app-from-url-in-another-app">Electron Deep Linking</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">LocalStorage API</a></li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>This implementation provides a robust, type-safe navigation system for the Electron application. It addresses all requirements from the problem statement:</p>
+<p>✅ Single router strategy (MemoryRouter with persistence)
+✅ Navigation service abstraction
+✅ Route guards with prerequisites
+✅ State persistence and restoration
+✅ Safe mode override
+✅ Comprehensive test coverage</p>
+<p>The system is production-ready and provides a solid foundation for future navigation enhancements.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/ELECTRON_ROUTING_FINALIZATION_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

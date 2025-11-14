@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>E2E Testing Best Practices | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="E2E Testing Best Practices | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/testing/E2E_TESTING_BEST_PRACTICES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="e2e-testing-best-practices">E2E Testing Best Practices</h1>
+
+<p>Guide for writing effective End-to-End tests with Playwright.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#test-structure">Test Structure</a></li>
+<li><a href="#page-object-model">Page Object Model</a></li>
+<li><a href="#selectors">Selectors</a></li>
+<li><a href="#waiting-strategies">Waiting Strategies</a></li>
+<li><a href="#visual-testing">Visual Testing</a></li>
+<li><a href="#best-practices">Best Practices</a></li>
+</ul>
+<h2 id="test-structure">Test Structure</h2>
+<h3 id="basic-test-structure">Basic Test Structure</h3>
+<pre><code class="lang-typescript">import { test, expect } from '@playwright/test';
+
+test.describe('Feature Name', () =&gt; {
+  test.beforeEach(async ({ page }) =&gt; {
+    await page.goto('/');
+  });
+
+  test('should perform action', async ({ page }) =&gt; {
+    // Arrange
+    await page.fill('input[name=&quot;field&quot;]', 'value');
+
+    // Act
+    await page.click('button[type=&quot;submit&quot;]');
+
+    // Assert
+    await expect(page.locator('.success')).toBeVisible();
+  });
+});
+</code></pre>
+<h3 id="test-hooks">Test Hooks</h3>
+<pre><code class="lang-typescript">test.describe('Suite with setup', () =&gt; {
+  // Runs before all tests
+  test.beforeAll(async ({ browser }) =&gt; {
+    // Setup that runs once
+  });
+
+  // Runs before each test
+  test.beforeEach(async ({ page }) =&gt; {
+    await page.goto('/dashboard');
+  });
+
+  // Runs after each test
+  test.afterEach(async ({ page }) =&gt; {
+    // Cleanup
+  });
+
+  // Runs after all tests
+  test.afterAll(async () =&gt; {
+    // Final cleanup
+  });
+});
+</code></pre>
+<h2 id="page-object-model">Page Object Model</h2>
+<h3 id="creating-page-objects">Creating Page Objects</h3>
+<pre><code class="lang-typescript">// pages/ProjectsPage.ts
+import { Page, Locator } from '@playwright/test';
+
+export class ProjectsPage {
+  readonly page: Page;
+  readonly createButton: Locator;
+  readonly projectList: Locator;
+  readonly searchInput: Locator;
+
+  constructor(page: Page) {
+    this.page = page;
+    this.createButton = page.locator('button[data-testid=&quot;create-project&quot;]');
+    this.projectList = page.locator('[data-testid=&quot;project-list&quot;]');
+    this.searchInput = page.locator('input[placeholder=&quot;Search projects&quot;]');
+  }
+
+  async goto() {
+    await this.page.goto('/projects');
+    await this.page.waitForLoadState('networkidle');
+  }
+
+  async createProject(name: string, description: string) {
+    await this.createButton.click();
+    await this.page.fill('input[name=&quot;name&quot;]', name);
+    await this.page.fill('textarea[name=&quot;description&quot;]', description);
+    await this.page.click('button[type=&quot;submit&quot;]');
+  }
+
+  async searchProject(query: string) {
+    await this.searchInput.fill(query);
+    await this.page.waitForTimeout(300); // Debounce
+  }
+
+  async getProjectByName(name: string): Promise&lt;Locator&gt; {
+    return this.projectList.locator(`text=&quot;${name}&quot;`);
+  }
+
+  async deleteProject(name: string) {
+    const project = await this.getProjectByName(name);
+    await project.hover();
+    await project.locator('button[aria-label=&quot;Delete&quot;]').click();
+    await this.page.click('button:has-text(&quot;Confirm&quot;)');
+  }
+}
+</code></pre>
+<h3 id="using-page-objects">Using Page Objects</h3>
+<pre><code class="lang-typescript">import { test, expect } from '@playwright/test';
+import { ProjectsPage } from './pages/ProjectsPage';
+
+test.describe('Projects', () =&gt; {
+  let projectsPage: ProjectsPage;
+
+  test.beforeEach(async ({ page }) =&gt; {
+    projectsPage = new ProjectsPage(page);
+    await projectsPage.goto();
+  });
+
+  test('should create new project', async () =&gt; {
+    await projectsPage.createProject('Test Project', 'Description');
+    
+    const project = await projectsPage.getProjectByName('Test Project');
+    await expect(project).toBeVisible();
+  });
+
+  test('should search projects', async () =&gt; {
+    await projectsPage.searchProject('Test');
+    
+    const results = projectsPage.projectList.locator('.project-card');
+    await expect(results).toHaveCount(1);
+  });
+});
+</code></pre>
+<h2 id="selectors">Selectors</h2>
+<h3 id="selector-strategies-in-priority-order">Selector Strategies (in priority order)</h3>
+<pre><code class="lang-typescript">// 1. Test IDs (Best)
+await page.click('[data-testid=&quot;submit-button&quot;]');
+
+// 2. User-facing attributes
+await page.click('button[name=&quot;submit&quot;]');
+await page.click('text=&quot;Submit&quot;');
+await page.click('[aria-label=&quot;Submit form&quot;]');
+
+// 3. Semantic selectors
+await page.click('button[type=&quot;submit&quot;]');
+await page.click('role=button[name=&quot;Submit&quot;]');
+
+// 4. CSS selectors (Last resort)
+await page.click('.submit-btn');
+</code></pre>
+<h3 id="locator-api">Locator API</h3>
+<pre><code class="lang-typescript">// Get locator
+const button = page.locator('button');
+
+// Filter locators
+const activeButton = page.locator('button').filter({ hasText: 'Active' });
+
+// Chain locators
+const deleteButton = page
+  .locator('.project-card')
+  .filter({ hasText: 'My Project' })
+  .locator('button[aria-label=&quot;Delete&quot;]');
+
+// Multiple elements
+const allButtons = page.locator('button');
+const count = await allButtons.count();
+const first = allButtons.first();
+const last = allButtons.last();
+const nth = allButtons.nth(2);
+
+// Within element
+const form = page.locator('form');
+const submitButton = form.locator('button[type=&quot;submit&quot;]');
+</code></pre>
+<h2 id="waiting-strategies">Waiting Strategies</h2>
+<h3 id="auto-waiting">Auto-waiting</h3>
+<p>Playwright automatically waits for elements to be:</p>
+<ul>
+<li>Attached to DOM</li>
+<li>Visible</li>
+<li>Stable (not animating)</li>
+<li>Enabled</li>
+<li>Editable (for inputs)</li>
+</ul>
+<pre><code class="lang-typescript">// No explicit wait needed
+await page.click('button'); // Automatically waits
+await page.fill('input', 'text'); // Automatically waits
+</code></pre>
+<h3 id="explicit-waits">Explicit Waits</h3>
+<pre><code class="lang-typescript">// Wait for selector
+await page.waitForSelector('.loading', { state: 'hidden' });
+
+// Wait for load state
+await page.waitForLoadState('networkidle');
+
+// Wait for URL
+await page.waitForURL('**/projects/**');
+
+// Wait for response
+await page.waitForResponse('**/api/projects');
+
+// Wait for request
+await page.waitForRequest('**/api/projects');
+
+// Wait for timeout (use sparingly!)
+await page.waitForTimeout(1000);
+
+// Wait for function
+await page.waitForFunction(() =&gt; window.appReady === true);
+</code></pre>
+<h3 id="best-waiting-practices">Best Waiting Practices</h3>
+<pre><code class="lang-typescript">// ✅ Good: Wait for specific condition
+await page.waitForSelector('[data-testid=&quot;project-loaded&quot;]');
+
+// ❌ Bad: Fixed timeout
+await page.waitForTimeout(5000);
+
+// ✅ Good: Wait for network to settle
+await page.goto('/projects');
+await page.waitForLoadState('networkidle');
+
+// ✅ Good: Wait for specific API call
+const response = await page.waitForResponse('**/api/projects');
+expect(response.status()).toBe(200);
+</code></pre>
+<h2 id="visual-testing">Visual Testing</h2>
+<h3 id="screenshot-comparison">Screenshot Comparison</h3>
+<pre><code class="lang-typescript">test('should match visual snapshot', async ({ page }) =&gt; {
+  await page.goto('/dashboard');
+  
+  // Full page screenshot
+  await expect(page).toHaveScreenshot('dashboard.png', {
+    fullPage: true,
+    animations: 'disabled',
+  });
+
+  // Element screenshot
+  const header = page.locator('header');
+  await expect(header).toHaveScreenshot('header.png');
+});
+</code></pre>
+<h3 id="visual-regression-configuration">Visual Regression Configuration</h3>
+<pre><code class="lang-typescript">// playwright.config.ts
+export default defineConfig({
+  expect: {
+    toHaveScreenshot: {
+      maxDiffPixels: 100, // Allow small differences
+      threshold: 0.2, // 20% pixel difference threshold
+      animations: 'disabled',
+    },
+  },
+});
+</code></pre>
+<h3 id="updating-snapshots">Updating Snapshots</h3>
+<pre><code class="lang-bash"># Update all snapshots
+npx playwright test --update-snapshots
+
+# Update specific test
+npx playwright test dashboard.spec.ts --update-snapshots
+
+# Update in specific browser
+npx playwright test --update-snapshots --project=chromium
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-use-test-ids">1. Use Test IDs</h3>
+<pre><code class="lang-typescript">// ❌ Bad: Fragile selector
+await page.click('.btn.btn-primary.submit');
+
+// ✅ Good: Stable test ID
+await page.click('[data-testid=&quot;submit-button&quot;]');
+</code></pre>
+<h3 id="2-isolate-tests">2. Isolate Tests</h3>
+<pre><code class="lang-typescript">// ✅ Good: Each test is independent
+test.describe('Projects', () =&gt; {
+  test.beforeEach(async ({ page }) =&gt; {
+    // Fresh state for each test
+    await page.goto('/projects');
+  });
+
+  test('test 1', async ({ page }) =&gt; {
+    // Test doesn't depend on test 2
+  });
+
+  test('test 2', async ({ page }) =&gt; {
+    // Test doesn't depend on test 1
+  });
+});
+</code></pre>
+<h3 id="3-use-parallel-execution">3. Use Parallel Execution</h3>
+<pre><code class="lang-typescript">// playwright.config.ts
+export default defineConfig({
+  workers: process.env.CI ? 2 : undefined,
+  fullyParallel: true,
+});
+
+// Mark tests as independent
+test.describe.configure({ mode: 'parallel' });
+</code></pre>
+<h3 id="4-handle-dynamic-content">4. Handle Dynamic Content</h3>
+<pre><code class="lang-typescript">// ✅ Good: Wait for content
+await page.waitForSelector('[data-testid=&quot;data-loaded&quot;]');
+await expect(page.locator('.project')).toHaveCount(3);
+
+// ✅ Good: Retry assertions
+await expect(async () =&gt; {
+  const count = await page.locator('.project').count();
+  expect(count).toBeGreaterThan(0);
+}).toPass({
+  intervals: [1000, 2000, 5000],
+  timeout: 10000,
+});
+</code></pre>
+<h3 id="5-test-user-flows-not-implementation">5. Test User Flows, Not Implementation</h3>
+<pre><code class="lang-typescript">// ❌ Bad: Testing implementation
+test('should update state on button click', async ({ page }) =&gt; {
+  await page.click('button');
+  const state = await page.evaluate(() =&gt; window.__APP_STATE__);
+  expect(state.clicked).toBe(true);
+});
+
+// ✅ Good: Testing user-visible behavior
+test('should show success message after submit', async ({ page }) =&gt; {
+  await page.click('button[type=&quot;submit&quot;]');
+  await expect(page.locator('.success-message')).toBeVisible();
+});
+</code></pre>
+<h3 id="6-mock-external-services">6. Mock External Services</h3>
+<pre><code class="lang-typescript">test('should handle API error', async ({ page }) =&gt; {
+  // Mock API failure
+  await page.route('**/api/projects', (route) =&gt; {
+    route.fulfill({
+      status: 500,
+      body: JSON.stringify({ error: 'Server error' }),
+    });
+  });
+
+  await page.goto('/projects');
+  await expect(page.locator('.error-message')).toBeVisible();
+});
+</code></pre>
+<h3 id="7-use-fixtures">7. Use Fixtures</h3>
+<pre><code class="lang-typescript">// fixtures.ts
+import { test as base } from '@playwright/test';
+
+type Fixtures = {
+  authenticatedPage: Page;
+};
+
+export const test = base.extend&lt;Fixtures&gt;({
+  authenticatedPage: async ({ page }, use) =&gt; {
+    // Setup: Login
+    await page.goto('/login');
+    await page.fill('input[name=&quot;email&quot;]', 'test@example.com');
+    await page.fill('input[name=&quot;password&quot;]', 'password');
+    await page.click('button[type=&quot;submit&quot;]');
+    await page.waitForURL('**/dashboard');
+
+    // Use the authenticated page
+    await use(page);
+
+    // Teardown: Logout
+    await page.click('[data-testid=&quot;logout&quot;]');
+  },
+});
+
+// Usage
+test('should access protected route', async ({ authenticatedPage }) =&gt; {
+  await authenticatedPage.goto('/protected');
+  await expect(authenticatedPage).toHaveURL('**/protected');
+});
+</code></pre>
+<h3 id="8-organize-tests-by-user-journey">8. Organize Tests by User Journey</h3>
+<pre><code class="lang-typescript">test.describe('Video Creation Journey', () =&gt; {
+  test('step 1: navigate to create page', async ({ page }) =&gt; {
+    // ...
+  });
+
+  test('step 2: fill in video details', async ({ page }) =&gt; {
+    // ...
+  });
+
+  test('step 3: submit and verify creation', async ({ page }) =&gt; {
+    // ...
+  });
+});
+</code></pre>
+<h3 id="9-use-soft-assertions-for-multiple-checks">9. Use Soft Assertions for Multiple Checks</h3>
+<pre><code class="lang-typescript">test('should validate form fields', async ({ page }) =&gt; {
+  // Continue test even if some assertions fail
+  await expect.soft(page.locator('#name')).toBeVisible();
+  await expect.soft(page.locator('#email')).toBeVisible();
+  await expect.soft(page.locator('#submit')).toBeDisabled();
+  
+  // Test continues and reports all failures
+});
+</code></pre>
+<h3 id="10-debug-tests-effectively">10. Debug Tests Effectively</h3>
+<pre><code class="lang-typescript">// Add debugging helpers
+test('debug test', async ({ page }) =&gt; {
+  // Pause test
+  await page.pause();
+
+  // Take screenshot
+  await page.screenshot({ path: 'debug.png' });
+
+  // Log element info
+  const button = page.locator('button');
+  console.log(await button.textContent());
+  console.log(await button.isVisible());
+
+  // Video recording (enabled in config)
+  // Video automatically saved on failure
+});
+</code></pre>
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="authentication">Authentication</h3>
+<pre><code class="lang-typescript">// Save auth state
+test('login', async ({ page }) =&gt; {
+  await page.goto('/login');
+  await page.fill('[name=&quot;email&quot;]', 'test@example.com');
+  await page.fill('[name=&quot;password&quot;]', 'password');
+  await page.click('button[type=&quot;submit&quot;]');
+  
+  await page.context().storageState({ path: 'auth.json' });
+});
+
+// Use auth state
+test.use({ storageState: 'auth.json' });
+</code></pre>
+<h3 id="file-upload">File Upload</h3>
+<pre><code class="lang-typescript">test('should upload file', async ({ page }) =&gt; {
+  await page.setInputFiles('input[type=&quot;file&quot;]', 'path/to/file.png');
+  
+  // Or with buffer
+  await page.setInputFiles('input[type=&quot;file&quot;]', {
+    name: 'file.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('file content'),
+  });
+});
+</code></pre>
+<h3 id="downloads">Downloads</h3>
+<pre><code class="lang-typescript">test('should download file', async ({ page }) =&gt; {
+  const downloadPromise = page.waitForEvent('download');
+  await page.click('a[download]');
+  const download = await downloadPromise;
+  
+  await download.saveAs('/path/to/save.pdf');
+});
+</code></pre>
+<h3 id="multiple-tabswindows">Multiple Tabs/Windows</h3>
+<pre><code class="lang-typescript">test('should handle new window', async ({ page, context }) =&gt; {
+  const pagePromise = context.waitForEvent('page');
+  await page.click('a[target=&quot;_blank&quot;]');
+  const newPage = await pagePromise;
+  
+  await expect(newPage).toHaveTitle(/New Window/);
+});
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="flaky-tests">Flaky Tests</h3>
+<pre><code class="lang-typescript">// Increase timeout for slow operations
+test('slow test', async ({ page }) =&gt; {
+  test.setTimeout(60000);
+  await page.goto('/slow-page');
+});
+
+// Use retry
+test('flaky test', async ({ page }) =&gt; {
+  test.fixme(); // Skip until fixed
+  // or
+  test.fail(); // Expected to fail
+});
+
+// Stabilize with proper waits
+await page.waitForLoadState('networkidle');
+await expect(element).toBeVisible({ timeout: 10000 });
+</code></pre>
+<h3 id="debugging">Debugging</h3>
+<pre><code class="lang-bash"># Run in headed mode
+npx playwright test --headed
+
+# Run with browser devtools
+npx playwright test --debug
+
+# Generate trace
+npx playwright test --trace on
+
+# View trace
+npx playwright show-trace trace.zip
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/testing/E2E_TESTING_BEST_PRACTICES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

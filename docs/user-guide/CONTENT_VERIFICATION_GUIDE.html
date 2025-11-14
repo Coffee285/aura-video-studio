@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>AI Content Verification and Fact Checking Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="AI Content Verification and Fact Checking Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONTENT_VERIFICATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ai-content-verification-and-fact-checking-guide">AI Content Verification and Fact Checking Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The AI Content Verification system ensures factual accuracy and prevents misinformation in AI-generated content. This comprehensive system includes fact-checking, source attribution, confidence analysis, and misinformation detection.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend-services">Backend Services</h3>
+<h4 id="1-factcheckingservice">1. FactCheckingService</h4>
+<p>Validates factual claims using evidence gathering and credibility scoring.</p>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Multi-source evidence gathering</li>
+<li>Claim type classification (Scientific, Historical, Statistical, etc.)</li>
+<li>Verification status determination</li>
+<li>Confidence scoring based on evidence quality</li>
+</ul>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-csharp">var service = new FactCheckingService(logger);
+var claim = new Claim(
+    ClaimId: &quot;claim-1&quot;,
+    Text: &quot;The Earth orbits the Sun&quot;,
+    Context: &quot;Solar system facts&quot;,
+    StartPosition: 0,
+    EndPosition: 100,
+    Type: ClaimType.Scientific,
+    ExtractionConfidence: 0.9
+);
+
+var result = await service.CheckClaimAsync(claim, ct);
+// result.Status: Verified, PartiallyVerified, Unverified, Disputed, False
+// result.ConfidenceScore: 0.0 to 1.0
+</code></pre>
+<h4 id="2-sourceattributionservice">2. SourceAttributionService</h4>
+<p>Generates proper citations and manages source attribution.</p>
+<p><strong>Supported Citation Formats:</strong></p>
+<ul>
+<li>APA (American Psychological Association)</li>
+<li>MLA (Modern Language Association)</li>
+<li>Chicago</li>
+<li>Harvard</li>
+</ul>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-csharp">var service = new SourceAttributionService(logger);
+var sources = new List&lt;SourceAttribution&gt; { /* ... */ };
+
+// Generate citations
+var citations = await service.GenerateCitationsAsync(
+    sources, 
+    CitationFormat.APA, 
+    ct
+);
+
+// Validate source credibility
+var validation = await service.ValidateSourceAsync(source, ct);
+</code></pre>
+<h4 id="3-confidenceanalysisservice">3. ConfidenceAnalysisService</h4>
+<p>Analyzes confidence in content assertions with detailed scoring.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Overall confidence calculation</li>
+<li>Per-claim confidence tracking</li>
+<li>High/low confidence claim identification</li>
+<li>Review recommendations</li>
+</ul>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-csharp">var service = new ConfidenceAnalysisService(logger);
+var analysis = await service.AnalyzeConfidenceAsync(
+    contentId,
+    claims,
+    factChecks,
+    ct
+);
+
+// Generate confidence report
+var report = service.GenerateConfidenceReport(analysis);
+</code></pre>
+<h4 id="4-misinformationdetectionservice">4. MisinformationDetectionService</h4>
+<p>Detects potential misinformation patterns and logical fallacies.</p>
+<p><strong>Detection Capabilities:</strong></p>
+<ul>
+<li>Absolute language patterns</li>
+<li>Sensationalist language</li>
+<li>Missing source attribution</li>
+<li>Correlation/causation confusion</li>
+<li>Appeals to emotion</li>
+<li>Logical fallacies</li>
+</ul>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-csharp">var service = new MisinformationDetectionService(logger);
+var detection = await service.DetectMisinformationAsync(
+    contentId,
+    content,
+    claims,
+    factChecks,
+    ct
+);
+
+// Check risk level: Low, Medium, High, Critical
+var riskLevel = detection.RiskLevel;
+</code></pre>
+<h4 id="5-contentverificationorchestrator">5. ContentVerificationOrchestrator</h4>
+<p>Coordinates the complete verification workflow.</p>
+<p><strong>Workflow:</strong></p>
+<ol>
+<li>Extract claims from content</li>
+<li>Fact-check claims</li>
+<li>Analyze confidence</li>
+<li>Detect misinformation</li>
+<li>Collect and validate sources</li>
+<li>Generate overall status and warnings</li>
+</ol>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-csharp">var orchestrator = new ContentVerificationOrchestrator(
+    logger,
+    factCheckingService,
+    sourceService,
+    confidenceService,
+    misinfoService
+);
+
+var request = new VerificationRequest(
+    ContentId: &quot;content-1&quot;,
+    Content: &quot;Your content here...&quot;,
+    Options: new VerificationOptions(
+        CheckFacts: true,
+        DetectMisinformation: true,
+        AnalyzeConfidence: true,
+        AttributeSources: true,
+        MaxClaimsToCheck: 50,
+        MinConfidenceThreshold: 0.5
+    )
+);
+
+var result = await orchestrator.VerifyContentAsync(request, ct);
+</code></pre>
+<h4 id="6-verificationpersistence">6. VerificationPersistence</h4>
+<p>Stores verification results and maintains history.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>JSON-based file storage</li>
+<li>History tracking with timestamps</li>
+<li>Statistics aggregation</li>
+<li>Atomic file operations</li>
+</ul>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-csharp">var persistence = new VerificationPersistence(logger, dataDirectory);
+
+// Save result
+await persistence.SaveVerificationResultAsync(result, ct);
+
+// Load result
+var loaded = await persistence.LoadVerificationResultAsync(contentId, ct);
+
+// Get history
+var history = await persistence.LoadVerificationHistoryAsync(contentId, 10, ct);
+
+// Get statistics
+var stats = await persistence.GetStatisticsAsync(ct);
+</code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="post-apiverificationverify">POST /api/verification/verify</h3>
+<p>Perform complete content verification.</p>
+<p><strong>Request:</strong></p>
+<pre><code class="lang-json">{
+  &quot;contentId&quot;: &quot;optional-id&quot;,
+  &quot;content&quot;: &quot;Content to verify...&quot;,
+  &quot;options&quot;: {
+    &quot;checkFacts&quot;: true,
+    &quot;detectMisinformation&quot;: true,
+    &quot;analyzeConfidence&quot;: true,
+    &quot;attributeSources&quot;: true,
+    &quot;maxClaimsToCheck&quot;: 50,
+    &quot;minConfidenceThreshold&quot;: 0.5
+  }
+}
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;result&quot;: {
+    &quot;contentId&quot;: &quot;content-123&quot;,
+    &quot;overallStatus&quot;: &quot;Verified&quot;,
+    &quot;overallConfidence&quot;: 0.85,
+    &quot;claimCount&quot;: 5,
+    &quot;factCheckCount&quot;: 5,
+    &quot;sourceCount&quot;: 3,
+    &quot;warnings&quot;: [],
+    &quot;misinformationRisk&quot;: &quot;Low&quot;,
+    &quot;verifiedAt&quot;: &quot;2024-10-24T01:00:00Z&quot;
+  },
+  &quot;details&quot;: { /* Full verification result */ }
+}
+</code></pre>
+<h3 id="post-apiverificationquick-verify">POST /api/verification/quick-verify</h3>
+<p>Quick verification for real-time feedback (checks top 5 claims only).</p>
+<p><strong>Request:</strong></p>
+<pre><code class="lang-json">{
+  &quot;content&quot;: &quot;Content to verify...&quot;
+}
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;result&quot;: {
+    &quot;claimCount&quot;: 7,
+    &quot;checkedCount&quot;: 5,
+    &quot;averageConfidence&quot;: 0.75,
+    &quot;hasIssues&quot;: false,
+    &quot;topIssues&quot;: []
+  }
+}
+</code></pre>
+<h3 id="get-apiverificationcontentid">GET /api/verification/{contentId}</h3>
+<p>Retrieve verification result by content ID.</p>
+<h3 id="get-apiverificationcontentidhistory">GET /api/verification/{contentId}/history</h3>
+<p>Get verification history for content.</p>
+<p><strong>Query Parameters:</strong></p>
+<ul>
+<li><code>maxResults</code> (default: 10): Maximum number of history entries</li>
+</ul>
+<h3 id="post-apiverificationcitations">POST /api/verification/citations</h3>
+<p>Generate citations for sources.</p>
+<p><strong>Request:</strong></p>
+<pre><code class="lang-json">{
+  &quot;sources&quot;: [
+    {
+      &quot;sourceId&quot;: &quot;s1&quot;,
+      &quot;name&quot;: &quot;Scientific Journal&quot;,
+      &quot;url&quot;: &quot;https://example.com/article&quot;,
+      &quot;type&quot;: &quot;AcademicJournal&quot;,
+      &quot;credibilityScore&quot;: 0.9,
+      &quot;publishedDate&quot;: &quot;2024-01-15T00:00:00Z&quot;,
+      &quot;author&quot;: &quot;Dr. Smith&quot;
+    }
+  ],
+  &quot;format&quot;: &quot;APA&quot;
+}
+</code></pre>
+<h3 id="get-apiverificationstatistics">GET /api/verification/statistics</h3>
+<p>Get verification statistics.</p>
+<h3 id="delete-apiverificationcontentid">DELETE /api/verification/{contentId}</h3>
+<p>Delete verification result.</p>
+<h3 id="get-apiverificationlist">GET /api/verification/list</h3>
+<p>List all verified content IDs.</p>
+<h2 id="frontend-components">Frontend Components</h2>
+<h3 id="1-factcheckpanel">1. FactCheckPanel</h3>
+<p>Main verification interface for checking content.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-tsx">import { FactCheckPanel } from '@/components/verification';
+
+&lt;FactCheckPanel
+  content={contentToVerify}
+  onVerify={(result) =&gt; console.log('Verification complete:', result)}
+/&gt;
+</code></pre>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Real-time verification</li>
+<li>Visual status indicators</li>
+<li>Warnings display</li>
+<li>Fact check details</li>
+<li>Summary statistics</li>
+</ul>
+<h3 id="2-confidencemeter">2. ConfidenceMeter</h3>
+<p>Visual confidence indicator with color coding.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-tsx">import { ConfidenceMeter } from '@/components/verification';
+
+&lt;ConfidenceMeter
+  confidence={0.85}
+  label=&quot;Overall Confidence&quot;
+  showIcon={true}
+  size=&quot;md&quot;
+/&gt;
+</code></pre>
+<p><strong>Props:</strong></p>
+<ul>
+<li><code>confidence</code>: 0.0 to 1.0</li>
+<li><code>label</code>: Display label (default: &quot;Confidence&quot;)</li>
+<li><code>showIcon</code>: Show trend icon (default: true)</li>
+<li><code>size</code>: 'sm' | 'md' | 'lg' (default: 'md')</li>
+</ul>
+<h3 id="3-verificationresultsview">3. VerificationResultsView</h3>
+<p>Comprehensive view of verification results.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-tsx">import { VerificationResultsView } from '@/components/verification';
+
+&lt;VerificationResultsView result={verificationResult} /&gt;
+</code></pre>
+<p><strong>Displays:</strong></p>
+<ul>
+<li>Overall status and confidence</li>
+<li>Warnings</li>
+<li>Misinformation analysis</li>
+<li>Source list with credibility scores</li>
+<li>Risk level indicators</li>
+</ul>
+<h3 id="4-sourcecitationeditor">4. SourceCitationEditor</h3>
+<p>Citation management UI for adding and editing sources.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-tsx">import { SourceCitationEditor } from '@/components/verification';
+
+&lt;SourceCitationEditor
+  sources={sources}
+  onSourcesChange={(updated) =&gt; setSources(updated)}
+/&gt;
+</code></pre>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Add/remove sources</li>
+<li>Edit source details</li>
+<li>Generate citations in multiple formats</li>
+<li>Copy citations to clipboard</li>
+<li>External link preview</li>
+</ul>
+<h3 id="5-contentwarningmanager">5. ContentWarningManager</h3>
+<p>Manages and displays content warnings.</p>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-tsx">import { ContentWarningManager } from '@/components/verification';
+
+&lt;ContentWarningManager
+  warnings={warnings}
+  riskLevel=&quot;Medium&quot;
+  onDismiss={(id) =&gt; console.log('Dismissed:', id)}
+  showTimestamp={true}
+/&gt;
+</code></pre>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Color-coded warning types (error, warning, info)</li>
+<li>Dismissible warnings</li>
+<li>Risk level badges</li>
+<li>Summary statistics</li>
+</ul>
+<h2 id="data-models">Data Models</h2>
+<h3 id="claim">Claim</h3>
+<pre><code class="lang-csharp">public record Claim(
+    string ClaimId,
+    string Text,
+    string Context,
+    int StartPosition,
+    int EndPosition,
+    ClaimType Type,
+    double ExtractionConfidence
+);
+
+public enum ClaimType
+{
+    Factual,
+    Statistical,
+    Historical,
+    Scientific,
+    Opinion,
+    Prediction
+}
+</code></pre>
+<h3 id="factcheckresult">FactCheckResult</h3>
+<pre><code class="lang-csharp">public record FactCheckResult(
+    string ClaimId,
+    string Claim,
+    VerificationStatus Status,
+    double ConfidenceScore,
+    List&lt;Evidence&gt; Evidence,
+    string? Explanation,
+    DateTime VerifiedAt
+);
+
+public enum VerificationStatus
+{
+    Verified,
+    PartiallyVerified,
+    Unverified,
+    Disputed,
+    False,
+    Unknown
+}
+</code></pre>
+<h3 id="sourceattribution">SourceAttribution</h3>
+<pre><code class="lang-csharp">public record SourceAttribution(
+    string SourceId,
+    string Name,
+    string Url,
+    SourceType Type,
+    double CredibilityScore,
+    DateTime? PublishedDate,
+    string? Author
+);
+
+public enum SourceType
+{
+    AcademicJournal,
+    NewsOrganization,
+    Government,
+    Wikipedia,
+    Expert,
+    Organization,
+    Other
+}
+</code></pre>
+<h3 id="misinformationdetection">MisinformationDetection</h3>
+<pre><code class="lang-csharp">public record MisinformationDetection(
+    string ContentId,
+    List&lt;MisinformationFlag&gt; Flags,
+    double RiskScore,
+    MisinformationRiskLevel RiskLevel,
+    List&lt;string&gt; Recommendations,
+    DateTime DetectedAt
+);
+
+public enum MisinformationRiskLevel
+{
+    Low,
+    Medium,
+    High,
+    Critical
+}
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="running-tests">Running Tests</h3>
+<pre><code class="lang-bash">dotnet test Aura.Tests/Aura.Tests.csproj --filter &quot;FullyQualifiedName~ContentVerificationTests&quot;
+</code></pre>
+<h3 id="test-coverage">Test Coverage</h3>
+<ul>
+<li>FactCheckingService claim checking</li>
+<li>ConfidenceAnalysisService analysis</li>
+<li>MisinformationDetectionService detection</li>
+<li>ContentVerificationOrchestrator workflow</li>
+<li>SourceAttributionService citations and deduplication</li>
+<li>Quick verification functionality</li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-content-verification">1. Content Verification</h3>
+<ul>
+<li>Always verify content before publication</li>
+<li>Use quick-verify for real-time feedback during editing</li>
+<li>Review warnings and address critical issues</li>
+<li>Maintain verification history for audit trails</li>
+</ul>
+<h3 id="2-source-attribution">2. Source Attribution</h3>
+<ul>
+<li>Add sources for all factual claims</li>
+<li>Use appropriate citation format for your audience</li>
+<li>Validate source credibility before adding</li>
+<li>Include publication dates when available</li>
+</ul>
+<h3 id="3-confidence-analysis">3. Confidence Analysis</h3>
+<ul>
+<li>Set appropriate confidence thresholds based on content type</li>
+<li>Review low-confidence claims before publishing</li>
+<li>Use confidence scores to prioritize review efforts</li>
+<li>Document reasoning for accepting low-confidence content</li>
+</ul>
+<h3 id="4-misinformation-detection">4. Misinformation Detection</h3>
+<ul>
+<li>Take all flags seriously, even if confidence is high</li>
+<li>Review suggested corrections</li>
+<li>Avoid absolute language and sensationalism</li>
+<li>Always provide sources for controversial claims</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><p><strong>External API Integration</strong></p>
+<ul>
+<li>Google Fact Check Tools API</li>
+<li>Snopes API</li>
+<li>PolitiFact API</li>
+<li>Wikipedia/Wikidata APIs</li>
+</ul>
+</li>
+<li><p><strong>Advanced ML Models</strong></p>
+<ul>
+<li>Deep learning-based claim extraction</li>
+<li>Semantic similarity for evidence matching</li>
+<li>Neural fact verification models</li>
+<li>Context-aware misinformation detection</li>
+</ul>
+</li>
+<li><p><strong>Real-time Features</strong></p>
+<ul>
+<li>Live verification during content creation</li>
+<li>Inline suggestions and corrections</li>
+<li>Collaborative fact-checking</li>
+<li>Browser extension for web content</li>
+</ul>
+</li>
+<li><p><strong>Enhanced Analytics</strong></p>
+<ul>
+<li>Verification trends over time</li>
+<li>Source credibility tracking</li>
+<li>Team performance metrics</li>
+<li>Comparative analysis</li>
+</ul>
+</li>
+</ol>
+<h2 id="support">Support</h2>
+<p>For issues, questions, or feature requests, please refer to the main repository documentation or create an issue on GitHub.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONTENT_VERIFICATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

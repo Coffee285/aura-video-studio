@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>FFmpeg Status UI Changes - Visual Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="FFmpeg Status UI Changes - Visual Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/FFMPEG_STATUS_VISUAL_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ffmpeg-status-ui-changes---visual-guide">FFmpeg Status UI Changes - Visual Guide</h1>
+
+<h2 id="before-vs-after-comparison">Before vs After Comparison</h2>
+<h3 id="settingsdownloads-page---ffmpeg-card">Settings/Downloads Page - FFmpeg Card</h3>
+<h4 id="-before-problematic-behavior">❌ BEFORE (Problematic Behavior)</h4>
+<pre><code>┌─────────────────────────────────────────┐
+│ FFmpeg  [Installed]                     │
+│ Required for video rendering            │
+├─────────────────────────────────────────┤
+│ Path: C:\ffmpeg\bin\ffmpeg.exe         │
+│ Version: unknown                        │  ⚠️ MISLEADING!
+├─────────────────────────────────────────┤
+│ [Rescan] [Open Folder] [Repair]        │
+└─────────────────────────────────────────┘
+
+Problem: Shows &quot;Installed&quot; even when:
+- Version is unknown/null
+- Binary might be corrupt
+- Version is below 4.0 minimum
+</code></pre>
+<h4 id="-after-fixed-behavior">✅ AFTER (Fixed Behavior)</h4>
+<p><strong>State 1: Not Installed</strong></p>
+<pre><code>┌─────────────────────────────────────────┐
+│ FFmpeg  [Not Installed]                 │
+│ Required for video rendering            │
+├─────────────────────────────────────────┤
+│ ⚠️ No path or version displayed         │
+├─────────────────────────────────────────┤
+│ [Install Managed FFmpeg]                │  ✅ Clear primary action
+│ [Attach Existing...] [Manual Guide]    │
+│ [Rescan]                                │
+└─────────────────────────────────────────┘
+</code></pre>
+<p><strong>State 2: Installed and Valid (Managed)</strong></p>
+<pre><code>┌─────────────────────────────────────────┐
+│ FFmpeg  [Installed ✓]                   │  ✅ Only shows when truly ready
+│ Required for video rendering            │
+├─────────────────────────────────────────┤
+│ Path:                                   │
+│ C:\Program Files\AuraVideoStudio\...    │
+│                                         │
+│ Version: 5.1.2 [✓ 4.0+]               │  ✅ With min-version validation
+│ Source: [Managed Installation]         │  ✅ Shows source
+├─────────────────────────────────────────┤
+│ [Rescan] [Open Folder] [Repair]        │
+└─────────────────────────────────────────┘
+</code></pre>
+<p><strong>State 3: Invalid/Corrupt</strong></p>
+<pre><code>┌─────────────────────────────────────────┐
+│ FFmpeg  [Invalid ⚠️]                     │  ✅ Clear error state
+│ Required for video rendering            │
+├─────────────────────────────────────────┤
+│ ⚠️ FFmpeg executable is corrupt or      │  ✅ Helpful error message
+│    cannot be executed                   │
+├─────────────────────────────────────────┤
+│ [Install Managed FFmpeg]                │  ✅ Remediation CTA
+│ [Attach Existing...] [Rescan]          │
+└─────────────────────────────────────────┘
+</code></pre>
+<p><strong>State 4: Outdated Version</strong></p>
+<pre><code>┌─────────────────────────────────────────┐
+│ FFmpeg  [Outdated ⚠️]                    │  ✅ Warning for old version
+│ Required for video rendering            │
+├─────────────────────────────────────────┤
+│ Path: /opt/ffmpeg/bin/ffmpeg           │
+│ Version: 3.4.0 [⚠️ Requires 4.0+]      │  ✅ Clear version requirement
+│ Source: [User Configured]              │
+├─────────────────────────────────────────┤
+│ [Install Managed FFmpeg]                │  ✅ Offers upgrade path
+│ [Rescan]                                │
+└─────────────────────────────────────────┘
+</code></pre>
+<p><strong>State 5: Found in PATH</strong></p>
+<pre><code>┌─────────────────────────────────────────┐
+│ FFmpeg  [Installed ✓]                   │
+│ Required for video rendering            │
+├─────────────────────────────────────────┤
+│ Path: /usr/bin/ffmpeg                  │
+│ Version: 4.4.2 [✓ 4.0+]               │
+│ Source: [System PATH]                  │  ✅ Shows PATH as source
+├─────────────────────────────────────────┤
+│ [Rescan] [Open Folder] [Repair]        │
+└─────────────────────────────────────────┘
+</code></pre>
+<p><strong>State 6: Attached Existing</strong></p>
+<pre><code>┌─────────────────────────────────────────┐
+│ FFmpeg  [Installed ✓]                   │
+│ Required for video rendering            │
+├─────────────────────────────────────────┤
+│ Path: D:\Tools\ffmpeg\ffmpeg.exe       │
+│ Version: 6.0 [✓ 4.0+]                 │
+│ Source: [User Configured]              │  ✅ Shows configured source
+├─────────────────────────────────────────┤
+│ [Rescan] [Open Folder] [Repair]        │
+└─────────────────────────────────────────┘
+</code></pre>
+<h3 id="first-run-wizard---step-4-system-requirements">First-Run Wizard - Step 4 (System Requirements)</h3>
+<h4 id="-before-broken">❌ BEFORE (Broken)</h4>
+<pre><code>┌─────────────────────────────────────────┐
+│ Step 4: System Requirements             │
+├─────────────────────────────────────────┤
+│ FFmpeg Status                           │
+│                                         │
+│ ❌ Request failed with status code 428  │  ⚠️ CRYPTIC ERROR!
+│                                         │
+│ Status: Not Ready                       │
+│                                         │
+│ [&lt; Back] [Skip &gt;]                       │
+└─────────────────────────────────────────┘
+
+Problem: HTTP 428 (Precondition Required) because
+/api/system/ffmpeg/status was blocked during wizard
+</code></pre>
+<h4 id="-after-fixed">✅ AFTER (Fixed)</h4>
+<p><strong>When Not Installed</strong>:</p>
+<pre><code>┌─────────────────────────────────────────┐
+│ Step 4: System Requirements             │
+├─────────────────────────────────────────┤
+│ FFmpeg Status                           │
+│                                         │
+│ Installation: [Not Installed 🔴]        │  ✅ Clear status
+│                                         │
+│ ℹ️ About FFmpeg                         │
+│ FFmpeg is required for video rendering  │
+│ and must be version 4.0 or higher.     │
+│                                         │
+│ [Install FFmpeg] [Refresh Status]      │
+└─────────────────────────────────────────┘
+</code></pre>
+<p><strong>After Installation</strong>:</p>
+<pre><code>┌─────────────────────────────────────────┐
+│ Step 4: System Requirements             │
+├─────────────────────────────────────────┤
+│ FFmpeg Status                           │
+│                                         │
+│ Installation: [Installed ✓]            │  ✅ Success state
+│ Version: 5.1.2 [✓ 4.0+]               │
+│ Location: C:\Program Files\...         │
+│ Source: [Managed Installation]         │
+│                                         │
+│ Hardware Acceleration:                  │
+│ [NVIDIA NVENC] [AMD AMF]              │  ✅ Bonus: shows GPU support
+│                                         │
+│ ℹ️ Hardware acceleration detected!      │
+│ Video rendering will be 5-10x faster   │
+│                                         │
+│ [&lt; Back] [Next &gt;]                       │
+└─────────────────────────────────────────┘
+</code></pre>
+<p><strong>If Error Occurs</strong>:</p>
+<pre><code>┌─────────────────────────────────────────┐
+│ Step 4: System Requirements             │
+├─────────────────────────────────────────┤
+│ FFmpeg Status                           │
+│                                         │
+│ Installation: [Not Installed 🔴]        │
+│                                         │
+│ ❌ Error: Unable to check FFmpeg status │  ✅ Helpful error message
+│ Backend server may not be running.     │
+│                                         │
+│ [Refresh Status]                        │
+└─────────────────────────────────────────┘
+</code></pre>
+<h2 id="status-badge-colors">Status Badge Colors</h2>
+<table>
+<thead>
+<tr>
+<th>Badge</th>
+<th>Color</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[Installed ✓]</code></td>
+<td>Green (success)</td>
+<td>FFmpeg is installed, valid, and meets version requirement</td>
+</tr>
+<tr>
+<td><code>[Not Installed]</code></td>
+<td>Gray (outline)</td>
+<td>FFmpeg not detected</td>
+</tr>
+<tr>
+<td><code>[Invalid ⚠️]</code></td>
+<td>Red (danger)</td>
+<td>FFmpeg found but corrupt or invalid</td>
+</tr>
+<tr>
+<td><code>[Outdated ⚠️]</code></td>
+<td>Yellow (warning)</td>
+<td>FFmpeg version below 4.0 minimum</td>
+</tr>
+<tr>
+<td><code>[Unknown]</code></td>
+<td>Gray (outline)</td>
+<td>Status check failed or inconclusive</td>
+</tr>
+</tbody>
+</table>
+<h2 id="source-badges">Source Badges</h2>
+<table>
+<thead>
+<tr>
+<th>Badge</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[Managed Installation]</code></td>
+<td>Installed via app's &quot;Install Managed FFmpeg&quot; button</td>
+</tr>
+<tr>
+<td><code>[System PATH]</code></td>
+<td>Found in system PATH environment variable</td>
+</tr>
+<tr>
+<td><code>[User Configured]</code></td>
+<td>Manually attached via &quot;Attach Existing...&quot;</td>
+</tr>
+<tr>
+<td><code>[None]</code></td>
+<td>Not detected</td>
+</tr>
+</tbody>
+</table>
+<h2 id="button-labels">Button Labels</h2>
+<h3 id="settingsdownloads-page">Settings/Downloads Page</h3>
+<p><strong>Primary Actions</strong> (when FFmpeg not ready):</p>
+<ul>
+<li><code>[Install Managed FFmpeg]</code> - Downloads and installs FFmpeg automatically</li>
+<li><code>[Attach Existing...]</code> - Opens dialog to specify custom path</li>
+<li><code>[Manual Install Guide]</code> - Shows manual installation instructions</li>
+</ul>
+<p><strong>Secondary Actions</strong>:</p>
+<ul>
+<li><code>[Rescan]</code> - Re-checks system for FFmpeg in standard locations</li>
+<li><code>[Open Folder]</code> - Opens FFmpeg installation folder in file explorer</li>
+<li><code>[Repair]</code> - Reinstalls/repairs managed FFmpeg installation</li>
+</ul>
+<h3 id="first-run-wizard">First-Run Wizard</h3>
+<p><strong>Actions</strong>:</p>
+<ul>
+<li><code>[Install FFmpeg]</code> - Downloads and installs FFmpeg</li>
+<li><code>[Refresh Status]</code> - Re-checks FFmpeg status</li>
+</ul>
+<h2 id="key-visual-differences-summary">Key Visual Differences Summary</h2>
+<h3 id="what-changed">What Changed</h3>
+<ol>
+<li><strong>Badge accuracy</strong>: Only shows &quot;Installed&quot; when truly ready</li>
+<li><strong>Version display</strong>: Always shows version with min-version validation badge</li>
+<li><strong>Source transparency</strong>: Shows where FFmpeg came from (Managed/PATH/Configured)</li>
+<li><strong>Error clarity</strong>: Meaningful messages instead of HTTP codes</li>
+<li><strong>Button clarity</strong>: &quot;Install Managed FFmpeg&quot; vs generic &quot;Install&quot;</li>
+</ol>
+<h3 id="what-stayed-the-same">What Stayed the Same</h3>
+<ul>
+<li>Overall card layout and structure</li>
+<li>Dialog for &quot;Attach Existing...&quot; path input</li>
+<li>Manual installation guide modal</li>
+<li>Rescan, Open Folder, Repair button positions</li>
+</ul>
+<h3 id="benefits">Benefits</h3>
+<ul>
+<li>✅ Users know exactly what state FFmpeg is in</li>
+<li>✅ Clear guidance on next steps (install/attach/upgrade)</li>
+<li>✅ No false &quot;Installed&quot; status</li>
+<li>✅ Version requirements visible at a glance</li>
+<li>✅ Source of FFmpeg installation is transparent</li>
+<li>✅ Wizard no longer shows cryptic 428 errors</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/FFMPEG_STATUS_VISUAL_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

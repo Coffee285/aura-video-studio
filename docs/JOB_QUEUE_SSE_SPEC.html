@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Job Queue &amp; SSE Resilience Specification | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Job Queue &amp; SSE Resilience Specification | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/JOB_QUEUE_SSE_SPEC.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="job-queue--sse-resilience-specification">Job Queue &amp; SSE Resilience Specification</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document specifies the behavior and guarantees of the job queue and Server-Sent Events (SSE) system in Aura Video Studio.</p>
+<h2 id="job-queue-invariants">Job Queue Invariants</h2>
+<h3 id="state-machine">State Machine</h3>
+<p>Jobs follow a strict state machine with the following states and transitions:</p>
+<pre><code>Queued → Running → Done/Succeeded
+         ↓          ↓
+         ↓       Failed
+         ↓          ↓
+       Canceled ←---┘
+</code></pre>
+<p><strong>Valid Transitions:</strong></p>
+<ul>
+<li><code>Queued → Running</code> - Job starts execution</li>
+<li><code>Queued → Canceled</code> - Job canceled before starting</li>
+<li><code>Running → Done/Succeeded</code> - Job completed successfully</li>
+<li><code>Running → Failed</code> - Job encountered an error</li>
+<li><code>Running → Canceled</code> - Job canceled during execution</li>
+</ul>
+<p><strong>Terminal States:</strong></p>
+<ul>
+<li><code>Done</code>/<code>Succeeded</code> - Successfully completed</li>
+<li><code>Failed</code> - Encountered an error</li>
+<li><code>Canceled</code> - User or system canceled</li>
+</ul>
+<p>Terminal states cannot transition to any other state.</p>
+<h3 id="timestamp-invariants">Timestamp Invariants</h3>
+<p>Jobs maintain the following timestamps with strict ordering:</p>
+<pre><code>CreatedUtc ≤ QueuedUtc ≤ StartedUtc ≤ EndedUtc
+                                      ↑
+                          CompletedUtc | CanceledUtc | FailedAt
+</code></pre>
+<p><strong>Timestamp Definitions:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Timestamp</th>
+<th>Set When</th>
+<th>Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CreatedUtc</code></td>
+<td>Job created</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><code>QueuedUtc</code></td>
+<td>Job enters queue (same as CreatedUtc)</td>
+<td>Always</td>
+</tr>
+<tr>
+<td><code>StartedUtc</code></td>
+<td>Job transitions to Running</td>
+<td>When started</td>
+</tr>
+<tr>
+<td><code>CompletedUtc</code></td>
+<td>Job transitions to Done/Succeeded</td>
+<td>When completed</td>
+</tr>
+<tr>
+<td><code>CanceledUtc</code></td>
+<td>Job transitions to Canceled</td>
+<td>When canceled</td>
+</tr>
+<tr>
+<td><code>EndedUtc</code></td>
+<td>Job enters terminal state</td>
+<td>Terminal states only</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ordering Rules:</strong></p>
+<ol>
+<li><code>CreatedUtc</code> is immutable and set on creation</li>
+<li><code>QueuedUtc</code> equals <code>CreatedUtc</code> for newly created jobs</li>
+<li><code>StartedUtc</code> must be ≥ <code>QueuedUtc</code></li>
+<li><code>CompletedUtc</code> must be ≥ <code>StartedUtc</code></li>
+<li><code>CanceledUtc</code> must be ≥ <code>StartedUtc</code> (if job was running)</li>
+<li><code>EndedUtc</code> is set to <code>CompletedUtc</code>, <code>CanceledUtc</code>, or failure timestamp</li>
+</ol>
+<h3 id="monotonic-progress">Monotonic Progress</h3>
+<p>Progress values must be <strong>monotonically increasing</strong>:</p>
+<ul>
+<li>Progress ranges from 0 to 100</li>
+<li>Once set, progress can only increase or stay the same</li>
+<li>Progress never decreases</li>
+<li>Attempting to set a lower progress value keeps the current value</li>
+</ul>
+<p><strong>Implementation:</strong></p>
+<pre><code class="lang-csharp">public Job WithMonotonicProgress(int newPercent)
+{
+    var safePercent = Math.Max(this.Percent, Math.Clamp(newPercent, 0, 100));
+    return this with { Percent = safePercent };
+}
+</code></pre>
+<h3 id="resumability-rules">Resumability Rules</h3>
+<p>Jobs may support resumption depending on the stage:</p>
+<p><strong>Resumable Stages:</strong></p>
+<ul>
+<li><code>Script</code> - Can resume after script generation</li>
+<li><code>Voice</code> - Can resume after TTS synthesis</li>
+<li><code>Visuals</code> - Can resume after visual generation</li>
+</ul>
+<p><strong>Non-Resumable Stages:</strong></p>
+<ul>
+<li><code>Rendering</code> - Atomic operation, cannot resume mid-render</li>
+<li><code>Initialization</code> - Too early to have meaningful checkpoints</li>
+</ul>
+<p><strong>Resume Support:</strong></p>
+<ul>
+<li><code>CanResume</code> flag indicates if job supports resumption</li>
+<li><code>LastCompletedStep</code> tracks the last successful checkpoint</li>
+<li>Resume starts from <code>LastCompletedStep</code>, skipping completed work</li>
+</ul>
+<h2 id="server-sent-events-sse-specification">Server-Sent Events (SSE) Specification</h2>
+<h3 id="event-types">Event Types</h3>
+<p>The SSE endpoint emits the following event types:</p>
+<table>
+<thead>
+<tr>
+<th>Event Type</th>
+<th>Purpose</th>
+<th>Data Structure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>job-status</code></td>
+<td>Overall job status changes</td>
+<td><code>{ status, stage, percent, correlationId }</code></td>
+</tr>
+<tr>
+<td><code>step-status</code></td>
+<td>Stage/phase transitions</td>
+<td><code>{ step, status, phase, correlationId }</code></td>
+</tr>
+<tr>
+<td><code>step-progress</code></td>
+<td>Progress within a step</td>
+<td><code>{ step, phase, progressPct, message, correlationId }</code></td>
+</tr>
+<tr>
+<td><code>warning</code></td>
+<td>Non-fatal warnings</td>
+<td><code>{ message, step, correlationId }</code></td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>Error occurred</td>
+<td><code>{ message, correlationId }</code></td>
+</tr>
+<tr>
+<td><code>job-completed</code></td>
+<td>Successful completion</td>
+<td><code>{ status, jobId, artifacts, output, correlationId }</code></td>
+</tr>
+<tr>
+<td><code>job-failed</code></td>
+<td>Job failure</td>
+<td><code>{ status, jobId, stage, errors, errorMessage, logs, correlationId }</code></td>
+</tr>
+<tr>
+<td><code>job-cancelled</code></td>
+<td>Job cancellation</td>
+<td><code>{ status, jobId, stage, message, correlationId }</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="event-ids">Event IDs</h3>
+<p>All SSE events include a unique event ID for reconnection support:</p>
+<p><strong>Format:</strong> <code>{timestamp}-{counter}</code></p>
+<p><strong>Example:</strong> <code>1704067200000-5</code></p>
+<p><strong>Properties:</strong></p>
+<ul>
+<li>Timestamp: Unix milliseconds (UTC)</li>
+<li>Counter: Incremental within the connection</li>
+<li>Event IDs are monotonically increasing</li>
+<li>Used for Last-Event-ID reconnection</li>
+</ul>
+<h3 id="stage-to-phase-mapping">Stage to Phase Mapping</h3>
+<p>Stages are mapped to high-level phases for consistent UI display:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Phase</th>
+<th>Progress Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initialization, Queued, Script, Planning, Brief</td>
+<td><code>plan</code></td>
+<td>0-15%</td>
+</tr>
+<tr>
+<td>TTS, Audio, Voice</td>
+<td><code>tts</code></td>
+<td>15-35%</td>
+</tr>
+<tr>
+<td>Visuals, Images, Assets</td>
+<td><code>visuals</code></td>
+<td>35-65%</td>
+</tr>
+<tr>
+<td>Composition, Timeline, Compose</td>
+<td><code>compose</code></td>
+<td>65-85%</td>
+</tr>
+<tr>
+<td>Rendering, Render, Encode</td>
+<td><code>render</code></td>
+<td>85-100%</td>
+</tr>
+<tr>
+<td>Complete, Done</td>
+<td><code>complete</code></td>
+<td>100%</td>
+</tr>
+<tr>
+<td>Unknown</td>
+<td><code>processing</code></td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h3 id="heartbeatkeepalive">Heartbeat/Keepalive</h3>
+<p>SSE connections send keepalive comments to prevent timeout:</p>
+<p><strong>Interval:</strong> 10 seconds</p>
+<p><strong>Format:</strong> <code>: keepalive: 2024-01-01T12:00:00.000Z\n\n</code></p>
+<p><strong>Purpose:</strong></p>
+<ul>
+<li>Detect broken connections</li>
+<li>Prevent proxy/load balancer timeouts</li>
+<li>Trigger reconnection if no heartbeat received</li>
+</ul>
+<h3 id="reconnection-protocol">Reconnection Protocol</h3>
+<p>SSE clients can recover from transient disconnections using Last-Event-ID:</p>
+<p><strong>Initial Connection:</strong></p>
+<pre><code>GET /api/jobs/{jobId}/events
+</code></pre>
+<p><strong>Reconnection (after disconnect):</strong></p>
+<pre><code>GET /api/jobs/{jobId}/events?lastEventId={lastEventId}
+</code></pre>
+<p><strong>Server Behavior:</strong></p>
+<ol>
+<li>Parse <code>lastEventId</code> from query parameter or <code>Last-Event-ID</code> header</li>
+<li>Send only events that occurred after <code>lastEventId</code></li>
+<li>Include event IDs in all subsequent events</li>
+</ol>
+<p><strong>Client Behavior:</strong></p>
+<ol>
+<li>Track <code>lastEventId</code> from each received event</li>
+<li>On disconnect, attempt reconnection with exponential backoff</li>
+<li>Include <code>lastEventId</code> in reconnection request</li>
+<li>Merge new events with existing state</li>
+<li>Enforce monotonic progress on client side</li>
+</ol>
+<p><strong>Backoff Strategy:</strong></p>
+<pre><code>Attempt 1: 1 second
+Attempt 2: 2 seconds
+Attempt 3: 4 seconds
+Attempt 4: 8 seconds
+Attempt 5: 16 seconds
+Max delay: 30 seconds
+Max attempts: 5
+</code></pre>
+<h3 id="progress-monotonicity-in-sse">Progress Monotonicity in SSE</h3>
+<p>SSE events may arrive out of order due to network conditions. Clients must enforce monotonic progress:</p>
+<p><strong>Client-Side Enforcement:</strong></p>
+<pre><code class="lang-typescript">let currentProgress = 0;
+
+sseClient.on('step-progress', (event) =&gt; {
+  const newProgress = event.data.progressPct;
+  
+  // Only accept if progress increases
+  if (newProgress &gt;= currentProgress) {
+    currentProgress = newProgress;
+    updateUI(currentProgress);
+  } else {
+    // Reject out-of-order event
+    console.debug(`Rejected progress ${newProgress}%, current is ${currentProgress}%`);
+  }
+});
+</code></pre>
+<h2 id="cancellation-and-cleanup">Cancellation and Cleanup</h2>
+<h3 id="cancellation-flow">Cancellation Flow</h3>
+<ol>
+<li>User clicks cancel button</li>
+<li>Frontend calls <code>POST /api/jobs/{jobId}/cancel</code></li>
+<li>Backend triggers cancellation token</li>
+<li>Orchestrator receives cancellation and stops processing</li>
+<li>Cleanup service removes temporary files and proxies</li>
+<li>Job status updated to <code>Canceled</code> with <code>CanceledUtc</code> timestamp</li>
+<li>SSE emits <code>job-cancelled</code> event</li>
+</ol>
+<h3 id="cleanup-operations">Cleanup Operations</h3>
+<p><strong>Temporary Files:</strong></p>
+<ul>
+<li>Location: <code>{LocalAppData}/Aura/temp/{jobId}/</code></li>
+<li>Cleaned on cancellation</li>
+<li>Cleaned on completion</li>
+<li>Orphaned files cleaned after 24 hours</li>
+</ul>
+<p><strong>Proxy Media:</strong></p>
+<ul>
+<li>Location: <code>{LocalAppData}/Aura/proxy/{jobId}/</code></li>
+<li>Cleaned on cancellation</li>
+<li>Cleaned on completion</li>
+<li>Orphaned files cleaned after 48 hours</li>
+</ul>
+<p><strong>Cleanup Guarantees:</strong></p>
+<ol>
+<li>Cleanup always attempted on cancellation</li>
+<li>Cleanup failures logged as warnings (non-fatal)</li>
+<li>Orphan sweeper runs periodically for missed cleanups</li>
+<li>Cancel endpoint returns <code>cleanupScheduled: true</code></li>
+</ol>
+<h3 id="preventing-downstream-work">Preventing Downstream Work</h3>
+<p>Cancellation prevents downstream work via:</p>
+<ol>
+<li><strong>CancellationToken</strong>: Passed to all async operations</li>
+<li><strong>Status Checks</strong>: Orchestrator checks job status before each stage</li>
+<li><strong>Token Propagation</strong>: Cancellation token linked to all child operations</li>
+<li><strong>Cleanup First</strong>: Temporary artifacts cleaned before final status update</li>
+</ol>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="sse-connection-errors">SSE Connection Errors</h3>
+<p><strong>Transient Errors</strong> (retry with backoff):</p>
+<ul>
+<li>Network timeout</li>
+<li>Connection reset</li>
+<li>Server temporarily unavailable</li>
+</ul>
+<p><strong>Permanent Errors</strong> (stop reconnecting):</p>
+<ul>
+<li>Job not found (404)</li>
+<li>Authorization failed (401/403)</li>
+<li>Max reconnection attempts exceeded</li>
+</ul>
+<p><strong>Error Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;event&quot;: &quot;error&quot;,
+  &quot;data&quot;: {
+    &quot;message&quot;: &quot;Connection error details&quot;,
+    &quot;correlationId&quot;: &quot;...&quot;
+  }
+}
+</code></pre>
+<h3 id="job-execution-errors">Job Execution Errors</h3>
+<p><strong>Recoverable Errors:</strong></p>
+<ul>
+<li>Provider API rate limits (retry with backoff)</li>
+<li>Temporary resource unavailability</li>
+<li>Network timeouts</li>
+</ul>
+<p><strong>Non-Recoverable Errors:</strong></p>
+<ul>
+<li>Invalid input data</li>
+<li>Missing dependencies</li>
+<li>Insufficient system resources</li>
+<li>Provider authentication failures</li>
+</ul>
+<p><strong>Error Reporting:</strong></p>
+<ol>
+<li>Error logged to job logs</li>
+<li><code>JobStepError</code> objects added to <code>job.Errors</code></li>
+<li><code>job.FailureDetails</code> populated with diagnostic info</li>
+<li>SSE emits <code>job-failed</code> event with error details</li>
+<li>Job transitions to <code>Failed</code> status</li>
+</ol>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p><strong>Job Model Tests:</strong></p>
+<ul>
+<li>State transition validation</li>
+<li>Timestamp ordering</li>
+<li>Monotonic progress enforcement</li>
+<li>Terminal state identification</li>
+<li>Resumability flags</li>
+</ul>
+<p><strong>SSE Client Tests:</strong></p>
+<ul>
+<li>Event ID generation</li>
+<li>Reconnection logic</li>
+<li>Backoff calculation</li>
+<li>Status tracking</li>
+</ul>
+<h3 id="e2e-tests">E2E Tests</h3>
+<p><strong>JobQueueStabilityTests (14 tests):</strong></p>
+<ul>
+<li>Monotonic progress through full lifecycle</li>
+<li>State transition invariants</li>
+<li>Timestamp ordering for successful jobs</li>
+<li>Timestamp ordering for canceled jobs</li>
+<li>Cleanup service integration</li>
+<li>Resumability tracking</li>
+</ul>
+<p><strong>SseResilienceTests (26 tests):</strong></p>
+<ul>
+<li>Event ID monotonicity</li>
+<li>Progress monotonicity with out-of-order events</li>
+<li>Reconnection with Last-Event-ID</li>
+<li>Heartbeat mechanism</li>
+<li>Stage-to-phase mapping (21 combinations)</li>
+<li>Event type consistency</li>
+<li>Error recovery with exponential backoff</li>
+</ul>
+<h3 id="manual-testing-scenarios">Manual Testing Scenarios</h3>
+<p><strong>SSE Disconnection:</strong></p>
+<ol>
+<li>Start a long-running job</li>
+<li>Disconnect network</li>
+<li>Reconnect network</li>
+<li>Verify: SSE resumes with Last-Event-ID</li>
+<li>Verify: Progress continues from last known state</li>
+<li>Verify: No duplicate events processed</li>
+</ol>
+<p><strong>Job Cancellation:</strong></p>
+<ol>
+<li>Start a job</li>
+<li>Cancel at 40% progress</li>
+<li>Verify: Status changes to Canceled</li>
+<li>Verify: Temporary files cleaned up</li>
+<li>Verify: Proxy files cleaned up</li>
+<li>Verify: CanceledUtc timestamp set</li>
+<li>Verify: EndedUtc equals CanceledUtc</li>
+</ol>
+<p><strong>Monotonic Progress:</strong></p>
+<ol>
+<li>Start a job</li>
+<li>Induce out-of-order SSE events (network delay)</li>
+<li>Verify: Progress never decreases in UI</li>
+<li>Verify: Out-of-order events logged and rejected</li>
+<li>Verify: Final progress reaches 100%</li>
+</ol>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="sse-connection-management">SSE Connection Management</h3>
+<ul>
+<li>Max 1 SSE connection per job</li>
+<li>Connections closed when job reaches terminal state</li>
+<li>Heartbeat interval optimized for connection liveness vs. bandwidth</li>
+<li>Event batching not implemented (real-time updates prioritized)</li>
+</ul>
+<h3 id="cleanup-performance">Cleanup Performance</h3>
+<ul>
+<li>Cleanup is asynchronous and non-blocking</li>
+<li>Failed cleanup logged but doesn't fail job</li>
+<li>Orphan sweeper runs daily, not on demand</li>
+<li>Large file cleanup may take seconds</li>
+</ul>
+<h3 id="progress-update-frequency">Progress Update Frequency</h3>
+<ul>
+<li>Progress updated on meaningful milestones (not every 1%)</li>
+<li>SSE events sent on progress change (debounced to 500ms)</li>
+<li>Backend polls job state every 500ms</li>
+<li>UI throttles progress bar updates to 60 FPS</li>
+</ul>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="sse-authentication">SSE Authentication</h3>
+<ul>
+<li>SSE connections inherit HTTP session authentication</li>
+<li>No additional auth required per event</li>
+<li>Connection URL includes job ID for authorization</li>
+</ul>
+<h3 id="correlation-ids">Correlation IDs</h3>
+<ul>
+<li>All events include correlation ID for request tracing</li>
+<li>Correlation IDs logged for debugging</li>
+<li>Never include sensitive data in correlation IDs</li>
+</ul>
+<h3 id="cleanup-security">Cleanup Security</h3>
+<ul>
+<li>Cleanup service validates job ownership</li>
+<li>Directory traversal prevention (no relative paths)</li>
+<li>Cleanup limited to known directories</li>
+<li>No arbitrary file deletion</li>
+</ul>
+<h2 id="version-history">Version History</h2>
+<ul>
+<li><strong>v1.0</strong> (2024-01) - Initial specification
+<ul>
+<li>State machine with monotonic progress</li>
+<li>SSE with Last-Event-ID support</li>
+<li>Cancellation with cleanup</li>
+<li>Resumability support</li>
+</ul>
+</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/JOB_QUEUE_SSE_SPEC.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

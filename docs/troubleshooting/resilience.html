@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Resilience and Error Recovery | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Resilience and Error Recovery | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/resilience.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="resilience-and-error-recovery">Resilience and Error Recovery</h1>
+
+<p>This guide explains Aura's resilience features including circuit breakers, retries, and automatic error recovery.</p>
+<h2 id="quick-navigation">Quick Navigation</h2>
+<ul>
+<li><a href="#circuit-breaker">Circuit Breaker</a></li>
+<li><a href="#retry-policies">Retry Policies</a></li>
+<li><a href="#error-recovery">Error Recovery</a></li>
+<li><a href="#fallback-strategies">Fallback Strategies</a></li>
+</ul>
+<hr>
+<h2 id="circuit-breaker">Circuit Breaker</h2>
+<h3 id="what-is-a-circuit-breaker">What is a Circuit Breaker?</h3>
+<p>A circuit breaker prevents repeated calls to a failing service, allowing it time to recover. It has three states:</p>
+<ol>
+<li><strong>Closed</strong> (Normal): Requests pass through</li>
+<li><strong>Open</strong> (Failing): Requests blocked, fail fast</li>
+<li><strong>Half-Open</strong> (Testing): Limited requests to test recovery</li>
+</ol>
+<h3 id="circuit-breaker-error">Circuit Breaker Error</h3>
+<p><strong>Error Code</strong>: <strong>CIRCUIT_OPEN</strong></p>
+<p><strong>Error Message</strong>: &quot;Service temporarily unavailable due to repeated failures. It will automatically recover.&quot;</p>
+<p><strong>What This Means</strong>:</p>
+<ul>
+<li>The provider has failed multiple times</li>
+<li>Circuit breaker has opened to prevent further failures</li>
+<li>Service is temporarily unavailable</li>
+<li>Will automatically attempt recovery</li>
+</ul>
+<h3 id="how-long-is-service-unavailable">How Long is Service Unavailable?</h3>
+<p><strong>Default Settings</strong>:</p>
+<ul>
+<li>Circuit opens after: 5 consecutive failures</li>
+<li>Circuit stays open: 30 seconds</li>
+<li>Half-open test period: 10 seconds</li>
+</ul>
+<h3 id="solutions">Solutions</h3>
+<h4 id="1-wait-for-automatic-recovery">1. Wait for Automatic Recovery</h4>
+<p><strong>Best approach</strong> - Circuit breaker will automatically:</p>
+<ol>
+<li>Wait for recovery period (30s default)</li>
+<li>Enter half-open state</li>
+<li>Test with a single request</li>
+<li>If successful: Close circuit (normal operation)</li>
+<li>If fails: Re-open circuit for another period</li>
+</ol>
+<p><strong>No action needed</strong> - Just wait a minute and retry.</p>
+<h4 id="2-check-provider-status">2. Check Provider Status</h4>
+<p>While waiting, check if provider has known issues:</p>
+<ul>
+<li>OpenAI: <a href="https://status.openai.com/">https://status.openai.com/</a></li>
+<li>Anthropic: <a href="https://status.anthropic.com/">https://status.anthropic.com/</a></li>
+<li>Other providers: Check their status pages</li>
+</ul>
+<h4 id="3-use-alternative-provider">3. Use Alternative Provider</h4>
+<p>Switch to a working provider:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;LLM&quot;: {
+      &quot;Primary&quot;: &quot;OpenAI&quot;,
+      &quot;Fallback&quot;: [&quot;Anthropic&quot;, &quot;LocalLLM&quot;]
+    }
+  }
+}
+</code></pre>
+<p>Or manually change provider in UI:</p>
+<ol>
+<li>Settings → Providers</li>
+<li>Select different provider</li>
+<li>Retry operation</li>
+</ol>
+<h4 id="4-adjust-circuit-breaker-settings">4. Adjust Circuit Breaker Settings</h4>
+<p>If circuit opens too aggressively:</p>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;CircuitBreaker&quot;: {
+      &quot;FailureThreshold&quot;: 5,        // Open after N failures
+      &quot;SamplingDuration&quot;: 60,       // In N seconds
+      &quot;MinimumThroughput&quot;: 3,       // Min requests before breaking
+      &quot;BreakDuration&quot;: 30,          // Stay open for N seconds
+      &quot;SuccessThreshold&quot;: 2         // Half-open: succeed N times to close
+    }
+  }
+}
+</code></pre>
+<p><strong>Conservative Settings</strong> (less aggressive):</p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;FailureThreshold&quot;: 10,    // Allow more failures
+    &quot;BreakDuration&quot;: 60       // Longer recovery time
+  }
+}
+</code></pre>
+<p><strong>Aggressive Settings</strong> (fail fast):</p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;FailureThreshold&quot;: 3,     // Open quickly
+    &quot;BreakDuration&quot;: 15        // Shorter recovery time
+  }
+}
+</code></pre>
+<h4 id="5-disable-circuit-breaker-not-recommended">5. Disable Circuit Breaker (NOT RECOMMENDED)</h4>
+<p>Only for debugging:</p>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;CircuitBreaker&quot;: {
+      &quot;Enabled&quot;: false  // All requests will be attempted
+    }
+  }
+}
+</code></pre>
+<p><strong>Warning</strong>: Disabling circuit breaker can lead to:</p>
+<ul>
+<li>Cascading failures</li>
+<li>Resource exhaustion</li>
+<li>Longer recovery times</li>
+<li>Higher costs (failed API calls may still be charged)</li>
+</ul>
+<h3 id="monitor-circuit-breaker-state">Monitor Circuit Breaker State</h3>
+<h4 id="via-api">Via API</h4>
+<pre><code class="lang-bash">GET /api/diagnostics/circuit-breakers
+</code></pre>
+<p>Response:</p>
+<pre><code class="lang-json">{
+  &quot;circuitBreakers&quot;: [
+    {
+      &quot;name&quot;: &quot;OpenAI-LLM&quot;,
+      &quot;state&quot;: &quot;Open&quot;,
+      &quot;failureCount&quot;: 5,
+      &quot;lastFailure&quot;: &quot;2024-01-15T10:30:00Z&quot;,
+      &quot;nextAttempt&quot;: &quot;2024-01-15T10:30:30Z&quot;
+    }
+  ]
+}
+</code></pre>
+<h4 id="via-ui">Via UI</h4>
+<ol>
+<li>Settings → Diagnostics</li>
+<li>View &quot;Resilience&quot; tab</li>
+<li>See circuit breaker states for each provider</li>
+</ol>
+<h4 id="via-logs">Via Logs</h4>
+<pre><code class="lang-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Aura.Core.Resilience&quot;: &quot;Debug&quot;
+    }
+  }
+}
+</code></pre>
+<p>Look for log entries:</p>
+<pre><code>[Circuit Breaker] OpenAI-LLM: State changed to Open
+[Circuit Breaker] OpenAI-LLM: Will attempt recovery in 30s
+[Circuit Breaker] OpenAI-LLM: Entering Half-Open state
+[Circuit Breaker] OpenAI-LLM: State changed to Closed (recovered)
+</code></pre>
+<hr>
+<h2 id="retry-policies">Retry Policies</h2>
+<h3 id="automatic-retry">Automatic Retry</h3>
+<p>Aura automatically retries failed requests with exponential backoff.</p>
+<h3 id="retry-exhausted-error">Retry Exhausted Error</h3>
+<p><strong>Error Code</strong>: <strong>RETRY_EXHAUSTED</strong></p>
+<p><strong>Error Message</strong>: &quot;All retry attempts have been exhausted for this operation&quot;</p>
+<p><strong>What This Means</strong>:</p>
+<ul>
+<li>Request failed</li>
+<li>All automatic retries also failed</li>
+<li>Manual intervention may be needed</li>
+</ul>
+<h3 id="how-many-retries">How Many Retries?</h3>
+<p><strong>Default Settings</strong>:</p>
+<ul>
+<li>Max retry attempts: 3</li>
+<li>Initial delay: 1 second</li>
+<li>Backoff multiplier: 2x (exponential)</li>
+<li>Max delay: 30 seconds</li>
+</ul>
+<p><strong>Timeline Example</strong>:</p>
+<ol>
+<li>Initial request: Fails</li>
+<li>Retry 1: After 1s → Fails</li>
+<li>Retry 2: After 2s → Fails</li>
+<li>Retry 3: After 4s → Fails</li>
+<li>Error returned: &quot;RETRY_EXHAUSTED&quot;</li>
+</ol>
+<p>Total time: ~7 seconds before giving up</p>
+<h3 id="solutions-1">Solutions</h3>
+<h4 id="1-wait-and-retry-manually">1. Wait and Retry Manually</h4>
+<p>If retries exhausted:</p>
+<ol>
+<li>Wait a minute for provider to stabilize</li>
+<li>Retry your operation manually</li>
+<li>Check provider status page</li>
+</ol>
+<h4 id="2-increase-retry-attempts">2. Increase Retry Attempts</h4>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;Retry&quot;: {
+      &quot;MaxRetryAttempts&quot;: 5,    // Increase from 3
+      &quot;InitialDelay&quot;: 1000,     // 1 second
+      &quot;MaxDelay&quot;: 60000,        // 60 seconds max
+      &quot;BackoffMultiplier&quot;: 2    // Exponential: 1s, 2s, 4s, 8s, 16s
+    }
+  }
+}
+</code></pre>
+<h4 id="3-adjust-retry-delay">3. Adjust Retry Delay</h4>
+<p><strong>Slower retries</strong> (better for rate limits):</p>
+<pre><code class="lang-json">{
+  &quot;Retry&quot;: {
+    &quot;InitialDelay&quot;: 5000,      // Start at 5s
+    &quot;BackoffMultiplier&quot;: 3     // 5s, 15s, 45s
+  }
+}
+</code></pre>
+<p><strong>Faster retries</strong> (better for transient errors):</p>
+<pre><code class="lang-json">{
+  &quot;Retry&quot;: {
+    &quot;InitialDelay&quot;: 500,       // Start at 0.5s
+    &quot;BackoffMultiplier&quot;: 1.5   // 0.5s, 0.75s, 1.125s
+  }
+}
+</code></pre>
+<h4 id="4-configure-per-provider-retries">4. Configure Per-Provider Retries</h4>
+<p>Different providers may need different retry strategies:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;Retry&quot;: {
+        &quot;MaxRetryAttempts&quot;: 5,
+        &quot;InitialDelay&quot;: 2000
+      }
+    },
+    &quot;Anthropic&quot;: {
+      &quot;Retry&quot;: {
+        &quot;MaxRetryAttempts&quot;: 3,
+        &quot;InitialDelay&quot;: 5000
+      }
+    }
+  }
+}
+</code></pre>
+<h4 id="5-handle-specific-error-types">5. Handle Specific Error Types</h4>
+<p>Configure retries for specific errors:</p>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;Retry&quot;: {
+      &quot;RetryableErrors&quot;: [
+        &quot;TransientNetworkFailure&quot;,
+        &quot;Timeout&quot;,
+        &quot;RateLimitExceeded&quot;,
+        &quot;ServiceUnavailable&quot;
+      ],
+      &quot;NonRetryableErrors&quot;: [
+        &quot;InvalidApiKey&quot;,
+        &quot;InvalidInput&quot;,
+        &quot;QuotaExceeded&quot;
+      ]
+    }
+  }
+}
+</code></pre>
+<h3 id="when-not-to-retry">When NOT to Retry</h3>
+<p>Retries are skipped for:</p>
+<ul>
+<li><strong>Authentication errors</strong>: API key invalid/expired</li>
+<li><strong>Validation errors</strong>: Bad input that won't change</li>
+<li><strong>Quota exceeded</strong>: Need to upgrade or wait</li>
+<li><strong>Permanent failures</strong>: 4xx errors (except 429 rate limit)</li>
+</ul>
+<hr>
+<h2 id="error-recovery">Error Recovery</h2>
+<h3 id="automatic-recovery-features">Automatic Recovery Features</h3>
+<p>Aura includes several automatic recovery mechanisms:</p>
+<h4 id="1-graceful-degradation">1. Graceful Degradation</h4>
+<p>When a feature fails, fall back to simpler operation:</p>
+<pre><code class="lang-json">{
+  &quot;Features&quot;: {
+    &quot;GracefulDegradation&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;FallbackToBasic&quot;: true
+    }
+  }
+}
+</code></pre>
+<p>Examples:</p>
+<ul>
+<li>Image generation fails → Use placeholder image</li>
+<li>TTS fails → Use system TTS or text display</li>
+<li>LLM fails → Use template or manual input</li>
+</ul>
+<h4 id="2-partial-success-handling">2. Partial Success Handling</h4>
+<p>When batch operation partially succeeds:</p>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;PartialSuccess&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;ReturnPartialResults&quot;: true,
+      &quot;RetryFailedOnly&quot;: true
+    }
+  }
+}
+</code></pre>
+<p>Example: Generating 10 images</p>
+<ul>
+<li>7 succeed</li>
+<li>3 fail</li>
+<li>Return 7 successful images</li>
+<li>Retry only the 3 failed ones</li>
+</ul>
+<h4 id="3-state-persistence">3. State Persistence</h4>
+<p>Save progress to recover from crashes:</p>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;StatePersistence&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;SaveInterval&quot;: 30,  // Save every 30 seconds
+      &quot;AutoResume&quot;: true   // Resume on restart
+    }
+  }
+}
+</code></pre>
+<h4 id="4-checkpointing">4. Checkpointing</h4>
+<p>For long operations, save checkpoints:</p>
+<pre><code class="lang-json">{
+  &quot;Rendering&quot;: {
+    &quot;Checkpoints&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;Interval&quot;: 60,       // Every 60 seconds
+      &quot;ResumeFromCheckpoint&quot;: true
+    }
+  }
+}
+</code></pre>
+<p>If rendering fails:</p>
+<ul>
+<li>Resume from last checkpoint</li>
+<li>Don't start from beginning</li>
+<li>Save time and resources</li>
+</ul>
+<hr>
+<h2 id="fallback-strategies">Fallback Strategies</h2>
+<h3 id="provider-fallback">Provider Fallback</h3>
+<p>Automatically switch to alternative provider:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;LLM&quot;: {
+      &quot;FallbackEnabled&quot;: true,
+      &quot;Providers&quot;: [
+        {
+          &quot;Name&quot;: &quot;OpenAI&quot;,
+          &quot;Priority&quot;: 1,
+          &quot;Enabled&quot;: true
+        },
+        {
+          &quot;Name&quot;: &quot;Anthropic&quot;,
+          &quot;Priority&quot;: 2,
+          &quot;Enabled&quot;: true
+        },
+        {
+          &quot;Name&quot;: &quot;LocalLLM&quot;,
+          &quot;Priority&quot;: 3,
+          &quot;Enabled&quot;: true
+        }
+      ],
+      &quot;FallbackTriggers&quot;: [
+        &quot;ServiceUnavailable&quot;,
+        &quot;RateLimitExceeded&quot;,
+        &quot;CircuitOpen&quot;
+      ]
+    }
+  }
+}
+</code></pre>
+<p><strong>Fallback Flow</strong>:</p>
+<ol>
+<li>Try OpenAI (Priority 1)</li>
+<li>If fails with trigger error → Try Anthropic (Priority 2)</li>
+<li>If fails → Try LocalLLM (Priority 3)</li>
+<li>If all fail → Return error</li>
+</ol>
+<h3 id="quality-fallback">Quality Fallback</h3>
+<p>Reduce quality to complete operation:</p>
+<pre><code class="lang-json">{
+  &quot;Quality&quot;: {
+    &quot;FallbackEnabled&quot;: true,
+    &quot;Levels&quot;: [
+      {
+        &quot;Name&quot;: &quot;High&quot;,
+        &quot;Resolution&quot;: &quot;1920x1080&quot;,
+        &quot;Bitrate&quot;: &quot;5M&quot;,
+        &quot;Priority&quot;: 1
+      },
+      {
+        &quot;Name&quot;: &quot;Medium&quot;,
+        &quot;Resolution&quot;: &quot;1280x720&quot;,
+        &quot;Bitrate&quot;: &quot;3M&quot;,
+        &quot;Priority&quot;: 2
+      },
+      {
+        &quot;Name&quot;: &quot;Low&quot;,
+        &quot;Resolution&quot;: &quot;854x480&quot;,
+        &quot;Bitrate&quot;: &quot;1M&quot;,
+        &quot;Priority&quot;: 3
+      }
+    ]
+  }
+}
+</code></pre>
+<p>Example:</p>
+<ul>
+<li>Try high quality export</li>
+<li>If fails (insufficient resources) → Try medium</li>
+<li>If fails → Try low</li>
+<li>Complete with lower quality rather than fail</li>
+</ul>
+<h3 id="cached-response-fallback">Cached Response Fallback</h3>
+<p>Use cached responses when provider unavailable:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;CacheFallback&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;UseCacheOnError&quot;: true,
+      &quot;CacheExpiration&quot;: 86400  // 24 hours
+    }
+  }
+}
+</code></pre>
+<hr>
+<h2 id="timeout-configuration">Timeout Configuration</h2>
+<h3 id="timeout-hierarchy">Timeout Hierarchy</h3>
+<ol>
+<li><strong>Request timeout</strong>: Single HTTP request</li>
+<li><strong>Operation timeout</strong>: Entire operation (may include multiple requests)</li>
+<li><strong>Job timeout</strong>: Long-running background job</li>
+</ol>
+<pre><code class="lang-json">{
+  &quot;Timeouts&quot;: {
+    &quot;Request&quot;: 30000,      // 30 seconds
+    &quot;Operation&quot;: 300000,   // 5 minutes
+    &quot;Job&quot;: 3600000        // 1 hour
+  }
+}
+</code></pre>
+<h3 id="adjust-timeouts">Adjust Timeouts</h3>
+<h4 id="short-operations-api-calls">Short Operations (API calls)</h4>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;RequestTimeout&quot;: 30000,    // 30s
+      &quot;OperationTimeout&quot;: 60000   // 1m
+    }
+  }
+}
+</code></pre>
+<h4 id="long-operations-tts-generation">Long Operations (TTS generation)</h4>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;ElevenLabs&quot;: {
+      &quot;RequestTimeout&quot;: 120000,   // 2m
+      &quot;OperationTimeout&quot;: 300000  // 5m
+    }
+  }
+}
+</code></pre>
+<h4 id="very-long-operations-rendering">Very Long Operations (Rendering)</h4>
+<pre><code class="lang-json">{
+  &quot;Rendering&quot;: {
+    &quot;JobTimeout&quot;: 7200000  // 2 hours
+  }
+}
+</code></pre>
+<h3 id="infinite-timeout-use-carefully">Infinite Timeout (Use Carefully)</h3>
+<p>For operations that must complete:</p>
+<pre><code class="lang-json">{
+  &quot;Timeouts&quot;: {
+    &quot;Job&quot;: 0  // No timeout (wait forever)
+  }
+}
+</code></pre>
+<p><strong>Warning</strong>: Can lead to hung processes if operation truly fails.</p>
+<hr>
+<h2 id="health-checks">Health Checks</h2>
+<h3 id="enable-health-monitoring">Enable Health Monitoring</h3>
+<pre><code class="lang-json">{
+  &quot;HealthChecks&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;Interval&quot;: 60000,  // Check every minute
+    &quot;Providers&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;TestConnection&quot;: true
+    },
+    &quot;FFmpeg&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;TestExecution&quot;: true
+    }
+  }
+}
+</code></pre>
+<h3 id="health-check-endpoint">Health Check Endpoint</h3>
+<pre><code class="lang-bash">GET /api/health
+
+# Response
+{
+  &quot;status&quot;: &quot;Healthy&quot;,
+  &quot;checks&quot;: {
+    &quot;database&quot;: &quot;Healthy&quot;,
+    &quot;ffmpeg&quot;: &quot;Healthy&quot;,
+    &quot;openai&quot;: &quot;Degraded&quot;,  // Circuit open
+    &quot;anthropic&quot;: &quot;Healthy&quot;
+  }
+}
+</code></pre>
+<h3 id="automated-recovery-actions">Automated Recovery Actions</h3>
+<p>Trigger actions based on health status:</p>
+<pre><code class="lang-json">{
+  &quot;HealthChecks&quot;: {
+    &quot;AutomaticRecovery&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;Actions&quot;: {
+        &quot;RestartOnUnhealthy&quot;: false,  // Don't auto-restart
+        &quot;SwitchProvider&quot;: true,       // Switch to fallback
+        &quot;NotifyUser&quot;: true,          // Show notification
+        &quot;LogErrors&quot;: true            // Log for debugging
+      }
+    }
+  }
+}
+</code></pre>
+<hr>
+<h2 id="monitoring-and-alerts">Monitoring and Alerts</h2>
+<h3 id="enable-resilience-monitoring">Enable Resilience Monitoring</h3>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;Resilience&quot;: {
+      &quot;Enabled&quot;: true,
+      &quot;TrackCircuitBreakerState&quot;: true,
+      &quot;TrackRetryAttempts&quot;: true,
+      &quot;TrackFallbacks&quot;: true,
+      &quot;AlertOnCircuitOpen&quot;: true,
+      &quot;AlertOnRetriesExhausted&quot;: true
+    }
+  }
+}
+</code></pre>
+<h3 id="view-resilience-metrics">View Resilience Metrics</h3>
+<ol>
+<li>Settings → Diagnostics → Resilience</li>
+<li>View:
+<ul>
+<li>Circuit breaker states</li>
+<li>Retry statistics</li>
+<li>Fallback usage</li>
+<li>Recovery success rate</li>
+</ul>
+</li>
+</ol>
+<h3 id="export-metrics">Export Metrics</h3>
+<pre><code class="lang-bash">GET /api/diagnostics/resilience/metrics
+
+# Response
+{
+  &quot;circuitBreakers&quot;: {
+    &quot;total&quot;: 5,
+    &quot;closed&quot;: 4,
+    &quot;open&quot;: 1,
+    &quot;halfOpen&quot;: 0
+  },
+  &quot;retries&quot;: {
+    &quot;total&quot;: 150,
+    &quot;successful&quot;: 120,
+    &quot;failed&quot;: 30,
+    &quot;averageAttempts&quot;: 1.5
+  },
+  &quot;fallbacks&quot;: {
+    &quot;total&quot;: 10,
+    &quot;successful&quot;: 9,
+    &quot;failed&quot;: 1
+  }
+}
+</code></pre>
+<hr>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-configure-appropriately-for-your-use-case">1. Configure Appropriately for Your Use Case</h3>
+<p><strong>High-Volume Production</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;FailureThreshold&quot;: 5,
+    &quot;BreakDuration&quot;: 30
+  },
+  &quot;Retry&quot;: {
+    &quot;MaxRetryAttempts&quot;: 5,
+    &quot;InitialDelay&quot;: 2000
+  },
+  &quot;Fallback&quot;: {
+    &quot;Enabled&quot;: true
+  }
+}
+</code></pre>
+<p><strong>Development/Testing</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;Enabled&quot;: false  // See all errors
+  },
+  &quot;Retry&quot;: {
+    &quot;MaxRetryAttempts&quot;: 1  // Fail fast
+  }
+}
+</code></pre>
+<h3 id="2-monitor-and-adjust">2. Monitor and Adjust</h3>
+<ul>
+<li>Watch circuit breaker metrics</li>
+<li>If opens frequently: Increase threshold or duration</li>
+<li>If never opens: May be too lenient</li>
+</ul>
+<h3 id="3-use-multiple-providers">3. Use Multiple Providers</h3>
+<ul>
+<li>Configure fallbacks for critical operations</li>
+<li>Distribute load across providers</li>
+<li>Reduce dependency on single service</li>
+</ul>
+<h3 id="4-test-failure-scenarios">4. Test Failure Scenarios</h3>
+<pre><code class="lang-json">{
+  &quot;Testing&quot;: {
+    &quot;SimulateFailures&quot;: true,
+    &quot;FailureRate&quot;: 0.1  // 10% of requests fail
+  }
+}
+</code></pre>
+<p>Verify resilience works as expected.</p>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="provider-errors.html">Provider Errors</a></li>
+<li><a href="network-errors.html">Network Errors</a></li>
+<li><a href="Troubleshooting.html">General Troubleshooting</a></li>
+<li><a href="../../ERROR_HANDLING_GUIDE.html">Error Handling Guide</a></li>
+</ul>
+<h2 id="need-more-help">Need More Help?</h2>
+<p>If resilience features aren't working as expected:</p>
+<ol>
+<li>Enable resilience logging:
+<pre><code class="lang-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Aura.Core.Resilience&quot;: &quot;Debug&quot;
+    }
+  }
+}
+</code></pre>
+</li>
+<li>Check circuit breaker state via API or UI</li>
+<li>Review retry attempt logs</li>
+<li>Adjust settings based on your specific needs</li>
+<li>Check <a href="https://github.com/Coffee285/aura-video-studio/issues">GitHub Issues</a></li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/resilience.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

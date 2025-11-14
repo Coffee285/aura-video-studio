@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>TTS and Captions with DSP Chain | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="TTS and Captions with DSP Chain | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/TTS-and-Captions.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="tts-and-captions-with-dsp-chain">TTS and Captions with DSP Chain</h1>
+
+<p>This document describes the TTS (Text-to-Speech) pipeline and caption generation features, including the DSP (Digital Signal Processing) chain for audio normalization.</p>
+<h2 id="overview">Overview</h2>
+<p>The TTS and Captions system provides:</p>
+<ol>
+<li><strong>Multiple TTS Providers</strong>: Windows SAPI (free), ElevenLabs, and PlayHT (with API keys)</li>
+<li><strong>DSP Chain</strong>: Professional audio processing pipeline for loudness normalization</li>
+<li><strong>Caption Generation</strong>: Export SRT and VTT subtitles with optional burn-in</li>
+<li><strong>Timecode Validation</strong>: Ensures captions align precisely with script line durations</li>
+</ol>
+<h2 id="tts-providers">TTS Providers</h2>
+<h3 id="windows-sapi-free">Windows SAPI (Free)</h3>
+<p>Windows Speech API provides free text-to-speech synthesis on Windows 10+.</p>
+<pre><code class="lang-csharp">// Registered in DI container
+var ttsProvider = serviceProvider.GetRequiredService&lt;ITtsProvider&gt;();
+
+var lines = new List&lt;ScriptLine&gt;
+{
+    new ScriptLine(0, &quot;Hello world&quot;, TimeSpan.Zero, TimeSpan.FromSeconds(2))
+};
+
+var voiceSpec = new VoiceSpec(
+    VoiceName: &quot;Microsoft David Desktop&quot;,
+    Rate: 1.0,
+    Pitch: 0.0,
+    Pause: PauseStyle.Natural
+);
+
+string audioPath = await ttsProvider.SynthesizeAsync(lines, voiceSpec, cancellationToken);
+</code></pre>
+<h3 id="elevenlabs-pro">ElevenLabs (Pro)</h3>
+<p>High-quality TTS with natural voices. Requires API key.</p>
+<pre><code class="lang-json">{
+  &quot;elevenLabsApiKey&quot;: &quot;your-api-key-here&quot;
+}
+</code></pre>
+<h3 id="playht-pro">PlayHT (Pro)</h3>
+<p>Professional TTS service. Requires API key and user ID.</p>
+<pre><code class="lang-json">{
+  &quot;playHTApiKey&quot;: &quot;your-api-key-here&quot;,
+  &quot;playHTUserId&quot;: &quot;your-user-id-here&quot;
+}
+</code></pre>
+<h2 id="dsp-chain">DSP Chain</h2>
+<p>The DSP chain normalizes audio to broadcast standards with the following stages:</p>
+<h3 id="stage-1-high-pass-filter-hpf">Stage 1: High-Pass Filter (HPF)</h3>
+<ul>
+<li>Removes low-frequency rumble below 80Hz</li>
+<li>Cleans up unwanted bass frequencies</li>
+</ul>
+<h3 id="stage-2-de-esser">Stage 2: De-esser</h3>
+<ul>
+<li>Reduces harsh sibilance in 6-8kHz range</li>
+<li>Makes speech easier to listen to</li>
+</ul>
+<h3 id="stage-3-compressor">Stage 3: Compressor</h3>
+<ul>
+<li>Dynamic range compression (ratio 3:1, threshold -18dB)</li>
+<li>Evens out volume differences</li>
+<li>Attack: 20ms, Release: 250ms, Makeup: 6dB</li>
+</ul>
+<h3 id="stage-4-limiter">Stage 4: Limiter</h3>
+<ul>
+<li>Prevents peaks from exceeding ceiling (-1 dBFS default)</li>
+<li>Attack: 5ms, Release: 50ms</li>
+</ul>
+<h3 id="stage-5-lufs-normalization">Stage 5: LUFS Normalization</h3>
+<ul>
+<li>Target loudness: -14 LUFS (YouTube standard)</li>
+<li>Alternative targets: -16 LUFS (voice-only), -12 LUFS (music-forward)</li>
+<li>Peak ceiling: -1 dBFS to prevent clipping</li>
+</ul>
+<h3 id="usage">Usage</h3>
+<pre><code class="lang-csharp">var dspChain = serviceProvider.GetRequiredService&lt;DspChain&gt;();
+
+// Build filter chain for YouTube
+string filterChain = dspChain.BuildDspFilterChain(
+    targetLufs: -14.0,
+    peakCeiling: -1.0,
+    enableHpf: true,
+    enableDeEsser: true,
+    enableCompressor: true,
+    enableLimiter: true
+);
+
+// Use with FFmpeg
+// ffmpeg -i input.wav -af &quot;{filterChain}&quot; output.aac
+</code></pre>
+<h3 id="validation">Validation</h3>
+<pre><code class="lang-csharp">bool isValid = dspChain.ValidateLoudness(
+    measuredLufs: -14.2,
+    measuredPeak: -1.5,
+    targetLufs: -14.0,
+    peakCeiling: -1.0,
+    out string? message,
+    tolerance: 1.0  // Accept ±1 dB
+);
+</code></pre>
+<h3 id="recommended-lufs-targets">Recommended LUFS Targets</h3>
+<pre><code class="lang-csharp">double lufs = dspChain.GetRecommendedLufs(&quot;youtube&quot;);  // -14.0 LUFS
+double lufs = dspChain.GetRecommendedLufs(&quot;voice&quot;);    // -16.0 LUFS
+double lufs = dspChain.GetRecommendedLufs(&quot;music&quot;);    // -12.0 LUFS
+</code></pre>
+<h2 id="caption-generation">Caption Generation</h2>
+<h3 id="generating-captions">Generating Captions</h3>
+<pre><code class="lang-csharp">var captionBuilder = serviceProvider.GetRequiredService&lt;CaptionBuilder&gt;();
+
+var lines = new List&lt;ScriptLine&gt;
+{
+    new ScriptLine(0, &quot;Hello world&quot;, TimeSpan.Zero, TimeSpan.FromSeconds(2)),
+    new ScriptLine(1, &quot;This is a test&quot;, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3))
+};
+
+// Generate SRT (SubRip)
+string srt = captionBuilder.GenerateSrt(lines);
+
+// Generate VTT (WebVTT)
+string vtt = captionBuilder.GenerateVtt(lines);
+</code></pre>
+<h3 id="srt-format">SRT Format</h3>
+<pre><code class="lang-srt">1
+00:00:00,000 --&gt; 00:00:02,000
+Hello world
+
+2
+00:00:02,000 --&gt; 00:00:05,000
+This is a test
+</code></pre>
+<h3 id="vtt-format">VTT Format</h3>
+<pre><code class="lang-vtt">WEBVTT
+
+00:00:00.000 --&gt; 00:00:02.000
+Hello world
+
+00:00:02.000 --&gt; 00:00:05.000
+This is a test
+</code></pre>
+<h3 id="burn-in-captions">Burn-in Captions</h3>
+<p>For hardcoding captions into video:</p>
+<pre><code class="lang-csharp">var style = new CaptionRenderStyle(
+    FontName: &quot;Arial&quot;,
+    FontSize: 24,
+    PrimaryColor: &quot;FFFFFF&quot;,    // White text
+    OutlineColor: &quot;000000&quot;,    // Black outline
+    OutlineWidth: 2,
+    BorderStyle: 3,            // Opaque box
+    Alignment: 2               // Bottom center
+);
+
+string filter = captionBuilder.BuildBurnInFilter(&quot;subtitles.srt&quot;, style);
+
+// Use with FFmpeg
+// ffmpeg -i video.mp4 -vf &quot;{filter}&quot; output.mp4
+</code></pre>
+<h3 id="timecode-validation">Timecode Validation</h3>
+<p>Ensure captions align correctly:</p>
+<pre><code class="lang-csharp">bool isValid = captionBuilder.ValidateTimecodes(lines, out string? message);
+
+if (!isValid)
+{
+    Console.WriteLine($&quot;Validation failed: {message}&quot;);
+    // Handle overlap or negative duration errors
+}
+</code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="generate-captions">Generate Captions</h3>
+<p><strong>POST</strong> <code>/api/v1/captions/generate</code></p>
+<pre><code class="lang-json">{
+  &quot;lines&quot;: [
+    {
+      &quot;sceneIndex&quot;: 0,
+      &quot;text&quot;: &quot;Hello world&quot;,
+      &quot;startSeconds&quot;: 0,
+      &quot;durationSeconds&quot;: 2
+    }
+  ],
+  &quot;format&quot;: &quot;srt&quot;,
+  &quot;outputPath&quot;: &quot;/path/to/captions.srt&quot;
+}
+</code></pre>
+<p>Response:</p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;captions&quot;: &quot;1\n00:00:00,000 --&gt; 00:00:02,000\nHello world\n\n&quot;,
+  &quot;filePath&quot;: &quot;/path/to/captions.srt&quot;
+}
+</code></pre>
+<h2 id="ui-component">UI Component</h2>
+<p>The <code>CaptionsPanel</code> component provides a user interface for:</p>
+<ul>
+<li>Selecting caption format (SRT or VTT)</li>
+<li>Enabling burn-in with style customization</li>
+<li>Previewing generated captions</li>
+<li>Exporting caption files</li>
+</ul>
+<pre><code class="lang-tsx">&lt;CaptionsPanel
+  scriptLines={scriptLines}
+  onGenerate={(format, burnIn, style) =&gt; {
+    // Handle caption generation
+  }}
+  onExport={(format) =&gt; {
+    // Handle export
+  }}
+/&gt;
+</code></pre>
+<h2 id="integration-example">Integration Example</h2>
+<p>Complete workflow from script to captioned video:</p>
+<pre><code class="lang-csharp">// 1. Generate TTS audio
+var ttsProvider = serviceProvider.GetRequiredService&lt;ITtsProvider&gt;();
+string audioPath = await ttsProvider.SynthesizeAsync(lines, voiceSpec, ct);
+
+// 2. Apply DSP chain
+var dspChain = serviceProvider.GetRequiredService&lt;DspChain&gt;();
+string dspFilter = dspChain.BuildDspFilterChain(targetLufs: -14.0);
+// Process with FFmpeg: ffmpeg -i {audioPath} -af &quot;{dspFilter}&quot; processed.aac
+
+// 3. Generate captions
+var captionBuilder = serviceProvider.GetRequiredService&lt;CaptionBuilder&gt;();
+string srt = captionBuilder.GenerateSrt(lines);
+await File.WriteAllTextAsync(&quot;captions.srt&quot;, srt);
+
+// 4. Optionally burn-in captions
+var style = new CaptionRenderStyle();
+string burnInFilter = captionBuilder.BuildBurnInFilter(&quot;captions.srt&quot;, style);
+// Render with FFmpeg: ffmpeg -i video.mp4 -vf &quot;{burnInFilter}&quot; output.mp4
+</code></pre>
+<h2 id="testing">Testing</h2>
+<p>Run tests to verify functionality:</p>
+<pre><code class="lang-bash"># DSP Chain tests (22 tests)
+dotnet test --filter &quot;FullyQualifiedName~DspChainTests&quot;
+
+# Caption Builder tests (15 tests)
+dotnet test --filter &quot;FullyQualifiedName~CaptionBuilderTests&quot;
+
+# Audio Processor tests (21 tests)
+dotnet test --filter &quot;FullyQualifiedName~AudioProcessorTests&quot;
+
+# Caption Integration tests (8 tests)
+dotnet test --filter &quot;FullyQualifiedName~CaptionsIntegration&quot;
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Audio Normalization</strong>: Always apply DSP chain to ensure consistent loudness</li>
+<li><strong>Validation</strong>: Validate timecodes before generating captions to catch overlaps</li>
+<li><strong>Format Selection</strong>: Use SRT for broad compatibility, VTT for web players</li>
+<li><strong>Peak Ceiling</strong>: Keep at -1 dBFS to prevent clipping during playback</li>
+<li><strong>LUFS Target</strong>: Use -14 LUFS for YouTube, -16 for podcasts, -12 for music videos</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="audio-is-too-quietloud">Audio is too quiet/loud</h3>
+<p>Check LUFS target and validate with:</p>
+<pre><code class="lang-csharp">dspChain.ValidateLoudness(measuredLufs, measuredPeak, targetLufs, peakCeiling, out var msg);
+</code></pre>
+<h3 id="captions-are-out-of-sync">Captions are out of sync</h3>
+<p>Validate timecodes:</p>
+<pre><code class="lang-csharp">captionBuilder.ValidateTimecodes(lines, out var msg);
+</code></pre>
+<h3 id="windows-tts-not-working">Windows TTS not working</h3>
+<ul>
+<li>Ensure Windows 10 or later</li>
+<li>Check available voices:</li>
+</ul>
+<pre><code class="lang-csharp">var voices = await ttsProvider.GetAvailableVoicesAsync();
+</code></pre>
+<h2 id="internationalization-and-rtl-support">Internationalization and RTL Support</h2>
+<h3 id="overview-1">Overview</h3>
+<p>Aura Studio provides comprehensive internationalization support including:</p>
+<ul>
+<li>Translation + TTS integration for 55+ languages</li>
+<li>RTL (Right-to-Left) subtitle rendering for Arabic, Hebrew, Persian, Urdu</li>
+<li>Language-specific voice recommendations</li>
+<li>Automatic font fallback for complex scripts</li>
+<li>Timing validation for translated content (±2% tolerance)</li>
+</ul>
+<h3 id="subtitleservice">SubtitleService</h3>
+<p>The <code>SubtitleService</code> provides high-level subtitle generation with language awareness:</p>
+<pre><code class="lang-csharp">var subtitleService = serviceProvider.GetRequiredService&lt;SubtitleService&gt;();
+
+var request = new SubtitleGenerationRequest
+{
+    ScriptLines = translatedLines,
+    TargetLanguage = &quot;ar&quot;,  // Arabic (RTL)
+    Format = SubtitleExportFormat.SRT,
+    IsRightToLeft = true,
+    ExportToFile = true,
+    OutputDirectory = &quot;/output/subtitles&quot;,
+    BaseFileName = &quot;arabic_subtitles&quot;
+};
+
+var result = await subtitleService.GenerateSubtitlesAsync(request);
+// result.ExportedFilePath contains path to generated .srt file
+</code></pre>
+<h3 id="rtl-language-support">RTL Language Support</h3>
+<h4 id="automatic-rtl-detection">Automatic RTL Detection</h4>
+<pre><code class="lang-csharp">// Get recommended style for any language
+var style = subtitleService.GetRecommendedStyle(&quot;ar&quot;);  // Arabic
+// style.IsRightToLeft == true
+// style.RtlFontFallback == &quot;Arial Unicode MS&quot;
+
+var englishStyle = subtitleService.GetRecommendedStyle(&quot;en&quot;);
+// englishStyle.IsRightToLeft == false
+// englishStyle.RtlFontFallback == null
+</code></pre>
+<h4 id="supported-rtl-languages">Supported RTL Languages</h4>
+<ul>
+<li><strong>Arabic</strong>: ar, ar-SA, ar-EG, ar-AE</li>
+<li><strong>Hebrew</strong>: he</li>
+<li><strong>Persian/Farsi</strong>: fa</li>
+<li><strong>Urdu</strong>: ur</li>
+</ul>
+<h4 id="rtl-font-fallbacks">RTL Font Fallbacks</h4>
+<p>RTL languages automatically use Unicode-compatible fonts:</p>
+<pre><code class="lang-csharp">var style = new CaptionRenderStyle(
+    FontName: &quot;Arial&quot;,  // Base font
+    FontSize: 24,
+    IsRightToLeft: true,
+    RtlFontFallback: &quot;Arial Unicode MS&quot;  // Used for RTL rendering
+);
+
+string filter = captionBuilder.BuildBurnInFilter(&quot;arabic.srt&quot;, style);
+// Automatically uses Arial Unicode MS for proper glyph rendering
+</code></pre>
+<h4 id="rtl-burn-in-example">RTL Burn-In Example</h4>
+<pre><code class="lang-csharp">var arabicStyle = new CaptionRenderStyle(
+    FontName: &quot;Arial&quot;,
+    FontSize: 28,
+    PrimaryColor: &quot;FFFFFF&quot;,
+    OutlineColor: &quot;000000&quot;,
+    OutlineWidth: 2,
+    BorderStyle: 3,
+    Alignment: 2,
+    IsRightToLeft: true,
+    RtlFontFallback: &quot;Arial Unicode MS&quot;
+);
+
+string filter = captionBuilder.BuildBurnInFilter(&quot;arabic_subtitles.srt&quot;, arabicStyle);
+// Use with FFmpeg for RTL-aware subtitle rendering
+</code></pre>
+<h3 id="translation-integration">Translation Integration</h3>
+<h4 id="translation--ssml--subtitles-pipeline">Translation → SSML → Subtitles Pipeline</h4>
+<p>Complete workflow from source script to translated audio + aligned subtitles:</p>
+<pre><code class="lang-csharp">var integrationService = serviceProvider.GetRequiredService&lt;TranslationIntegrationService&gt;();
+
+var request = new TranslateAndPlanSSMLRequest
+{
+    SourceLanguage = &quot;en&quot;,
+    TargetLanguage = &quot;es&quot;,
+    ScriptLines = sourceLines,
+    TargetProvider = VoiceProvider.ElevenLabs,
+    VoiceSpec = new VoiceSpec(&quot;Sofia&quot;, 1.0, 1.0, PauseStyle.Natural),
+    SubtitleFormat = SubtitleFormat.SRT,
+    DurationTolerance = 0.02  // ±2% timing tolerance
+};
+
+var result = await integrationService.TranslateAndPlanSSMLAsync(request);
+
+// result.Translation - Full translation with quality metrics
+// result.SSMLPlanning - SSML markup with timing
+// result.TranslatedScriptLines - Lines ready for TTS
+// result.Subtitles - Synchronized subtitle file (SRT or VTT)
+</code></pre>
+<h4 id="voice-recommendations-per-language">Voice Recommendations per Language</h4>
+<p>Get AI-recommended voices for target languages:</p>
+<pre><code class="lang-csharp">var recommendation = integrationService.GetRecommendedVoice(
+    targetLanguage: &quot;es&quot;,
+    provider: VoiceProvider.ElevenLabs,
+    preferredGender: &quot;Female&quot;,
+    preferredStyle: &quot;Professional&quot;
+);
+
+// recommendation.IsRTL - Whether language is RTL
+// recommendation.RecommendedVoices - List of suitable voices with quality/style info
+</code></pre>
+<h3 id="timing-validation">Timing Validation</h3>
+<p>Ensure subtitles match target durations within tolerance:</p>
+<pre><code class="lang-csharp">var validation = subtitleService.ValidateTimingAlignment(
+    lines: translatedLines,
+    targetTotalDuration: 30.0,  // seconds
+    tolerancePercent: 0.02  // ±2%
+);
+
+if (!validation.IsValid)
+{
+    Console.WriteLine($&quot;Timing deviation: {validation.DeviationPercent:F2}%&quot;);
+    Console.WriteLine($&quot;Target: {validation.TargetDuration:F2}s, Actual: {validation.ActualDuration:F2}s&quot;);
+}
+</code></pre>
+<h3 id="subtitle-export">Subtitle Export</h3>
+<p>Export subtitles to file with UTF-8 encoding:</p>
+<pre><code class="lang-csharp">string path = await captionBuilder.ExportSubtitlesToFileAsync(
+    lines: scriptLines,
+    format: SubtitleExportFormat.VTT,
+    outputDirectory: &quot;/output&quot;,
+    baseFileName: &quot;spanish_subtitles&quot;,
+    isRightToLeft: false
+);
+
+// Creates: /output/spanish_subtitles.vtt (UTF-8 encoded)
+</code></pre>
+<h3 id="burn-in-options">Burn-In Options</h3>
+<p>Control subtitle rendering with <code>BurnInOptions</code>:</p>
+<pre><code class="lang-csharp">var burnInOptions = new BurnInOptions
+{
+    FontName = &quot;Arial&quot;,
+    FontSize = 24,
+    PrimaryColor = &quot;FFFFFF&quot;,
+    OutlineColor = &quot;000000&quot;,
+    OutlineWidth = 2,
+    BorderStyle = 3,  // Opaque box
+    Alignment = 2,  // Bottom center
+    IsRightToLeft = true,
+    RtlFontFallback = &quot;Arial Unicode MS&quot;
+};
+
+string filter = subtitleService.GenerateBurnInFilter(
+    subtitleFilePath: &quot;arabic.srt&quot;,
+    options: burnInOptions
+);
+</code></pre>
+<h3 id="language-registry">Language Registry</h3>
+<p>Access language metadata:</p>
+<pre><code class="lang-csharp">using Aura.Core.Services.Localization;
+
+var language = LanguageRegistry.GetLanguage(&quot;ar&quot;);
+// language.IsRightToLeft == true
+// language.TypicalExpansionFactor == 0.95 (Arabic is slightly more compact than English)
+
+var allLanguages = LanguageRegistry.GetAllLanguages();
+// Returns LanguageInfo for 55+ supported languages
+</code></pre>
+<h3 id="best-practices-1">Best Practices</h3>
+<p><strong>For RTL Languages:</strong></p>
+<ol>
+<li>Always use <code>GetRecommendedStyle()</code> to get proper RTL configuration</li>
+<li>Test subtitles on target playback devices before mass production</li>
+<li>Use UTF-8 encoding for all subtitle files</li>
+<li>Verify font support for complex scripts (Arabic diacritics, Hebrew vowel points)</li>
+</ol>
+<p><strong>For Translation:</strong></p>
+<ol>
+<li>Enable timing validation to ensure subtitle alignment</li>
+<li>Use ±2% tolerance for production quality</li>
+<li>Review timing warnings for scenes exceeding tolerance</li>
+<li>Test with actual TTS output before finalizing</li>
+</ol>
+<p><strong>For Multi-Language Projects:</strong></p>
+<ol>
+<li>Export subtitles to separate files per language</li>
+<li>Use consistent naming convention (e.g., <code>video_ar.srt</code>, <code>video_es.srt</code>)</li>
+<li>Validate timing for each language separately</li>
+<li>Consider language-specific font requirements for burn-in</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://tech.ebu.ch/docs/r/r128.pdf">EBS R128: Loudness Normalization</a></li>
+<li><a href="https://en.wikipedia.org/wiki/SubRip">SubRip (SRT) Format</a></li>
+<li><a href="https://www.w3.org/TR/webvtt1/">WebVTT Specification</a></li>
+<li><a href="https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters">FFmpeg Audio Filters</a></li>
+<li><a href="https://unicode.org/reports/tr9/">Unicode Bidirectional Algorithm</a></li>
+<li><a href="https://www.loc.gov/standards/iso639-2/php/code_list.php">ISO 639 Language Codes</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/TTS-and-Captions.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Video Studio - Development Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Video Studio - Development Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/DEVELOPMENT.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-video-studio---development-guide">Aura Video Studio - Development Guide</h1>
+
+<p>This guide covers local development for Aura Video Studio's <strong>backend and frontend components</strong>. For Electron desktop app development, see <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a>.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#desktop-app-vs-component-development">Desktop App vs Component Development</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#development-environment">Development Environment</a></li>
+<li><a href="#component-development-workflows">Component Development Workflows</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+<li><a href="#contributing">Contributing</a></li>
+</ul>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio is an <strong>Electron desktop application</strong> that bundles:</p>
+<ul>
+<li><strong>React frontend</strong> (Aura.Web) - UI components built with React + TypeScript + Vite</li>
+<li><strong>ASP.NET Core backend</strong> (Aura.Api) - REST API with Server-Sent Events</li>
+<li><strong>Electron shell</strong> (Aura.Desktop) - Native desktop wrapper, IPC, window management</li>
+</ul>
+<p>This guide focuses on developing the backend and frontend <strong>components</strong> in isolation for rapid iteration. For full desktop app development (Electron main process, IPC, packaging), see <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a>.</p>
+<h2 id="desktop-app-vs-component-development">Desktop App vs Component Development</h2>
+<h3 id="desktop-app-development-production-like">Desktop App Development (Production-like)</h3>
+<p><strong>When to use:</strong> Final testing, Electron-specific features, IPC development, packaging</p>
+<p><strong>See:</strong> <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for:</p>
+<ul>
+<li>Electron main process development</li>
+<li>IPC handlers and preload scripts</li>
+<li>Native desktop features (menus, tray, dialogs)</li>
+<li>Building installers and distribution</li>
+</ul>
+<h3 id="component-development-rapid-iteration">Component Development (Rapid Iteration)</h3>
+<p><strong>When to use:</strong> Backend API development, frontend UI development, quick testing</p>
+<p><strong>This guide covers:</strong></p>
+<ul>
+<li>Running backend API standalone</li>
+<li>Running frontend in browser with Vite hot-reload</li>
+<li>API endpoint development</li>
+<li>UI component development</li>
+</ul>
+<h2 id="architecture">Architecture</h2>
+<h3 id="high-level-overview-electron-desktop-app">High-Level Overview (Electron Desktop App)</h3>
+<pre><code>┌──────────────────────────────────────────────────────────────┐
+│              Electron Main Process                           │
+│         (Node.js, Window Mgmt, IPC, Lifecycle)              │
+└────┬──────────────────────────────┬──────────────────────────┘
+     │ spawns child process         │ IPC communication
+     ▼                              ▼
+┌────────────────┐         ┌─────────────────────────────────┐
+│   ASP.NET      │ HTTP    │    Electron Renderer Process    │
+│   Backend      │◄────────┤      (React + Vite UI)          │
+│   (Aura.Api)   │────────►│      Sandboxed Browser          │
+└────────────────┘         └─────────────────────────────────┘
+     │
+     ▼
+┌────────────────────────────────────────────────────────┐
+│  Aura.Core (Domain Logic)                              │
+│  Aura.Providers (LLM, TTS, Images, Video)              │
+│  FFmpeg (Video Rendering)                              │
+└────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>In Production (Electron App):</strong></p>
+<ul>
+<li>Electron main process spawns the .NET backend as a child process</li>
+<li>Backend runs on random available port (e.g., http://localhost:54321)</li>
+<li>React frontend is loaded from bundled files into Electron window</li>
+<li>Frontend communicates with backend via HTTP/REST and SSE</li>
+<li>Frontend communicates with Electron main process via IPC (through preload script)</li>
+</ul>
+<p><strong>In Development (Component Mode):</strong></p>
+<ul>
+<li>Backend runs standalone on http://localhost:5005</li>
+<li>Frontend runs in browser with Vite dev server on http://localhost:5173</li>
+<li>Hot reload enabled for fast iteration</li>
+<li>No Electron process (browser-only)</li>
+</ul>
+<h3 id="project-structure">Project Structure</h3>
+<pre><code>Aura/
+├── Aura.Desktop/        # Electron desktop application
+│   ├── electron/        # Main process, IPC handlers, window management
+│   ├── assets/          # Icons, splash screen
+│   ├── build/           # Build configuration (NSIS, DMG)
+│   └── package.json     # Electron dependencies and build scripts
+├── Aura.Api/            # REST API + SSE endpoints
+│   ├── Controllers/     # API controllers
+│   ├── HealthChecks/    # Health check implementations
+│   ├── Data/            # Database context and seed data
+│   ├── Middleware/      # Custom middleware
+│   └── Services/        # Application services
+├── Aura.Core/           # Domain logic and orchestration
+│   ├── Models/          # Domain models
+│   ├── Orchestrator/    # Video generation orchestration
+│   ├── Planner/         # Content planning
+│   └── Data/            # Data access layer
+├── Aura.Providers/      # External provider integrations
+│   ├── Llm/             # Language model providers
+│   ├── Tts/             # Text-to-speech providers
+│   ├── Images/          # Image providers
+│   └── Video/           # Video processing
+├── Aura.Web/            # React frontend (bundled into Electron)
+│   ├── src/
+│   │   ├── api/         # API client
+│   │   ├── components/  # React components
+│   │   ├── pages/       # Page components
+│   │   ├── services/    # Frontend services
+│   │   └── state/       # State management (Zustand)
+│   └── public/          # Static assets
+├── Aura.Tests/          # Unit and integration tests
+└── Aura.E2E/            # End-to-end tests (Playwright)
+</code></pre>
+<h2 id="development-environment">Development Environment</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Minimum Version</th>
+<th>Required For</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Node.js</strong></td>
+<td>20.0+</td>
+<td>Frontend (Aura.Web)</td>
+<td>Use version from .nvmrc if available</td>
+</tr>
+<tr>
+<td><strong>npm</strong></td>
+<td>9.0+</td>
+<td>Frontend dependencies</td>
+<td>Comes with Node.js</td>
+</tr>
+<tr>
+<td><strong>.NET SDK</strong></td>
+<td>8.0+</td>
+<td>Backend (Aura.Api, Aura.Core)</td>
+<td>Required</td>
+</tr>
+<tr>
+<td><strong>Electron</strong></td>
+<td>32.0+</td>
+<td>Desktop app</td>
+<td>Installed via npm in Aura.Desktop</td>
+</tr>
+<tr>
+<td><strong>FFmpeg</strong></td>
+<td>4.0+</td>
+<td>Video rendering</td>
+<td>Required at runtime</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Optional:</strong></p>
+<ul>
+<li><strong>Git</strong> - Version control</li>
+<li><strong>Visual Studio Code</strong> - Recommended editor</li>
+<li><strong>Docker</strong> - For containerized dependencies (alternative approach)</li>
+</ul>
+<h3 id="first-time-setup">First-Time Setup</h3>
+<ol>
+<li><p><strong>Clone the repository:</strong></p>
+<pre><code class="lang-bash">git clone https://github.com/your-org/aura-video-studio.git
+cd aura-video-studio
+</code></pre>
+</li>
+<li><p><strong>Install frontend dependencies:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm install
+</code></pre>
+</li>
+<li><p><strong>Install Electron dependencies:</strong></p>
+<pre><code class="lang-bash">cd ../Aura.Desktop
+npm install
+</code></pre>
+</li>
+<li><p><strong>Restore .NET dependencies:</strong></p>
+<pre><code class="lang-bash">cd ../Aura.Api
+dotnet restore
+</code></pre>
+</li>
+<li><p><strong>Configure environment (optional):</strong></p>
+<pre><code class="lang-bash"># Copy example config
+cp .env.example .env
+
+# Edit .env to add API keys for premium features (optional)
+nano .env
+</code></pre>
+</li>
+</ol>
+<h3 id="environment-variables">Environment Variables</h3>
+<p>Create a <code>.env</code> file in the repository root (copy from <code>.env.example</code>):</p>
+<pre><code class="lang-bash"># Core API
+AURA_DATABASE_PATH=./data/aura.db
+AURA_FFMPEG_PATH=/path/to/ffmpeg  # Leave empty for auto-detection
+
+# Provider API Keys (optional - enables premium features)
+AURA_OPENAI_API_KEY=      # For GPT-4 script generation
+AURA_ELEVENLABS_API_KEY=  # For premium TTS voices
+
+# Feature Flags
+AURA_OFFLINE_MODE=false
+AURA_ENABLE_ADVANCED_MODE=false
+</code></pre>
+<p><strong>Note:</strong> Aura works without any API keys using free/local providers.</p>
+<h2 id="component-development-workflows">Component Development Workflows</h2>
+<h3 id="quick-start-component-development-mode">Quick Start: Component Development Mode</h3>
+<p><strong>For rapid backend/frontend iteration without Electron:</strong></p>
+<pre><code class="lang-bash"># Terminal 1: Start backend API
+cd Aura.Api
+dotnet run
+# API runs at http://localhost:5005
+
+# Terminal 2: Start frontend dev server
+cd Aura.Web
+npm run dev
+# Frontend runs at http://localhost:5173 with hot reload
+
+# Open browser to http://localhost:5173
+</code></pre>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>✅ Frontend hot-reload for instant UI updates</li>
+<li>✅ Backend watch mode available via <code>dotnet watch run</code></li>
+<li>✅ Browser DevTools for debugging</li>
+<li>✅ Fast iteration cycle</li>
+</ul>
+<p><strong>Limitations:</strong></p>
+<ul>
+<li>❌ No Electron-specific features (IPC, native dialogs, menus)</li>
+<li>❌ Not testing final desktop app behavior</li>
+<li>❌ Browser environment differs from Electron renderer</li>
+</ul>
+<p><strong>When to use:</strong> Backend API development, frontend UI components, quick prototyping</p>
+<p><strong>When to switch to Electron:</strong> Testing IPC, native features, final integration testing</p>
+<h3 id="desktop-app-development-mode">Desktop App Development Mode</h3>
+<p><strong>For full Electron app development (recommended for final testing):</strong></p>
+<p>See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for complete instructions.</p>
+<pre><code class="lang-bash"># Build frontend
+cd Aura.Web
+npm run build:prod
+
+# Run Electron in dev mode
+cd ../Aura.Desktop
+npm run dev
+</code></pre>
+<h3 id="typical-development-session">Typical Development Session</h3>
+<pre><code class="lang-bash"># Morning: Start component development mode
+cd Aura.Api &amp;&amp; dotnet watch run &amp;  # Backend with auto-reload
+cd Aura.Web &amp;&amp; npm run dev         # Frontend with hot reload
+
+# Work on features in your editor
+# Changes auto-reload in browser
+
+# Before committing: Test in Electron
+cd Aura.Web &amp;&amp; npm run build:prod
+cd ../Aura.Desktop &amp;&amp; npm run dev
+
+# Run tests
+cd Aura.Web &amp;&amp; npm test
+dotnet test
+
+# Commit changes
+git add .
+git commit -m &quot;feat: your feature&quot;
+</code></pre>
+<h3 id="backend-development">Backend Development</h3>
+<p><strong>Running with auto-reload:</strong></p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet watch run
+# Backend auto-reloads on .cs file changes
+</code></pre>
+<p><strong>Making changes:</strong></p>
+<ol>
+<li>Edit .cs files in Aura.Api, Aura.Core, or Aura.Providers</li>
+<li>Save file - backend automatically rebuilds and restarts</li>
+<li>Test API endpoint via browser, Postman, or frontend</li>
+</ol>
+<p><strong>Testing endpoints:</strong></p>
+<pre><code class="lang-bash"># Health check
+curl http://localhost:5005/health/live
+
+# API endpoint example
+curl http://localhost:5005/api/v1/jobs
+</code></pre>
+<h3 id="frontend-development">Frontend Development</h3>
+<p><strong>Running with hot reload:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run dev
+# Vite dev server with instant hot module replacement (HMR)
+</code></pre>
+<p><strong>Making changes:</strong></p>
+<ol>
+<li>Edit .tsx/.ts files in Aura.Web/src</li>
+<li>Save file - browser automatically updates (no page reload)</li>
+<li>Changes reflect instantly in browser</li>
+</ol>
+<p><strong>Code quality checks:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
+
+# Format checking
+npm run format:check
+
+# All checks at once
+npm run quality-check
+</code></pre>
+<h3 id="building-for-electron">Building for Electron</h3>
+<p><strong>When you need to test in the Electron app:</strong></p>
+<pre><code class="lang-bash"># 1. Build frontend production bundle
+cd Aura.Web
+npm run build:prod
+# Creates dist/ folder with optimized bundle
+
+# 2. Build backend (if changed)
+cd ../Aura.Api
+dotnet build -c Release
+
+# 3. Run Electron
+cd ../Aura.Desktop
+npm run dev
+# Or build full installer: npm run build:win
+</code></pre>
+<h3 id="adding-a-new-api-endpoint">Adding a New API Endpoint</h3>
+<ol>
+<li><p><strong>Create/update controller:</strong></p>
+<pre><code class="lang-csharp">// Aura.Api/Controllers/YourController.cs
+[ApiController]
+[Route(&quot;api/v1/[controller]&quot;)]
+public class YourController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult Get() { /* ... */ }
+}
+</code></pre>
+</li>
+<li><p><strong>Test the endpoint:</strong></p>
+<pre><code class="lang-bash"># With backend running on localhost:5005
+curl http://localhost:5005/api/v1/your-endpoint
+</code></pre>
+</li>
+<li><p><strong>Update frontend API client (if needed):</strong></p>
+<pre><code class="lang-typescript">// Aura.Web/src/services/api/apiClient.ts
+export async function getYourData() {
+  const response = await apiClient.get('/api/v1/your-endpoint');
+  return response.data;
+}
+</code></pre>
+</li>
+<li><p><strong>Test in both modes:</strong></p>
+<ul>
+<li>Component mode: Browser at http://localhost:5173</li>
+<li>Electron mode: <code>cd Aura.Desktop &amp;&amp; npm run dev</code></li>
+</ul>
+</li>
+</ol>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-bash"># Run all .NET tests
+dotnet test
+
+# Run specific test project
+dotnet test Aura.Tests/Aura.Tests.csproj
+
+# Run with coverage
+dotnet test /p:CollectCoverage=true
+</code></pre>
+<h3 id="frontend-tests">Frontend Tests</h3>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Run unit tests
+npm run test
+
+# Run with coverage
+npm run test:coverage
+
+# Run in watch mode
+npm run test:watch
+</code></pre>
+<h3 id="e2e-tests">E2E Tests</h3>
+<pre><code class="lang-bash"># Using test-specific compose file
+docker-compose -f docker-compose.test.yml up --abort-on-container-exit
+
+# Or run Playwright tests directly
+cd Aura.Web
+npm run playwright
+
+# With UI
+npm run playwright:ui
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-bash"># Start services
+make dev-detached
+
+# Run integration tests
+dotnet test Aura.E2E/Aura.E2E.csproj
+
+# Cleanup
+make clean
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="backend-wont-start">Backend won't start</h3>
+<p><strong>Check .NET SDK:</strong></p>
+<pre><code class="lang-bash">dotnet --version
+# Should be 8.0.x or higher
+</code></pre>
+<p><strong>Check port availability:</strong></p>
+<pre><code class="lang-bash"># Windows
+netstat -ano | findstr :5005
+
+# Linux/macOS
+lsof -i :5005
+</code></pre>
+<p><strong>Check logs:</strong></p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet run --verbosity detailed
+</code></pre>
+<h3 id="frontend-dev-server-fails">Frontend dev server fails</h3>
+<p><strong>Check Node.js version:</strong></p>
+<pre><code class="lang-bash">node --version
+# Should be 20.0.0 or higher
+</code></pre>
+<p><strong>Clear cache and reinstall:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+rm -rf node_modules .vite dist
+npm install
+npm run dev
+</code></pre>
+<h3 id="frontend-cant-connect-to-backend">Frontend can't connect to backend</h3>
+<p><strong>Verify backend is running:</strong></p>
+<pre><code class="lang-bash">curl http://localhost:5005/health/live
+</code></pre>
+<p><strong>Check CORS configuration:</strong></p>
+<ul>
+<li>Backend should allow http://localhost:5173 in development</li>
+<li>Check Aura.Api/Program.cs for CORS policy</li>
+</ul>
+<p><strong>Check frontend API base URL:</strong></p>
+<pre><code class="lang-typescript">// Aura.Web/src/services/api/apiClient.ts
+// Should point to http://localhost:5005 in development
+</code></pre>
+<h3 id="ffmpeg-not-found">FFmpeg not found</h3>
+<p><strong>Install FFmpeg:</strong></p>
+<pre><code class="lang-bash"># Windows (winget)
+winget install ffmpeg
+
+# macOS
+brew install ffmpeg
+
+# Linux (Ubuntu/Debian)
+sudo apt-get install ffmpeg
+</code></pre>
+<p><strong>Verify installation:</strong></p>
+<pre><code class="lang-bash">ffmpeg -version
+</code></pre>
+<h3 id="electron-app-issues">Electron app issues</h3>
+<p>For Electron-specific issues, see <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> troubleshooting section.</p>
+<h3 id="clean-slate-reset">Clean slate reset</h3>
+<pre><code class="lang-bash"># Remove all build artifacts
+cd Aura.Web
+rm -rf node_modules dist .vite
+npm install
+
+cd ../Aura.Desktop
+rm -rf node_modules
+npm install
+
+cd ../Aura.Api
+dotnet clean
+dotnet restore
+</code></pre>
+<h2 id="performance-optimization">Performance Optimization</h2>
+<h3 id="component-development-performance">Component Development Performance</h3>
+<ol>
+<li><p><strong>Backend watch mode:</strong></p>
+<ul>
+<li>Use <code>dotnet watch run</code> for auto-reload</li>
+<li>Only rebuilds changed projects</li>
+<li>Faster than full rebuild</li>
+</ul>
+</li>
+<li><p><strong>Frontend hot reload:</strong></p>
+<ul>
+<li>Vite HMR is near-instant</li>
+<li>Keep dev server running</li>
+<li>Use <code>npm run dev</code> (not <code>npm run build</code>)</li>
+</ul>
+</li>
+<li><p><strong>Selective testing:</strong></p>
+<pre><code class="lang-bash"># Test specific file
+npm test -- path/to/file.test.ts
+
+# Test specific .NET project
+dotnet test Aura.Tests/Aura.Tests.csproj
+</code></pre>
+</li>
+</ol>
+<h3 id="electron-build-performance">Electron Build Performance</h3>
+<p>See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for Electron-specific optimizations.</p>
+<h2 id="contributing">Contributing</h2>
+<h3 id="before-submitting-a-pr">Before Submitting a PR</h3>
+<ol>
+<li><p><strong>Run all checks:</strong></p>
+<pre><code class="lang-bash">make test
+cd Aura.Web &amp;&amp; npm run quality-check
+</code></pre>
+</li>
+<li><p><strong>Ensure clean state:</strong></p>
+<pre><code class="lang-bash">make clean
+make dev
+make health
+</code></pre>
+</li>
+<li><p><strong>Update documentation:</strong></p>
+<ul>
+<li>Add/update relevant docs</li>
+<li>Update CHANGELOG.md</li>
+<li>Include inline code comments</li>
+</ul>
+</li>
+<li><p><strong>Follow conventions:</strong></p>
+<ul>
+<li>See <a href="CONTRIBUTING.html">CONTRIBUTING.md</a> for code style</li>
+<li>Use conventional commits</li>
+<li>Write tests for new features</li>
+</ul>
+</li>
+</ol>
+<h3 id="commit-message-format">Commit Message Format</h3>
+<pre><code>type(scope): subject
+
+body
+
+footer
+</code></pre>
+<p><strong>Types:</strong></p>
+<ul>
+<li><code>feat</code>: New feature</li>
+<li><code>fix</code>: Bug fix</li>
+<li><code>docs</code>: Documentation changes</li>
+<li><code>refactor</code>: Code refactoring</li>
+<li><code>test</code>: Test changes</li>
+<li><code>chore</code>: Build/tooling changes</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code>feat(api): add video export queue endpoint
+
+Implements a new endpoint for queuing video exports with priority support.
+Includes rate limiting and authentication.
+
+Closes #123
+</code></pre>
+<h2 id="documentation-tooling">Documentation Tooling</h2>
+<h3 id="markdownlint">Markdownlint</h3>
+<p>All markdown files are linted using markdownlint-cli with configuration in <code>.markdownlint.json</code>.</p>
+<p><strong>Installation:</strong></p>
+<pre><code class="lang-bash">npm install -g markdownlint-cli
+</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-bash"># Check all markdown files
+markdownlint --config .markdownlint.json &quot;*.md&quot; &quot;docs/**/*.md&quot;
+
+# Auto-fix issues
+markdownlint --fix --config .markdownlint.json &quot;*.md&quot; &quot;docs/**/*.md&quot;
+</code></pre>
+<p><strong>Configuration:</strong>
+The <code>.markdownlint.json</code> file is configured to align with the repository's established style:</p>
+<ul>
+<li>Disabled stylistic rules that don't match our conventions (MD036, MD029, MD026, MD024, etc.)</li>
+<li>Enabled important rules for hard tabs and whitespace</li>
+<li>Allows common patterns like emphasis-as-heading and trailing punctuation in headings</li>
+</ul>
+<h3 id="docfx">DocFX</h3>
+<p>API documentation is generated using DocFX.</p>
+<p><strong>Installation:</strong></p>
+<pre><code class="lang-bash">dotnet tool install -g docfx
+</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-bash"># Build documentation
+docfx build docfx.json
+
+# Serve documentation locally
+docfx serve _site
+</code></pre>
+<p><strong>Configuration:</strong></p>
+<ul>
+<li><code>docfx.json</code> - Main configuration</li>
+<li>Generates documentation from XML comments in C# code</li>
+<li>Includes markdown documentation from <code>docs/</code> directory</li>
+</ul>
+<p><strong>Note:</strong> There may be a cosmetic warning about file links that appears even when links work correctly in the generated HTML. This is a known DocFX behavior and can be safely ignored if the links render correctly.</p>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><strong><a href="README.html">README.md</a></strong> - Project overview and quick start</li>
+<li><strong><a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a></strong> - Electron desktop app development (CRITICAL for production)</li>
+<li><strong><a href="BUILD_GUIDE.html">BUILD_GUIDE.md</a></strong> - Building installers and packaging</li>
+<li><strong><a href="CONTRIBUTING.html">CONTRIBUTING.md</a></strong> - Contribution guidelines</li>
+<li><strong>docs/architecture/</strong> - System design and architecture details</li>
+<li><strong>docs/api/</strong> - REST API documentation</li>
+<li><strong>Electron README</strong> - Electron main process architecture</li>
+</ul>
+<h2 id="getting-help">Getting Help</h2>
+<ul>
+<li><strong>Issues:</strong> GitHub Issues for bug reports and feature requests</li>
+<li><strong>Discussions:</strong> GitHub Discussions for questions and ideas</li>
+<li><strong>Documentation:</strong> Check <code>docs/troubleshooting/</code> for common issues</li>
+<li><strong>Logs:</strong>
+<ul>
+<li>Backend: Console output from <code>dotnet run</code></li>
+<li>Frontend: Browser console (F12)</li>
+<li>Electron: See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a></li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>For Electron/Desktop Development:</strong> See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a></p>
+<p><strong>Happy coding!</strong> 🚀</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/DEVELOPMENT.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

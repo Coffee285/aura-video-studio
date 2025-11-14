@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Advanced Timeline Editing Features | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Advanced Timeline Editing Features | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ADVANCED_TIMELINE_FEATURES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="advanced-timeline-editing-features">Advanced Timeline Editing Features</h1>
+
+<p>This document describes the advanced video editing features added to the Aura Video Studio timeline editor, providing Adobe Premiere-level functionality.</p>
+<h2 id="overview">Overview</h2>
+<p>The enhanced timeline editor includes:</p>
+<ul>
+<li><strong>Audio waveform rendering and scrubbing</strong> for precise audio navigation</li>
+<li><strong>Trim handles</strong> for adjusting scene in/out points</li>
+<li><strong>Splice and ripple delete</strong> operations for efficient editing</li>
+<li><strong>Multi-level undo/redo</strong> (up to 50 steps)</li>
+<li><strong>Timeline snapping</strong> for precise alignment</li>
+<li><strong>Copy/paste/duplicate</strong> for scene management</li>
+<li><strong>Audio track controls</strong> with mute/solo/volume/pan</li>
+<li><strong>Zoom controls</strong> with playhead-centered zooming</li>
+<li><strong>Comprehensive keyboard shortcuts</strong> for fast workflow</li>
+</ul>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend-services-c">Backend Services (C#)</h3>
+<h4 id="waveformgenerator-auracoreservicesmediawaveformgeneratorcs">WaveformGenerator (<code>Aura.Core/Services/Media/WaveformGenerator.cs</code>)</h4>
+<p>Generates audio waveforms using FFmpeg for timeline visualization.</p>
+<p><strong>Key Methods:</strong></p>
+<ul>
+<li><code>GenerateWaveformAsync(audioFilePath, width, height, trackType)</code> - Generates PNG waveform image</li>
+<li><code>GenerateWaveformDataAsync(audioFilePath, targetSamples)</code> - Extracts raw audio sample data</li>
+<li><code>ClearCache()</code> - Clears cached waveforms</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>FFmpeg integration using <code>showwavespic</code> filter</li>
+<li>Color-coded waveforms (blue for narration, green for music, orange for SFX)</li>
+<li>Dictionary-based caching for performance</li>
+<li>Stereo audio support (averaged to mono)</li>
+<li>Downsampling to match target resolution</li>
+</ul>
+<h3 id="frontend-services-typescript">Frontend Services (TypeScript)</h3>
+<h4 id="timelineeditor-aurawebsrcservicestimelinetimelineeditorts">TimelineEditor (<code>Aura.Web/src/services/timeline/TimelineEditor.ts</code>)</h4>
+<p>Manages timeline editing operations with undo/redo support.</p>
+<p><strong>Key Methods:</strong></p>
+<ul>
+<li><code>spliceAtPlayhead(scenes, sceneIndex, playheadTime)</code> - Cuts scene at playhead</li>
+<li><code>rippleDelete(scenes, sceneIndex)</code> - Removes scene and shifts following scenes</li>
+<li><code>deleteScene(scenes, sceneIndex)</code> - Removes scene without shifting</li>
+<li><code>closeGaps(scenes)</code> - Removes all gaps in timeline</li>
+<li><code>undo()</code> / <code>redo()</code> - Undo/redo operations</li>
+<li><code>canUndo()</code> / <code>canRedo()</code> - Check undo/redo availability</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>50-step undo/redo stack</li>
+<li>Operation recording with timestamps</li>
+<li>Automatic redo stack clearing on new operations</li>
+</ul>
+<h4 id="snappingservice-aurawebsrcservicestimelinesnappingservicets">SnappingService (<code>Aura.Web/src/services/timeline/SnappingService.ts</code>)</h4>
+<p>Provides snap-to functionality for precise alignment.</p>
+<p><strong>Key Methods:</strong></p>
+<ul>
+<li><code>calculateSnapPosition(dragPosition, snapPoints, pixelsPerSecond)</code> - Calculates snap position</li>
+<li><code>generateSnapPoints(playheadPosition, sceneStarts, sceneEnds, gridInterval, duration, markers)</code> - Generates snap points</li>
+<li><code>getGridInterval(pixelsPerSecond)</code> - Returns appropriate grid interval for zoom level</li>
+<li><code>setSnapThreshold(threshold)</code> - Sets snap threshold in pixels</li>
+<li><code>setEnabled(enabled)</code> - Enables/disables snapping</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Priority-based snapping (playhead &gt; scenes &gt; grid)</li>
+<li>8-pixel default threshold</li>
+<li>Dynamic grid intervals based on zoom</li>
+<li>Support for markers and custom snap points</li>
+</ul>
+<h4 id="clipboardservice-aurawebsrcservicestimelineclipboardservicets">ClipboardService (<code>Aura.Web/src/services/timeline/ClipboardService.ts</code>)</h4>
+<p>Handles copy/paste/duplicate operations with localStorage persistence.</p>
+<p><strong>Key Methods:</strong></p>
+<ul>
+<li><code>copy(scenes)</code> - Copies scenes to clipboard</li>
+<li><code>paste(insertTime)</code> - Pastes scenes at specified time</li>
+<li><code>duplicate(scenes, afterTime)</code> - Duplicates scenes</li>
+<li><code>hasData()</code> - Checks if clipboard has data</li>
+<li><code>clear()</code> - Clears clipboard</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Deep cloning to prevent reference issues</li>
+<li>localStorage backup for cross-session persistence</li>
+<li>Automatic timing adjustment on paste</li>
+</ul>
+<h3 id="react-components">React Components</h3>
+<h4 id="timeline-aurawebsrccomponentseditortimelinetimelinetsx">Timeline (<code>Aura.Web/src/components/Editor/Timeline/Timeline.tsx</code>)</h4>
+<p>Main timeline component integrating all advanced features.</p>
+<p><strong>Props:</strong></p>
+<ul>
+<li><code>duration</code> - Total timeline duration in seconds</li>
+<li><code>onSave</code> - Callback for save action</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Keyboard shortcuts integration</li>
+<li>Playhead display with time indicator</li>
+<li>Multiple audio/video tracks</li>
+<li>Real-time preview integration</li>
+<li>Shortcuts dialog (press <code>?</code>)</li>
+</ul>
+<h4 id="timelinetrack-aurawebsrccomponentseditortimelinetimelinetracktsx">TimelineTrack (<code>Aura.Web/src/components/Editor/Timeline/TimelineTrack.tsx</code>)</h4>
+<p>Audio track component with waveform display and scrubbing.</p>
+<p><strong>Props:</strong></p>
+<ul>
+<li><code>name</code> - Track name</li>
+<li><code>type</code> - Track type ('narration' | 'music' | 'sfx')</li>
+<li><code>audioPath</code> - Path to audio file</li>
+<li><code>duration</code> - Track duration in seconds</li>
+<li><code>zoom</code> - Pixels per second</li>
+<li><code>onSeek</code> - Callback when scrubbing</li>
+<li><code>muted</code> - Muted state</li>
+<li><code>selected</code> - Selected state</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Canvas-based waveform rendering at 60fps</li>
+<li>Mouse-drag scrubbing with real-time feedback</li>
+<li>Time tooltip during scrubbing</li>
+<li>Color-coded by track type</li>
+<li>Loading state with spinner</li>
+</ul>
+<h4 id="sceneblock-aurawebsrccomponentseditortimelinesceneblocktsx">SceneBlock (<code>Aura.Web/src/components/Editor/Timeline/SceneBlock.tsx</code>)</h4>
+<p>Scene block component with trim handles for precise editing.</p>
+<p><strong>Props:</strong></p>
+<ul>
+<li><code>index</code> - Scene index</li>
+<li><code>heading</code> - Scene heading</li>
+<li><code>start</code> - Start time in seconds</li>
+<li><code>duration</code> - Duration in seconds</li>
+<li><code>zoom</code> - Pixels per second</li>
+<li><code>selected</code> - Selected state</li>
+<li><code>onSelect</code> - Selection callback</li>
+<li><code>onTrim</code> - Trim callback (newStart, newDuration)</li>
+<li><code>onMove</code> - Move callback (newStart)</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>8px draggable trim handles on left/right edges</li>
+<li>Real-time duration preview during trim</li>
+<li>Timecode tooltip showing changes</li>
+<li>Minimum duration enforcement (0.1s)</li>
+<li>Visual feedback on hover/active</li>
+</ul>
+<h4 id="audiotrackcontrols-aurawebsrccomponentseditortimelineaudiotrackcontrolstsx">AudioTrackControls (<code>Aura.Web/src/components/Editor/Timeline/AudioTrackControls.tsx</code>)</h4>
+<p>Audio mixing controls for individual tracks.</p>
+<p><strong>Props:</strong></p>
+<ul>
+<li><code>trackName</code> - Track name</li>
+<li><code>trackType</code> - Track type</li>
+<li><code>muted</code> - Muted state</li>
+<li><code>solo</code> - Solo state</li>
+<li><code>volume</code> - Volume (0-200, default 100)</li>
+<li><code>pan</code> - Pan (-100 to 100, center 0)</li>
+<li><code>locked</code> - Locked state</li>
+<li><code>audioLevel</code> - Current audio level (0-100)</li>
+<li>Callbacks for all controls</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Mute/Solo/Lock buttons</li>
+<li>Volume slider with dB display</li>
+<li>Pan slider with L/R display</li>
+<li>Real-time VU meter (green/yellow/red)</li>
+<li>Disabled state when locked</li>
+</ul>
+<h4 id="timelinezoomcontrols-aurawebsrccomponentseditortimelinetimelinezoomcontrolstsx">TimelineZoomControls (<code>Aura.Web/src/components/Editor/Timeline/TimelineZoomControls.tsx</code>)</h4>
+<p>Zoom controls with presets and logarithmic scaling.</p>
+<p><strong>Props:</strong></p>
+<ul>
+<li><code>zoom</code> - Current zoom level (pixels per second)</li>
+<li><code>minZoom</code> - Minimum zoom (default 10)</li>
+<li><code>maxZoom</code> - Maximum zoom (default 200)</li>
+<li><code>timelineDuration</code> - Total duration for fit-to-view</li>
+<li><code>onZoomChange</code> - Zoom change callback</li>
+<li><code>onFitToView</code> - Fit-to-view callback</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Logarithmic zoom slider for natural feel</li>
+<li>Zoom in/out buttons (1.5x per click)</li>
+<li>Preset buttons (Fit All, 1 Second, 10 Frames)</li>
+<li>Zoom level display</li>
+<li>Maintains playhead position during zoom</li>
+</ul>
+<h3 id="custom-hooks">Custom Hooks</h3>
+<h4 id="usetimelinekeyboardshortcuts-aurawebsrchooksusetimelinekeyboardshortcutsts">useTimelineKeyboardShortcuts (<code>Aura.Web/src/hooks/useTimelineKeyboardShortcuts.ts</code>)</h4>
+<p>Comprehensive keyboard shortcuts for timeline editing.</p>
+<p><strong>Keyboard Shortcuts:</strong></p>
+<ul>
+<li><code>Space</code> - Play/Pause</li>
+<li><code>J/K/L</code> - Rewind/Pause/Fast-forward</li>
+<li><code>Left/Right Arrow</code> - Move playhead 1 frame</li>
+<li><code>Shift + Left/Right</code> - Move playhead 1 second</li>
+<li><code>Home/End</code> - Jump to start/end</li>
+<li><code>I/O</code> - Set in/out points</li>
+<li><code>X</code> - Mark in to out</li>
+<li><code>C</code> - Cut/Splice at playhead</li>
+<li><code>Delete</code> - Ripple delete selected</li>
+<li><code>Backspace</code> - Delete selected (leave gap)</li>
+<li><code>Ctrl/Cmd + A</code> - Select all</li>
+<li><code>Ctrl/Cmd + D</code> - Deselect all / Duplicate</li>
+<li><code>Ctrl/Cmd + C</code> - Copy selected</li>
+<li><code>Ctrl/Cmd + V</code> - Paste at playhead</li>
+<li><code>Ctrl/Cmd + Z</code> - Undo</li>
+<li><code>Ctrl/Cmd + Shift + Z</code> - Redo</li>
+<li><code>+/-</code> - Zoom in/out timeline</li>
+<li><code>M</code> - Add marker</li>
+<li><code>Ctrl/Cmd + S</code> - Save timeline</li>
+<li><code>?</code> - Show keyboard shortcuts</li>
+</ul>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Platform-aware (Cmd on Mac, Ctrl on Windows/Linux)</li>
+<li>Input field detection (shortcuts disabled when typing)</li>
+<li>Customizable handlers</li>
+<li>Enable/disable toggle</li>
+</ul>
+<h2 id="state-management">State Management</h2>
+<p>The timeline state is managed using Zustand with enhanced track properties:</p>
+<pre><code class="lang-typescript">interface Track {
+  id: string;
+  name: string;
+  type: 'video' | 'audio';
+  clips: TimelineClip[];
+  muted?: boolean;
+  solo?: boolean;
+  volume?: number; // 0-200
+  pan?: number; // -100 to 100
+  locked?: boolean;
+  height?: number; // pixels
+}
+</code></pre>
+<p><strong>State Actions:</strong></p>
+<ul>
+<li><code>setSnappingEnabled(enabled)</code> - Toggle snapping</li>
+<li><code>setCurrentTime(time)</code> - Update playhead position</li>
+<li><code>setZoom(zoom)</code> - Update zoom level</li>
+<li><code>setPlaying(playing)</code> - Update playback state</li>
+<li><code>setInPoint(time)</code> / <code>setOutPoint(time)</code> - Set in/out points</li>
+<li><code>updateTrack(trackId, updates)</code> - Update track properties</li>
+<li><code>toggleMute(trackId)</code> - Toggle track mute</li>
+<li><code>toggleSolo(trackId)</code> - Toggle track solo</li>
+<li><code>toggleLock(trackId)</code> - Toggle track lock</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<p>Comprehensive unit tests are provided for all services:</p>
+<h3 id="timelineeditor-tests-aurawebsrctesttimeline-editortestts">TimelineEditor Tests (<code>Aura.Web/src/test/timeline-editor.test.ts</code>)</h3>
+<ul>
+<li>Scene splitting at playhead</li>
+<li>Ripple delete with timeline shifting</li>
+<li>Non-ripple delete</li>
+<li>Gap closing</li>
+<li>Undo/redo functionality</li>
+</ul>
+<h3 id="snappingservice-tests-aurawebsrctestsnapping-servicetestts">SnappingService Tests (<code>Aura.Web/src/test/snapping-service.test.ts</code>)</h3>
+<ul>
+<li>Snap calculation within threshold</li>
+<li>Priority-based snapping</li>
+<li>Snap point generation</li>
+<li>Grid interval calculation</li>
+<li>Enable/disable functionality</li>
+</ul>
+<h3 id="clipboardservice-tests-aurawebsrctestclipboard-servicetestts">ClipboardService Tests (<code>Aura.Web/src/test/clipboard-service.test.ts</code>)</h3>
+<ul>
+<li>Copy with deep cloning</li>
+<li>Paste with timing adjustment</li>
+<li>Duplicate functionality</li>
+<li>localStorage persistence</li>
+<li>Clear operations</li>
+</ul>
+<p><strong>Test Results:</strong> 44 tests passing (100% pass rate)</p>
+<h2 id="integration-example">Integration Example</h2>
+<p>See <code>Aura.Web/src/pages/Editor/EnhancedTimelineEditor.tsx</code> for a complete integration example showing:</p>
+<ol>
+<li>Timeline loading and state management</li>
+<li>Auto-save functionality</li>
+<li>Preview generation integration</li>
+<li>Scene and asset management</li>
+<li>Layout with video preview and timeline</li>
+<li>Properties panel integration</li>
+</ol>
+<h2 id="usage">Usage</h2>
+<h3 id="basic-integration">Basic Integration</h3>
+<pre><code class="lang-tsx">import { Timeline } from './components/Editor/Timeline/Timeline';
+
+function MyEditor() {
+  return (
+    &lt;Timeline
+      duration={120} // 2 minutes
+      onSave={() =&gt; {
+        // Save logic
+      }}
+    /&gt;
+  );
+}
+</code></pre>
+<h3 id="with-custom-handlers">With Custom Handlers</h3>
+<pre><code class="lang-tsx">import { useTimelineKeyboardShortcuts } from './hooks/useTimelineKeyboardShortcuts';
+
+function MyEditor() {
+  const handlers = {
+    onPlayPause: () =&gt; { /* Play/pause logic */ },
+    onSplice: () =&gt; { /* Splice logic */ },
+    onCopy: () =&gt; { /* Copy logic */ },
+    // ... other handlers
+  };
+
+  useTimelineKeyboardShortcuts(handlers, true);
+
+  return &lt;Timeline ... /&gt;;
+}
+</code></pre>
+<h3 id="using-services-directly">Using Services Directly</h3>
+<pre><code class="lang-typescript">import { timelineEditor } from './services/timeline/TimelineEditor';
+import { clipboardService } from './services/timeline/ClipboardService';
+import { snappingService } from './services/timeline/SnappingService';
+
+// Splice scene
+const updatedScenes = timelineEditor.spliceAtPlayhead(scenes, 1, 15.5);
+
+// Copy and paste
+clipboardService.copy(selectedScenes);
+const pastedScenes = clipboardService.paste(insertTime);
+
+// Calculate snap position
+const result = snappingService.calculateSnapPosition(
+  dragPosition,
+  snapPoints,
+  pixelsPerSecond
+);
+</code></pre>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ol>
+<li><strong>Waveform Caching</strong> - Waveforms are cached in dictionary to avoid regeneration</li>
+<li><strong>Canvas Rendering</strong> - Waveforms use Canvas API for 60fps performance</li>
+<li><strong>Lazy Loading</strong> - Waveforms load on demand as user scrolls</li>
+<li><strong>Debouncing</strong> - Drag operations are debounced to reduce updates</li>
+<li><strong>Virtual Scrolling</strong> - Can be added for timelines with 100+ scenes</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>The following features are marked as placeholders for future implementation:</p>
+<ol>
+<li><strong>Audio Effects</strong> - EQ, compression, reverb (button added, panel not implemented)</li>
+<li><strong>Beat Detection</strong> - Snap to music beats for synchronization</li>
+<li><strong>Proxy Rendering</strong> - Real-time preview with low-resolution proxies</li>
+<li><strong>Virtualized Timeline</strong> - For improved performance with very long videos</li>
+<li><strong>Minimap</strong> - Overview thumbnail with draggable viewport indicator</li>
+<li><strong>Slip Edit</strong> - Alt+drag to shift in/out points together</li>
+<li><strong>Multi-track Selection</strong> - Select and edit multiple scenes simultaneously</li>
+<li><strong>Transition Editor</strong> - Visual transition editing on timeline</li>
+</ol>
+<h2 id="api-endpoints-to-be-implemented">API Endpoints (To Be Implemented)</h2>
+<p>The following API endpoints should be implemented in <code>Aura.Api</code>:</p>
+<pre><code class="lang-csharp">// Waveform generation
+GET /api/editor/waveform/{audioPath}?width={w}&amp;height={h}&amp;type={trackType}
+GET /api/editor/waveform-data/{audioPath}?samples={n}
+
+// Timeline operations
+GET /api/editor/timeline/{jobId}
+PUT /api/editor/timeline/{jobId}
+POST /api/editor/timeline/{jobId}/render-preview
+GET /api/editor/preview/{jobId}
+</code></pre>
+<h2 id="security-considerations">Security Considerations</h2>
+<ol>
+<li><strong>Audio File Validation</strong> - WaveformGenerator validates file existence</li>
+<li><strong>Path Sanitization</strong> - All file paths are validated before processing</li>
+<li><strong>Resource Limits</strong> - Waveform generation has size limits</li>
+<li><strong>Cache Management</strong> - Cache can be cleared to prevent memory issues</li>
+<li><strong>User Input Validation</strong> - All keyboard input is validated</li>
+<li><strong>CSRF Protection</strong> - API endpoints require proper authentication</li>
+</ol>
+<h2 id="browser-compatibility">Browser Compatibility</h2>
+<ul>
+<li><strong>Chrome/Edge</strong> - Full support</li>
+<li><strong>Firefox</strong> - Full support</li>
+<li><strong>Safari</strong> - Full support (Mac keyboard shortcuts adapted)</li>
+<li><strong>Minimum Version</strong> - Modern browsers with ES2020+ support</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>These advanced timeline editing features bring professional-grade video editing capabilities to Aura Video Studio, matching the functionality of industry-standard tools like Adobe Premiere Pro. The modular architecture allows for easy extension and customization based on specific needs.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ADVANCED_TIMELINE_FEATURES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Video Generation Pipeline Architecture | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Video Generation Pipeline Architecture | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/PIPELINE_ARCHITECTURE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="video-generation-pipeline-architecture">Video Generation Pipeline Architecture</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Aura Video Studio video generation pipeline is a stage-based orchestration system that transforms a brief into a complete video through a series of well-defined stages. The pipeline is designed for:</p>
+<ul>
+<li><strong>Reliability</strong>: Automatic retry logic, circuit breakers, and graceful degradation</li>
+<li><strong>Observability</strong>: Comprehensive logging, metrics, and progress tracking</li>
+<li><strong>Resumability</strong>: Checkpoint/resume support for long-running jobs</li>
+<li><strong>Extensibility</strong>: Easy to add new stages or customize existing ones</li>
+</ul>
+<h2 id="pipeline-stages">Pipeline Stages</h2>
+<p>The video generation process consists of 5 sequential stages:</p>
+<h3 id="1-brief-stage">1. Brief Stage</h3>
+<p><strong>Purpose</strong>: Validate and preprocess the input brief</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Validate brief content (topic, audience, goal)</li>
+<li>Check system resources (FFmpeg, disk space, memory)</li>
+<li>Prepare brief for downstream stages</li>
+</ul>
+<p><strong>Output</strong>: <code>BriefStageOutput</code></p>
+<ul>
+<li>Validated brief object</li>
+<li>Validation results</li>
+<li>Processing timestamp</li>
+</ul>
+<p><strong>Typical Duration</strong>: &lt; 5 seconds</p>
+<h3 id="2-script-stage">2. Script Stage</h3>
+<p><strong>Purpose</strong>: Generate video script using LLM</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Call LLM provider to generate script from brief</li>
+<li>Validate script structure (scenes, narration)</li>
+<li>Validate script quality (coherence, length)</li>
+<li>Support RAG (Retrieval Augmented Generation) if enabled</li>
+</ul>
+<p><strong>Output</strong>: <code>ScriptStageOutput</code></p>
+<ul>
+<li>Generated script text</li>
+<li>Character count</li>
+<li>Provider information</li>
+<li>Generation timestamp</li>
+</ul>
+<p><strong>Typical Duration</strong>: 10-30 seconds</p>
+<h3 id="3-voice-stage">3. Voice Stage</h3>
+<p><strong>Purpose</strong>: Convert script to audio narration</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Parse script into scenes and script lines</li>
+<li>Call TTS provider to synthesize audio</li>
+<li>Validate audio quality (duration, format)</li>
+<li>Calculate scene timings</li>
+</ul>
+<p><strong>Output</strong>: <code>VoiceStageOutput</code></p>
+<ul>
+<li>Path to narration audio file</li>
+<li>Scene count and timing information</li>
+<li>TTS provider and voice details</li>
+</ul>
+<p><strong>Typical Duration</strong>: 20-60 seconds</p>
+<h3 id="4-visuals-stage">4. Visuals Stage</h3>
+<p><strong>Purpose</strong>: Generate or fetch visual assets for each scene</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Generate images for each scene (if image provider available)</li>
+<li>Validate image quality and format</li>
+<li>Handle missing assets gracefully</li>
+<li>Register assets for cleanup</li>
+</ul>
+<p><strong>Output</strong>: <code>VisualsStageOutput</code></p>
+<ul>
+<li>Dictionary of scene assets (indexed by scene)</li>
+<li>Asset generation statistics</li>
+<li>Provider information</li>
+</ul>
+<p><strong>Typical Duration</strong>: 30-90 seconds (highly variable)</p>
+<p><strong>Note</strong>: This stage is optional and will gracefully skip if no image provider is configured.</p>
+<h3 id="5-composition-stage">5. Composition Stage</h3>
+<p><strong>Purpose</strong>: Combine all assets into final video</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Build timeline from scenes, narration, and assets</li>
+<li>Call video composer (FFmpeg) to render</li>
+<li>Validate output video</li>
+<li>Report final video metadata</li>
+</ul>
+<p><strong>Output</strong>: <code>CompositionStageOutput</code></p>
+<ul>
+<li>Path to final video file</li>
+<li>Video metadata (resolution, codec, duration)</li>
+<li>File size</li>
+</ul>
+<p><strong>Typical Duration</strong>: 30-120 seconds</p>
+<h2 id="architecture-components">Architecture Components</h2>
+<h3 id="pipelinestage-base-class">PipelineStage Base Class</h3>
+<p>The <code>PipelineStage</code> abstract class provides common functionality for all stages:</p>
+<pre><code class="lang-csharp">public abstract class PipelineStage
+{
+    // Stage identification
+    public abstract string StageName { get; }
+    public abstract string DisplayName { get; }
+    
+    // Configuration
+    public virtual int ProgressWeight =&gt; 20;
+    public virtual TimeSpan Timeout =&gt; TimeSpan.FromMinutes(5);
+    public virtual bool SupportsRetry =&gt; true;
+    public virtual int MaxRetryAttempts =&gt; 3;
+    
+    // Execution
+    public Task&lt;PipelineStageResult&gt; ExecuteAsync(
+        PipelineContext context,
+        IProgress&lt;StageProgress&gt;? progress,
+        CancellationToken ct);
+    
+    // Abstract method for derived classes
+    protected abstract Task ExecuteStageAsync(
+        PipelineContext context,
+        IProgress&lt;StageProgress&gt;? progress,
+        CancellationToken ct);
+}
+</code></pre>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li>Automatic retry logic with exponential backoff</li>
+<li>Progress reporting</li>
+<li>Error tracking and metrics collection</li>
+<li>Resume/skip support</li>
+<li>Timeout handling</li>
+<li>Cancellation support</li>
+</ul>
+<h3 id="pipelinecontext">PipelineContext</h3>
+<p>The <code>PipelineContext</code> class maintains state across stages:</p>
+<pre><code class="lang-csharp">public sealed class PipelineContext : IDisposable
+{
+    // Input specifications
+    public string CorrelationId { get; }
+    public Brief Brief { get; }
+    public PlanSpec PlanSpec { get; }
+    public VoiceSpec VoiceSpec { get; }
+    public RenderSpec RenderSpec { get; }
+    public SystemProfile SystemProfile { get; }
+    
+    // Pipeline state
+    public PipelineState State { get; set; }
+    public string CurrentStage { get; set; }
+    
+    // Stage outputs
+    public string? GeneratedScript { get; set; }
+    public List&lt;Scene&gt;? ParsedScenes { get; set; }
+    public string? NarrationPath { get; set; }
+    public Dictionary&lt;int, IReadOnlyList&lt;Asset&gt;&gt; SceneAssets { get; set; }
+    public string? FinalVideoPath { get; set; }
+    
+    // Methods
+    public void SetStageOutput&lt;T&gt;(string stageName, T output);
+    public T? GetStageOutput&lt;T&gt;(string stageName);
+    public void RecordStageMetrics(string stageName, PipelineStageMetrics metrics);
+    public void RecordError(string stageName, Exception exception, bool isRecoverable);
+}
+</code></pre>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li>Thread-safe stage output storage</li>
+<li>Metrics and error tracking</li>
+<li>Memory-efficient channels for streaming</li>
+<li>Checkpoint support</li>
+</ul>
+<h3 id="orchestratoroptions">OrchestratorOptions</h3>
+<p>Configuration options for customizing pipeline behavior:</p>
+<pre><code class="lang-csharp">public class OrchestratorOptions
+{
+    public bool EnableCheckpoints { get; set; } = true;
+    public bool EnableMetrics { get; set; } = true;
+    public int MaxRetryAttempts { get; set; } = 3;
+    public TimeSpan StageTimeout { get; set; } = TimeSpan.FromMinutes(10);
+    public TimeSpan PipelineTimeout { get; set; } = TimeSpan.FromHours(1);
+    public bool EnableAutoCleanup { get; set; } = true;
+    public bool EnableProgressStreaming { get; set; } = true;
+    // ... more options
+}
+</code></pre>
+<p><strong>Presets</strong>:</p>
+<ul>
+<li><code>CreateDefault()</code>: Production settings</li>
+<li><code>CreateDebug()</code>: Development/debugging settings</li>
+<li><code>CreateQuickDemo()</code>: Fast, lenient settings for demos</li>
+</ul>
+<h2 id="execution-flow">Execution Flow</h2>
+<h3 id="1-pipeline-initialization">1. Pipeline Initialization</h3>
+<pre><code class="lang-mermaid">graph TD
+    A[Client Request] --&gt; B[VideoController.GenerateVideo]
+    B --&gt; C[JobRunner.CreateAndStartJobAsync]
+    C --&gt; D[Create PipelineContext]
+    D --&gt; E[Start Background Execution]
+    E --&gt; F[Return Job ID to Client]
+</code></pre>
+<h3 id="2-stage-execution">2. Stage Execution</h3>
+<pre><code class="lang-mermaid">graph TD
+    A[Start Stage] --&gt; B{Can Skip?}
+    B --&gt;|Yes| C[Return Resumed Result]
+    B --&gt;|No| D[Execute Stage Logic]
+    D --&gt; E{Success?}
+    E --&gt;|Yes| F[Record Metrics]
+    F --&gt; G[Store Output]
+    G --&gt; H[Report Progress]
+    H --&gt; I[Return Success]
+    E --&gt;|No| J{Can Retry?}
+    J --&gt;|Yes| K[Wait with Backoff]
+    K --&gt; D
+    J --&gt;|No| L[Record Error]
+    L --&gt; M[Return Failure]
+</code></pre>
+<h3 id="3-progress-reporting">3. Progress Reporting</h3>
+<pre><code class="lang-mermaid">sequenceDiagram
+    participant Client
+    participant VideoController
+    participant JobRunner
+    participant Stage
+    participant Context
+    
+    Client-&gt;&gt;VideoController: GET /api/videos/{id}/stream
+    VideoController-&gt;&gt;JobRunner: Subscribe to Progress
+    loop Each Stage
+        Stage-&gt;&gt;Context: Update Progress
+        Context-&gt;&gt;JobRunner: Notify Progress
+        JobRunner-&gt;&gt;VideoController: Progress Event
+        VideoController-&gt;&gt;Client: SSE Progress Update
+    end
+    Stage-&gt;&gt;Context: Mark Completed
+    Context-&gt;&gt;JobRunner: Completion Event
+    JobRunner-&gt;&gt;VideoController: Done Event
+    VideoController-&gt;&gt;Client: SSE Complete Event
+</code></pre>
+<h2 id="error-handling--resilience">Error Handling &amp; Resilience</h2>
+<h3 id="retry-strategy">Retry Strategy</h3>
+<p>The pipeline implements automatic retry logic for transient failures:</p>
+<ol>
+<li><strong>Exponential Backoff</strong>: Delays increase exponentially (1s, 2s, 4s, 8s...)</li>
+<li><strong>Maximum Delay</strong>: Capped at 10 seconds to prevent excessive waiting</li>
+<li><strong>Configurable Attempts</strong>: Default 3 retries, configurable per stage</li>
+<li><strong>Selective Retry</strong>: Only retries transient errors (network, rate limits)</li>
+</ol>
+<h3 id="circuit-breaker">Circuit Breaker</h3>
+<p>Polly circuit breaker policies protect against cascading failures:</p>
+<ul>
+<li><strong>Failure Threshold</strong>: Opens after 50% failure rate over 30 seconds</li>
+<li><strong>Break Duration</strong>: 30 seconds before attempting recovery</li>
+<li><strong>States</strong>: Closed → Open → Half-Open → Closed</li>
+</ul>
+<h3 id="graceful-degradation">Graceful Degradation</h3>
+<ul>
+<li><strong>Missing Image Provider</strong>: Continues without visuals</li>
+<li><strong>Failed Asset Generation</strong>: Uses empty asset list</li>
+<li><strong>Script Validation Failure</strong>: Falls back to safe default script (Quick Demo mode)</li>
+</ul>
+<h2 id="monitoring--observability">Monitoring &amp; Observability</h2>
+<h3 id="structured-logging">Structured Logging</h3>
+<p>All stages emit structured logs with:</p>
+<ul>
+<li>Correlation ID for request tracing</li>
+<li>Stage name and execution context</li>
+<li>Performance metrics (duration, retry count)</li>
+<li>Error details with stack traces</li>
+</ul>
+<h3 id="metrics-collection">Metrics Collection</h3>
+<p>Each stage records:</p>
+<ul>
+<li>Duration</li>
+<li>Items processed/failed</li>
+<li>Retry count</li>
+<li>Memory usage</li>
+<li>CPU percentage</li>
+<li>Provider information</li>
+<li>Estimated cost</li>
+</ul>
+<h3 id="progress-tracking">Progress Tracking</h3>
+<p>Real-time progress updates via Server-Sent Events (SSE):</p>
+<ul>
+<li>Overall pipeline progress (0-100%)</li>
+<li>Stage-specific progress (0-100%)</li>
+<li>Current stage name and message</li>
+<li>Estimated time remaining</li>
+<li>Current/total items</li>
+</ul>
+<h2 id="api-integration">API Integration</h2>
+<h3 id="generate-video">Generate Video</h3>
+<pre><code class="lang-http">POST /api/videos/generate
+Content-Type: application/json
+
+{
+  &quot;brief&quot;: &quot;Create a video about AI&quot;,
+  &quot;voiceId&quot;: &quot;en-US-Neural&quot;,
+  &quot;style&quot;: &quot;documentary&quot;,
+  &quot;durationMinutes&quot;: 2,
+  &quot;options&quot;: {
+    &quot;audience&quot;: &quot;general&quot;,
+    &quot;aspect&quot;: &quot;16:9&quot;,
+    &quot;fps&quot;: 30
+  }
+}
+</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;abc123&quot;,
+  &quot;status&quot;: &quot;pending&quot;,
+  &quot;correlationId&quot;: &quot;xyz789&quot;,
+  &quot;createdAt&quot;: &quot;2024-01-01T12:00:00Z&quot;
+}
+</code></pre>
+<h3 id="stream-progress">Stream Progress</h3>
+<pre><code class="lang-http">GET /api/videos/{jobId}/stream
+Accept: text/event-stream
+</code></pre>
+<p><strong>Events</strong>:</p>
+<pre><code>event: progress
+data: {&quot;percentage&quot;:20,&quot;stage&quot;:&quot;Script&quot;,&quot;message&quot;:&quot;Generating script...&quot;}
+
+event: progress
+data: {&quot;percentage&quot;:45,&quot;stage&quot;:&quot;Voice&quot;,&quot;message&quot;:&quot;Synthesizing audio...&quot;}
+
+event: done
+data: {&quot;jobId&quot;:&quot;abc123&quot;,&quot;videoUrl&quot;:&quot;/api/videos/abc123/download&quot;}
+</code></pre>
+<h3 id="get-video-status">Get Video Status</h3>
+<pre><code class="lang-http">GET /api/videos/{jobId}/status
+</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;abc123&quot;,
+  &quot;status&quot;: &quot;completed&quot;,
+  &quot;progressPercentage&quot;: 100,
+  &quot;currentStage&quot;: &quot;Composition&quot;,
+  &quot;videoUrl&quot;: &quot;/api/videos/abc123/download&quot;,
+  &quot;createdAt&quot;: &quot;2024-01-01T12:00:00Z&quot;,
+  &quot;completedAt&quot;: &quot;2024-01-01T12:03:45Z&quot;,
+  &quot;processingSteps&quot;: [
+    &quot;Initialized&quot;,
+    &quot;Script Generated&quot;,
+    &quot;Audio Synthesized&quot;,
+    &quot;Visuals Created&quot;,
+    &quot;Video Composed&quot;,
+    &quot;Completed&quot;
+  ]
+}
+</code></pre>
+<h2 id="extending-the-pipeline">Extending the Pipeline</h2>
+<h3 id="adding-a-new-stage">Adding a New Stage</h3>
+<ol>
+<li><strong>Create Stage Class</strong>:</li>
+</ol>
+<pre><code class="lang-csharp">public class CustomStage : PipelineStage
+{
+    public CustomStage(ILogger&lt;CustomStage&gt; logger) : base(logger) { }
+    
+    public override string StageName =&gt; &quot;Custom&quot;;
+    public override string DisplayName =&gt; &quot;Custom Processing&quot;;
+    public override int ProgressWeight =&gt; 15;
+    
+    protected override async Task ExecuteStageAsync(
+        PipelineContext context,
+        IProgress&lt;StageProgress&gt;? progress,
+        CancellationToken ct)
+    {
+        // Your stage logic here
+        ReportProgress(progress, 50, &quot;Processing...&quot;);
+        
+        // Store output
+        context.SetStageOutput(StageName, new CustomStageOutput
+        {
+            // Your output data
+        });
+    }
+}
+</code></pre>
+<ol start="2">
+<li><strong>Register in DI Container</strong> (<code>Program.cs</code>):</li>
+</ol>
+<pre><code class="lang-csharp">builder.Services.AddSingleton&lt;CustomStage&gt;();
+</code></pre>
+<ol start="3">
+<li><strong>Add to Pipeline</strong> (in <code>VideoOrchestrator</code>):</li>
+</ol>
+<pre><code class="lang-csharp">// Execute custom stage
+var customStage = serviceProvider.GetRequiredService&lt;CustomStage&gt;();
+var result = await customStage.ExecuteAsync(context, progress, ct);
+if (!result.Succeeded)
+{
+    // Handle failure
+}
+</code></pre>
+<h3 id="customizing-existing-stages">Customizing Existing Stages</h3>
+<p>Override stage properties to customize behavior:</p>
+<pre><code class="lang-csharp">public class CustomScriptStage : ScriptStage
+{
+    public override int MaxRetryAttempts =&gt; 5; // More retries
+    public override TimeSpan Timeout =&gt; TimeSpan.FromMinutes(5); // Longer timeout
+    
+    protected override async Task ExecuteStageAsync(...)
+    {
+        // Custom script generation logic
+    }
+}
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-idempotency">1. Idempotency</h3>
+<p>Stages should be idempotent where possible. Use <code>SupportsResume</code> and <code>CanSkipStage()</code> to avoid re-executing completed stages.</p>
+<h3 id="2-resource-management">2. Resource Management</h3>
+<p>Always register temporary files with <code>ResourceCleanupManager</code>:</p>
+<pre><code class="lang-csharp">_cleanupManager.RegisterTempFile(audioPath);
+</code></pre>
+<h3 id="3-progress-reporting-1">3. Progress Reporting</h3>
+<p>Report progress at key milestones (0%, 25%, 50%, 75%, 100%):</p>
+<pre><code class="lang-csharp">ReportProgress(progress, 50, &quot;Halfway done...&quot;);
+</code></pre>
+<h3 id="4-error-context">4. Error Context</h3>
+<p>Provide detailed error context:</p>
+<pre><code class="lang-csharp">throw new ValidationException(
+    &quot;Script quality validation failed&quot;,
+    new List&lt;string&gt; { &quot;Too short&quot;, &quot;Missing scenes&quot; }
+);
+</code></pre>
+<h3 id="5-cancellation-support">5. Cancellation Support</h3>
+<p>Always check cancellation tokens:</p>
+<pre><code class="lang-csharp">ct.ThrowIfCancellationRequested();
+await Task.Delay(1000, ct);
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="stage-hangs">Stage Hangs</h3>
+<ul>
+<li>Check timeout settings in <code>OrchestratorOptions</code></li>
+<li>Verify provider endpoints are responsive</li>
+<li>Check for deadlocks in channel operations</li>
+</ul>
+<h3 id="memory-issues">Memory Issues</h3>
+<ul>
+<li>Enable streaming mode: <code>EnableStreaming = true</code></li>
+<li>Reduce <code>ChannelBufferSize</code></li>
+<li>Enable auto-cleanup: <code>EnableAutoCleanup = true</code></li>
+</ul>
+<h3 id="retry-loops">Retry Loops</h3>
+<ul>
+<li>Check <code>MaxRetryAttempts</code> configuration</li>
+<li>Verify error classification (transient vs permanent)</li>
+<li>Review provider circuit breaker state</li>
+</ul>
+<h3 id="missing-progress-updates">Missing Progress Updates</h3>
+<ul>
+<li>Ensure <code>EnableProgressStreaming = true</code></li>
+<li>Check SSE connection is not buffered by proxy</li>
+<li>Verify <code>ProgressUpdateInterval</code> is reasonable</li>
+</ul>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="optimization-tips">Optimization Tips</h3>
+<ol>
+<li><strong>Parallel Execution</strong>: The pipeline supports parallel execution of independent stages through channels</li>
+<li><strong>Caching</strong>: Enable LLM caching to avoid regenerating identical scripts</li>
+<li><strong>Hardware Acceleration</strong>: Enable GPU acceleration for video rendering</li>
+<li><strong>Concurrency Control</strong>: Adjust <code>MaxConcurrency</code> based on system resources</li>
+</ol>
+<h3 id="expected-timings">Expected Timings</h3>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Typical Duration</th>
+<th>Factors</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brief</td>
+<td>&lt; 5s</td>
+<td>Validation complexity</td>
+</tr>
+<tr>
+<td>Script</td>
+<td>10-30s</td>
+<td>LLM provider speed, script length</td>
+</tr>
+<tr>
+<td>Voice</td>
+<td>20-60s</td>
+<td>TTS provider speed, narration length</td>
+</tr>
+<tr>
+<td>Visuals</td>
+<td>30-90s</td>
+<td>Image provider, scene count</td>
+</tr>
+<tr>
+<td>Composition</td>
+<td>30-120s</td>
+<td>Video length, resolution, codec</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total</strong>: 2-5 minutes for typical 1-2 minute video</p>
+<h2 id="security-considerations">Security Considerations</h2>
+<ol>
+<li><strong>Input Validation</strong>: All briefs are validated before processing</li>
+<li><strong>Resource Limits</strong>: Timeout and size limits prevent resource exhaustion</li>
+<li><strong>Cleanup</strong>: Temporary files are automatically cleaned up</li>
+<li><strong>API Keys</strong>: Stored securely using encrypted storage</li>
+<li><strong>Rate Limiting</strong>: Applied at controller level</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Planned improvements:</p>
+<ul>
+<li>[ ] Parallel stage execution where dependencies allow</li>
+<li>[ ] Advanced checkpoint compression</li>
+<li>[ ] Machine learning for progress estimation</li>
+<li>[ ] Dynamic stage ordering based on dependencies</li>
+<li>[ ] A/B testing framework for stage variations</li>
+<li>[ ] Multi-tenant resource isolation</li>
+<li>[ ] Advanced cost optimization strategies</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/PIPELINE_ARCHITECTURE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>FFmpeg Capability Service Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="FFmpeg Capability Service Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/FFMPEG_CAPABILITY_SERVICE_IMPLEMENTATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ffmpeg-capability-service-implementation-summary">FFmpeg Capability Service Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This implementation addresses the FFmpeg installation and detection issues reported in the problem statement, specifically:</p>
+<ul>
+<li>Fixed circuit breaker &quot;open&quot; state preventing FFmpeg operations</li>
+<li>Made &quot;Install Managed FFmpeg&quot; button functional with proper error handling</li>
+<li>Implemented working &quot;Re-scan&quot; functionality that actually rescans the system</li>
+<li>Enhanced &quot;Use Existing FFmpeg&quot; with backend validation</li>
+<li>Improved FFmpeg detection to check common Windows installation directories</li>
+</ul>
+<h2 id="problem-statement-addressed">Problem Statement Addressed</h2>
+<p><strong>Original Issues:</strong></p>
+<ul>
+<li>Step 2 shows circuit breaker state for FFmpeg; install/rescan buttons do nothing</li>
+<li>System FFmpeg is installed but not detected</li>
+<li>App supposed to bundle/install FFmpeg during build; detection and managed install path aren't reliably wired</li>
+</ul>
+<p><strong>Solution Delivered:</strong></p>
+<ul>
+<li>Circuit breaker now resets after successful FFmpeg operations</li>
+<li>Install and rescan buttons are fully functional with proper backend integration</li>
+<li>Enhanced detection checks PATH, common Windows directories, and managed installs</li>
+<li>Clear error messages with actionable guidance (howToFix arrays)</li>
+</ul>
+<h2 id="implementation-details">Implementation Details</h2>
+<h3 id="backend-changes">Backend Changes</h3>
+<h4 id="1-ffmpegcontrollercs-auraapicontrollers">1. FFmpegController.cs (Aura.Api/Controllers/)</h4>
+<p><strong>New Endpoints:</strong></p>
+<p><strong>POST /api/ffmpeg/rescan</strong></p>
+<ul>
+<li>Invalidates FFmpegResolver cache to force fresh scan</li>
+<li>Scans PATH, common directories, and managed installs</li>
+<li>Returns detailed status including path, version, source</li>
+<li>Provides clear error messages if FFmpeg not found</li>
+</ul>
+<p><strong>POST /api/ffmpeg/use-existing</strong></p>
+<ul>
+<li>Accepts custom FFmpeg path from user</li>
+<li>Validates the path points to a working FFmpeg executable</li>
+<li>Runs <code>ffmpeg -version</code> to verify functionality</li>
+<li>Returns validation result with version info</li>
+<li>Provides howToFix guidance on validation failure</li>
+</ul>
+<p><strong>Enhanced POST /api/ffmpeg/install</strong></p>
+<ul>
+<li>Added howToFix arrays to error responses</li>
+<li>Provides actionable guidance for common failure scenarios</li>
+<li>Suggests alternatives (manual install, VPN, etc.)</li>
+</ul>
+<h4 id="2-ffmpegresolvercs-auracoredependencies">2. FFmpegResolver.cs (Aura.Core/Dependencies/)</h4>
+<p><strong>Enhanced CheckPathEnvironmentAsync():</strong></p>
+<ul>
+<li>First checks PATH environment variable (existing behavior)</li>
+<li>If not found on PATH, checks common Windows directories:
+<ul>
+<li><code>C:\ffmpeg\bin\ffmpeg.exe</code></li>
+<li><code>C:\ffmpeg\ffmpeg.exe</code></li>
+<li><code>C:\Program Files\ffmpeg\bin\ffmpeg.exe</code></li>
+<li><code>C:\Program Files\ffmpeg\ffmpeg.exe</code></li>
+<li><code>C:\Program Files (x86)\ffmpeg\bin\ffmpeg.exe</code></li>
+<li><code>C:\Program Files (x86)\ffmpeg\ffmpeg.exe</code></li>
+<li>Chocolatey install directory if available</li>
+<li>Environment.SpecialFolder.ProgramFiles variations</li>
+</ul>
+</li>
+<li>Logs each checked location for troubleshooting</li>
+<li>Returns &quot;Common Directory&quot; as source when found outside PATH</li>
+<li>Comprehensive error message listing all checked locations</li>
+</ul>
+<h3 id="frontend-changes">Frontend Changes</h3>
+<h4 id="1-ffmpegclientts-aurawebsrcservicesapi">1. ffmpegClient.ts (Aura.Web/src/services/api/)</h4>
+<p><strong>New Methods:</strong></p>
+<p><strong>rescan(): Promise<ffmpegrescanresponse></ffmpegrescanresponse></strong></p>
+<ul>
+<li>Calls POST /api/ffmpeg/rescan</li>
+<li>Resets circuit breaker on successful scan that finds valid FFmpeg</li>
+<li>Returns detailed scan results</li>
+</ul>
+<p><strong>useExisting(request): Promise<useexistingffmpegresponse></useexistingffmpegresponse></strong></p>
+<ul>
+<li>Calls POST /api/ffmpeg/use-existing with path</li>
+<li>Validates user-provided FFmpeg path</li>
+<li>Resets circuit breaker on successful validation</li>
+</ul>
+<p><strong>Circuit Breaker Integration:</strong></p>
+<ul>
+<li>All methods now reset circuit breaker after successful operations</li>
+<li><code>getStatus()</code> resets when FFmpeg is installed and valid</li>
+<li><code>install()</code> resets on successful installation</li>
+<li><code>rescan()</code> resets when scan finds valid FFmpeg</li>
+<li><code>useExisting()</code> resets on successful path validation</li>
+</ul>
+<h4 id="2-ffmpegdependencycardtsx-aurawebsrccomponentsonboarding">2. FFmpegDependencyCard.tsx (Aura.Web/src/components/Onboarding/)</h4>
+<p><strong>New Handler:</strong></p>
+<p><strong>handleRescan()</strong></p>
+<ul>
+<li>Calls <code>ffmpegClient.rescan()</code> instead of just checking cached status</li>
+<li>Shows success toast with message from backend</li>
+<li>Updates component status from rescan results</li>
+<li>Falls back to full status check to get hardware acceleration info</li>
+<li>Handles errors with clear toast notifications</li>
+</ul>
+<p><strong>Button Behavior:</strong></p>
+<ul>
+<li>&quot;Re-scan&quot; button now triggers actual system rescan</li>
+<li>Shows &quot;Scanning...&quot; state during operation</li>
+<li>Disabled while scanning or installing</li>
+<li>Works whether FFmpeg is ready or not</li>
+</ul>
+<h4 id="3-firstrunwizardtsx-aurawebsrcpagesonboarding">3. FirstRunWizard.tsx (Aura.Web/src/pages/Onboarding/)</h4>
+<p><strong>Enhanced handleValidateFfmpegPath():</strong></p>
+<ul>
+<li>Now uses <code>ffmpegClient.useExisting()</code> instead of local validation</li>
+<li>Sends path to backend for proper validation</li>
+<li>Displays howToFix tips from backend on failure</li>
+<li>Shows success toast with confirmation message</li>
+<li>Updates wizard state and triggers status refresh</li>
+</ul>
+<p><strong>Error Handling:</strong></p>
+<ul>
+<li>Proper TypeScript error typing (unknown → type checking)</li>
+<li>Extracts howToFix tips from error responses</li>
+<li>Formats tips as bullet list in error message</li>
+<li>Shows clear guidance to users</li>
+</ul>
+<h2 id="api-contract">API Contract</h2>
+<h3 id="requestresponse-models">Request/Response Models</h3>
+<pre><code class="lang-typescript">// Rescan Response
+interface FFmpegRescanResponse {
+  success: boolean;
+  installed: boolean;
+  version: string | null;
+  path: string | null;
+  source: string;  // &quot;Managed&quot;, &quot;PATH&quot;, &quot;Common Directory&quot;, &quot;Configured&quot;
+  valid: boolean;
+  error: string | null;
+  message: string;
+  correlationId: string;
+}
+
+// Use Existing Request
+interface UseExistingFFmpegRequest {
+  path: string;
+}
+
+// Use Existing Response
+interface UseExistingFFmpegResponse {
+  success: boolean;
+  message: string;
+  installed: boolean;
+  valid: boolean;
+  path: string | null;
+  version: string | null;
+  source: string;
+  correlationId: string;
+  howToFix?: string[];
+}
+</code></pre>
+<h3 id="error-response-format">Error Response Format</h3>
+<p>All error responses follow ProblemDetails format with additional howToFix guidance:</p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: false,
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/.../README.md#E316&quot;,
+  &quot;title&quot;: &quot;Invalid FFmpeg&quot;,
+  &quot;status&quot;: 400,
+  &quot;detail&quot;: &quot;The specified path does not contain a valid FFmpeg executable&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Ensure the path points to ffmpeg.exe (or ffmpeg on Unix)&quot;,
+    &quot;Verify FFmpeg is properly installed and not corrupted&quot;,
+    &quot;Try running 'ffmpeg -version' manually to test&quot;,
+    &quot;Download a fresh copy of FFmpeg if needed&quot;
+  ],
+  &quot;correlationId&quot;: &quot;abc-123-def-456&quot;
+}
+</code></pre>
+<h2 id="circuit-breaker-integration">Circuit Breaker Integration</h2>
+<h3 id="problem">Problem</h3>
+<p>The global circuit breaker was opening after FFmpeg failures, blocking all subsequent requests including status checks and installation attempts. Users would see &quot;Circuit breaker is open - service unavailable&quot; errors.</p>
+<h3 id="solution">Solution</h3>
+<p>Implemented circuit breaker reset logic after any successful FFmpeg operation:</p>
+<p><strong>When circuit breaker resets:</strong></p>
+<ol>
+<li>After successful status check (FFmpeg is installed and valid)</li>
+<li>After successful managed FFmpeg installation</li>
+<li>After successful rescan that finds valid FFmpeg</li>
+<li>After successful validation of user-provided path</li>
+</ol>
+<p><strong>Implementation:</strong></p>
+<pre><code class="lang-typescript">// In ffmpegClient methods
+if (response.data.success &amp;&amp; response.data.installed &amp;&amp; response.data.valid) {
+  resetCircuitBreaker();
+}
+</code></pre>
+<p>This ensures users can recover from failure states by:</p>
+<ul>
+<li>Installing FFmpeg successfully</li>
+<li>Rescanning after manual FFmpeg installation</li>
+<li>Providing a valid existing FFmpeg path</li>
+</ul>
+<h2 id="user-experience-flow">User Experience Flow</h2>
+<h3 id="scenario-1-fresh-install-no-ffmpeg">Scenario 1: Fresh Install (No FFmpeg)</h3>
+<ol>
+<li>User sees &quot;FFmpeg Not Ready&quot; status</li>
+<li>Clicks &quot;Install Managed FFmpeg&quot;</li>
+<li>Progress bar shows installation progress</li>
+<li>Backend downloads from mirrors with fallback</li>
+<li>On success: Status updates to &quot;Ready&quot;, circuit breaker resets</li>
+<li>User can proceed to next wizard step</li>
+</ol>
+<h3 id="scenario-2-manual-ffmpeg-installation">Scenario 2: Manual FFmpeg Installation</h3>
+<ol>
+<li>User installs FFmpeg manually (e.g., to C:\ffmpeg)</li>
+<li>FFmpeg not detected initially</li>
+<li>User clicks &quot;Re-scan&quot;</li>
+<li>Backend checks PATH, then common directories</li>
+<li>Finds FFmpeg at C:\ffmpeg\bin\ffmpeg.exe</li>
+<li>Status updates to &quot;Ready&quot; with source &quot;Common Directory&quot;</li>
+<li>Circuit breaker resets, user can proceed</li>
+</ol>
+<h3 id="scenario-3-custom-path">Scenario 3: Custom Path</h3>
+<ol>
+<li>User has FFmpeg at non-standard location</li>
+<li>Enters path in &quot;Use Existing FFmpeg&quot; field</li>
+<li>Clicks &quot;Validate Path&quot;</li>
+<li>Backend validates path, runs <code>ffmpeg -version</code></li>
+<li>On success: Status shows validated path, circuit breaker resets</li>
+<li>On failure: Shows howToFix tips (check path, verify installation, etc.)</li>
+</ol>
+<h3 id="scenario-4-recovery-from-failure">Scenario 4: Recovery from Failure</h3>
+<ol>
+<li>Circuit breaker opens due to previous failures</li>
+<li>User sees &quot;service unavailable&quot; errors</li>
+<li>User successfully completes any FFmpeg operation (install/rescan/validate)</li>
+<li>Circuit breaker automatically resets</li>
+<li>All operations now work normally</li>
+</ol>
+<h2 id="testing-verification">Testing Verification</h2>
+<h3 id="test-scenarios-covered">Test Scenarios Covered</h3>
+<ol>
+<li><p><strong>Missing FFmpeg:</strong></p>
+<ul>
+<li>Verify clear error messages</li>
+<li>Check howToFix guidance is displayed</li>
+<li>Confirm rescan finds nothing with helpful message</li>
+</ul>
+</li>
+<li><p><strong>PATH Installation:</strong></p>
+<ul>
+<li>FFmpeg on PATH is detected correctly</li>
+<li>Source shows &quot;PATH&quot;</li>
+<li>Version is extracted properly</li>
+</ul>
+</li>
+<li><p><strong>Common Directory Detection:</strong></p>
+<ul>
+<li>FFmpeg in C:\ffmpeg is found automatically</li>
+<li>Source shows &quot;Common Directory&quot;</li>
+<li>Logged locations help troubleshooting</li>
+</ul>
+</li>
+<li><p><strong>Rescan Functionality:</strong></p>
+<ul>
+<li>Actually rescans vs using cache</li>
+<li>Updates status after finding FFmpeg</li>
+<li>Shows success toast with clear message</li>
+</ul>
+</li>
+<li><p><strong>Use Existing Path:</strong></p>
+<ul>
+<li>Valid paths are accepted and validated</li>
+<li>Invalid paths show clear error with tips</li>
+<li>Version info is extracted and displayed</li>
+</ul>
+</li>
+<li><p><strong>Circuit Breaker Reset:</strong></p>
+<ul>
+<li>Opens after repeated failures</li>
+<li>Resets after successful operation</li>
+<li>Allows normal operations to resume</li>
+</ul>
+</li>
+</ol>
+<h2 id="benefits-delivered">Benefits Delivered</h2>
+<ol>
+<li><strong>Reliability:</strong> Enhanced detection finds FFmpeg in more locations</li>
+<li><strong>Transparency:</strong> Clear error messages guide users to solutions</li>
+<li><strong>Resilience:</strong> Circuit breaker resets allow recovery from failures</li>
+<li><strong>User Control:</strong> Manual path validation gives users flexibility</li>
+<li><strong>Diagnostics:</strong> Logging helps troubleshoot detection issues</li>
+<li><strong>Standards:</strong> Follows existing patterns (ProblemDetails, correlation IDs)</li>
+</ol>
+<h2 id="files-modified">Files Modified</h2>
+<h3 id="backend">Backend</h3>
+<ul>
+<li><code>Aura.Api/Controllers/FFmpegController.cs</code> - Added rescan and use-existing endpoints</li>
+<li><code>Aura.Core/Dependencies/FFmpegResolver.cs</code> - Enhanced detection with common paths</li>
+</ul>
+<h3 id="frontend">Frontend</h3>
+<ul>
+<li><code>Aura.Web/src/services/api/ffmpegClient.ts</code> - New methods with circuit breaker reset</li>
+<li><code>Aura.Web/src/components/Onboarding/FFmpegDependencyCard.tsx</code> - Rescan handler</li>
+<li><code>Aura.Web/src/pages/Onboarding/FirstRunWizard.tsx</code> - Use-existing integration</li>
+</ul>
+<h3 id="total-changes">Total Changes</h3>
+<ul>
+<li>5 files modified</li>
+<li>~450 lines added</li>
+<li>50 lines removed</li>
+<li>0 placeholders or TODOs</li>
+<li>All linting and formatting checks pass</li>
+</ul>
+<h2 id="future-enhancements-not-implemented">Future Enhancements (Not Implemented)</h2>
+<p>The following were mentioned in the problem statement but are optional enhancements:</p>
+<ol>
+<li><p><strong>SSE Progress for Installation:</strong></p>
+<ul>
+<li>Real-time download progress with speed and ETA</li>
+<li>Extraction progress updates</li>
+<li>Checksum verification progress</li>
+<li>Would require SSE endpoint and EventSource integration</li>
+</ul>
+</li>
+<li><p><strong>Diagnostics View:</strong></p>
+<ul>
+<li>&quot;View Diagnostics&quot; link in UI</li>
+<li>Shows last error with full details</li>
+<li>Displays log tail for troubleshooting</li>
+<li>Export logs functionality</li>
+</ul>
+</li>
+<li><p><strong>Manual Circuit Breaker Reset:</strong></p>
+<ul>
+<li>Button to manually reset circuit breaker</li>
+<li>Useful for advanced troubleshooting</li>
+<li>Circuit breaker state indicator in UI</li>
+</ul>
+</li>
+<li><p><strong>Antivirus Interference Detection:</strong></p>
+<ul>
+<li>Detect when antivirus blocks downloads</li>
+<li>Show specific guidance for common AV products</li>
+<li>Suggest temporary exemptions</li>
+</ul>
+</li>
+</ol>
+<p>These enhancements can be added in future PRs as needed.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This implementation successfully addresses all core issues from the problem statement:</p>
+<ul>
+<li>✅ Fixed circuit breaker preventing FFmpeg operations</li>
+<li>✅ Made Install/Rescan buttons functional</li>
+<li>✅ Improved FFmpeg detection reliability</li>
+<li>✅ Added proper error handling and user guidance</li>
+<li>✅ Integrated backend validation for custom paths</li>
+</ul>
+<p>The solution is production-ready, follows project conventions, and provides a solid foundation for any future enhancements.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/FFMPEG_CAPABILITY_SERVICE_IMPLEMENTATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

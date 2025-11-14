@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Resource Management Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Resource Management Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/RESOURCE_MANAGEMENT_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="resource-management-guide">Resource Management Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide documents best practices for resource management in Aura Video Studio to prevent memory leaks, file handle exhaustion, and process accumulation.</p>
+<h2 id="critical-resource-types">Critical Resource Types</h2>
+<h3 id="1-httpclient-socket-exhaustion-prevention">1. HttpClient (Socket Exhaustion Prevention)</h3>
+<p><strong>Problem</strong>: Creating new <code>HttpClient</code> instances per request leads to socket exhaustion.</p>
+<p><strong>Solution</strong>: Use shared <code>HttpClient</code> with proper lifetime management.</p>
+<h4 id="-correct-pattern-dependency-injection">✅ Correct Pattern (Dependency Injection)</h4>
+<pre><code class="lang-csharp">public class MyProvider
+{
+    private readonly HttpClient _httpClient;
+    
+    public MyProvider(HttpClient httpClient)
+    {
+        _httpClient = httpClient; // Injected, managed by DI container
+    }
+    
+    public async Task&lt;string&gt; FetchDataAsync()
+    {
+        return await _httpClient.GetStringAsync(&quot;https://api.example.com/data&quot;);
+    }
+}
+</code></pre>
+<h4 id="-correct-pattern-test-classes">✅ Correct Pattern (Test Classes)</h4>
+<pre><code class="lang-csharp">public class MyTests : IDisposable
+{
+    private readonly HttpClient _httpClient;
+    
+    public MyTests()
+    {
+        _httpClient = new HttpClient();
+    }
+    
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
+    }
+    
+    [Fact]
+    public async Task Test()
+    {
+        // Use _httpClient for all tests
+    }
+}
+</code></pre>
+<h4 id="-wrong-pattern">❌ Wrong Pattern</h4>
+<pre><code class="lang-csharp">// NEVER DO THIS
+public async Task&lt;string&gt; FetchDataAsync()
+{
+    using var httpClient = new HttpClient(); // Creates new socket per call
+    return await httpClient.GetStringAsync(&quot;url&quot;);
+}
+</code></pre>
+<h3 id="2-process-management-ffmpeg-external-tools">2. Process Management (FFmpeg, External Tools)</h3>
+<p><strong>Problem</strong>: Processes not properly disposed can accumulate and exhaust system resources.</p>
+<p><strong>Solution</strong>: Use ProcessManager for tracking and automatic cleanup.</p>
+<h4 id="-correct-pattern">✅ Correct Pattern</h4>
+<pre><code class="lang-csharp">public class FFmpegService : IFFmpegService
+{
+    private readonly IProcessManager _processManager;
+    
+    public async Task&lt;FFmpegResult&gt; ExecuteAsync(string arguments, CancellationToken ct)
+    {
+        Process? process = null;
+        try
+        {
+            process = new Process { StartInfo = CreateStartInfo(arguments) };
+            process.Start();
+            
+            // Register for tracking
+            _processManager?.RegisterProcess(process.Id, &quot;ffmpeg-job&quot;);
+            
+            await process.WaitForExitAsync(ct).ConfigureAwait(false);
+            
+            return new FFmpegResult { Success = process.ExitCode == 0 };
+        }
+        catch (OperationCanceledException)
+        {
+            // Kill process on cancellation
+            if (process != null &amp;&amp; !process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            throw;
+        }
+        finally
+        {
+            // Always dispose and unregister
+            _processManager?.UnregisterProcess(process?.Id ?? 0);
+            process?.Dispose();
+        }
+    }
+}
+</code></pre>
+<h3 id="3-file-handles-streams-files">3. File Handles (Streams, Files)</h3>
+<p><strong>Problem</strong>: Unclosed file handles can exhaust available handles and lock files.</p>
+<p><strong>Solution</strong>: Always use <code>using</code> statements or proper try-finally disposal.</p>
+<h4 id="-correct-pattern-1">✅ Correct Pattern</h4>
+<pre><code class="lang-csharp">// Preferred: using declaration
+public async Task&lt;string&gt; ReadFileAsync(string path)
+{
+    using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+    using var reader = new StreamReader(stream);
+    return await reader.ReadToEndAsync();
+}
+
+// Alternative: using block
+public async Task WriteFileAsync(string path, string content)
+{
+    using (var stream = new FileStream(path, FileMode.Create))
+    using (var writer = new StreamWriter(stream))
+    {
+        await writer.WriteAsync(content);
+    }
+}
+</code></pre>
+<h4 id="-wrong-pattern-1">❌ Wrong Pattern</h4>
+<pre><code class="lang-csharp">// Missing using - stream not disposed if exception occurs
+public string ReadFile(string path)
+{
+    var stream = new FileStream(path, FileMode.Open);
+    var reader = new StreamReader(stream);
+    return reader.ReadToEnd(); // Leaks if exception thrown
+}
+</code></pre>
+<h3 id="4-cancellationtokensource">4. CancellationTokenSource</h3>
+<p><strong>Problem</strong>: Not disposing CancellationTokenSource can leak resources.</p>
+<p><strong>Solution</strong>: Always dispose in finally block or use using statement.</p>
+<h4 id="-correct-pattern-2">✅ Correct Pattern</h4>
+<pre><code class="lang-csharp">public async Task ExecuteWithTimeoutAsync(TimeSpan timeout)
+{
+    using var cts = new CancellationTokenSource(timeout);
+    try
+    {
+        await DoWorkAsync(cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        // Handle cancellation
+    }
+}
+
+// For linked tokens stored in dictionary
+private readonly Dictionary&lt;string, CancellationTokenSource&gt; _tokens = new();
+
+public void StartJob(string jobId, CancellationToken ct)
+{
+    var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+    _tokens[jobId] = cts;
+}
+
+public void CleanupJob(string jobId)
+{
+    if (_tokens.TryRemove(jobId, out var cts))
+    {
+        cts.Dispose(); // Always dispose
+    }
+}
+</code></pre>
+<h2 id="memory-pressure-monitoring">Memory Pressure Monitoring</h2>
+<h3 id="memorypressuremonitor-usage">MemoryPressureMonitor Usage</h3>
+<p>The <code>MemoryPressureMonitor</code> tracks memory usage per job and triggers garbage collection when needed.</p>
+<h4 id="integration-with-jobrunner">Integration with JobRunner</h4>
+<pre><code class="lang-csharp">public class JobRunner
+{
+    private readonly IMemoryPressureMonitor _memoryMonitor;
+    
+    private async Task ExecuteJobAsync(string jobId, CancellationToken ct)
+    {
+        try
+        {
+            // Start monitoring
+            _memoryMonitor?.StartMonitoring(jobId);
+            
+            // Execute job with periodic memory checks
+            await foreach (var progress in ProcessJobAsync(jobId, ct))
+            {
+                // Update peak memory tracking
+                _memoryMonitor?.UpdatePeakMemory(jobId);
+                
+                // Force GC if memory pressure detected
+                _memoryMonitor?.ForceCollectionIfNeeded();
+            }
+        }
+        finally
+        {
+            // Stop monitoring and log statistics
+            var stats = _memoryMonitor?.StopMonitoring(jobId);
+            if (stats != null)
+            {
+                _logger.LogInformation(
+                    &quot;Job {JobId} memory: Start={Start}MB, Peak={Peak}MB, End={End}MB, Delta={Delta}MB&quot;,
+                    jobId, stats.StartMemoryMb, stats.PeakMemoryMb, 
+                    stats.EndMemoryMb, stats.MemoryDeltaMb);
+            }
+        }
+    }
+}
+</code></pre>
+<h3 id="custom-memory-thresholds">Custom Memory Thresholds</h3>
+<pre><code class="lang-csharp">// Configure for low-memory environments
+var monitor = new MemoryPressureMonitor(
+    logger,
+    memoryPressureThresholdMb: 1024, // 1GB threshold
+    memoryPressureThresholdPercent: 0.80 // 80% of available
+);
+</code></pre>
+<h2 id="common-pitfalls">Common Pitfalls</h2>
+<h3 id="1-async-disposal">1. Async Disposal</h3>
+<pre><code class="lang-csharp">// ❌ Wrong - IDisposable.Dispose() is synchronous
+public class MyService : IDisposable
+{
+    public void Dispose()
+    {
+        CleanupAsync().Wait(); // Can deadlock
+    }
+}
+
+// ✅ Correct - Use IAsyncDisposable
+public class MyService : IAsyncDisposable
+{
+    public async ValueTask DisposeAsync()
+    {
+        await CleanupAsync();
+    }
+}
+</code></pre>
+<h3 id="2-finalizers-with-managed-resources">2. Finalizers with Managed Resources</h3>
+<pre><code class="lang-csharp">// ❌ Wrong - Don't use finalizer for managed resources
+public class MyService : IDisposable
+{
+    private HttpClient _client;
+    
+    ~MyService() // Finalizer
+    {
+        _client?.Dispose(); // Unnecessary, managed by GC
+    }
+}
+
+// ✅ Correct - Only for unmanaged resources
+public class MyService : IDisposable
+{
+    private bool _disposed;
+    
+    public void Dispose()
+    {
+        if (_disposed) return;
+        
+        // Dispose managed resources
+        _client?.Dispose();
+        
+        _disposed = true;
+        GC.SuppressFinalize(this); // No finalizer needed
+    }
+}
+</code></pre>
+<h3 id="3-forgetting-configureawait-in-libraries">3. Forgetting ConfigureAwait in Libraries</h3>
+<pre><code class="lang-csharp">// ❌ Wrong in library code
+public async Task ProcessAsync()
+{
+    await _service.DoWorkAsync(); // Captures context unnecessarily
+}
+
+// ✅ Correct in library code
+public async Task ProcessAsync()
+{
+    await _service.DoWorkAsync().ConfigureAwait(false);
+}
+
+// Note: In ASP.NET Core controllers, ConfigureAwait(false) is optional
+</code></pre>
+<h2 id="testing-resource-management">Testing Resource Management</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-csharp">[Fact]
+public async Task Service_Should_DisposeResources()
+{
+    // Arrange
+    var service = new MyService();
+    
+    // Act
+    await service.ProcessAsync();
+    service.Dispose();
+    
+    // Assert - Verify resources cleaned up
+    Assert.Equal(0, service.GetActiveConnectionCount());
+}
+</code></pre>
+<h3 id="stress-tests">Stress Tests</h3>
+<pre><code class="lang-csharp">[Fact]
+public async Task Service_UnderLoad_Should_NotLeakMemory()
+{
+    var initialMemory = GC.GetTotalMemory(forceFullCollection: true);
+    
+    // Execute many operations
+    for (int i = 0; i &lt; 1000; i++)
+    {
+        using var service = new MyService();
+        await service.ProcessAsync();
+    }
+    
+    GC.Collect();
+    GC.WaitForPendingFinalizers();
+    GC.Collect();
+    
+    var finalMemory = GC.GetTotalMemory(forceFullCollection: false);
+    var leakedMb = (finalMemory - initialMemory) / (1024.0 * 1024.0);
+    
+    Assert.True(leakedMb &lt; 10, $&quot;Leaked {leakedMb:F1}MB&quot;);
+}
+</code></pre>
+<h2 id="monitoring-and-diagnostics">Monitoring and Diagnostics</h2>
+<h3 id="logging">Logging</h3>
+<p>Always log resource usage for long-running operations:</p>
+<pre><code class="lang-csharp">_logger.LogInformation(
+    &quot;Job {JobId} completed: Duration={Duration}s, Memory={MemoryMb}MB, Processes={ProcessCount}&quot;,
+    jobId, duration.TotalSeconds, memoryUsageMb, activeProcessCount);
+</code></pre>
+<h3 id="health-checks">Health Checks</h3>
+<p>Implement health checks for resource monitoring:</p>
+<pre><code class="lang-csharp">public class ResourceHealthCheck : IHealthCheck
+{
+    private readonly IProcessManager _processManager;
+    private readonly IMemoryPressureMonitor _memoryMonitor;
+    
+    public async Task&lt;HealthCheckResult&gt; CheckHealthAsync(
+        HealthCheckContext context, 
+        CancellationToken ct = default)
+    {
+        var processCount = _processManager.GetProcessCount();
+        var memoryPressure = _memoryMonitor.IsUnderMemoryPressure();
+        
+        if (processCount &gt; 100 || memoryPressure)
+        {
+            return HealthCheckResult.Degraded(
+                $&quot;High resource usage: {processCount} processes, memory pressure: {memoryPressure}&quot;);
+        }
+        
+        return HealthCheckResult.Healthy();
+    }
+}
+</code></pre>
+<h2 id="checklist-for-code-reviews">Checklist for Code Reviews</h2>
+<ul>
+<li>[ ] All IDisposable objects have using statements or try-finally disposal</li>
+<li>[ ] No new HttpClient() in request handlers or loops</li>
+<li>[ ] Process.Dispose() called for all Process objects</li>
+<li>[ ] CancellationTokenSource.Dispose() in finally blocks</li>
+<li>[ ] FileStream uses FileShare.Read for read operations</li>
+<li>[ ] Large memory allocations cleared after use</li>
+<li>[ ] Long-running operations have memory monitoring</li>
+<li>[ ] Async methods use ConfigureAwait(false) in library code</li>
+<li>[ ] No finalizers unless managing unmanaged resources</li>
+<li>[ ] Tests verify resource cleanup</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="/home/runner/work/aura-video-studio/aura-video-studio/Aura.Core/Services/FFmpeg/ProcessManager.cs">ProcessManager</a></li>
+<li><a href="/home/runner/work/aura-video-studio/aura-video-studio/Aura.Core/Services/Memory/MemoryPressureMonitor.cs">MemoryPressureMonitor</a></li>
+<li><a href="/home/runner/work/aura-video-studio/aura-video-studio/Aura.Core/Services/ResourceCleanupManager.cs">ResourceCleanupManager</a></li>
+<li><a href="/home/runner/work/aura-video-studio/aura-video-studio/Aura.Core/Services/CleanupService.cs">CleanupService</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/RESOURCE_MANAGEMENT_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

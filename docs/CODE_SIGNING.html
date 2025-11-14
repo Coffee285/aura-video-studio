@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Code Signing Guide for Aura Video Studio | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Code Signing Guide for Aura Video Studio | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/CODE_SIGNING.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="code-signing-guide-for-aura-video-studio">Code Signing Guide for Aura Video Studio</h1>
+
+<p>This guide explains code signing for Windows installers - why it's important, how to get a certificate, and how to configure signing.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#why-code-signing">Why Code Signing?</a></li>
+<li><a href="#understanding-certificates">Understanding Certificates</a></li>
+<li><a href="#obtaining-a-certificate">Obtaining a Certificate</a></li>
+<li><a href="#configuring-code-signing">Configuring Code Signing</a></li>
+<li><a href="#signing-locally">Signing Locally</a></li>
+<li><a href="#github-actions-configuration">GitHub Actions Configuration</a></li>
+<li><a href="#verification">Verification</a></li>
+<li><a href="#certificate-management">Certificate Management</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+<h2 id="why-code-signing">Why Code Signing?</h2>
+<h3 id="the-problem-smartscreen-warnings">The Problem: SmartScreen Warnings</h3>
+<p>Without code signing, Windows shows scary warnings to users:</p>
+<pre><code>Windows protected your PC
+Microsoft Defender SmartScreen prevented an unrecognized app from starting.
+Running this app might put your PC at risk.
+</code></pre>
+<p><strong>Impact</strong>:</p>
+<ul>
+<li>Users won't trust your installer</li>
+<li>Many users will give up and not install</li>
+<li>Looks unprofessional</li>
+<li>Antivirus software may flag it</li>
+</ul>
+<h3 id="the-solution-code-signing-certificate">The Solution: Code Signing Certificate</h3>
+<p>A code signing certificate:</p>
+<ul>
+<li>✅ Proves the software publisher's identity</li>
+<li>✅ Ensures code hasn't been tampered with</li>
+<li>✅ Eliminates SmartScreen warnings (eventually)</li>
+<li>✅ Increases user trust and download rates</li>
+<li>✅ Reduces antivirus false positives</li>
+</ul>
+<h3 id="reality-check">Reality Check</h3>
+<p><strong>Initial Period</strong> (first few weeks):</p>
+<ul>
+<li>SmartScreen warnings will still appear</li>
+<li>Even with valid certificate</li>
+<li>Certificate needs to build &quot;reputation&quot;</li>
+<li>Based on number of downloads and user feedback</li>
+</ul>
+<p><strong>After Building Reputation</strong>:</p>
+<ul>
+<li>No more SmartScreen warnings</li>
+<li>Smooth installation experience</li>
+<li>Professional appearance</li>
+</ul>
+<p><strong>Timeline</strong>:</p>
+<ul>
+<li>Standard Certificate: 2-6 months to build reputation</li>
+<li>EV Certificate: Immediate trust (no reputation needed)</li>
+</ul>
+<h2 id="understanding-certificates">Understanding Certificates</h2>
+<h3 id="types-of-code-signing-certificates">Types of Code Signing Certificates</h3>
+<h4 id="1-standard-code-signing-ov">1. Standard Code Signing (OV)</h4>
+<p><strong>Organization Validation (OV)</strong></p>
+<ul>
+<li><strong>Cost</strong>: $200-$400 per year</li>
+<li><strong>Validation</strong>: Email + business registration verification</li>
+<li><strong>Timeline</strong>: 1-3 business days</li>
+<li><strong>Delivery</strong>: Digital file (PFX)</li>
+<li><strong>Storage</strong>: On your computer</li>
+<li><strong>SmartScreen</strong>: Must build reputation over time</li>
+</ul>
+<p><strong>Best for</strong>:</p>
+<ul>
+<li>Independent developers</li>
+<li>Startups</li>
+<li>Small businesses</li>
+<li>Budget-conscious projects</li>
+</ul>
+<p><strong>Providers</strong>:</p>
+<ul>
+<li>Sectigo/Comodo: ~$200/year</li>
+<li>DigiCert: ~$400/year</li>
+<li>SSL.com: ~$250/year</li>
+<li>GlobalSign: ~$300/year</li>
+</ul>
+<h4 id="2-extended-validation-ev">2. Extended Validation (EV)</h4>
+<p><strong>Extended Validation (EV)</strong></p>
+<ul>
+<li><strong>Cost</strong>: $400-$800 per year</li>
+<li><strong>Validation</strong>: Extensive business verification</li>
+<li><strong>Timeline</strong>: 3-7 business days</li>
+<li><strong>Delivery</strong>: USB hardware token</li>
+<li><strong>Storage</strong>: On hardware token only</li>
+<li><strong>SmartScreen</strong>: Immediate trust (no reputation period!)</li>
+</ul>
+<p><strong>Best for</strong>:</p>
+<ul>
+<li>Established businesses</li>
+<li>High-volume downloads</li>
+<li>Professional image critical</li>
+<li>Want immediate trust</li>
+</ul>
+<p><strong>Providers</strong>:</p>
+<ul>
+<li>DigiCert: ~$600/year</li>
+<li>SSL.com: ~$450/year</li>
+<li>Sectigo: ~$500/year</li>
+<li>Entrust: ~$700/year</li>
+</ul>
+<h3 id="comparison">Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Standard (OV)</th>
+<th>Extended Validation (EV)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cost</td>
+<td>$200-$400/year</td>
+<td>$400-$800/year</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Email + docs</td>
+<td>Extensive verification</td>
+</tr>
+<tr>
+<td>Timeline</td>
+<td>1-3 days</td>
+<td>3-7 days</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td>File (PFX)</td>
+<td>Hardware token (USB)</td>
+</tr>
+<tr>
+<td>SmartScreen</td>
+<td>Builds reputation</td>
+<td>Instant trust</td>
+</tr>
+<tr>
+<td>Portability</td>
+<td>Easy (copy file)</td>
+<td>Hardware token required</td>
+</tr>
+<tr>
+<td>CI/CD</td>
+<td>Easy to automate</td>
+<td>Requires HSM or special setup</td>
+</tr>
+<tr>
+<td>Best for</td>
+<td>Indie devs, startups</td>
+<td>Enterprises, high-volume</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Recommendation</strong>:</p>
+<ul>
+<li><strong>Starting out?</strong> Standard (OV) - Build reputation over time</li>
+<li><strong>Serious business?</strong> EV - Worth the extra cost for instant trust</li>
+<li><strong>Tight budget?</strong> Standard (OV) or wait until you have users</li>
+</ul>
+<h2 id="obtaining-a-certificate">Obtaining a Certificate</h2>
+<h3 id="step-1-choose-a-provider">Step 1: Choose a Provider</h3>
+<p><strong>Popular Providers</strong>:</p>
+<ol>
+<li><p><strong>Sectigo (formerly Comodo)</strong></p>
+<ul>
+<li>Website: <a href="https://sectigo.com/">https://sectigo.com/</a></li>
+<li>Cost: ~$200-$250/year (OV), ~$500/year (EV)</li>
+<li>Pros: Affordable, good reputation</li>
+<li>Cons: Average support</li>
+</ul>
+</li>
+<li><p><strong>DigiCert</strong></p>
+<ul>
+<li>Website: <a href="https://www.digicert.com/">https://www.digicert.com/</a></li>
+<li>Cost: ~$400/year (OV), ~$600/year (EV)</li>
+<li>Pros: Premium provider, excellent support, fast</li>
+<li>Cons: More expensive</li>
+</ul>
+</li>
+<li><p><strong>SSL.com</strong></p>
+<ul>
+<li>Website: <a href="https://www.ssl.com/">https://www.ssl.com/</a></li>
+<li>Cost: ~$250/year (OV), ~$450/year (EV)</li>
+<li>Pros: Good balance of price and service</li>
+<li>Cons: Validation can be slow</li>
+</ul>
+</li>
+<li><p><strong>GlobalSign</strong></p>
+<ul>
+<li>Website: <a href="https://www.globalsign.com/">https://www.globalsign.com/</a></li>
+<li>Cost: ~$300/year (OV)</li>
+<li>Pros: Well-known, trusted</li>
+<li>Cons: Limited EV options</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-2-prepare-documents">Step 2: Prepare Documents</h3>
+<p><strong>For Standard (OV) Certificate</strong>:</p>
+<p><em>Individual developers:</em></p>
+<ul>
+<li>Valid government ID (driver's license, passport)</li>
+<li>Proof of address (utility bill, bank statement)</li>
+<li>Email at domain you're signing (or use personal email)</li>
+</ul>
+<p><em>Businesses:</em></p>
+<ul>
+<li>Business registration documents</li>
+<li>Tax ID / EIN</li>
+<li>Business address proof</li>
+<li>Officer/owner ID</li>
+<li>Business email address</li>
+</ul>
+<p><strong>For EV Certificate</strong>:</p>
+<p><em>All of the above, plus:</em></p>
+<ul>
+<li>D&amp;B DUNS number (or equivalent)</li>
+<li>Business phone listed in directory</li>
+<li>Verified business bank account</li>
+<li>Incorporation documents</li>
+<li>May require notarization</li>
+</ul>
+<p><strong>Tips</strong>:</p>
+<ul>
+<li>Have documents ready before ordering</li>
+<li>Use official business email (not Gmail/Yahoo)</li>
+<li>Ensure business details match exactly across all documents</li>
+<li>Response time affects how quickly you get certificate</li>
+</ul>
+<h3 id="step-3-order-certificate">Step 3: Order Certificate</h3>
+<ol>
+<li>Go to provider website</li>
+<li>Select &quot;Code Signing Certificate&quot;</li>
+<li>Choose Standard (OV) or Extended Validation (EV)</li>
+<li>Select duration (1 year, 2 years, 3 years)
+<ul>
+<li>Multi-year often cheaper</li>
+<li>Saves renewal hassle</li>
+</ul>
+</li>
+<li>Complete checkout</li>
+<li>Wait for validation email</li>
+</ol>
+<h3 id="step-4-validation-process">Step 4: Validation Process</h3>
+<p><strong>Standard (OV)</strong>:</p>
+<ol>
+<li>Receive validation email</li>
+<li>Click verification link</li>
+<li>Submit documents</li>
+<li>Answer any follow-up questions</li>
+<li>Receive certificate (1-3 days)</li>
+</ol>
+<p><strong>EV</strong>:</p>
+<ol>
+<li>Receive validation email</li>
+<li>Submit extensive documentation</li>
+<li>Verification phone calls</li>
+<li>Wait for hardware token to ship</li>
+<li>Receive token (3-7 days + shipping)</li>
+</ol>
+<h3 id="step-5-downloadreceive-certificate">Step 5: Download/Receive Certificate</h3>
+<p><strong>Standard (OV)</strong>:</p>
+<ul>
+<li>Download PFX file from provider portal</li>
+<li>Save securely with password</li>
+<li>Backup in secure location</li>
+</ul>
+<p><strong>EV</strong>:</p>
+<ul>
+<li>Receive hardware token by mail</li>
+<li>Install token drivers</li>
+<li>Configure token software</li>
+<li>Test signing on development machine</li>
+</ul>
+<h2 id="configuring-code-signing">Configuring Code Signing</h2>
+<h3 id="standard-certificate-pfx-file">Standard Certificate (PFX File)</h3>
+<h4 id="1-save-certificate">1. Save Certificate</h4>
+<pre><code class="lang-powershell"># Create secure directory
+New-Item -ItemType Directory -Path &quot;C:\Certificates&quot; -Force
+
+# Copy certificate
+Copy-Item &quot;Downloads\mycert.pfx&quot; -Destination &quot;C:\Certificates\aura-cert.pfx&quot;
+
+# Set secure permissions (optional)
+icacls &quot;C:\Certificates\aura-cert.pfx&quot; /inheritance:r /grant:r &quot;$env:USERNAME:(R)&quot;
+</code></pre>
+<h4 id="2-configure-electron-builder">2. Configure electron-builder</h4>
+<p>The certificate is already configured in <code>Aura.Desktop/package.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;build&quot;: {
+    &quot;win&quot;: {
+      &quot;certificateFile&quot;: &quot;win-certificate.pfx&quot;,
+      &quot;certificatePassword&quot;: &quot;&quot;,
+      &quot;signingHashAlgorithms&quot;: [&quot;sha256&quot;],
+      &quot;rfc3161TimeStampServer&quot;: &quot;http://timestamp.digicert.com&quot;
+    }
+  }
+}
+</code></pre>
+<h4 id="3-set-environment-variables">3. Set Environment Variables</h4>
+<pre><code class="lang-powershell"># For local builds
+$env:WIN_CSC_LINK=&quot;C:\Certificates\aura-cert.pfx&quot;
+$env:WIN_CSC_KEY_PASSWORD=&quot;your_certificate_password&quot;
+
+# Now build
+cd Aura.Desktop
+npm run build:win
+</code></pre>
+<p><strong>Or</strong> copy certificate to project:</p>
+<pre><code class="lang-powershell"># Copy certificate to project (NOT recommended for public repos)
+Copy-Item &quot;C:\Certificates\aura-cert.pfx&quot; -Destination &quot;Aura.Desktop\win-certificate.pfx&quot;
+
+# Add password to build command
+$env:WIN_CSC_KEY_PASSWORD=&quot;password&quot;
+npm run build:win
+</code></pre>
+<h3 id="ev-certificate-hardware-token">EV Certificate (Hardware Token)</h3>
+<h4 id="1-install-token-drivers">1. Install Token Drivers</h4>
+<p>Follow manufacturer instructions (usually SafeNet or Thales)</p>
+<h4 id="2-configure-token-software">2. Configure Token Software</h4>
+<ul>
+<li>Install eToken software</li>
+<li>Test token access</li>
+<li>Note token password/PIN</li>
+</ul>
+<h4 id="3-update-build-configuration">3. Update Build Configuration</h4>
+<p>For EV certificates on hardware tokens, electron-builder needs special configuration:</p>
+<pre><code class="lang-json">{
+  &quot;build&quot;: {
+    &quot;win&quot;: {
+      &quot;sign&quot;: &quot;./scripts/sign-windows.js&quot;,
+      &quot;signingHashAlgorithms&quot;: [&quot;sha256&quot;]
+    }
+  }
+}
+</code></pre>
+<p>The custom signing script (<code>scripts/sign-windows.js</code>) handles hardware token signing.</p>
+<h4 id="4-build">4. Build</h4>
+<pre><code class="lang-powershell"># Token must be plugged in
+# Enter PIN when prompted
+npm run build:win
+</code></pre>
+<h2 id="signing-locally">Signing Locally</h2>
+<h3 id="quick-test">Quick Test</h3>
+<pre><code class="lang-powershell"># Build installer with signing
+cd Aura.Desktop
+$env:WIN_CSC_LINK=&quot;path\to\cert.pfx&quot;
+$env:WIN_CSC_KEY_PASSWORD=&quot;your_password&quot;
+npm run build:win
+</code></pre>
+<h3 id="verify-signing">Verify Signing</h3>
+<pre><code class="lang-powershell"># Check if installer is signed
+cd dist
+Get-AuthenticodeSignature &quot;Aura-Video-Studio-Setup-1.0.0.exe&quot;
+
+# Should show:
+# Status: Valid
+# StatusMessage: Signature verified
+# SignerCertificate: CN=Your Company Name
+</code></pre>
+<h3 id="manual-signing-with-signtool">Manual Signing (with signtool)</h3>
+<p>If you want to sign manually:</p>
+<pre><code class="lang-powershell"># Find signtool.exe (comes with Windows SDK)
+$signtool = &quot;C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe&quot;
+
+# Sign installer
+&amp; $signtool sign `
+  /f &quot;path\to\cert.pfx&quot; `
+  /p &quot;certificate_password&quot; `
+  /tr &quot;http://timestamp.digicert.com&quot; `
+  /td SHA256 `
+  /fd SHA256 `
+  /v `
+  &quot;Aura-Video-Studio-Setup-1.0.0.exe&quot;
+</code></pre>
+<h2 id="github-actions-configuration">GitHub Actions Configuration</h2>
+<h3 id="for-standard-certificate-pfx">For Standard Certificate (PFX)</h3>
+<h4 id="1-convert-certificate-to-base64">1. Convert Certificate to Base64</h4>
+<pre><code class="lang-powershell"># Read certificate file
+$certBytes = [System.IO.File]::ReadAllBytes(&quot;C:\Certificates\aura-cert.pfx&quot;)
+
+# Convert to base64
+$base64 = [System.Convert]::ToBase64String($certBytes)
+
+# Copy to clipboard
+$base64 | Set-Clipboard
+
+# Or save to file
+$base64 | Out-File &quot;cert-base64.txt&quot;
+</code></pre>
+<h4 id="2-add-github-secrets">2. Add GitHub Secrets</h4>
+<ol>
+<li>Go to your repository on GitHub</li>
+<li>Settings → Secrets and variables → Actions</li>
+<li>Click &quot;New repository secret&quot;</li>
+</ol>
+<p><strong>Add two secrets</strong>:</p>
+<p><strong>Secret 1: WIN_CSC_LINK</strong></p>
+<ul>
+<li>Name: <code>WIN_CSC_LINK</code></li>
+<li>Value: (paste base64 string from step 1)</li>
+</ul>
+<p><strong>Secret 2: WIN_CSC_KEY_PASSWORD</strong></p>
+<ul>
+<li>Name: <code>WIN_CSC_KEY_PASSWORD</code></li>
+<li>Value: (your certificate password)</li>
+</ul>
+<h4 id="3-workflow-configuration">3. Workflow Configuration</h4>
+<p>The GitHub Actions workflow (<code>.github/workflows/build-windows-installer.yml</code>) is already configured:</p>
+<pre><code class="lang-yaml">- name: Build Windows installer
+  env:
+    WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+    WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    cd Aura.Desktop
+    npm run build:win
+</code></pre>
+<h4 id="4-test-workflow">4. Test Workflow</h4>
+<ol>
+<li>Push a commit or tag</li>
+<li>Go to Actions tab</li>
+<li>Watch build progress</li>
+<li>Download artifact</li>
+<li>Verify signature</li>
+</ol>
+<h3 id="for-ev-certificate-hardware-token">For EV Certificate (Hardware Token)</h3>
+<p>EV certificates on hardware tokens cannot be used directly in GitHub Actions (no physical USB access).</p>
+<p><strong>Options</strong>:</p>
+<ol>
+<li><strong>Build Locally</strong>: Sign releases on your machine with token</li>
+<li><strong>Use HSM</strong>: Cloud HSM service (expensive)</li>
+<li><strong>Use Standard Cert</strong>: For CI/CD, switch to standard cert</li>
+</ol>
+<p><strong>Recommended</strong>: Build and sign locally, then upload to GitHub releases manually.</p>
+<h2 id="verification">Verification</h2>
+<h3 id="windows-explorer">Windows Explorer</h3>
+<ol>
+<li>Right-click installer</li>
+<li>Properties → Digital Signatures</li>
+<li>Should show your company name</li>
+<li>Status: &quot;This digital signature is OK&quot;</li>
+</ol>
+<h3 id="powershell">PowerShell</h3>
+<pre><code class="lang-powershell">Get-AuthenticodeSignature &quot;Aura-Video-Studio-Setup-1.0.0.exe&quot; | Format-List *
+</code></pre>
+<p><strong>Expected Output</strong>:</p>
+<pre><code>SignerCertificate : CN=Your Company, O=Your Company, L=City, S=State, C=US
+TimeStamperCertificate : CN=DigiCert Timestamp 2023
+Status : Valid
+StatusMessage : Signature verified.
+</code></pre>
+<h3 id="smartscreen-test">SmartScreen Test</h3>
+<ol>
+<li>Copy installer to fresh Windows VM</li>
+<li>Download and run installer</li>
+<li>Check for warnings:
+<ul>
+<li>No warning = Certificate working!</li>
+<li>Warning = Building reputation (normal for first few months)</li>
+</ul>
+</li>
+</ol>
+<h3 id="signtool-verification">signtool Verification</h3>
+<pre><code class="lang-powershell">$signtool = &quot;C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe&quot;
+&amp; $signtool verify /pa /v &quot;Aura-Video-Studio-Setup-1.0.0.exe&quot;
+</code></pre>
+<h2 id="certificate-management">Certificate Management</h2>
+<h3 id="storage-security">Storage Security</h3>
+<p><strong>DO</strong>:</p>
+<ul>
+<li>✅ Store certificate in encrypted location</li>
+<li>✅ Use strong password</li>
+<li>✅ Backup certificate securely (encrypted cloud, safe, etc.)</li>
+<li>✅ Limit access (only authorized team members)</li>
+<li>✅ Use environment variables (not hardcoded paths)</li>
+</ul>
+<p><strong>DON'T</strong>:</p>
+<ul>
+<li>❌ Commit certificate to Git repository</li>
+<li>❌ Share certificate password in plain text</li>
+<li>❌ Email certificate without encryption</li>
+<li>❌ Store in public cloud without encryption</li>
+<li>❌ Use weak password</li>
+</ul>
+<h3 id="backup">Backup</h3>
+<pre><code class="lang-powershell"># Backup certificate
+Copy-Item &quot;C:\Certificates\aura-cert.pfx&quot; -Destination &quot;D:\Backups\Certificates\aura-cert-backup-2025-11-10.pfx&quot;
+
+# Or to encrypted cloud storage
+# Use 7-Zip with AES-256 encryption:
+7z a -p -mhe=on &quot;aura-cert.7z&quot; &quot;C:\Certificates\aura-cert.pfx&quot;
+# Upload aura-cert.7z to secure cloud storage
+</code></pre>
+<h3 id="renewal">Renewal</h3>
+<p><strong>When to Renew</strong>:</p>
+<ul>
+<li>30 days before expiration</li>
+<li>Certificate provider will send reminder emails</li>
+</ul>
+<p><strong>Renewal Process</strong>:</p>
+<ol>
+<li>Order renewal from provider</li>
+<li>Validation (usually faster for renewals)</li>
+<li>Receive new certificate</li>
+<li>Update secrets/environment variables</li>
+<li>Test with new certificate</li>
+<li>Update CI/CD before old cert expires</li>
+</ol>
+<p><strong>Important</strong>: Keep old certificate until all signed releases are deprecated.</p>
+<h3 id="revocation">Revocation</h3>
+<p><strong>If certificate is compromised</strong>:</p>
+<ol>
+<li>Contact provider immediately</li>
+<li>Request certificate revocation</li>
+<li>Get new certificate with different key</li>
+<li>Update all signing configurations</li>
+<li>Re-sign and re-release installers</li>
+</ol>
+<h3 id="monitoring">Monitoring</h3>
+<p><strong>Check Expiration</strong>:</p>
+<pre><code class="lang-powershell"># View certificate expiration
+$cert = Get-PfxCertificate -FilePath &quot;C:\Certificates\aura-cert.pfx&quot;
+$cert.NotAfter
+# Output: expiration date
+</code></pre>
+<p><strong>Set Calendar Reminder</strong>:</p>
+<ul>
+<li>90 days before expiration: Start renewal process</li>
+<li>30 days before: Ensure renewal complete</li>
+<li>7 days before: Emergency mode if not renewed</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="certificate-not-found-error">&quot;Certificate not found&quot; Error</h3>
+<p><strong>Problem</strong>: electron-builder can't find certificate</p>
+<p><strong>Solutions</strong>:</p>
+<pre><code class="lang-powershell"># Check environment variable
+echo $env:WIN_CSC_LINK
+# Should show certificate path
+
+# Check file exists
+Test-Path &quot;C:\Certificates\aura-cert.pfx&quot;
+# Should be True
+
+# Try absolute path
+$env:WIN_CSC_LINK=&quot;C:\full\path\to\cert.pfx&quot;
+</code></pre>
+<h3 id="invalid-password-error">&quot;Invalid Password&quot; Error</h3>
+<p><strong>Problem</strong>: Certificate password incorrect</p>
+<p><strong>Solutions</strong>:</p>
+<pre><code class="lang-powershell"># Test password
+$cert = Get-PfxCertificate -FilePath &quot;C:\Certificates\aura-cert.pfx&quot;
+# If prompts, enter password
+# If loads, password is correct
+
+# Check environment variable
+echo $env:WIN_CSC_KEY_PASSWORD
+
+# Special characters may need escaping
+$env:WIN_CSC_KEY_PASSWORD='password'  # Use single quotes
+</code></pre>
+<h3 id="signing-failed-error">&quot;Signing Failed&quot; Error</h3>
+<p><strong>Problem</strong>: signtool fails to sign</p>
+<p><strong>Checks</strong>:</p>
+<ol>
+<li><strong>signtool installed</strong>: Windows SDK required</li>
+<li><strong>Certificate valid</strong>: Not expired</li>
+<li><strong>Timestamp server</strong>: Try different servers</li>
+<li><strong>Permissions</strong>: Run as administrator</li>
+</ol>
+<p><strong>Try different timestamp server</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;win&quot;: {
+    &quot;rfc3161TimeStampServer&quot;: &quot;http://timestamp.sectigo.com&quot;
+  }
+}
+</code></pre>
+<h3 id="smartscreen-still-shows-warnings">SmartScreen Still Shows Warnings</h3>
+<p><strong>Problem</strong>: Signed installer still triggers SmartScreen</p>
+<p><strong>This is NORMAL for new certificates!</strong></p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><strong>Wait</strong>: Build reputation over 2-6 months</li>
+<li><strong>EV Certificate</strong>: Switch to EV for instant trust</li>
+<li><strong>More downloads</strong>: Reputation based on usage</li>
+<li><strong>Clean history</strong>: No malware reports</li>
+</ol>
+<p><strong>Ways to build reputation faster</strong>:</p>
+<ul>
+<li>Encourage downloads and installations</li>
+<li>Never distribute malware (obvious but critical)</li>
+<li>Consistent signing (same certificate, same publisher)</li>
+<li>Good user feedback (no uninstalls immediately after install)</li>
+</ul>
+<h3 id="certificate-expired">Certificate Expired</h3>
+<p><strong>Problem</strong>: Forgot to renew, certificate expired</p>
+<p><strong>Impact</strong>:</p>
+<ul>
+<li>New builds won't sign</li>
+<li>Old installers still valid (if timestamped)</li>
+<li>SmartScreen warnings return</li>
+</ul>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Order new certificate immediately</li>
+<li>Express validation if available</li>
+<li>Update secrets/environment variables</li>
+<li>Re-sign latest release</li>
+<li>Set better renewal reminders</li>
+</ol>
+<h3 id="private-key-not-found">Private Key Not Found</h3>
+<p><strong>Problem</strong>: Certificate imports but can't access private key</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-powershell"># Re-import PFX with proper flags
+$password = ConvertTo-SecureString -String &quot;your_password&quot; -Force -AsPlainText
+Import-PfxCertificate -FilePath &quot;cert.pfx&quot; `
+  -CertStoreLocation Cert:\CurrentUser\My `
+  -Password $password `
+  -Exportable
+</code></pre>
+<h2 id="cost-analysis">Cost Analysis</h2>
+<h3 id="return-on-investment">Return on Investment</h3>
+<p><strong>Without Code Signing</strong>:</p>
+<ul>
+<li>50-70% of users abandon installation (SmartScreen warning)</li>
+<li>Poor first impression</li>
+<li>Support requests about safety</li>
+<li>Antivirus false positives</li>
+</ul>
+<p><strong>With Code Signing</strong>:</p>
+<ul>
+<li>5-10% abandonment (initially, with reputation)</li>
+<li>Professional appearance</li>
+<li>Builds trust</li>
+<li>Fewer support requests</li>
+</ul>
+<p><strong>Break-even</strong>: ~100-200 serious users</p>
+<h3 id="budget-recommendations">Budget Recommendations</h3>
+<p><strong>Indie/Hobby Project</strong>:</p>
+<ul>
+<li>Start without code signing</li>
+<li>Document installation process clearly</li>
+<li>Add code signing when have regular users</li>
+<li><strong>Cost</strong>: $0 initially, $200-$250/year when ready</li>
+</ul>
+<p><strong>Startup/Small Business</strong>:</p>
+<ul>
+<li>Start with Standard (OV) certificate</li>
+<li>Upgrade to EV when budget allows</li>
+<li><strong>Cost</strong>: $200-$400/year (Standard)</li>
+</ul>
+<p><strong>Established Business</strong>:</p>
+<ul>
+<li>Use EV certificate from day one</li>
+<li>Immediate trust = better conversion</li>
+<li><strong>Cost</strong>: $400-$800/year (EV)</li>
+</ul>
+<h2 id="resources">Resources</h2>
+<h3 id="certificate-providers">Certificate Providers</h3>
+<ul>
+<li><a href="https://sectigo.com/ssl-certificates-tls/code-signing">Sectigo</a></li>
+<li><a href="https://www.digicert.com/signing/code-signing-certificates">DigiCert</a></li>
+<li><a href="https://www.ssl.com/certificates/code-signing/">SSL.com</a></li>
+<li><a href="https://www.globalsign.com/en/code-signing-certificate">GlobalSign</a></li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li><a href="https://www.electron.build/code-signing">Electron Builder Code Signing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/windows/win32/seccrypto/cryptography-tools">Microsoft Code Signing</a></li>
+<li><a href="https://learn.microsoft.com/en-us/windows/security/threat-protection/microsoft-defender-smartscreen/microsoft-defender-smartscreen-overview">SmartScreen Information</a></li>
+</ul>
+<h3 id="tools">Tools</h3>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/framework/tools/signtool-exe">signtool.exe</a> (Windows SDK)</li>
+<li><a href="https://github.com/mtrojnar/osslsigncode">osslsigncode</a> (Cross-platform signing)</li>
+</ul>
+<h2 id="getting-help">Getting Help</h2>
+<p><strong>Certificate Issues</strong>:</p>
+<ul>
+<li>Contact your certificate provider's support</li>
+<li>Check provider documentation</li>
+<li>Most providers have 24/7 support</li>
+</ul>
+<p><strong>Signing Configuration</strong>:</p>
+<ul>
+<li>GitHub Issues: <a href="https://github.com/coffee285/aura-video-studio/issues">https://github.com/coffee285/aura-video-studio/issues</a></li>
+<li>electron-builder Issues: <a href="https://github.com/electron-userland/electron-builder/issues">https://github.com/electron-userland/electron-builder/issues</a></li>
+<li>Stack Overflow: Tag <code>code-signing</code>, <code>electron-builder</code></li>
+</ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-10<br>
+<strong>Version</strong>: 1.0.0<br>
+<strong>For</strong>: Aura Video Studio maintainers and developers</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/CODE_SIGNING.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

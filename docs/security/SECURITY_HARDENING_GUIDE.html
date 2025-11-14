@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Security Hardening Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Security Hardening Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/security/SECURITY_HARDENING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="security-hardening-guide">Security Hardening Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide documents the comprehensive security measures implemented in Aura Video Studio as part of PR #12. The security hardening follows OWASP best practices and implements defense-in-depth strategies.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#security-architecture">Security Architecture</a></li>
+<li><a href="#authentication--authorization">Authentication &amp; Authorization</a></li>
+<li><a href="#secret-management">Secret Management</a></li>
+<li><a href="#input-validation--sanitization">Input Validation &amp; Sanitization</a></li>
+<li><a href="#security-headers">Security Headers</a></li>
+<li><a href="#csrf-protection">CSRF Protection</a></li>
+<li><a href="#rate-limiting">Rate Limiting</a></li>
+<li><a href="#audit-logging">Audit Logging</a></li>
+<li><a href="#https-enforcement">HTTPS Enforcement</a></li>
+<li><a href="#security-scanning">Security Scanning</a></li>
+<li><a href="#configuration">Configuration</a></li>
+<li><a href="#incident-response">Incident Response</a></li>
+</ul>
+<h2 id="security-architecture">Security Architecture</h2>
+<h3 id="defense-in-depth-layers">Defense-in-Depth Layers</h3>
+<ol>
+<li><strong>Network Layer</strong>: HTTPS enforcement, secure TLS configuration</li>
+<li><strong>Application Layer</strong>: Security headers, CSRF protection, input validation</li>
+<li><strong>Authentication Layer</strong>: JWT tokens, API keys, multi-factor authentication ready</li>
+<li><strong>Authorization Layer</strong>: Role-based access control, resource-based policies</li>
+<li><strong>Data Layer</strong>: Encryption at rest, secure secret storage</li>
+<li><strong>Monitoring Layer</strong>: Audit logging, security event tracking</li>
+</ol>
+<h3 id="security-middleware-pipeline">Security Middleware Pipeline</h3>
+<p>The security middleware is applied in the following order:</p>
+<ol>
+<li>Security Headers (First - protects all responses)</li>
+<li>HTTPS Enforcement</li>
+<li>Cookie Policy</li>
+<li>CORS</li>
+<li>Authentication</li>
+<li>Authorization</li>
+<li>CSRF Protection (After authentication)</li>
+<li>Audit Logging</li>
+<li>Rate Limiting</li>
+</ol>
+<h2 id="authentication--authorization">Authentication &amp; Authorization</h2>
+<h3 id="api-key-authentication">API Key Authentication</h3>
+<p>API key authentication is enabled by default for local/development scenarios.</p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Authentication&quot;: {
+    &quot;EnableApiKeyAuthentication&quot;: true,
+    &quot;ApiKeyHeaderName&quot;: &quot;X-API-Key&quot;,
+    &quot;RequireAuthentication&quot;: false
+  }
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash">curl -H &quot;X-API-Key: your-api-key&quot; https://api.example.com/api/endpoint
+</code></pre>
+<h3 id="jwt-authentication">JWT Authentication</h3>
+<p>JWT authentication provides stateless authentication with token validation.</p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Authentication&quot;: {
+    &quot;EnableJwtAuthentication&quot;: true,
+    &quot;JwtSecretKey&quot;: &quot;use-key-vault-for-production&quot;,
+    &quot;JwtIssuer&quot;: &quot;AuraVideoStudio&quot;,
+    &quot;JwtAudience&quot;: &quot;AuraApi&quot;,
+    &quot;JwtExpirationMinutes&quot;: 60
+  }
+}
+</code></pre>
+<p><strong>Token Structure</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;sub&quot;: &quot;user-id&quot;,
+  &quot;role&quot;: &quot;Admin&quot;,
+  &quot;iat&quot;: 1234567890,
+  &quot;exp&quot;: 1234571490
+}
+</code></pre>
+<h3 id="authorization-policies">Authorization Policies</h3>
+<h4 id="available-policies">Available Policies</h4>
+<ul>
+<li><code>RequireAdmin</code>: Requires admin role</li>
+<li><code>RequireUser</code>: Requires user or admin role</li>
+<li><code>RequireApiKey</code>: Requires valid API key</li>
+<li><code>RequireValidatedProvider</code>: Requires validated provider configuration</li>
+</ul>
+<h4 id="usage-in-controllers">Usage in Controllers</h4>
+<pre><code class="lang-csharp">[Authorize(Policy = AuthorizationPolicies.RequireAdmin)]
+public async Task&lt;IActionResult&gt; AdminOnlyEndpoint()
+{
+    // Only admins can access this
+}
+
+[Authorize(Policy = AuthorizationPolicies.RequireApiKey)]
+public async Task&lt;IActionResult&gt; ApiKeyProtectedEndpoint()
+{
+    // Requires valid API key
+}
+</code></pre>
+<h3 id="anonymous-endpoints">Anonymous Endpoints</h3>
+<p>The following endpoints are exempt from authentication:</p>
+<ul>
+<li><code>/health*</code> - Health check endpoints</li>
+<li><code>/healthz</code> - Kubernetes health probe</li>
+<li><code>/swagger</code> - API documentation</li>
+<li><code>/api-docs</code> - API documentation</li>
+</ul>
+<h2 id="secret-management">Secret Management</h2>
+<h3 id="azure-key-vault-integration">Azure Key Vault Integration</h3>
+<p>Azure Key Vault integration provides secure storage for sensitive configuration values.</p>
+<h4 id="configuration">Configuration</h4>
+<pre><code class="lang-json">{
+  &quot;KeyVault&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;VaultUri&quot;: &quot;https://your-vault.vault.azure.net/&quot;,
+    &quot;UseManagedIdentity&quot;: true,
+    &quot;CacheExpirationMinutes&quot;: 60,
+    &quot;AutoReload&quot;: true,
+    &quot;SecretMappings&quot;: {
+      &quot;Providers:OpenAI:ApiKey&quot;: &quot;OpenAI-ApiKey&quot;,
+      &quot;Providers:Anthropic:ApiKey&quot;: &quot;Anthropic-ApiKey&quot;
+    }
+  }
+}
+</code></pre>
+<h4 id="using-managed-identity-recommended">Using Managed Identity (Recommended)</h4>
+<p>For Azure deployments, use Managed Identity:</p>
+<pre><code class="lang-json">{
+  &quot;KeyVault&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;VaultUri&quot;: &quot;https://your-vault.vault.azure.net/&quot;,
+    &quot;UseManagedIdentity&quot;: true
+  }
+}
+</code></pre>
+<h4 id="using-service-principal-alternative">Using Service Principal (Alternative)</h4>
+<p>For non-Azure deployments or testing:</p>
+<pre><code class="lang-json">{
+  &quot;KeyVault&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;VaultUri&quot;: &quot;https://your-vault.vault.azure.net/&quot;,
+    &quot;UseManagedIdentity&quot;: false,
+    &quot;TenantId&quot;: &quot;your-tenant-id&quot;,
+    &quot;ClientId&quot;: &quot;your-client-id&quot;,
+    &quot;ClientSecret&quot;: &quot;use-environment-variable&quot;
+  }
+}
+</code></pre>
+<h4 id="secret-naming-convention">Secret Naming Convention</h4>
+<p>In Key Vault, secrets should follow this naming pattern:</p>
+<ul>
+<li><code>OpenAI-ApiKey</code> (hyphens instead of colons)</li>
+<li><code>Anthropic-ApiKey</code></li>
+<li><code>JWT-Secret-Key</code></li>
+</ul>
+<h4 id="automatic-secret-refresh">Automatic Secret Refresh</h4>
+<p>Secrets are automatically refreshed at half the cache expiration interval. This ensures minimal downtime when secrets are rotated.</p>
+<h2 id="input-validation--sanitization">Input Validation &amp; Sanitization</h2>
+<h3 id="input-sanitizer-utility">Input Sanitizer Utility</h3>
+<p>The <code>InputSanitizer</code> class provides comprehensive input validation:</p>
+<h4 id="file-path-sanitization">File Path Sanitization</h4>
+<pre><code class="lang-csharp">// Prevent directory traversal
+var safePath = InputSanitizer.SanitizeFilePath(userInput, baseDirectory);
+</code></pre>
+<h4 id="xss-protection">XSS Protection</h4>
+<pre><code class="lang-csharp">// Remove XSS patterns
+var clean = InputSanitizer.SanitizeForXss(userInput);
+
+// Check for XSS patterns
+if (InputSanitizer.ContainsXssPattern(userInput))
+{
+    // Reject input
+}
+</code></pre>
+<h4 id="sql-injection-protection">SQL Injection Protection</h4>
+<pre><code class="lang-csharp">// Check for SQL injection patterns (defense-in-depth)
+// Always use parameterized queries as primary defense
+if (InputSanitizer.ContainsSqlInjectionPattern(userInput))
+{
+    // Reject input
+}
+</code></pre>
+<h4 id="prompt-injection-protection">Prompt Injection Protection</h4>
+<pre><code class="lang-csharp">// Sanitize LLM prompts
+var safePrompt = InputSanitizer.SanitizePrompt(userInput);
+</code></pre>
+<h4 id="log-injection-prevention">Log Injection Prevention</h4>
+<pre><code class="lang-csharp">// Sanitize for logging
+var safeLog = InputSanitizer.SanitizeForLogging(userInput);
+</code></pre>
+<h3 id="fluentvalidation">FluentValidation</h3>
+<p>All API requests are validated using FluentValidation:</p>
+<pre><code class="lang-csharp">public class ScriptRequestValidator : AbstractValidator&lt;ScriptRequest&gt;
+{
+    public ScriptRequestValidator()
+    {
+        RuleFor(x =&gt; x.Brief)
+            .NotEmpty()
+            .MaximumLength(10000)
+            .Must(brief =&gt; !InputSanitizer.ContainsXssPattern(brief))
+            .WithMessage(&quot;Input contains potentially malicious content&quot;);
+    }
+}
+</code></pre>
+<h2 id="security-headers">Security Headers</h2>
+<h3 id="implemented-headers">Implemented Headers</h3>
+<h4 id="content-security-policy">Content-Security-Policy</h4>
+<p>Prevents XSS attacks by controlling resource loading:</p>
+<pre><code>default-src 'self';
+script-src 'self' 'unsafe-inline' 'unsafe-eval';
+style-src 'self' 'unsafe-inline';
+img-src 'self' data: blob: https:;
+connect-src 'self' ws: wss:;
+</code></pre>
+<h4 id="x-content-type-options">X-Content-Type-Options</h4>
+<p>Prevents MIME type sniffing:</p>
+<pre><code>X-Content-Type-Options: nosniff
+</code></pre>
+<h4 id="x-frame-options">X-Frame-Options</h4>
+<p>Prevents clickjacking:</p>
+<pre><code>X-Frame-Options: DENY
+</code></pre>
+<h4 id="strict-transport-security-hsts">Strict-Transport-Security (HSTS)</h4>
+<p>Enforces HTTPS:</p>
+<pre><code>Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+</code></pre>
+<h4 id="x-xss-protection">X-XSS-Protection</h4>
+<p>Enables XSS filter in older browsers:</p>
+<pre><code>X-XSS-Protection: 1; mode=block
+</code></pre>
+<h4 id="referrer-policy">Referrer-Policy</h4>
+<p>Controls referrer information:</p>
+<pre><code>Referrer-Policy: strict-origin-when-cross-origin
+</code></pre>
+<h4 id="permissions-policy">Permissions-Policy</h4>
+<p>Restricts browser features:</p>
+<pre><code>Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+</code></pre>
+<h3 id="configuration-1">Configuration</h3>
+<p>Security headers are enabled by default and can be configured:</p>
+<pre><code class="lang-json">{
+  &quot;Security&quot;: {
+    &quot;EnableSecurityHeaders&quot;: true
+  }
+}
+</code></pre>
+<h2 id="csrf-protection">CSRF Protection</h2>
+<h3 id="double-submit-cookie-pattern">Double-Submit Cookie Pattern</h3>
+<p>CSRF protection uses the double-submit cookie pattern:</p>
+<ol>
+<li>Server sets <code>XSRF-TOKEN</code> cookie</li>
+<li>Client reads cookie and includes value in <code>X-XSRF-TOKEN</code> header</li>
+<li>Server validates that cookie and header values match</li>
+</ol>
+<h3 id="configuration-2">Configuration</h3>
+<pre><code class="lang-json">{
+  &quot;Security&quot;: {
+    &quot;EnableCsrfProtection&quot;: true
+  }
+}
+</code></pre>
+<h3 id="client-integration">Client Integration</h3>
+<h4 id="javascripttypescript">JavaScript/TypeScript</h4>
+<pre><code class="lang-typescript">// Read CSRF token from cookie
+function getCsrfToken(): string {
+  const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+  return match ? match[1] : '';
+}
+
+// Include in request headers
+fetch('/api/endpoint', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-XSRF-TOKEN': getCsrfToken()
+  },
+  body: JSON.stringify(data)
+});
+</code></pre>
+<h4 id="axios-automatic">Axios (Automatic)</h4>
+<pre><code class="lang-typescript">import axios from 'axios';
+
+// Axios automatically handles XSRF tokens
+axios.defaults.xsrfCookieName = 'XSRF-TOKEN';
+axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
+</code></pre>
+<h3 id="exempt-paths">Exempt Paths</h3>
+<p>Safe methods (GET, HEAD, OPTIONS, TRACE) and specific paths are exempt:</p>
+<ul>
+<li><code>/health*</code></li>
+<li><code>/healthz</code></li>
+<li><code>/swagger</code></li>
+</ul>
+<h2 id="rate-limiting">Rate Limiting</h2>
+<h3 id="configuration-3">Configuration</h3>
+<p>Rate limiting is configured per endpoint:</p>
+<pre><code class="lang-json">{
+  &quot;IpRateLimiting&quot;: {
+    &quot;EnableEndpointRateLimiting&quot;: true,
+    &quot;HttpStatusCode&quot;: 429,
+    &quot;GeneralRules&quot;: [
+      {
+        &quot;Endpoint&quot;: &quot;POST:/api/jobs&quot;,
+        &quot;Period&quot;: &quot;1m&quot;,
+        &quot;Limit&quot;: 10
+      },
+      {
+        &quot;Endpoint&quot;: &quot;*&quot;,
+        &quot;Period&quot;: &quot;1m&quot;,
+        &quot;Limit&quot;: 100
+      }
+    ]
+  }
+}
+</code></pre>
+<h3 id="rate-limit-headers">Rate Limit Headers</h3>
+<p>Responses include rate limit information:</p>
+<pre><code>X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1234567890
+Retry-After: 30
+</code></pre>
+<h3 id="bypassing-rate-limits">Bypassing Rate Limits</h3>
+<p>Admins can bypass rate limits using the <code>RateLimitBypass</code> policy.</p>
+<h2 id="audit-logging">Audit Logging</h2>
+<h3 id="security-event-logging">Security Event Logging</h3>
+<p>All security-relevant events are logged to a dedicated audit log:</p>
+<h4 id="logged-events">Logged Events</h4>
+<ul>
+<li>Authentication attempts (success/failure)</li>
+<li>Authorization failures</li>
+<li>Sensitive data access</li>
+<li>Configuration changes</li>
+<li>API key usage</li>
+<li>Rate limit violations</li>
+<li>Input validation failures</li>
+<li>Suspicious activity</li>
+</ul>
+<h4 id="log-format">Log Format</h4>
+<pre><code class="lang-json">{
+  &quot;timestamp&quot;: &quot;2024-01-01T00:00:00Z&quot;,
+  &quot;level&quot;: &quot;Information&quot;,
+  &quot;eventType&quot;: &quot;Authentication&quot;,
+  &quot;userId&quot;: &quot;user-123&quot;,
+  &quot;ipAddress&quot;: &quot;192.168.1.1&quot;,
+  &quot;message&quot;: &quot;User authenticated successfully&quot;,
+  &quot;correlationId&quot;: &quot;abc-123&quot;
+}
+</code></pre>
+<h4 id="log-retention">Log Retention</h4>
+<ul>
+<li>Audit logs: 90 days</li>
+<li>Error logs: 30 days</li>
+<li>General logs: 30 days</li>
+</ul>
+<h3 id="using-the-audit-logger">Using the Audit Logger</h3>
+<pre><code class="lang-csharp">public class MyController : ControllerBase
+{
+    private readonly IAuditLogger _auditLogger;
+
+    public MyController(IAuditLogger auditLogger)
+    {
+        _auditLogger = auditLogger;
+    }
+
+    [HttpPost(&quot;sensitive&quot;)]
+    public IActionResult SensitiveOperation()
+    {
+        _auditLogger.LogSensitiveDataAccess(
+            UserId,
+            &quot;SensitiveResource&quot;,
+            &quot;Read&quot;);
+        
+        return Ok();
+    }
+}
+</code></pre>
+<h2 id="https-enforcement">HTTPS Enforcement</h2>
+<h3 id="configuration-4">Configuration</h3>
+<p>HTTPS enforcement can be configured:</p>
+<pre><code class="lang-json">{
+  &quot;Security&quot;: {
+    &quot;EnforceHttps&quot;: true
+  }
+}
+</code></pre>
+<h3 id="development-environment">Development Environment</h3>
+<p>For local development (localhost/127.0.0.1), HTTPS enforcement is automatically disabled to allow HTTP connections.</p>
+<h3 id="production-environment">Production Environment</h3>
+<p>In production, all HTTP requests are redirected to HTTPS with a 301 status code.</p>
+<h2 id="security-scanning">Security Scanning</h2>
+<h3 id="cicd-integration">CI/CD Integration</h3>
+<p>Security scanning is automatically performed on:</p>
+<ul>
+<li>Every push to main/develop</li>
+<li>Pull requests</li>
+<li>Daily scheduled scans</li>
+</ul>
+<h3 id="scanning-tools">Scanning Tools</h3>
+<ol>
+<li><p><strong>Dependency Scanning</strong></p>
+<ul>
+<li>.NET: <code>dotnet list package --vulnerable</code></li>
+<li>npm: <code>npm audit</code></li>
+</ul>
+</li>
+<li><p><strong>SAST Scanning</strong></p>
+<ul>
+<li>CodeQL (GitHub)</li>
+<li>Semgrep</li>
+</ul>
+</li>
+<li><p><strong>Container Scanning</strong></p>
+<ul>
+<li>Trivy (Aqua Security)</li>
+</ul>
+</li>
+<li><p><strong>Secret Scanning</strong></p>
+<ul>
+<li>TruffleHog</li>
+<li>Gitleaks</li>
+</ul>
+</li>
+<li><p><strong>License Compliance</strong></p>
+<ul>
+<li>Dependency Review Action</li>
+</ul>
+</li>
+</ol>
+<h3 id="scan-results">Scan Results</h3>
+<p>Results are uploaded to:</p>
+<ul>
+<li>GitHub Security tab (SARIF format)</li>
+<li>GitHub Actions artifacts</li>
+<li>Pull request comments</li>
+</ul>
+<h3 id="failure-thresholds">Failure Thresholds</h3>
+<ul>
+<li>Critical vulnerabilities: Build fails</li>
+<li>High vulnerabilities: Warning issued</li>
+<li>Medium/Low vulnerabilities: Informational</li>
+</ul>
+<h2 id="configuration-5">Configuration</h2>
+<h3 id="production-configuration-example">Production Configuration Example</h3>
+<pre><code class="lang-json">{
+  &quot;Authentication&quot;: {
+    &quot;EnableJwtAuthentication&quot;: true,
+    &quot;RequireAuthentication&quot;: true,
+    &quot;JwtSecretKey&quot;: &quot;&quot;  // Load from Key Vault
+  },
+  &quot;KeyVault&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;VaultUri&quot;: &quot;https://prod-vault.vault.azure.net/&quot;,
+    &quot;UseManagedIdentity&quot;: true,
+    &quot;AutoReload&quot;: true
+  },
+  &quot;Security&quot;: {
+    &quot;EnableCsrfProtection&quot;: true,
+    &quot;EnforceHttps&quot;: true,
+    &quot;EnableSecurityHeaders&quot;: true,
+    &quot;EnableAuditLogging&quot;: true
+  },
+  &quot;IpRateLimiting&quot;: {
+    &quot;EnableEndpointRateLimiting&quot;: true,
+    &quot;GeneralRules&quot;: [
+      {
+        &quot;Endpoint&quot;: &quot;*&quot;,
+        &quot;Period&quot;: &quot;1m&quot;,
+        &quot;Limit&quot;: 100
+      }
+    ]
+  }
+}
+</code></pre>
+<h3 id="environment-variables">Environment Variables</h3>
+<p>Sensitive configuration should use environment variables:</p>
+<pre><code class="lang-bash"># JWT Secret (if not using Key Vault)
+export Authentication__JwtSecretKey=&quot;your-secret-key&quot;
+
+# Key Vault Configuration
+export KeyVault__Enabled=true
+export KeyVault__VaultUri=&quot;https://your-vault.vault.azure.net/&quot;
+
+# API Keys (if not using Key Vault)
+export Providers__OpenAI__ApiKey=&quot;sk-...&quot;
+</code></pre>
+<h2 id="incident-response">Incident Response</h2>
+<h3 id="security-event-response">Security Event Response</h3>
+<ol>
+<li><strong>Detection</strong>: Security events are logged and monitored</li>
+<li><strong>Analysis</strong>: Review audit logs and security alerts</li>
+<li><strong>Containment</strong>: Rate limiting, IP blocking, service shutdown</li>
+<li><strong>Recovery</strong>: Rotate secrets, patch vulnerabilities</li>
+<li><strong>Post-Mortem</strong>: Document incident and improve defenses</li>
+</ol>
+<h3 id="emergency-procedures">Emergency Procedures</h3>
+<h4 id="suspected-breach">Suspected Breach</h4>
+<ol>
+<li>Review audit logs: <code>logs/audit-*.log</code></li>
+<li>Check failed authentication attempts</li>
+<li>Look for suspicious IP addresses</li>
+<li>Review configuration changes</li>
+</ol>
+<h4 id="secret-compromise">Secret Compromise</h4>
+<ol>
+<li>Immediately rotate compromised secrets in Key Vault</li>
+<li>Review audit logs for unauthorized access</li>
+<li>Force re-authentication of all users</li>
+<li>Update API keys for affected providers</li>
+</ol>
+<h4 id="ddos-attack">DDoS Attack</h4>
+<ol>
+<li>Review rate limit logs</li>
+<li>Identify attacking IP addresses</li>
+<li>Add to IP blacklist</li>
+<li>Enable more restrictive rate limits</li>
+<li>Consider enabling DDoS protection service</li>
+</ol>
+<h3 id="monitoring-alerts">Monitoring Alerts</h3>
+<p>Set up alerts for:</p>
+<ul>
+<li>Multiple failed authentication attempts</li>
+<li>Unusual API access patterns</li>
+<li>Rate limit violations</li>
+<li>Configuration changes</li>
+<li>High/critical vulnerabilities detected</li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="development">Development</h3>
+<ol>
+<li><strong>Never commit secrets</strong> to source control</li>
+<li><strong>Use Key Vault</strong> for all sensitive configuration</li>
+<li><strong>Test security features</strong> locally before deployment</li>
+<li><strong>Review security scan results</strong> before merging PRs</li>
+<li><strong>Keep dependencies updated</strong> regularly</li>
+</ol>
+<h3 id="deployment">Deployment</h3>
+<ol>
+<li><strong>Enable all security features</strong> in production</li>
+<li><strong>Use Managed Identity</strong> for Azure resources</li>
+<li><strong>Configure monitoring alerts</strong></li>
+<li><strong>Implement backup and recovery</strong></li>
+<li><strong>Document security incidents</strong></li>
+</ol>
+<h3 id="operations">Operations</h3>
+<ol>
+<li><strong>Monitor audit logs</strong> regularly</li>
+<li><strong>Review security scan results</strong> daily</li>
+<li><strong>Rotate secrets</strong> periodically (90 days)</li>
+<li><strong>Update dependencies</strong> monthly</li>
+<li><strong>Conduct security reviews</strong> quarterly</li>
+</ol>
+<h2 id="security-checklist">Security Checklist</h2>
+<h3 id="pre-deployment">Pre-Deployment</h3>
+<ul>
+<li>[ ] All secrets moved to Key Vault</li>
+<li>[ ] HTTPS enforcement enabled</li>
+<li>[ ] Security headers configured</li>
+<li>[ ] CSRF protection enabled</li>
+<li>[ ] Rate limiting configured</li>
+<li>[ ] Audit logging enabled</li>
+<li>[ ] Authentication required</li>
+<li>[ ] Authorization policies applied</li>
+<li>[ ] Security scans passing</li>
+<li>[ ] Monitoring alerts configured</li>
+</ul>
+<h3 id="post-deployment">Post-Deployment</h3>
+<ul>
+<li>[ ] Verify HTTPS redirect working</li>
+<li>[ ] Test authentication flow</li>
+<li>[ ] Verify rate limiting active</li>
+<li>[ ] Check audit logs generating</li>
+<li>[ ] Review security headers</li>
+<li>[ ] Test CSRF protection</li>
+<li>[ ] Verify secret loading from Key Vault</li>
+<li>[ ] Check monitoring alerts working</li>
+</ul>
+<h2 id="compliance">Compliance</h2>
+<h3 id="owasp-top-10-addressed">OWASP Top 10 Addressed</h3>
+<ol>
+<li><strong>A01:2021 - Broken Access Control</strong>: Authorization policies, CSRF protection</li>
+<li><strong>A02:2021 - Cryptographic Failures</strong>: HTTPS enforcement, secure secrets storage</li>
+<li><strong>A03:2021 - Injection</strong>: Input validation, sanitization</li>
+<li><strong>A04:2021 - Insecure Design</strong>: Defense-in-depth architecture</li>
+<li><strong>A05:2021 - Security Misconfiguration</strong>: Secure defaults, security headers</li>
+<li><strong>A06:2021 - Vulnerable Components</strong>: Dependency scanning</li>
+<li><strong>A07:2021 - Authentication Failures</strong>: JWT/API key auth, audit logging</li>
+<li><strong>A08:2021 - Software and Data Integrity</strong>: SAST scanning, code signing</li>
+<li><strong>A09:2021 - Security Logging Failures</strong>: Comprehensive audit logging</li>
+<li><strong>A10:2021 - SSRF</strong>: Input validation, URL validation</li>
+</ol>
+<h3 id="gdpr-compliance">GDPR Compliance</h3>
+<ul>
+<li>Audit logging for data access</li>
+<li>Secure data storage (encryption)</li>
+<li>Data retention policies</li>
+<li>Right to be forgotten support</li>
+</ul>
+<h3 id="soc-2-controls">SOC 2 Controls</h3>
+<ul>
+<li>Access controls (authentication/authorization)</li>
+<li>Encryption in transit (HTTPS)</li>
+<li>Encryption at rest (Key Vault)</li>
+<li>Audit logging</li>
+<li>Vulnerability management</li>
+<li>Incident response procedures</li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For security issues or questions:</p>
+<ul>
+<li>Create a security advisory on GitHub</li>
+<li>Email: security@aura.studio</li>
+<li>Review: <code>/docs/security/</code> directory</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://owasp.org/www-project-top-ten/">OWASP Top 10</a></li>
+<li><a href="https://docs.microsoft.com/azure/key-vault/">Azure Key Vault Documentation</a></li>
+<li><a href="https://docs.microsoft.com/aspnet/core/security/">ASP.NET Core Security</a></li>
+<li><a href="https://www.nist.gov/cyberframework">NIST Cybersecurity Framework</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/security/SECURITY_HARDENING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

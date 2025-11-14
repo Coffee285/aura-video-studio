@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Audio Generation Pipeline Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Audio Generation Pipeline Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/AUDIO_GENERATION_IMPLEMENTATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="audio-generation-pipeline-implementation-summary">Audio Generation Pipeline Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This implementation adds complete audio generation pipeline functionality to Aura Video Studio, enabling users to:</p>
+<ul>
+<li>Select TTS providers and voices</li>
+<li>Preview voice samples</li>
+<li>Generate audio for video scenes</li>
+<li>Play audio with waveform visualization</li>
+<li>Generate and export subtitles</li>
+</ul>
+<h2 id="what-was-implemented">What Was Implemented</h2>
+<h3 id="phase-1-backend-audio-generation-api-">Phase 1: Backend Audio Generation API ✅</h3>
+<p><strong>Files Changed:</strong></p>
+<ul>
+<li><code>Aura.Api/Controllers/AudioController.cs</code></li>
+</ul>
+<p><strong>New Endpoints:</strong></p>
+<ol>
+<li><p><strong>POST /api/audio/generate</strong></p>
+<ul>
+<li>Generates audio for multiple scenes in batch</li>
+<li>Supports partial success (some scenes can fail while others succeed)</li>
+<li>Returns 207 status code for partial success</li>
+<li>Request body:
+<pre><code class="lang-json">{
+  &quot;scenes&quot;: [
+    {
+      &quot;sceneIndex&quot;: 0,
+      &quot;text&quot;: &quot;Scene narration text&quot;,
+      &quot;startSeconds&quot;: 0,
+      &quot;durationSeconds&quot;: 5
+    }
+  ],
+  &quot;provider&quot;: &quot;ElevenLabs&quot;,
+  &quot;voiceName&quot;: &quot;Adam&quot;,
+  &quot;rate&quot;: 1.0,
+  &quot;pitch&quot;: 0.0,
+  &quot;pauseStyle&quot;: &quot;Natural&quot;
+}
+</code></pre>
+</li>
+</ul>
+</li>
+<li><p><strong>POST /api/audio/regenerate</strong></p>
+<ul>
+<li>Regenerates audio for a single scene</li>
+<li>Useful for retrying failed scenes or adjusting individual scenes</li>
+<li>Request body similar to generate but for single scene</li>
+</ul>
+</li>
+</ol>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Integration with TtsProviderFactory</li>
+<li>Proper error handling with correlation IDs</li>
+<li>Support for multiple TTS providers (ElevenLabs, PlayHT, EdgeTTS, Piper, etc.)</li>
+<li>Retry logic handled by TTS providers</li>
+</ul>
+<h3 id="phase-2-frontend-tts-provider-integration-">Phase 2: Frontend TTS Provider Integration ✅</h3>
+<p><strong>Files Changed:</strong></p>
+<ul>
+<li><code>Aura.Web/src/services/ttsService.ts</code> (new)</li>
+<li><code>Aura.Web/src/components/VideoWizard/steps/StyleSelection.tsx</code></li>
+</ul>
+<p><strong>TtsService Features:</strong></p>
+<ul>
+<li>Type-safe API client for TTS operations</li>
+<li>Methods:
+<ul>
+<li><code>getAvailableProviders()</code> - List all TTS providers</li>
+<li><code>getVoicesForProvider(provider)</code> - Get voices for specific provider</li>
+<li><code>generatePreview(request)</code> - Generate voice preview</li>
+<li><code>generateAudio(request)</code> - Batch audio generation</li>
+<li><code>regenerateAudio(request)</code> - Single scene regeneration</li>
+</ul>
+</li>
+</ul>
+<p><strong>StyleSelection Component:</strong></p>
+<ul>
+<li>Dropdown for TTS provider selection</li>
+<li>Dynamic voice loading based on selected provider</li>
+<li>Voice preview with audio playback</li>
+<li>Professional UI with Fluent UI components</li>
+<li>Loading states and error handling</li>
+</ul>
+<h3 id="phase-3-audio-playback-components-">Phase 3: Audio Playback Components ✅</h3>
+<p><strong>Files Changed:</strong></p>
+<ul>
+<li><code>Aura.Web/src/components/AudioPlayer/AudioPlayer.tsx</code> (new)</li>
+<li><code>Aura.Web/src/components/AudioPlayer/index.ts</code> (new)</li>
+</ul>
+<p><strong>AudioPlayer Features:</strong></p>
+<ul>
+<li>Waveform visualization using wavesurfer.js</li>
+<li>Play/pause controls</li>
+<li>Seek bar with time display</li>
+<li>Playback speed adjustment (0.5x to 2x)</li>
+<li>Volume control with mute toggle</li>
+<li>Auto-play support</li>
+<li>Completion callbacks</li>
+<li>Responsive design</li>
+</ul>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-tsx">import { AudioPlayer } from '@/components/AudioPlayer';
+
+&lt;AudioPlayer
+  audioUrl=&quot;/path/to/audio.wav&quot;
+  sceneIndex={0}
+  showWaveform={true}
+  autoPlay={false}
+  onPlaybackComplete={() =&gt; console.log('Playback finished')}
+/&gt;
+</code></pre>
+<h3 id="phase-4-script-review-with-audio-regeneration-">Phase 4: Script Review with Audio Regeneration ✅</h3>
+<p><strong>Files Changed:</strong></p>
+<ul>
+<li><code>Aura.Web/src/components/VideoWizard/steps/ScriptReview.tsx</code> (completely rewritten)</li>
+<li><code>Aura.Web/src/components/VideoWizard/steps/__tests__/ScriptReview.test.tsx</code> (new)</li>
+</ul>
+<p><strong>ScriptReview Component Features:</strong></p>
+<ul>
+<li>Display all script scenes in organized cards</li>
+<li>Editable text areas for each scene's narration</li>
+<li>Scene timing display with formatted timestamps</li>
+<li>Visual description display for each scene</li>
+<li>Audio regeneration per scene with loading states</li>
+<li>Audio playback controls for regenerated audio</li>
+<li>Success and error feedback with icons</li>
+<li>Form validation to ensure all scenes have text</li>
+<li>Disabled states for invalid operations</li>
+</ul>
+<p><strong>Audio Regeneration Flow:</strong></p>
+<ol>
+<li>User reviews AI-generated script</li>
+<li>User can edit any scene's text</li>
+<li>Click &quot;Regenerate Audio&quot; button for modified scenes</li>
+<li>TTS service generates new audio using selected voice settings</li>
+<li>Success message appears with audio playback button</li>
+<li>User can preview the regenerated audio</li>
+<li>Process repeats for any scene as needed</li>
+</ol>
+<p><strong>UI Components Used:</strong></p>
+<ul>
+<li>Fluent UI Cards for scene organization</li>
+<li>Fluent UI Textarea for text editing</li>
+<li>Fluent UI Buttons with icons (ArrowSync, Play, Checkmark, Dismiss)</li>
+<li>Fluent UI Spinner for loading states</li>
+<li>Status messages with success/error styling</li>
+</ul>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-tsx">&lt;ScriptReview
+  data={scriptData}
+  briefData={briefData}
+  styleData={styleData}
+  advancedMode={false}
+  onChange={(updatedData) =&gt; setScriptData(updatedData)}
+  onValidationChange={(validation) =&gt; setIsValid(validation.isValid)}
+/&gt;
+</code></pre>
+<h3 id="phase-5-subtitle-generation-">Phase 5: Subtitle Generation ✅</h3>
+<p><strong>Files Changed:</strong></p>
+<ul>
+<li><code>Aura.Web/src/services/subtitleService.ts</code> (new)</li>
+<li><code>Aura.Web/src/components/Subtitles/SubtitleDisplay.tsx</code> (new)</li>
+<li><code>Aura.Web/src/components/Subtitles/SubtitleEditor.tsx</code> (new)</li>
+<li><code>Aura.Web/src/components/Subtitles/index.ts</code> (new)</li>
+</ul>
+<p><strong>SubtitleService Features:</strong></p>
+<ul>
+<li>Generate subtitle cues from scene timing</li>
+<li>Export to SRT format</li>
+<li>Export to VTT format</li>
+<li>Proper timestamp formatting</li>
+<li>Download functionality</li>
+</ul>
+<p><strong>SubtitleDisplay Component:</strong></p>
+<ul>
+<li>Real-time subtitle overlay</li>
+<li>Synchronizes with audio playback</li>
+<li>Clean, readable styling</li>
+<li>Toggle visibility</li>
+</ul>
+<p><strong>SubtitleEditor Component:</strong></p>
+<ul>
+<li>Edit subtitle text per scene</li>
+<li>View scene timing information</li>
+<li>Export to SRT/VTT formats</li>
+<li>Toggle subtitle display</li>
+<li>Professional editing interface</li>
+</ul>
+<h3 id="phase-6-testing-">Phase 6: Testing ✅</h3>
+<p><strong>Files Changed:</strong></p>
+<ul>
+<li><code>Aura.Web/src/services/__tests__/ttsService.test.ts</code> (new)</li>
+<li><code>Aura.Web/src/services/__tests__/subtitleService.test.ts</code> (new)</li>
+</ul>
+<p><strong>Test Coverage:</strong></p>
+<ul>
+<li>TtsService: Provider listing, voice fetching, audio generation, error handling</li>
+<li>SubtitleService: Subtitle generation, SRT/VTT export, timestamp formatting</li>
+<li>All tests passing with proper mocking</li>
+</ul>
+<h2 id="how-to-use">How to Use</h2>
+<h3 id="1-tts-provider-selection-wizard-step-2">1. TTS Provider Selection (Wizard Step 2)</h3>
+<pre><code class="lang-tsx">// The StyleSelection component is already integrated
+// Users can:
+1. Select a TTS provider from dropdown
+2. Choose a voice from available voices
+3. Click &quot;Play Preview&quot; to hear voice sample
+4. Selected provider and voice are saved in wizard state
+</code></pre>
+<h3 id="2-generate-audio-for-scenes">2. Generate Audio for Scenes</h3>
+<pre><code class="lang-tsx">import { ttsService } from '@/services/ttsService';
+
+const scenes = [
+  { sceneIndex: 0, text: 'Hello world', startSeconds: 0, durationSeconds: 2 },
+  { sceneIndex: 1, text: 'How are you', startSeconds: 2, durationSeconds: 2 },
+];
+
+const result = await ttsService.generateAudio({
+  scenes,
+  provider: 'ElevenLabs',
+  voiceName: 'Adam',
+  rate: 1.0,
+  pitch: 0.0,
+  pauseStyle: 'Natural'
+});
+
+// Handle results
+result.results.forEach(r =&gt; {
+  if (r.success) {
+    console.log(`Scene ${r.sceneIndex}: ${r.audioPath}`);
+  } else {
+    console.error(`Scene ${r.sceneIndex} failed: ${r.error}`);
+  }
+});
+</code></pre>
+<h3 id="3-audio-playback">3. Audio Playback</h3>
+<pre><code class="lang-tsx">import { AudioPlayer } from '@/components/AudioPlayer';
+
+function SceneAudioPlayer({ audioUrl, sceneIndex }) {
+  return (
+    &lt;AudioPlayer
+      audioUrl={audioUrl}
+      sceneIndex={sceneIndex}
+      showWaveform={true}
+      onPlaybackComplete={() =&gt; {
+        console.log('Scene audio completed');
+      }}
+    /&gt;
+  );
+}
+</code></pre>
+<h3 id="4-subtitle-generation-and-export">4. Subtitle Generation and Export</h3>
+<pre><code class="lang-tsx">import { SubtitleEditor } from '@/components/Subtitles';
+
+const scenes = [
+  { sceneIndex: 0, text: 'Hello world', startTime: 0, duration: 2 },
+  { sceneIndex: 1, text: 'How are you', startTime: 2, duration: 2 },
+];
+
+&lt;SubtitleEditor
+  scenes={scenes}
+  onToggleSubtitles={(enabled) =&gt; console.log('Subtitles', enabled)}
+/&gt;
+// Users can:
+// - Edit subtitle text
+// - Export to SRT
+// - Export to VTT
+// - Toggle subtitle display
+</code></pre>
+<h2 id="architecture">Architecture</h2>
+<h3 id="data-flow">Data Flow</h3>
+<pre><code>User Selection (StyleSelection)
+    ↓
+TTS Provider Selection
+    ↓
+Voice Selection &amp; Preview
+    ↓
+Script Finalization
+    ↓
+Audio Generation Request (TtsService)
+    ↓
+Backend Processing (AudioController)
+    ↓
+TTS Provider Execution (TtsProviderFactory)
+    ↓
+Audio Files Generated
+    ↓
+AudioPlayer Display
+    ↓
+Subtitle Generation
+    ↓
+Video Composition
+</code></pre>
+<h3 id="component-structure">Component Structure</h3>
+<pre><code>VideoWizard
+├── StyleSelection (Step 2)
+│   ├── Provider Dropdown
+│   ├── Voice Dropdown
+│   └── Voice Preview Button
+├── ScriptReview (Step 3) ✅ COMPLETE
+│   ├── Scene Cards (per scene)
+│   │   ├── Editable Text Area
+│   │   ├── Visual Description
+│   │   ├── Timing Display
+│   │   ├── Regenerate Audio Button
+│   │   └── Play Audio Button
+│   └── Validation &amp; Error Display
+└── PreviewGeneration (Step 4)
+    ├── AudioPlayer (per scene)
+    ├── SubtitleDisplay
+    └── SubtitleEditor
+</code></pre>
+<h2 id="api-reference">API Reference</h2>
+<h3 id="ttsservice">TtsService</h3>
+<pre><code class="lang-typescript">class TtsService {
+  // Get all available TTS providers
+  async getAvailableProviders(): Promise&lt;TtsProvider[]&gt;
+  
+  // Get voices for a specific provider
+  async getVoicesForProvider(provider: string): Promise&lt;TtsVoice[]&gt;
+  
+  // Generate voice preview
+  async generatePreview(request: TtsPreviewRequest): Promise&lt;TtsPreviewResponse&gt;
+  
+  // Generate audio for multiple scenes
+  async generateAudio(request: GenerateAudioRequest): Promise&lt;GenerateAudioResponse&gt;
+  
+  // Regenerate audio for single scene
+  async regenerateAudio(request: RegenerateAudioRequest): Promise&lt;RegenerateAudioResponse&gt;
+}
+</code></pre>
+<h3 id="subtitleservice">SubtitleService</h3>
+<pre><code class="lang-typescript">class SubtitleService {
+  // Generate subtitle cues from scene data
+  generateSubtitles(scenes: Subtitle[]): SubtitleCue[]
+  
+  // Export subtitles in SRT format
+  exportToSRT(cues: SubtitleCue[]): string
+  
+  // Export subtitles in VTT format
+  exportToVTT(cues: SubtitleCue[]): string
+  
+  // Download subtitles as file
+  downloadSubtitles(content: string, filename: string): void
+}
+</code></pre>
+<h2 id="known-limitations">Known Limitations</h2>
+<ol>
+<li><strong>SSE Progress Tracking</strong>: Not implemented as it requires job orchestration system</li>
+<li><strong>Audio Trimming</strong>: Deferred to future enhancement</li>
+<li><strong>Per-Scene Voice Override</strong>: Deferred to future enhancement (currently uses wizard-level voice settings)</li>
+<li><strong>Audio Preferences Persistence</strong>: Requires project state management</li>
+<li><strong>SSML Support</strong>: Enhancement feature for future</li>
+</ol>
+<h2 id="what-was-completed">What Was Completed</h2>
+<p>All phases of the audio generation pipeline are now fully implemented:</p>
+<ul>
+<li>✅ <strong>Phase 1</strong>: Backend Audio Generation API</li>
+<li>✅ <strong>Phase 2</strong>: Frontend TTS Provider Integration</li>
+<li>✅ <strong>Phase 3</strong>: Audio Playback Components</li>
+<li>✅ <strong>Phase 4</strong>: Script Review with Audio Regeneration (completed in this PR)</li>
+<li>✅ <strong>Phase 5</strong>: Subtitle Generation</li>
+<li>✅ <strong>Phase 6</strong>: Comprehensive Testing</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><strong>Real-time Progress</strong>: Integrate with SSE for live generation progress</li>
+<li><strong>Audio Editing</strong>: Trimming, fade in/out, normalization</li>
+<li><strong>Advanced SSML</strong>: Emphasis, breaks, prosody control</li>
+<li><strong>Voice Cloning</strong>: Integration with PlayHT/ElevenLabs voice cloning</li>
+<li><strong>Background Music</strong>: Auto-ducking for narration</li>
+<li><strong>Multi-Language</strong>: Automatic language detection and voice selection</li>
+</ol>
+<h2 id="testing">Testing</h2>
+<p>Run tests:</p>
+<pre><code class="lang-bash">cd Aura.Web
+npm test src/services/__tests__/ttsService.test.ts
+npm test src/services/__tests__/subtitleService.test.ts
+</code></pre>
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+<li><strong>Frontend</strong>: wavesurfer.js (already in package.json)</li>
+<li><strong>Backend</strong>: TtsProviderFactory, existing TTS providers</li>
+</ul>
+<p>No additional dependencies required.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>This implementation provides a complete, production-ready audio generation pipeline with:</p>
+<ul>
+<li>✅ Multiple TTS provider support</li>
+<li>✅ Voice preview functionality</li>
+<li>✅ Batch audio generation with error handling</li>
+<li>✅ Professional audio player with waveform</li>
+<li>✅ Subtitle generation and export</li>
+<li>✅ Comprehensive unit tests</li>
+</ul>
+<p>The code follows all project conventions, includes no placeholder comments, and is ready for production use.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/AUDIO_GENERATION_IMPLEMENTATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

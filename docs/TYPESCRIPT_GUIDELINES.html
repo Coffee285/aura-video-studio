@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>TypeScript Guidelines for Aura Video Studio | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="TypeScript Guidelines for Aura Video Studio | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/TYPESCRIPT_GUIDELINES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="typescript-guidelines-for-aura-video-studio">TypeScript Guidelines for Aura Video Studio</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This project uses TypeScript in <strong>strict mode</strong> to ensure type safety and catch errors at compile time. All code must pass TypeScript compilation with zero errors before merging.</p>
+<h2 id="strict-mode-configuration">Strict Mode Configuration</h2>
+<p>Our <code>tsconfig.json</code> is configured with:</p>
+<pre><code class="lang-json">{
+  &quot;compilerOptions&quot;: {
+    &quot;strict&quot;: true,
+    &quot;noUnusedLocals&quot;: true,
+    &quot;noUnusedParameters&quot;: true,
+    &quot;noFallthroughCasesInSwitch&quot;: true
+  }
+}
+</code></pre>
+<h2 id="type-safety-best-practices">Type Safety Best Practices</h2>
+<h3 id="1-no-implicit-any">1. No Implicit Any</h3>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">function processData(data) {  // Implicitly 'any'
+  return data.value;
+}
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">function processData(data: { value: string }): string {
+  return data.value;
+}
+</code></pre>
+<h3 id="2-proper-nullundefined-handling">2. Proper Null/Undefined Handling</h3>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">const message = warning.suggestion;  // Could be undefined
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">const message = warning.suggestion ?? 'No suggestion';
+// or
+const message = warning.suggestion || 'No suggestion';
+</code></pre>
+<h3 id="3-usecallback-dependencies">3. useCallback Dependencies</h3>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">useEffect(() =&gt; {
+  loadData();
+}, [loadData]);  // loadData not defined yet!
+
+const loadData = useCallback(async () =&gt; {
+  // ...
+}, []);
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">const loadData = useCallback(async () =&gt; {
+  // ...
+}, []);
+
+useEffect(() =&gt; {
+  loadData();
+}, [loadData]);
+</code></pre>
+<h3 id="4-type-assertions">4. Type Assertions</h3>
+<p>Use type assertions sparingly and only when you have more information than TypeScript:</p>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">const data = await response.json() as any;  // Too permissive
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">interface ExpectedResponse {
+  name: string;
+  value: number;
+}
+
+const data = await response.json() as ExpectedResponse;
+</code></pre>
+<h3 id="5-interface-definitions">5. Interface Definitions</h3>
+<p>Always define interfaces for complex objects:</p>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">const [state, setState] = useState&lt;Record&lt;string, unknown&gt;&gt;({});
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">interface ComponentState {
+  isInstalled: boolean;
+  isInstalling: boolean;
+  error?: string;
+}
+
+const [state, setState] = useState&lt;ComponentState&gt;({
+  isInstalled: false,
+  isInstalling: false,
+});
+</code></pre>
+<h3 id="6-function-return-types">6. Function Return Types</h3>
+<p>Always specify return types for functions:</p>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">async function fetchData() {
+  const response = await fetch('/api/data');
+  return response.json();
+}
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">async function fetchData(): Promise&lt;DataResponse&gt; {
+  const response = await fetch('/api/data');
+  return response.json() as DataResponse;
+}
+</code></pre>
+<h3 id="7-react-component-props">7. React Component Props</h3>
+<p>Always define prop interfaces:</p>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">export function MyComponent({ title, onClose }) {
+  return &lt;div&gt;{title}&lt;/div&gt;;
+}
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">interface MyComponentProps {
+  title: string;
+  onClose?: () =&gt; void;
+}
+
+export function MyComponent({ title, onClose }: MyComponentProps) {
+  return &lt;div&gt;{title}&lt;/div&gt;;
+}
+</code></pre>
+<h3 id="8-event-handlers">8. Event Handlers</h3>
+<p>Use proper event types:</p>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">const handleClick = (e) =&gt; {  // Implicit any
+  e.preventDefault();
+};
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">const handleClick = (e: React.MouseEvent&lt;HTMLButtonElement&gt;) =&gt; {
+  e.preventDefault();
+};
+</code></pre>
+<h3 id="9-unknown-vs-any">9. Unknown vs Any</h3>
+<p>Prefer <code>unknown</code> over <code>any</code> when dealing with truly unknown data:</p>
+<p>❌ <strong>Bad:</strong></p>
+<pre><code class="lang-typescript">function processApiResponse(data: any) {
+  return data.value;  // No type checking
+}
+</code></pre>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">function processApiResponse(data: unknown) {
+  if (isValidResponse(data)) {
+    return data.value;  // Type guard ensures safety
+  }
+  throw new Error('Invalid response');
+}
+
+function isValidResponse(data: unknown): data is { value: string } {
+  return typeof data === 'object' &amp;&amp; data !== null &amp;&amp; 'value' in data;
+}
+</code></pre>
+<h3 id="10-optional-chaining-and-nullish-coalescing">10. Optional Chaining and Nullish Coalescing</h3>
+<p>Use modern TypeScript operators for safer code:</p>
+<p>✅ <strong>Good:</strong></p>
+<pre><code class="lang-typescript">// Optional chaining
+const port = config?.server?.port;
+
+// Nullish coalescing (only null/undefined, not falsy)
+const timeout = config.timeout ?? 5000;
+
+// Combined
+const url = config?.api?.url ?? 'http://localhost:3000';
+</code></pre>
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="api-response-handling">API Response Handling</h3>
+<pre><code class="lang-typescript">interface ApiResponse&lt;T&gt; {
+  data: T;
+  status: number;
+  message?: string;
+}
+
+async function fetchFromApi&lt;T&gt;(endpoint: string): Promise&lt;ApiResponse&lt;T&gt;&gt; {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.statusText}`);
+  }
+  return response.json() as Promise&lt;ApiResponse&lt;T&gt;&gt;;
+}
+</code></pre>
+<h3 id="state-management-with-zustand">State Management with Zustand</h3>
+<pre><code class="lang-typescript">interface UserState {
+  user: User | null;
+  isLoading: boolean;
+  error: string | null;
+  
+  setUser: (user: User | null) =&gt; void;
+  fetchUser: (id: string) =&gt; Promise&lt;void&gt;;
+}
+
+export const useUserStore = create&lt;UserState&gt;((set) =&gt; ({
+  user: null,
+  isLoading: false,
+  error: null,
+  
+  setUser: (user) =&gt; set({ user }),
+  
+  fetchUser: async (id) =&gt; {
+    set({ isLoading: true, error: null });
+    try {
+      const user = await api.getUser(id);
+      set({ user, isLoading: false });
+    } catch (error) {
+      set({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        isLoading: false 
+      });
+    }
+  },
+}));
+</code></pre>
+<h2 id="type-checking-workflow">Type Checking Workflow</h2>
+<h3 id="pre-commit">Pre-Commit</h3>
+<p>Type-check is automatically run as part of the pre-commit hook via lint-staged.</p>
+<h3 id="manual-check">Manual Check</h3>
+<pre><code class="lang-bash">npm run type-check
+</code></pre>
+<h3 id="build">Build</h3>
+<p>The production build includes type-checking:</p>
+<pre><code class="lang-bash">npm run build:prod
+</code></pre>
+<h2 id="common-type-errors-and-solutions">Common Type Errors and Solutions</h2>
+<h3 id="error-property-does-not-exist-on-type">Error: Property does not exist on type</h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="lang-typescript">const value = response.someProperty;  // Error if not in interface
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-typescript">// Add property to interface
+interface Response {
+  someProperty: string;
+}
+
+// Or use type guard
+if ('someProperty' in response) {
+  const value = response.someProperty;
+}
+</code></pre>
+<h3 id="error-type-x-is-not-assignable-to-type-y">Error: Type 'X' is not assignable to type 'Y'</h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="lang-typescript">const status: 'active' | 'inactive' = userInput;  // Error
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-typescript">// Validate and narrow type
+if (userInput === 'active' || userInput === 'inactive') {
+  const status: 'active' | 'inactive' = userInput;
+}
+</code></pre>
+<h3 id="error-object-is-possibly-undefined">Error: Object is possibly 'undefined'</h3>
+<p><strong>Problem:</strong></p>
+<pre><code class="lang-typescript">const length = array.length;  // Error if array could be undefined
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-typescript">const length = array?.length ?? 0;
+// or
+if (array) {
+  const length = array.length;
+}
+</code></pre>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a href="https://www.typescriptlang.org/docs/handbook/intro.html">TypeScript Handbook</a></li>
+<li><a href="https://react-typescript-cheatsheet.netlify.app/">React TypeScript Cheatsheet</a></li>
+<li><a href="https://typescript-eslint.io/rules/">TypeScript ESLint Rules</a></li>
+</ul>
+<h2 id="contributing">Contributing</h2>
+<p>Before submitting a PR:</p>
+<ol>
+<li>Run <code>npm run type-check</code> to ensure zero TypeScript errors</li>
+<li>Run <code>npm run lint</code> to check for linting issues</li>
+<li>Run <code>npm test</code> to ensure tests pass</li>
+<li>Run <code>npm run build:prod</code> to verify production build works</li>
+</ol>
+<p>Type errors in CI/CD will block merging. Fix all errors before requesting review.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/TYPESCRIPT_GUIDELINES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

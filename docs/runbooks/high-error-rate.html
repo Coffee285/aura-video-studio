@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Runbook: High Error Rate | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Runbook: High Error Rate | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/high-error-rate.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="runbook-high-error-rate">Runbook: High Error Rate</h1>
+
+<h2 id="alert-details">Alert Details</h2>
+<ul>
+<li><strong>Alert Name</strong>: High Error Rate</li>
+<li><strong>Severity</strong>: Critical</li>
+<li><strong>SLO Target</strong>: Error rate &lt; 1%</li>
+<li><strong>Evaluation Window</strong>: 5 minutes</li>
+<li><strong>Notification</strong>: PagerDuty + Slack</li>
+</ul>
+<h2 id="symptoms">Symptoms</h2>
+<ul>
+<li>5xx error rate exceeds 1%</li>
+<li>Multiple API endpoints returning errors</li>
+<li>Increased exception logs</li>
+<li>User complaints about failures</li>
+</ul>
+<h2 id="quick-diagnostic-commands">Quick Diagnostic Commands</h2>
+<pre><code class="lang-bash"># Check current error rate
+curl -s http://localhost:5005/api/monitoring/metrics/histogram/api.errors.5xx | jq .
+
+# View recent errors
+tail -n 100 logs/errors-$(date +%Y-%m-%d).log
+
+# Top failing endpoints
+grep &quot;500\|502\|503\|504&quot; logs/aura-api-$(date +%Y-%m-%d).log | \
+  awk '{print $8}' | sort | uniq -c | sort -rn | head -10
+
+# Check exception types
+grep &quot;Exception&quot; logs/errors-$(date +%Y-%m-%d).log | \
+  awk -F: '{print $2}' | sort | uniq -c | sort -rn | head -10
+</code></pre>
+<h2 id="common-causes">Common Causes</h2>
+<h3 id="1-nullreferenceexception--unhandled-exceptions">1. NullReferenceException / Unhandled Exceptions</h3>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># If caused by recent deployment, rollback
+git checkout HEAD~1 &amp;&amp; docker-compose up -d
+
+# Otherwise, restart to clear transient state
+docker-compose restart api
+</code></pre>
+<h3 id="2-database-connection-errors">2. Database Connection Errors</h3>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Check database health
+curl http://localhost:5005/api/health
+
+# Restart database connection pool
+docker-compose restart api
+
+# If database is down
+docker-compose restart db
+</code></pre>
+<h3 id="3-provider-api-failures">3. Provider API Failures</h3>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Identify failing provider
+curl -s http://localhost:5005/api/health/providers | jq '.[] | select(.healthy == false)'
+
+# Disable provider to trigger failover
+curl -X POST http://localhost:5005/api/providers/disable \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;provider&quot;: &quot;&lt;ProviderName&gt;&quot;, &quot;reason&quot;: &quot;High error rate&quot;}'
+</code></pre>
+<h3 id="4-memory-leaks--oom">4. Memory Leaks / OOM</h3>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># Check memory usage
+docker stats --no-stream
+
+# Restart to clear memory
+docker-compose restart api
+
+# If persistent, scale up
+docker-compose up -d --scale api=3
+</code></pre>
+<h2 id="escalation">Escalation</h2>
+<ul>
+<li><strong>After 15 minutes</strong>: Page secondary on-call</li>
+<li><strong>After 1 hour</strong>: Escalate to engineering manager</li>
+</ul>
+<h2 id="post-resolution">Post-Resolution</h2>
+<ol>
+<li>Verify error rate returned to normal</li>
+<li>Complete post-mortem within 48 hours</li>
+<li>Add action items to prevent recurrence</li>
+</ol>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-10
+<strong>Maintainer</strong>: Platform Team</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/high-error-rate.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

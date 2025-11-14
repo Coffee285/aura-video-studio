@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Deployment Runbook | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Deployment Runbook | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../../favicon.ico">
+      <link rel="stylesheet" href="../../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../../public/main.css">
+      <meta name="docfx:navrel" content="../../../toc.html">
+      <meta name="docfx:tocrel" content="../../../toc.html">
+      
+      <meta name="docfx:rel" content="../../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/runbooks/deployment.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../../index.html">
+            <img id="logo" class="svg" src="../../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="deployment-runbook">Deployment Runbook</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This runbook covers deploying Aura Video Studio to production and staging environments.</p>
+<p><strong>Severity</strong>: N/A (Scheduled Maintenance)<br>
+<strong>Estimated Time</strong>: 30-60 minutes<br>
+<strong>Prerequisites</strong>: Admin access, approved change request</p>
+<h2 id="pre-deployment-checklist">Pre-Deployment Checklist</h2>
+<ul>
+<li>[ ] All tests passing in CI/CD</li>
+<li>[ ] Code reviewed and approved</li>
+<li>[ ] Change request approved</li>
+<li>[ ] Stakeholders notified of maintenance window</li>
+<li>[ ] Backup completed</li>
+<li>[ ] Rollback plan documented</li>
+<li>[ ] Database migrations reviewed</li>
+<li>[ ] Dependencies updated and tested</li>
+</ul>
+<h2 id="deployment-types">Deployment Types</h2>
+<h3 id="1-standard-deployment-zero-downtime">1. Standard Deployment (Zero Downtime)</h3>
+<p>For minor updates and feature releases.</p>
+<h3 id="2-maintenance-window-deployment">2. Maintenance Window Deployment</h3>
+<p>For breaking changes, database migrations, or major updates.</p>
+<h3 id="3-hotfix-deployment">3. Hotfix Deployment</h3>
+<p>For critical bug fixes requiring immediate deployment.</p>
+<h2 id="standard-deployment-procedure">Standard Deployment Procedure</h2>
+<h3 id="step-1-pre-deployment-verification">Step 1: Pre-Deployment Verification</h3>
+<pre><code class="lang-bash"># Verify current production status
+curl http://localhost:5005/api/v1/health
+
+# Check current version
+curl http://localhost:5005/api/v1/capabilities | jq '.version'
+
+# Verify database connection
+sqlite3 aura.db &quot;SELECT COUNT(*) FROM Projects;&quot;
+
+# Check disk space
+df -h
+
+# Check memory
+free -h
+</code></pre>
+<h3 id="step-2-backup">Step 2: Backup</h3>
+<pre><code class="lang-bash"># Backup database
+sqlite3 aura.db &quot;.backup 'backup/aura-$(date +%Y%m%d-%H%M%S).db'&quot;
+
+# Backup configuration
+cp appsettings.json backup/appsettings-$(date +%Y%m%d-%H%M%S).json
+
+# Backup user data
+tar -czf backup/userdata-$(date +%Y%m%d-%H%M%S).tar.gz \
+  secrets.dat \
+  logs/ \
+  output/
+</code></pre>
+<h3 id="step-3-stop-services">Step 3: Stop Services</h3>
+<pre><code class="lang-bash"># Stop API service
+systemctl stop aura-api
+
+# Or for Docker deployment
+docker-compose down
+
+# Verify services stopped
+ps aux | grep -E &quot;(dotnet|Aura)&quot;
+</code></pre>
+<h3 id="step-4-deploy-new-version">Step 4: Deploy New Version</h3>
+<h4 id="for-native-deployment">For Native Deployment</h4>
+<pre><code class="lang-bash"># Pull latest code
+git fetch origin
+git checkout v1.2.3  # Replace with target version
+
+# Restore dependencies
+dotnet restore
+
+# Build solution
+dotnet build --configuration Release
+
+# Run database migrations
+dotnet ef database update --project Aura.Api
+
+# Verify build output
+ls -la Aura.Api/bin/Release/net8.0/
+</code></pre>
+<h4 id="for-docker-deployment">For Docker Deployment</h4>
+<pre><code class="lang-bash"># Pull latest images
+docker-compose pull
+
+# Or build locally
+docker-compose build --no-cache
+
+# Verify images
+docker images | grep aura
+</code></pre>
+<h3 id="step-5-update-configuration">Step 5: Update Configuration</h3>
+<pre><code class="lang-bash"># Review configuration changes
+diff backup/appsettings-*.json appsettings.json
+
+# Update environment-specific settings
+nano appsettings.Production.json
+
+# Verify secrets are encrypted
+ls -la secrets.dat
+</code></pre>
+<h3 id="step-6-start-services">Step 6: Start Services</h3>
+<pre><code class="lang-bash"># Start API service
+systemctl start aura-api
+
+# Or for Docker
+docker-compose up -d
+
+# Wait for startup (30 seconds)
+sleep 30
+</code></pre>
+<h3 id="step-7-verify-deployment">Step 7: Verify Deployment</h3>
+<pre><code class="lang-bash"># Check health endpoint
+curl http://localhost:5005/api/v1/health
+
+# Expected output:
+# {
+#   &quot;status&quot;: &quot;healthy&quot;,
+#   &quot;version&quot;: &quot;1.2.3&quot;,
+#   &quot;timestamp&quot;: &quot;2024-11-10T10:30:00Z&quot;
+# }
+
+# Check logs for errors
+tail -n 100 logs/aura-api-*.log | grep -i error
+
+# Test critical endpoints
+curl -X POST http://localhost:5005/api/v1/health/ready
+
+# Check database connectivity
+curl http://localhost:5005/api/v1/diagnostics/database
+
+# Verify provider status
+curl http://localhost:5005/api/v1/providers/status
+</code></pre>
+<h3 id="step-8-smoke-tests">Step 8: Smoke Tests</h3>
+<pre><code class="lang-bash"># Run automated smoke tests
+cd Aura.E2E
+dotnet test --filter &quot;Category=Smoke&quot;
+
+# Or use test script
+./scripts/smoke/start_and_probe.sh
+</code></pre>
+<h3 id="step-9-monitor">Step 9: Monitor</h3>
+<p>Monitor for 30 minutes after deployment:</p>
+<pre><code class="lang-bash"># Watch logs in real-time
+tail -f logs/aura-api-*.log
+
+# Monitor error rate
+watch -n 5 'grep -c ERROR logs/aura-api-*.log'
+
+# Monitor memory usage
+watch -n 5 'free -h'
+
+# Monitor disk space
+watch -n 5 'df -h'
+</code></pre>
+<h3 id="step-10-post-deployment-tasks">Step 10: Post-Deployment Tasks</h3>
+<ul>
+<li>[ ] Update deployment log</li>
+<li>[ ] Notify stakeholders of successful deployment</li>
+<li>[ ] Monitor error rates for 24 hours</li>
+<li>[ ] Update documentation if needed</li>
+<li>[ ] Close change request</li>
+</ul>
+<h2 id="rollback-procedure">Rollback Procedure</h2>
+<p>If deployment fails or causes issues:</p>
+<h3 id="step-1-immediate-rollback">Step 1: Immediate Rollback</h3>
+<pre><code class="lang-bash"># Stop current services
+systemctl stop aura-api
+
+# Or for Docker
+docker-compose down
+</code></pre>
+<h3 id="step-2-restore-previous-version">Step 2: Restore Previous Version</h3>
+<h4 id="for-native-deployment-1">For Native Deployment</h4>
+<pre><code class="lang-bash"># Checkout previous version
+git checkout v1.2.2  # Previous stable version
+
+# Rebuild
+dotnet build --configuration Release
+
+# Restore database from backup if needed
+sqlite3 aura.db &quot;.restore 'backup/aura-YYYYMMDD-HHMMSS.db'&quot;
+</code></pre>
+<h4 id="for-docker-deployment-1">For Docker Deployment</h4>
+<pre><code class="lang-bash"># Use previous image version
+docker-compose down
+docker-compose -f docker-compose.v1.2.2.yml up -d
+</code></pre>
+<h3 id="step-3-verify-rollback">Step 3: Verify Rollback</h3>
+<pre><code class="lang-bash"># Check health
+curl http://localhost:5005/api/v1/health
+
+# Verify version
+curl http://localhost:5005/api/v1/capabilities | jq '.version'
+
+# Run smoke tests
+./scripts/smoke/start_and_probe.sh
+</code></pre>
+<h3 id="step-4-root-cause-analysis">Step 4: Root Cause Analysis</h3>
+<ul>
+<li>Collect logs from failed deployment</li>
+<li>Review error messages</li>
+<li>Identify root cause</li>
+<li>Create incident report</li>
+<li>Update deployment procedures</li>
+</ul>
+<h2 id="database-migrations">Database Migrations</h2>
+<h3 id="safe-migration-procedure">Safe Migration Procedure</h3>
+<pre><code class="lang-bash"># Generate migration script
+dotnet ef migrations script --output migration.sql
+
+# Review SQL script
+cat migration.sql
+
+# Test on staging first
+sqlite3 staging.db &lt; migration.sql
+
+# Backup production database
+sqlite3 aura.db &quot;.backup 'backup/pre-migration-$(date +%Y%m%d-%H%M%S).db'&quot;
+
+# Apply migration
+dotnet ef database update --project Aura.Api
+
+# Verify migration
+dotnet ef migrations list --project Aura.Api
+</code></pre>
+<h3 id="rollback-migration">Rollback Migration</h3>
+<pre><code class="lang-bash"># Revert to previous migration
+dotnet ef database update PreviousMigrationName --project Aura.Api
+
+# Or restore from backup
+sqlite3 aura.db &quot;.restore 'backup/pre-migration-YYYYMMDD-HHMMSS.db'&quot;
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="issue-health-check-fails-after-deployment">Issue: Health Check Fails After Deployment</h3>
+<p><strong>Symptoms</strong>: <code>/api/v1/health</code> returns 503 or times out</p>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check if service is running
+systemctl status aura-api
+
+# Check logs for startup errors
+tail -n 100 logs/aura-api-*.log
+
+# Check database connectivity
+sqlite3 aura.db &quot;SELECT 1;&quot;
+</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Check for configuration errors in <code>appsettings.json</code></li>
+<li>Verify database file permissions</li>
+<li>Ensure all dependencies are restored</li>
+<li>Check port conflicts (5005)</li>
+</ol>
+<h3 id="issue-database-migration-fails">Issue: Database Migration Fails</h3>
+<p><strong>Symptoms</strong>: Migration command returns error</p>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check current migration state
+dotnet ef migrations list --project Aura.Api
+
+# Check database schema
+sqlite3 aura.db &quot;.schema&quot;
+</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Review migration script for errors</li>
+<li>Check for conflicting migrations</li>
+<li>Restore from backup if corrupted</li>
+<li>Apply migrations incrementally</li>
+</ol>
+<h3 id="issue-high-memory-usage-after-deployment">Issue: High Memory Usage After Deployment</h3>
+<p><strong>Symptoms</strong>: Memory usage increases significantly</p>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check memory usage
+free -h
+
+# Check process memory
+ps aux | grep dotnet | awk '{print $4, $11}'
+
+# Check for memory leaks
+dotnet-counters monitor --process-id $(pgrep -f Aura.Api)
+</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Restart service to clear memory</li>
+<li>Check for memory leaks in new code</li>
+<li>Adjust GC settings if needed</li>
+<li>Consider rollback if persistent</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="before-deployment">Before Deployment</h3>
+<ul>
+<li>Always test in staging first</li>
+<li>Review all code changes</li>
+<li>Check for breaking changes</li>
+<li>Verify database migrations</li>
+<li>Complete backup before deploying</li>
+</ul>
+<h3 id="during-deployment">During Deployment</h3>
+<ul>
+<li>Follow runbook exactly</li>
+<li>Document any deviations</li>
+<li>Communicate status updates</li>
+<li>Monitor key metrics</li>
+<li>Be prepared to rollback</li>
+</ul>
+<h3 id="after-deployment">After Deployment</h3>
+<ul>
+<li>Monitor for 24 hours</li>
+<li>Check error logs regularly</li>
+<li>Verify user reports</li>
+<li>Update documentation</li>
+<li>Conduct post-mortem if issues</li>
+</ul>
+<h2 id="automation">Automation</h2>
+<h3 id="cicd-pipeline">CI/CD Pipeline</h3>
+<pre><code class="lang-yaml"># .github/workflows/deploy.yml
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build and test
+        run: |
+          dotnet restore
+          dotnet build --configuration Release
+          dotnet test
+      - name: Deploy
+        run: |
+          ./scripts/deploy/deploy-production.sh
+      - name: Verify
+        run: |
+          ./scripts/smoke/start_and_probe.sh
+</code></pre>
+<h3 id="deployment-script">Deployment Script</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# scripts/deploy/deploy-production.sh
+
+set -e
+
+echo &quot;Starting deployment...&quot;
+
+# Pre-deployment checks
+./scripts/deploy/pre-deploy-checks.sh
+
+# Backup
+./scripts/backup/backup-production.sh
+
+# Deploy
+./scripts/deploy/deploy.sh
+
+# Verify
+./scripts/smoke/start_and_probe.sh
+
+echo &quot;Deployment complete!&quot;
+</code></pre>
+<h2 id="references">References</h2>
+<ul>
+<li>Backup and Restore Runbook</li>
+<li>Monitoring Runbook</li>
+<li>Database Maintenance</li>
+<li><a href="../../../TROUBLESHOOTING.html">Troubleshooting Guide</a></li>
+</ul>
+<hr>
+<p><strong>Last Updated</strong>: 2024-11-10<br>
+<strong>Version</strong>: 1.0</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/runbooks/deployment.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

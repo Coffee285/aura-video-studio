@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Manual Testing Guide: OpenAI API Key Validation Fix | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Manual Testing Guide: OpenAI API Key Validation Fix | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/MANUAL_TEST_API_KEY_VALIDATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="manual-testing-guide-openai-api-key-validation-fix">Manual Testing Guide: OpenAI API Key Validation Fix</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide helps verify that the API key validation fix (camelCase JSON serialization) is working correctly in the running application.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Running Aura.Api backend (http://localhost:5005 or configured port)</li>
+<li>Running Aura.Web frontend  (http://localhost:5173 or configured port)</li>
+<li>Valid OpenAI API key for testing (starts with <code>sk-</code> or <code>sk-proj-</code>)</li>
+</ul>
+<h2 id="test-procedure">Test Procedure</h2>
+<h3 id="1-test-via-first-run-wizard">1. Test via First-Run Wizard</h3>
+<ol>
+<li>Clear application data to trigger first-run experience:
+<ul>
+<li>Windows: Delete <code>%APPDATA%\Aura</code> folder</li>
+<li>Linux/Mac: Delete <code>~/.config/Aura</code> folder</li>
+</ul>
+</li>
+<li>Start the application</li>
+<li>Navigate through the wizard to the &quot;API Key Setup&quot; step</li>
+<li>Enter a valid OpenAI API key in the OpenAI provider section</li>
+<li>Click &quot;Validate&quot; button</li>
+<li><strong>Expected Result</strong>: Status should show &quot;Valid ✓&quot; with green badge</li>
+<li><strong>Previous Bug</strong>: Would show &quot;Invalid ✕&quot; immediately or show error &quot;undefined&quot;</li>
+</ol>
+<h3 id="2-test-via-settings-page">2. Test via Settings Page</h3>
+<ol>
+<li>Open the application</li>
+<li>Navigate to Settings → API Keys</li>
+<li>Find the OpenAI section</li>
+<li>Enter a valid OpenAI API key</li>
+<li>Click &quot;Test Connection&quot; or &quot;Validate&quot;</li>
+<li><strong>Expected Result</strong>: Success message &quot;API key is valid and verified with OpenAI&quot;</li>
+<li><strong>Previous Bug</strong>: Would show error immediately even with valid key</li>
+</ol>
+<h3 id="3-test-api-endpoint-directly-developer-test">3. Test API Endpoint Directly (Developer Test)</h3>
+<p>Using cURL or Postman:</p>
+<pre><code class="lang-bash"># Test the OpenAI validation endpoint
+curl -X POST http://localhost:5005/api/providers/openai/validate \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;apiKey&quot;: &quot;sk-YOUR_ACTUAL_OPENAI_KEY_HERE&quot;
+  }'
+</code></pre>
+<p><strong>Expected Response Format (camelCase)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;isValid&quot;: true,
+  &quot;status&quot;: &quot;Valid&quot;,
+  &quot;message&quot;: &quot;API key is valid and verified with OpenAI.&quot;,
+  &quot;correlationId&quot;: &quot;...&quot;,
+  &quot;details&quot;: {
+    &quot;provider&quot;: &quot;OpenAI&quot;,
+    &quot;keyFormat&quot;: &quot;valid&quot;,
+    &quot;formatValid&quot;: true,
+    &quot;networkCheckPassed&quot;: true,
+    &quot;httpStatusCode&quot;: 200,
+    &quot;responseTimeMs&quot;: 150,
+    &quot;diagnosticInfo&quot;: &quot;Validated successfully after 1 attempts&quot;
+  }
+}
+</code></pre>
+<p><strong>IMPORTANT</strong>: All property names should be camelCase (isValid, not IsValid).</p>
+<h3 id="4-browser-devtools-test">4. Browser DevTools Test</h3>
+<ol>
+<li>Open browser DevTools (F12)</li>
+<li>Go to Network tab</li>
+<li>Perform API key validation (as in Test 1 or 2)</li>
+<li>Find the <code>/api/providers/openai/validate</code> request</li>
+<li>Inspect the Response</li>
+<li><strong>Verify</strong>: All JSON properties are camelCase</li>
+<li><strong>Previous Bug</strong>: Properties were PascalCase, causing frontend to not find them</li>
+</ol>
+<h2 id="what-to-look-for">What to Look For</h2>
+<h3 id="success-indicators">Success Indicators</h3>
+<p>✅ Validation completes without errors<br>
+✅ Valid keys show &quot;Valid&quot; status with green badge<br>
+✅ Invalid keys show clear error messages (e.g., &quot;Invalid authentication&quot;)<br>
+✅ Network tab shows response with camelCase properties<br>
+✅ No console errors in browser DevTools</p>
+<h3 id="failure-indicators-if-bug-still-exists">Failure Indicators (If Bug Still Exists)</h3>
+<p>❌ Validation fails immediately even with valid key<br>
+❌ Console shows &quot;isValid is undefined&quot; errors<br>
+❌ Network response shows PascalCase properties (IsValid instead of isValid)<br>
+❌ Validation status stuck in &quot;Validating...&quot; state</p>
+<h2 id="additional-test-cases">Additional Test Cases</h2>
+<h3 id="test-invalid-key">Test Invalid Key</h3>
+<ol>
+<li>Enter an invalid OpenAI key (e.g., <code>sk-invalid123</code>)</li>
+<li>Click Validate</li>
+<li><strong>Expected</strong>: Clear error message &quot;Invalid authentication&quot; or similar</li>
+<li><strong>Should NOT</strong>: Show generic &quot;undefined&quot; error</li>
+</ol>
+<h3 id="test-timeoutnetwork-error">Test Timeout/Network Error</h3>
+<ol>
+<li>Disconnect internet</li>
+<li>Try to validate an API key</li>
+<li><strong>Expected</strong>: Message about network connectivity or offline mode</li>
+<li><strong>Should NOT</strong>: Crash or show undefined errors</li>
+</ol>
+<h3 id="test-rate-limiting">Test Rate Limiting</h3>
+<ol>
+<li>Validate the same key multiple times quickly (5+ times)</li>
+<li><strong>Expected</strong>: Either succeeds or shows rate limit message</li>
+<li><strong>Should NOT</strong>: Show undefined errors</li>
+</ol>
+<h2 id="rollback-procedure">Rollback Procedure</h2>
+<p>If the fix causes issues:</p>
+<ol>
+<li>Revert the change in <code>Aura.Api/Program.cs</code>:</li>
+</ol>
+<pre><code class="lang-csharp">// Remove this line:
+options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+</code></pre>
+<ol start="2">
+<li>Rebuild the API:</li>
+</ol>
+<pre><code class="lang-bash">dotnet build Aura.Api/Aura.Api.csproj -c Release
+</code></pre>
+<ol start="3">
+<li>Restart the backend</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="isvalid-is-undefined-still-appearing">&quot;isValid is undefined&quot; still appearing</h3>
+<ul>
+<li>Check that backend was restarted after the fix</li>
+<li>Verify Program.cs has the camelCase policy</li>
+<li>Check Network tab to see actual JSON response format</li>
+</ul>
+<h3 id="all-validations-failing">All validations failing</h3>
+<ul>
+<li>Check backend logs for errors</li>
+<li>Verify OpenAI API service is accessible</li>
+<li>Test with a known-good API key from OpenAI platform</li>
+</ul>
+<h3 id="frontend-not-receiving-response">Frontend not receiving response</h3>
+<ul>
+<li>Check CORS configuration</li>
+<li>Verify API is running on expected port</li>
+<li>Check for circuit breaker state (may need reset)</li>
+</ul>
+<h2 id="related-files">Related Files</h2>
+<ul>
+<li><strong>Backend</strong>: <code>Aura.Api/Program.cs</code> - JSON serialization configuration</li>
+<li><strong>Frontend</strong>: <code>Aura.Web/src/state/onboarding.ts</code> - Validation logic (line 816)</li>
+<li><strong>Frontend</strong>: <code>Aura.Web/src/services/openAIValidationService.ts</code> - Service layer</li>
+<li><strong>Backend</strong>: <code>Aura.Api/Controllers/ProvidersController.cs</code> - API endpoint</li>
+<li><strong>Backend</strong>: <code>Aura.Core/Services/Providers/OpenAIKeyValidationService.cs</code> - Validation logic</li>
+</ul>
+<h2 id="success-criteria">Success Criteria</h2>
+<p>The fix is considered successful when:</p>
+<ol>
+<li>Valid OpenAI API keys validate successfully on first try</li>
+<li>Error messages are clear and actionable</li>
+<li>No &quot;undefined&quot; errors in console</li>
+<li>JSON responses use camelCase throughout</li>
+<li>User can complete first-run wizard without issues</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/MANUAL_TEST_API_KEY_VALIDATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

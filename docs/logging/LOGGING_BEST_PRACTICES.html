@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Logging Best Practices Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Logging Best Practices Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/LOGGING_BEST_PRACTICES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="logging-best-practices-guide">Logging Best Practices Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide provides best practices for using the structured logging and distributed tracing infrastructure in the Aura project.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#logging-levels">Logging Levels</a></li>
+<li><a href="#structured-logging">Structured Logging</a></li>
+<li><a href="#distributed-tracing">Distributed Tracing</a></li>
+<li><a href="#performance-logging">Performance Logging</a></li>
+<li><a href="#security-considerations">Security Considerations</a></li>
+<li><a href="#frontend-logging">Frontend Logging</a></li>
+<li><a href="#backend-logging">Backend Logging</a></li>
+</ul>
+<h2 id="logging-levels">Logging Levels</h2>
+<h3 id="when-to-use-each-level">When to Use Each Level</h3>
+<h4 id="debug">Debug</h4>
+<ul>
+<li>Use for detailed diagnostic information</li>
+<li><strong>Suppressed in production</strong></li>
+<li>Examples:
+<ul>
+<li>Variable values during execution</li>
+<li>Entry/exit of methods</li>
+<li>Detailed state information</li>
+</ul>
+</li>
+</ul>
+<pre><code class="lang-csharp">logger.LogDebug(&quot;Processing item {ItemId} with value {Value}&quot;, itemId, value);
+</code></pre>
+<h4 id="information">Information</h4>
+<ul>
+<li>Use for general informational messages about application flow</li>
+<li>Examples:
+<ul>
+<li>Service started/stopped</li>
+<li>Request received/completed</li>
+<li>Background job executed</li>
+</ul>
+</li>
+</ul>
+<pre><code class="lang-csharp">logger.LogInformation(&quot;Video generation started for project {ProjectId}&quot;, projectId);
+</code></pre>
+<h4 id="warning">Warning</h4>
+<ul>
+<li>Use for unexpected conditions that don't prevent operation</li>
+<li>Examples:
+<ul>
+<li>Slow performance detected</li>
+<li>Deprecated API usage</li>
+<li>Resource usage approaching limits</li>
+</ul>
+</li>
+</ul>
+<pre><code class="lang-csharp">logger.LogWarning(&quot;Request took {Duration}ms, exceeding threshold&quot;, duration);
+</code></pre>
+<h4 id="error">Error</h4>
+<ul>
+<li>Use for errors and exceptions that need investigation</li>
+<li><strong>Always include the exception object</strong></li>
+<li>Examples:
+<ul>
+<li>API call failures</li>
+<li>Database errors</li>
+<li>Validation failures</li>
+</ul>
+</li>
+</ul>
+<pre><code class="lang-csharp">logger.LogError(exception, &quot;Failed to generate video for project {ProjectId}&quot;, projectId);
+</code></pre>
+<h2 id="structured-logging">Structured Logging</h2>
+<h3 id="use-structured-properties">Use Structured Properties</h3>
+<p><strong>✅ Good - Structured</strong></p>
+<pre><code class="lang-csharp">logger.LogInformation(
+    &quot;User {UserId} created project {ProjectId} with duration {Duration}s&quot;,
+    userId, projectId, duration);
+</code></pre>
+<p><strong>❌ Bad - String Concatenation</strong></p>
+<pre><code class="lang-csharp">logger.LogInformation($&quot;User {userId} created project {projectId} with duration {duration}s&quot;);
+</code></pre>
+<h3 id="using-loggingextensions">Using LoggingExtensions</h3>
+<p>The <code>Aura.Core.Logging</code> namespace provides extension methods for common logging patterns:</p>
+<h4 id="log-with-context">Log with Context</h4>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+logger.LogStructured(
+    LogLevel.Information,
+    &quot;Operation completed: {OperationName}&quot;,
+    new Dictionary&lt;string, object&gt;
+    {
+        [&quot;OperationName&quot;] = &quot;VideoGeneration&quot;,
+        [&quot;ProjectId&quot;] = projectId,
+        [&quot;Duration&quot;] = duration,
+        [&quot;Success&quot;] = true
+    });
+</code></pre>
+<h4 id="performance-logging">Performance Logging</h4>
+<pre><code class="lang-csharp">logger.LogPerformance(
+    &quot;Video Generation&quot;,
+    duration,
+    success: true,
+    new Dictionary&lt;string, object&gt;
+    {
+        [&quot;ProjectId&quot;] = projectId,
+        [&quot;Resolution&quot;] = &quot;1920x1080&quot;,
+        [&quot;Frames&quot;] = frameCount
+    });
+</code></pre>
+<h4 id="audit-logging">Audit Logging</h4>
+<pre><code class="lang-csharp">logger.LogAudit(
+    action: &quot;DeleteProject&quot;,
+    userId: currentUser.Id,
+    resourceId: projectId,
+    new Dictionary&lt;string, object&gt;
+    {
+        [&quot;ProjectName&quot;] = projectName,
+        [&quot;Reason&quot;] = &quot;UserRequest&quot;
+    });
+</code></pre>
+<h4 id="security-logging">Security Logging</h4>
+<pre><code class="lang-csharp">logger.LogSecurity(
+    eventType: &quot;LoginAttempt&quot;,
+    success: true,
+    userId: userId,
+    ipAddress: clientIp,
+    details: &quot;Two-factor authentication used&quot;);
+</code></pre>
+<h2 id="distributed-tracing">Distributed Tracing</h2>
+<h3 id="using-trace-context">Using Trace Context</h3>
+<h4 id="backend-c">Backend (C#)</h4>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+// Trace context is automatically propagated through middleware
+// Access current trace context
+var traceContext = TraceContext.Current;
+
+// Create a child span for a sub-operation
+using var childScope = TraceContext.Current?.CreateChildSpan(&quot;DatabaseQuery&quot;);
+try
+{
+    // Operation code
+    logger.LogInformation(&quot;Query executed successfully&quot;);
+}
+catch (Exception ex)
+{
+    logger.LogError(ex, &quot;Query failed&quot;);
+    throw;
+}
+</code></pre>
+<h4 id="frontend-typescript">Frontend (TypeScript)</h4>
+<pre><code class="lang-typescript">import { logger } from '../utils/logger';
+
+// Create a trace context for an operation
+const traceContext = logger.createChildSpan('LoadProjectData');
+logger.setTraceContext(traceContext);
+
+try {
+  const data = await fetchProjectData(projectId);
+  logger.info('Project data loaded', 'ProjectView', 'load', { projectId });
+} catch (error) {
+  logger.error('Failed to load project', error, 'ProjectView', 'load');
+}
+</code></pre>
+<h3 id="correlation-ids">Correlation IDs</h3>
+<p>Correlation IDs are automatically generated and propagated:</p>
+<ul>
+<li>Set in <code>CorrelationIdMiddleware</code> for each HTTP request</li>
+<li>Included in all log entries</li>
+<li>Returned in response headers as <code>X-Correlation-ID</code></li>
+<li>Propagated to downstream services</li>
+</ul>
+<h4 id="manual-correlation-id-usage">Manual Correlation ID Usage</h4>
+<pre><code class="lang-csharp">using (logger.BeginCorrelatedScope(correlationId, &quot;VideoProcessing&quot;))
+{
+    // All logs within this scope will include the correlation ID
+    logger.LogInformation(&quot;Processing video&quot;);
+}
+</code></pre>
+<h2 id="performance-logging-1">Performance Logging</h2>
+<h3 id="using-performancetimer">Using PerformanceTimer</h3>
+<h4 id="backend">Backend</h4>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+// Using disposable pattern
+using (var timer = PerformanceTimer.Start(logger, &quot;VideoEncoding&quot;))
+{
+    timer.AddMetadata(&quot;Resolution&quot;, &quot;1920x1080&quot;);
+    timer.AddMetadata(&quot;Codec&quot;, &quot;h264&quot;);
+    
+    // Checkpoint
+    timer.Checkpoint(&quot;FramesProcessed&quot;);
+    
+    // Operation code
+    await EncodeVideo(input, output);
+    
+    // Timer automatically logs on dispose
+}
+
+// Using extension method
+var result = await logger.TimeOperationAsync(
+    &quot;DatabaseQuery&quot;,
+    async () =&gt; await database.QueryAsync(sql),
+    new Dictionary&lt;string, object&gt; { [&quot;Query&quot;] = &quot;GetProjects&quot; }
+);
+</code></pre>
+<h4 id="frontend">Frontend</h4>
+<pre><code class="lang-typescript">// Time an async operation
+const result = await logger.timeOperation(
+  'LoadDashboard',
+  async () =&gt; {
+    const data = await fetchDashboardData();
+    return data;
+  },
+  'Dashboard',
+  { userId }
+);
+
+// Manual timing
+const start = performance.now();
+try {
+  await someOperation();
+  const duration = performance.now() - start;
+  logger.performance('SomeOperation', duration, 'MyComponent', { success: true });
+} catch (error) {
+  const duration = performance.now() - start;
+  logger.performance('SomeOperation', duration, 'MyComponent', { success: false });
+}
+</code></pre>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="sensitive-data-filtering">Sensitive Data Filtering</h3>
+<p>The <code>SensitiveDataFilter</code> automatically redacts sensitive information:</p>
+<p><strong>Automatically Filtered:</strong></p>
+<ul>
+<li>Email addresses (partially masked)</li>
+<li>Credit card numbers</li>
+<li>Social Security Numbers</li>
+<li>JWT tokens</li>
+<li>Properties containing: <code>password</code>, <code>secret</code>, <code>token</code>, <code>apikey</code>, <code>credential</code></li>
+</ul>
+<h4 id="manual-sanitization">Manual Sanitization</h4>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+// Sanitize a dictionary
+var sanitized = LogSanitizer.SanitizeDictionary(userInput);
+logger.LogInformation(&quot;User data: {@Data}&quot;, sanitized);
+
+// Mask sensitive strings
+var maskedApiKey = LogSanitizer.MaskString(apiKey, visibleChars: 4);
+logger.LogInformation(&quot;API Key: {MaskedKey}&quot;, maskedApiKey);
+</code></pre>
+<h4 id="typescript">TypeScript</h4>
+<pre><code class="lang-typescript">// Never log sensitive data directly
+// ❌ Bad
+logger.info('User logged in', 'Auth', 'login', { password: userPassword });
+
+// ✅ Good
+logger.info('User logged in', 'Auth', 'login', { userId: user.id });
+</code></pre>
+<h2 id="frontend-logging">Frontend Logging</h2>
+<h3 id="component-scoped-logging">Component-Scoped Logging</h3>
+<pre><code class="lang-typescript">import { logger } from '../utils/logger';
+
+export const MyComponent = () =&gt; {
+  // Create a scoped logger
+  const componentLogger = logger.forComponent('MyComponent');
+  
+  useEffect(() =&gt; {
+    componentLogger.debug('Component mounted', 'mount');
+    
+    return () =&gt; {
+      componentLogger.debug('Component unmounted', 'unmount');
+    };
+  }, []);
+  
+  const handleAction = async () =&gt; {
+    try {
+      componentLogger.info('Action started', 'handleAction');
+      await performAction();
+      componentLogger.info('Action completed', 'handleAction');
+    } catch (error) {
+      componentLogger.error('Action failed', error, 'handleAction');
+    }
+  };
+  
+  return &lt;button onClick={handleAction}&gt;Perform Action&lt;/button&gt;;
+};
+</code></pre>
+<h3 id="error-boundary-logging">Error Boundary Logging</h3>
+<pre><code class="lang-typescript">import { ErrorBoundary } from '../components/ErrorBoundary';
+
+// Wrap components with error boundary
+&lt;ErrorBoundary componentName=&quot;Dashboard&quot;&gt;
+  &lt;DashboardComponent /&gt;
+&lt;/ErrorBoundary&gt;
+</code></pre>
+<h2 id="backend-logging">Backend Logging</h2>
+<h3 id="request-logging">Request Logging</h3>
+<p>Request logging is automatic via middleware. All requests are logged with:</p>
+<ul>
+<li>HTTP method and path</li>
+<li>Status code</li>
+<li>Duration</li>
+<li>Client IP</li>
+<li>User agent</li>
+<li>Correlation ID</li>
+<li>Trace ID and Span ID</li>
+</ul>
+<h3 id="operation-context">Operation Context</h3>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+using (OperationContext.BeginScope(&quot;VideoGeneration&quot;, projectId))
+{
+    // All logs within this scope include the operation context
+    logger.LogInformation(&quot;Starting video generation&quot;);
+    
+    // Nested operations automatically inherit context
+    await GenerateFrames();
+    await EncodeVideo();
+    
+    logger.LogInformation(&quot;Video generation completed&quot;);
+}
+</code></pre>
+<h2 id="log-sampling">Log Sampling</h2>
+<p>For high-volume scenarios, use log sampling:</p>
+<pre><code class="lang-csharp">// In Program.cs
+Log.Logger = new LoggerConfiguration()
+    .ConfigureStructuredLogging(&quot;Aura.Api&quot;)
+    .ConfigureLogSampling(sampleRate: 10) // Keep 1 in 10 debug/verbose logs
+    .CreateLogger();
+</code></pre>
+<h2 id="common-anti-patterns">Common Anti-Patterns</h2>
+<h3 id="-dont">❌ Don't</h3>
+<pre><code class="lang-csharp">// Don't use string concatenation
+logger.LogInformation(&quot;User &quot; + userId + &quot; logged in&quot;);
+
+// Don't log without context
+logger.LogError(&quot;An error occurred&quot;);
+
+// Don't log PII without sanitization
+logger.LogInformation(&quot;User email: {Email}&quot;, userEmail);
+
+// Don't ignore exceptions
+catch (Exception ex)
+{
+    logger.LogError(&quot;Failed&quot;);
+}
+</code></pre>
+<h3 id="-do">✅ Do</h3>
+<pre><code class="lang-csharp">// Use structured logging
+logger.LogInformation(&quot;User {UserId} logged in&quot;, userId);
+
+// Provide context
+logger.LogError(ex, &quot;Failed to save user data for {UserId}&quot;, userId);
+
+// Sanitize or omit PII
+logger.LogInformation(&quot;User registered: {UserId}&quot;, userId);
+
+// Always log the exception
+catch (Exception ex)
+{
+    logger.LogError(ex, &quot;Failed to save user data for {UserId}&quot;, userId);
+}
+</code></pre>
+<h2 id="performance-tips">Performance Tips</h2>
+<ol>
+<li><strong>Use log levels appropriately</strong> - Debug logs are free in production (not evaluated)</li>
+<li><strong>Avoid expensive operations in log statements</strong> - Don't serialize large objects</li>
+<li><strong>Use structured properties</strong> - More efficient than string interpolation</li>
+<li><strong>Batch frontend logs</strong> - Logs are automatically batched and sent every 5 seconds</li>
+<li><strong>Sample high-volume logs</strong> - Use log sampling for debug/verbose logs</li>
+</ol>
+<h2 id="testing-considerations">Testing Considerations</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-csharp">// Use ILogger&lt;T&gt; for easy mocking
+public class VideoService
+{
+    private readonly ILogger&lt;VideoService&gt; _logger;
+    
+    public VideoService(ILogger&lt;VideoService&gt; logger)
+    {
+        _logger = logger;
+    }
+}
+
+// In tests
+var mockLogger = new Mock&lt;ILogger&lt;VideoService&gt;&gt;();
+var service = new VideoService(mockLogger.Object);
+
+// Verify logging
+mockLogger.Verify(
+    x =&gt; x.Log(
+        LogLevel.Information,
+        It.IsAny&lt;EventId&gt;(),
+        It.Is&lt;It.IsAnyType&gt;((v, t) =&gt; v.ToString().Contains(&quot;expected message&quot;)),
+        null,
+        It.IsAny&lt;Func&lt;It.IsAnyType, Exception?, string&gt;&gt;()),
+    Times.Once);
+</code></pre>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="DEBUGGING_WITH_TRACES.html">Debugging with Traces Guide</a></li>
+<li><a href="LOG_QUERY_EXAMPLES.html">Log Query Examples</a></li>
+<li><a href="LOCAL_LOGGING_SETUP.html">Local Logging Setup</a></li>
+<li><a href="https://serilog.net/">Serilog Documentation</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/LOGGING_BEST_PRACTICES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

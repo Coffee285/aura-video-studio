@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Entity Relationship Diagram | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Entity Relationship Diagram | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/ER_DIAGRAM.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="entity-relationship-diagram">Entity Relationship Diagram</h1>
+
+<h2 id="database-schema-overview">Database Schema Overview</h2>
+<p>This document provides a visual representation of the Aura database schema and entity relationships.</p>
+<h2 id="core-entity-relationships">Core Entity Relationships</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────┐
+│                              CORE TABLES                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────┐
+│   ProjectStates          │ (Main project table)
+├──────────────────────────┤
+│ • Id (PK, GUID)          │
+│ • Title                  │
+│ • Description            │
+│ • Status                 │──┐
+│ • CurrentWizardStep      │  │
+│ • CurrentStage           │  │
+│ • ProgressPercent        │  │
+│ • JobId                  │  │
+│ • BriefJson              │  │
+│ • PlanSpecJson           │  │
+│ • VoiceSpecJson          │  │
+│ • RenderSpecJson         │  │
+│ • CreatedAt, UpdatedAt   │  │
+│ • IsDeleted, DeletedAt   │  │
+└──────────────────────────┘  │
+                              │
+        ┌─────────────────────┴─────────────────────┬──────────────────────┐
+        │                                           │                      │
+        ▼                                           ▼                      ▼
+┌──────────────────────┐                  ┌──────────────────┐  ┌──────────────────┐
+│   SceneStates        │                  │  AssetStates     │  │ RenderCheckpoints │
+├──────────────────────┤                  ├──────────────────┤  ├──────────────────┤
+│ • Id (PK, GUID)      │                  │ • Id (PK, GUID)  │  │ • Id (PK, GUID)  │
+│ • ProjectId (FK)     │◄─────────────────┤ • ProjectId (FK) │  │ • ProjectId (FK) │
+│ • SceneIndex         │ 1:N              │ • AssetType      │  │ • StageName      │
+│ • ScriptText         │                  │ • FilePath       │  │ • CheckpointTime │
+│ • AudioFilePath      │                  │ • FileSizeBytes  │  │ • CompletedScenes│
+│ • ImageFilePath      │                  │ • MimeType       │  │ • TotalScenes    │
+│ • DurationSeconds    │                  │ • IsTemporary    │  │ • CheckpointData │
+│ • IsCompleted        │                  │ • CreatedAt      │  │ • OutputFilePath │
+│ • CreatedAt          │                  └──────────────────┘  │ • IsValid        │
+└──────────────────────┘                                        └──────────────────┘
+                                                                          │
+                                                                          │
+        ┌─────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌──────────────────────────┐
+│   ProjectVersions        │ (Version control &amp; snapshots)
+├──────────────────────────┤
+│ • Id (PK, GUID)          │
+│ • ProjectId (FK)         │◄───────┐
+│ • VersionNumber          │ 1:N    │
+│ • Name                   │        │
+│ • Description            │        │
+│ • VersionType            │        │
+│ • BriefHash     ─────────┼────────┼──┐
+│ • PlanHash      ─────────┼────────┼──┤
+│ • VoiceHash     ─────────┼────────┼──┤
+│ • RenderHash    ─────────┼────────┼──┤
+│ • TimelineHash  ─────────┼────────┼──┤
+│ • StorageSizeBytes       │        │  │
+│ • IsMarkedImportant      │        │  │
+│ • IsDeleted, DeletedAt   │        │  │
+│ • CreatedAt, UpdatedAt   │        │  │
+└──────────────────────────┘        │  │
+                                    │  │
+                                    │  ▼
+                                    │  ┌──────────────────────┐
+                                    │  │   ContentBlobs       │
+                                    │  ├──────────────────────┤
+                                    │  │ • ContentHash (PK)   │
+                                    └──┤ • Content            │
+                                    M:1│ • ContentType        │
+                                       │ • SizeBytes          │
+                                       │ • CreatedAt          │
+                                       │ • LastReferencedAt   │
+                                       │ • ReferenceCount     │
+                                       └──────────────────────┘
+                                       (Content-addressed storage)
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          CONFIGURATION TABLES                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────┐  ┌──────────────────────────┐  ┌────────────────────┐
+│   SystemConfiguration    │  │   Configurations         │  │   UserSetups       │
+├──────────────────────────┤  ├──────────────────────────┤  ├────────────────────┤
+│ • Id (PK, int) = 1       │  │ • Key (PK, string)       │  │ • Id (PK, string)  │
+│ • IsSetupComplete        │  │ • Value                  │  │ • UserId (unique)  │
+│ • FFmpegPath             │  │ • Category               │  │ • Completed        │
+│ • OutputDirectory        │  │ • ValueType              │  │ • CompletedAt      │
+│ • CreatedAt, UpdatedAt   │  │ • Description            │  │ • Version          │
+└──────────────────────────┘  │ • IsSensitive            │  │ • LastStep         │
+ (Single row, global config) │ • Version                │  │ • UpdatedAt        │
+                              │ • IsActive               │  │ • SelectedTier     │
+                              │ • CreatedAt, UpdatedAt   │  │ • WizardState      │
+                              └──────────────────────────┘  └────────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          TEMPLATE &amp; HISTORY TABLES                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────┐  ┌──────────────────────────┐
+│   Templates              │  │   CustomTemplates        │
+├──────────────────────────┤  ├──────────────────────────┤
+│ • Id (PK, string)        │  │ • Id (PK, string)        │
+│ • Name                   │  │ • Name                   │
+│ • Description            │  │ • Description            │
+│ • Category               │  │ • Category               │
+│ • SubCategory            │  │ • Tags                   │
+│ • PreviewImage           │  │ • Author                 │
+│ • PreviewVideo           │  │ • IsDefault              │
+│ • Tags                   │  │ • ScriptStructureJson    │
+│ • TemplateData           │  │ • VideoStructureJson     │
+│ • Author                 │  │ • LLMPipelineJson        │
+│ • IsSystemTemplate       │  │ • VisualPreferencesJson  │
+│ • IsCommunityTemplate    │  │ • IsDeleted, DeletedAt   │
+│ • UsageCount             │  │ • CreatedAt, UpdatedAt   │
+│ • Rating, RatingCount    │  └──────────────────────────┘
+│ • CreatedAt, UpdatedAt   │
+└──────────────────────────┘
+
+┌──────────────────────────┐  ┌──────────────────────────┐
+│   ExportHistory          │  │   ActionLogs             │
+├──────────────────────────┤  ├──────────────────────────┤
+│ • Id (PK, string)        │  │ • Id (PK, GUID)          │
+│ • InputFile              │  │ • UserId                 │
+│ • OutputFile             │  │ • ActionType             │
+│ • PresetName             │  │ • Description            │
+│ • Status                 │  │ • Timestamp              │
+│ • Progress               │  │ • Status                 │
+│ • CreatedAt              │  │ • PayloadJson            │
+│ • StartedAt              │  │ • InverseActionType      │
+│ • CompletedAt            │  │ • InversePayloadJson     │
+│ • ErrorMessage           │  │ • CanBatch, IsPersistent │
+│ • FileSize               │  │ • UndoneAt, UndoneBy     │
+│ • DurationSeconds        │  │ • ExpiresAt              │
+│ • Platform               │  │ • CorrelationId          │
+│ • Resolution, Codec      │  └──────────────────────────┘
+└──────────────────────────┘   (Undo/Redo support)
+ (Export job tracking)
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          KEY DESIGN PATTERNS                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+1. CASCADE DELETE
+   ProjectStates → SceneStates, AssetStates, RenderCheckpoints, ProjectVersions
+   When a project is deleted, all related records are automatically removed.
+
+2. CONTENT-ADDRESSED STORAGE
+   ProjectVersions store hashes, ContentBlobs store actual content.
+   Same content = same hash = single storage (deduplication).
+
+3. SOFT DELETE
+   ProjectStates, CustomTemplates, ProjectVersions use IsDeleted flag.
+   Data is never actually removed, only marked as deleted.
+
+4. AUDIT TRAILS
+   All entities track CreatedAt, UpdatedAt, CreatedBy, ModifiedBy.
+   Automatic timestamp updates via DbContext.SaveChanges override.
+
+5. VERSION CONTROL
+   ProjectVersions provide full project history with restore points.
+   Supports Manual saves, Autosaves, and automatic RestorePoints.
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                             INDEX STRATEGY                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+High-traffic columns are indexed for performance:
+
+• ProjectStates: Status, UpdatedAt, JobId, IsDeleted
+• SceneStates: ProjectId, (ProjectId + SceneIndex)
+• AssetStates: ProjectId, IsTemporary
+• ProjectVersions: ProjectId, VersionNumber, VersionType
+• Templates: Category, IsSystemTemplate
+• ExportHistory: Status, CreatedAt
+• ActionLogs: UserId, ActionType, Timestamp, CorrelationId
+• Configurations: Category, IsActive, IsSensitive
+
+Composite indexes optimize common query patterns:
+• (Status, UpdatedAt) for filtered sorted queries
+• (ProjectId, SceneIndex) for scene lookups
+• (Category, SubCategory) for template filtering
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          DATA FLOW EXAMPLES                             │
+└─────────────────────────────────────────────────────────────────────────┘
+
+1. CREATE PROJECT
+   User → ProjectStates (new record)
+        → SceneStates (scenes created)
+        → ProjectVersions (initial version)
+        → ContentBlobs (content stored)
+
+2. UPDATE PROJECT
+   User → ProjectStates (updated)
+        → ProjectVersions (new version snapshot)
+        → ContentBlobs (reuse existing via hash or create new)
+
+3. EXPORT VIDEO
+   User → ExportHistory (new job record)
+        → Status: Queued → InProgress → Completed
+        → FileSize, DurationSeconds populated on completion
+
+4. UNDO ACTION
+   User → ActionLogs (find action)
+        → Apply InverseActionType with InversePayloadJson
+        → Update Status to &quot;Undone&quot;
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          STORAGE ESTIMATES                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Typical sizes per record:
+
+• ProjectStates: ~2-5 KB (with JSON fields)
+• SceneStates: ~1-2 KB per scene
+• ProjectVersions: ~5-10 KB (mostly hashes, content in blobs)
+• ContentBlobs: ~1-50 KB per content piece
+• Templates: ~2-5 KB
+• ExportHistory: ~500 bytes
+
+Example project with 10 scenes and 5 versions:
+• 1 ProjectState: 3 KB
+• 10 SceneStates: 15 KB
+• 10 AssetStates: 5 KB
+• 5 ProjectVersions: 25 KB (hashes only)
+• Content in blobs (deduplicated): ~50-200 KB
+Total: ~100-250 KB per project
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/ER_DIAGRAM.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Quality Validation API Endpoints | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Quality Validation API Endpoints | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/QUALITY_VALIDATION_API.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="quality-validation-api-endpoints">Quality Validation API Endpoints</h1>
+
+<p>This document describes the quality validation API endpoints available in Aura Video Studio.</p>
+<h2 id="overview">Overview</h2>
+<p>The Quality Validation API provides 5 endpoints for validating video quality metrics before processing or publication. These endpoints help ensure your videos meet technical requirements and platform specifications.</p>
+<h2 id="endpoints">Endpoints</h2>
+<h3 id="1-resolution-validation">1. Resolution Validation</h3>
+<p><strong>GET</strong> <code>/api/quality/validate/resolution</code></p>
+<p>Validates video resolution against minimum requirements.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>width</code> (required): Video width in pixels</li>
+<li><code>height</code> (required): Video height in pixels</li>
+<li><code>min_resolution</code> (optional): Minimum resolution specification (default: &quot;1280x720&quot;)</li>
+</ul>
+<p><strong>Example Request:</strong></p>
+<pre><code class="lang-bash">curl -X GET &quot;http://localhost:5005/api/quality/validate/resolution?width=1920&amp;height=1080&amp;min_resolution=1280x720&quot;
+</code></pre>
+<p><strong>Example Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;result&quot;: {
+    &quot;width&quot;: 1920,
+    &quot;height&quot;: 1080,
+    &quot;aspectRatio&quot;: &quot;16:9&quot;,
+    &quot;meetsMinimumResolution&quot;: true,
+    &quot;totalPixels&quot;: 2073600,
+    &quot;resolutionCategory&quot;: &quot;Full HD 1080p&quot;,
+    &quot;isValid&quot;: true,
+    &quot;score&quot;: 100,
+    &quot;issues&quot;: [],
+    &quot;warnings&quot;: [],
+    &quot;validatedAt&quot;: &quot;2025-10-23T12:00:00Z&quot;
+  }
+}
+</code></pre>
+<h3 id="2-audio-quality-analysis">2. Audio Quality Analysis</h3>
+<p><strong>POST</strong> <code>/api/quality/validate/audio</code></p>
+<p>Analyzes audio file for quality issues including loudness, clarity, and noise.</p>
+<p><strong>Request Body:</strong></p>
+<pre><code class="lang-json">{
+  &quot;audioFilePath&quot;: &quot;/path/to/audio.wav&quot;
+}
+</code></pre>
+<p><strong>Example Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;result&quot;: {
+    &quot;loudnessLUFS&quot;: -14.0,
+    &quot;peakLevel&quot;: -1.0,
+    &quot;noiseLevel&quot;: 10,
+    &quot;clarityScore&quot;: 85,
+    &quot;hasClipping&quot;: false,
+    &quot;sampleRate&quot;: 48000,
+    &quot;bitDepth&quot;: 16,
+    &quot;channels&quot;: 2,
+    &quot;dynamicRange&quot;: 12.0,
+    &quot;isValid&quot;: true,
+    &quot;score&quot;: 88,
+    &quot;issues&quot;: [],
+    &quot;warnings&quot;: []
+  }
+}
+</code></pre>
+<h3 id="3-frame-rate-validation">3. Frame Rate Validation</h3>
+<p><strong>GET</strong> <code>/api/quality/validate/framerate</code></p>
+<p>Verifies frame rate consistency.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>expected_fps</code> (required): Expected frame rate</li>
+<li><code>actual_fps</code> (required): Actual detected frame rate</li>
+<li><code>tolerance</code> (optional): Acceptable variance (default: 0.5)</li>
+</ul>
+<p><strong>Example Request:</strong></p>
+<pre><code class="lang-bash">curl -X GET &quot;http://localhost:5005/api/quality/validate/framerate?expected_fps=30&amp;actual_fps=30&amp;tolerance=0.5&quot;
+</code></pre>
+<p><strong>Example Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;result&quot;: {
+    &quot;actualFPS&quot;: 30.0,
+    &quot;expectedFPS&quot;: 30.0,
+    &quot;variance&quot;: 0.0,
+    &quot;isConsistent&quot;: true,
+    &quot;droppedFrames&quot;: 0,
+    &quot;totalFrames&quot;: 1000,
+    &quot;frameRateCategory&quot;: &quot;NTSC 30 FPS&quot;,
+    &quot;isValid&quot;: true,
+    &quot;score&quot;: 100,
+    &quot;issues&quot;: [],
+    &quot;warnings&quot;: []
+  }
+}
+</code></pre>
+<h3 id="4-content-consistency-analysis">4. Content Consistency Analysis</h3>
+<p><strong>POST</strong> <code>/api/quality/validate/consistency</code></p>
+<p>Checks for content consistency across video frames.</p>
+<p><strong>Request Body:</strong></p>
+<pre><code class="lang-json">{
+  &quot;videoFilePath&quot;: &quot;/path/to/video.mp4&quot;
+}
+</code></pre>
+<p><strong>Example Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;result&quot;: {
+    &quot;consistencyScore&quot;: 85,
+    &quot;sceneChanges&quot;: 5,
+    &quot;hasAbruptTransitions&quot;: false,
+    &quot;colorConsistency&quot;: 90,
+    &quot;brightnessConsistency&quot;: 88,
+    &quot;hasFlickering&quot;: false,
+    &quot;motionSmoothness&quot;: 82,
+    &quot;detectedArtifacts&quot;: [],
+    &quot;isValid&quot;: true,
+    &quot;score&quot;: 86,
+    &quot;issues&quot;: [],
+    &quot;warnings&quot;: []
+  }
+}
+</code></pre>
+<h3 id="5-platform-requirements-validation">5. Platform Requirements Validation</h3>
+<p><strong>GET</strong> <code>/api/quality/validate/platform-requirements</code></p>
+<p>Validates video against platform-specific requirements.</p>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>platform</code> (required): Target platform (youtube, tiktok, instagram, twitter)</li>
+<li><code>width</code> (required): Video width in pixels</li>
+<li><code>height</code> (required): Video height in pixels</li>
+<li><code>file_size_bytes</code> (required): File size in bytes</li>
+<li><code>duration_seconds</code> (required): Duration in seconds</li>
+<li><code>codec</code> (optional): Video codec (default: &quot;H.264&quot;)</li>
+</ul>
+<p><strong>Example Request:</strong></p>
+<pre><code class="lang-bash">curl -X GET &quot;http://localhost:5005/api/quality/validate/platform-requirements?platform=youtube&amp;width=1920&amp;height=1080&amp;file_size_bytes=52428800&amp;duration_seconds=300&amp;codec=H.264&quot;
+</code></pre>
+<p><strong>Example Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;result&quot;: {
+    &quot;platform&quot;: &quot;YouTube&quot;,
+    &quot;meetsResolutionRequirements&quot;: true,
+    &quot;meetsAspectRatioRequirements&quot;: true,
+    &quot;meetsDurationRequirements&quot;: true,
+    &quot;meetsFileSizeRequirements&quot;: true,
+    &quot;meetsCodecRequirements&quot;: true,
+    &quot;fileSizeBytes&quot;: 52428800,
+    &quot;durationSeconds&quot;: 300.0,
+    &quot;codec&quot;: &quot;H.264&quot;,
+    &quot;recommendedOptimizations&quot;: [],
+    &quot;isValid&quot;: true,
+    &quot;score&quot;: 100,
+    &quot;issues&quot;: [],
+    &quot;warnings&quot;: []
+  }
+}
+</code></pre>
+<h2 id="supported-platforms">Supported Platforms</h2>
+<p>The platform requirements endpoint supports the following platforms:</p>
+<ul>
+<li><strong>YouTube</strong>: Max 256GB, up to 12 hours, supports H.264/H.265/VP9/AV1</li>
+<li><strong>TikTok</strong>: Max 287MB, up to 10 minutes, 9:16 aspect ratio recommended</li>
+<li><strong>Instagram</strong>: Max 650MB, up to 60 seconds, supports 1:1, 4:5, 9:16</li>
+<li><strong>Twitter/X</strong>: Max 512MB, up to 140 seconds, supports H.264</li>
+</ul>
+<h2 id="response-fields">Response Fields</h2>
+<p>All endpoints return a common set of fields:</p>
+<ul>
+<li><code>isValid</code>: Boolean indicating if validation passed</li>
+<li><code>score</code>: Overall quality score (0-100)</li>
+<li><code>issues</code>: Array of critical validation failures</li>
+<li><code>warnings</code>: Array of non-critical issues</li>
+<li><code>validatedAt</code>: Timestamp of validation</li>
+</ul>
+<h2 id="error-handling">Error Handling</h2>
+<p>All endpoints return appropriate HTTP status codes:</p>
+<ul>
+<li><code>200 OK</code>: Validation completed successfully</li>
+<li><code>400 Bad Request</code>: Invalid input parameters</li>
+<li><code>404 Not Found</code>: File not found (for file-based endpoints)</li>
+<li><code>500 Internal Server Error</code>: Server error during validation</li>
+</ul>
+<h2 id="integration-examples">Integration Examples</h2>
+<h3 id="javascripttypescript">JavaScript/TypeScript</h3>
+<pre><code class="lang-typescript">async function validateResolution(width: number, height: number) {
+  const response = await fetch(
+    `http://localhost:5005/api/quality/validate/resolution?width=${width}&amp;height=${height}`
+  );
+  const data = await response.json();
+  return data.result;
+}
+</code></pre>
+<h3 id="python">Python</h3>
+<pre><code class="lang-python">import requests
+
+def validate_platform_requirements(platform, width, height, file_size, duration):
+    url = &quot;http://localhost:5005/api/quality/validate/platform-requirements&quot;
+    params = {
+        &quot;platform&quot;: platform,
+        &quot;width&quot;: width,
+        &quot;height&quot;: height,
+        &quot;file_size_bytes&quot;: file_size,
+        &quot;duration_seconds&quot;: duration
+    }
+    response = requests.get(url, params=params)
+    return response.json()[&quot;result&quot;]
+</code></pre>
+<h3 id="c">C</h3>
+<pre><code class="lang-csharp">using System.Net.Http;
+using System.Text.Json;
+
+var client = new HttpClient();
+var response = await client.GetAsync(
+    &quot;http://localhost:5005/api/quality/validate/resolution?width=1920&amp;height=1080&quot;
+);
+var content = await response.Content.ReadAsStringAsync();
+var result = JsonSerializer.Deserialize&lt;dynamic&gt;(content);
+</code></pre>
+<h2 id="testing">Testing</h2>
+<p>The API includes comprehensive test coverage with 58 unit tests covering all endpoints and edge cases. Run tests with:</p>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~QualityValidation&quot;
+</code></pre>
+<h2 id="production-considerations">Production Considerations</h2>
+<p>The current implementation uses simulated analysis for demonstration. For production use, integrate:</p>
+<ol>
+<li><strong>FFmpeg.NET</strong> or <strong>MediaToolkit</strong> for actual video/audio analysis</li>
+<li><strong>NAudio</strong> or <strong>CSCore</strong> for detailed audio quality metrics</li>
+<li><strong>ML.NET</strong> for advanced frame consistency analysis</li>
+</ol>
+<p>All service interfaces are designed to support these integrations with minimal code changes.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/QUALITY_VALIDATION_API.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
