@@ -4,6 +4,7 @@ import './index.css';
 import './styles/windows11.css';
 import { errorReportingService } from './services/errorReportingService';
 import { loggingService } from './services/loggingService';
+import { shutdownService } from './services/shutdownService';
 import { validateEnvironment } from './utils/validateEnv';
 import { logWindowsEnvironment } from './utils/windowsUtils';
 
@@ -174,6 +175,10 @@ console.log('[Main] Waiting for React hydration to complete...');
 if (window.__initTimeout) {
   clearTimeout(window.__initTimeout);
 }
+
+// Initialize shutdown service
+console.log('[Main] Initializing shutdown service...');
+// The shutdownService is already instantiated and listening to beforeunload
 
 // Add type declaration for the global timeout
 declare global {
