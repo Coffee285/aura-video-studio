@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Onboarding Wizard Network Errors and Navigation Fixes | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Onboarding Wizard Network Errors and Navigation Fixes | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/WIZARD_FIX_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="onboarding-wizard-network-errors-and-navigation-fixes">Onboarding Wizard Network Errors and Navigation Fixes</h1>
+
+<h2 id="problem-statement">Problem Statement</h2>
+<p>The first-run onboarding wizard was experiencing multiple critical issues:</p>
+<ol>
+<li><strong>Step 2 (FFmpeg Check)</strong>: Always shows &quot;Network Error&quot;</li>
+<li><strong>Step 3 (Provider Configuration)</strong>: Shows &quot;Network Error&quot; for API validation</li>
+<li><strong>Step 4</strong>: Broken entirely with persistent errors</li>
+<li><strong>&quot;Go to Main App&quot; button</strong>: Does nothing when clicked in Step 6</li>
+</ol>
+<h2 id="root-cause-analysis">Root Cause Analysis</h2>
+<h3 id="circuit-breaker-persistence-issue-primary-root-cause">Circuit Breaker Persistence Issue (PRIMARY ROOT CAUSE)</h3>
+<p>The application uses a circuit breaker pattern to prevent cascading failures when the API is unavailable. However, this circuit breaker state was being persisted to <code>localStorage</code>, causing false positives:</p>
+<p><strong>Problem Flow</strong>:</p>
+<ol>
+<li>User experiences some API failures (could be from previous session, network issues, etc.)</li>
+<li>Circuit breaker opens and saves state to localStorage</li>
+<li>User closes and reopens the application</li>
+<li>Circuit breaker loads <strong>stale &quot;OPEN&quot; state</strong> from localStorage</li>
+<li>ALL API calls are immediately blocked without even attempting the request</li>
+<li>User sees &quot;Network Error&quot; even though the API is actually available</li>
+</ol>
+<p><strong>Evidence</strong>:</p>
+<ul>
+<li><code>circuitBreakerPersistence.ts</code> saves circuit breaker state to localStorage</li>
+<li><code>apiClient.ts</code> loads this state on initialization (line 65-77)</li>
+<li><code>FirstRunWizard.tsx</code> tried to clear circuit breaker on mount (line 210-213), but this happened <strong>AFTER</strong> the first API call attempts</li>
+<li>Timing issue: Circuit breaker was checked before the clear operation completed</li>
+</ul>
+<h3 id="navigation-state-update-issue">Navigation State Update Issue</h3>
+<p>The &quot;Go to Main App&quot; button called <code>markFirstRunCompleted()</code> before updating <code>shouldShowOnboarding</code> state, causing a race condition where the app would try to reload the wizard.</p>
+<h2 id="fixes-implemented">Fixes Implemented</h2>
+<h3 id="fix-1-clear-circuit-breaker-before-first-run-check-critical">Fix 1: Clear Circuit Breaker BEFORE First-Run Check (CRITICAL)</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/App.tsx</code></p>
+<p><strong>Change</strong>: Clear circuit breaker state at the earliest possible moment:</p>
+<pre><code class="lang-typescript">// BEFORE (in FirstRunWizard.tsx - TOO LATE):
+useEffect(() =&gt; {
+  // ... other setup code ...
+  PersistentCircuitBreaker.clearState();
+  resetCircuitBreaker();
+  console.info('[FirstRunWizard] Circuit breaker state cleared on mount');
+}, []);
+
+// AFTER (in App.tsx - EARLY ENOUGH):
+async function checkFirstRun() {
+  try {
+    // CRITICAL: Clear circuit breaker state BEFORE checking first run
+    PersistentCircuitBreaker.clearState();
+    resetCircuitBreaker();
+    console.info('[App] Circuit breaker state cleared before first-run check');
+    
+    // Now safe to make API calls...
+    const systemStatus = await setupApi.getSystemStatus();
+    // ...
+  }
+}
+</code></pre>
+<p><strong>Why This Works</strong>:</p>
+<ul>
+<li>Clears stale circuit breaker state BEFORE any API calls are attempted</li>
+<li>Happens in App.tsx during initial application load</li>
+<li>Prevents wizard from even seeing the old circuit breaker state</li>
+</ul>
+<h3 id="fix-2-bypass-circuit-breaker-for-setupffmpeg-apis">Fix 2: Bypass Circuit Breaker for Setup/FFmpeg APIs</h3>
+<p><strong>Files</strong>:</p>
+<ul>
+<li><code>Aura.Web/src/services/api/setupApi.ts</code></li>
+<li><code>Aura.Web/src/services/api/ffmpegClient.ts</code></li>
+</ul>
+<p><strong>Change</strong>: All setup and FFmpeg API calls now explicitly skip the circuit breaker:</p>
+<pre><code class="lang-typescript">// Add type import
+import apiClient, { type ExtendedAxiosRequestConfig } from './apiClient';
+
+// Use _skipCircuitBreaker config
+async getSystemStatus(): Promise&lt;SystemSetupStatus&gt; {
+  const config: ExtendedAxiosRequestConfig = {
+    _skipCircuitBreaker: true,  // Skip circuit breaker for setup APIs
+  };
+  const response = await apiClient.get&lt;SystemSetupStatus&gt;(
+    '/api/setup/system-status', 
+    config
+  );
+  return response.data;
+}
+</code></pre>
+<p><strong>Why This Works</strong>:</p>
+<ul>
+<li>Setup and FFmpeg APIs are <strong>critical for first-run setup</strong></li>
+<li>They should always be attempted, regardless of circuit breaker state</li>
+<li><code>_skipCircuitBreaker</code> flag bypasses the circuit breaker check in apiClient.ts</li>
+<li>Even if circuit breaker is triggered elsewhere, setup still works</li>
+</ul>
+<p><strong>Applied to</strong>:</p>
+<ul>
+<li><code>setupApi.getSystemStatus()</code></li>
+<li><code>setupApi.completeSetup()</code></li>
+<li><code>setupApi.checkFFmpeg()</code></li>
+<li><code>setupApi.checkDirectory()</code></li>
+<li><code>ffmpegClient.getStatus()</code></li>
+<li><code>ffmpegClient.install()</code></li>
+<li><code>ffmpegClient.rescan()</code></li>
+<li><code>ffmpegClient.useExisting()</code></li>
+</ul>
+<h3 id="fix-3-navigation-state-update-order">Fix 3: Navigation State Update Order</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/App.tsx</code></p>
+<p><strong>Change</strong>: Update state before marking completion:</p>
+<pre><code class="lang-typescript">// BEFORE:
+onComplete={async () =&gt; {
+  setShouldShowOnboarding(false);
+  await markFirstRunCompleted();
+}}
+
+// AFTER:
+onComplete={async () =&gt; {
+  console.info('[App] FirstRunWizard onComplete called');
+  await markFirstRunCompleted();
+  setShouldShowOnboarding(false);  // Update state AFTER backend persistence
+  console.info('[App] Transitioning to main app');
+}}
+</code></pre>
+<p><strong>Why This Works</strong>:</p>
+<ul>
+<li>Ensures backend persistence completes first</li>
+<li>Then updates React state to trigger main app render</li>
+<li>Logging helps track the transition</li>
+<li>Prevents race conditions between state updates</li>
+</ul>
+<h2 id="testing-instructions">Testing Instructions</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ol>
+<li>Clear all browser data (localStorage, sessionStorage, cookies)</li>
+<li>Or use incognito/private browsing mode</li>
+<li>Ensure backend API is running (usually on port 5005)</li>
+</ol>
+<h3 id="test-case-1-fresh-install-with-circuit-breaker-clear">Test Case 1: Fresh Install with Circuit Breaker Clear</h3>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Open browser DevTools → Console tab</li>
+<li>Open Application tab → localStorage → Clear all</li>
+<li>Navigate to the application</li>
+<li>Watch console for: <code>[App] Circuit breaker state cleared before first-run check</code></li>
+<li>Proceed through wizard steps</li>
+</ol>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>Console shows circuit breaker cleared message</li>
+<li>No &quot;Network Error&quot; messages in any step</li>
+<li>All API calls succeed</li>
+</ul>
+<p><strong>What to Check</strong>:</p>
+<ul>
+<li>Console logs show circuit breaker reset</li>
+<li>Network tab shows successful API calls (Status 200)</li>
+<li>No red error messages in UI</li>
+</ul>
+<h3 id="test-case-2-step-2---ffmpeg-check">Test Case 2: Step 2 - FFmpeg Check</h3>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Start wizard</li>
+<li>Click through to Step 2 (FFmpeg Check)</li>
+<li>Observe FFmpeg status check</li>
+</ol>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>FFmpeg status loads without &quot;Network Error&quot;</li>
+<li>Either shows &quot;FFmpeg not found&quot; (if not installed) OR &quot;FFmpeg detected&quot; (if installed)</li>
+<li>Install/Rescan/Validate buttons work without errors</li>
+</ul>
+<p><strong>What to Check</strong>:</p>
+<ul>
+<li>Network tab: <code>GET /api/system/ffmpeg/status</code> returns 200</li>
+<li>No circuit breaker errors in console</li>
+<li>UI shows actual FFmpeg status (not network error)</li>
+</ul>
+<h3 id="test-case-3-step-3---provider-configuration">Test Case 3: Step 3 - Provider Configuration</h3>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Continue to Step 3</li>
+<li>Enter an API key for OpenAI or another provider</li>
+<li>Click &quot;Validate&quot;</li>
+</ol>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>API key validation request completes</li>
+<li>Shows either &quot;Valid&quot; or &quot;Invalid&quot; (based on actual API key)</li>
+<li>No &quot;Network Error&quot; message</li>
+</ul>
+<p><strong>What to Check</strong>:</p>
+<ul>
+<li>Network tab: <code>POST /api/providers/openai/validate</code> (or other provider) returns response</li>
+<li>Console shows validation attempt</li>
+<li>UI shows validation result</li>
+</ul>
+<h3 id="test-case-4-step-4---workspace-setup">Test Case 4: Step 4 - Workspace Setup</h3>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Continue to Step 4</li>
+<li>Configure workspace location</li>
+<li>Proceed to Step 5</li>
+</ol>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>Workspace directory validation works</li>
+<li>No errors when setting workspace location</li>
+<li>Can proceed to completion</li>
+</ul>
+<h3 id="test-case-5-go-to-main-app-button">Test Case 5: &quot;Go to Main App&quot; Button</h3>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Complete wizard through Step 6</li>
+<li>Click &quot;Go to Main App&quot; button</li>
+</ol>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>Console shows: <code>[App] FirstRunWizard onComplete called</code></li>
+<li>Console shows: <code>[App] Transitioning to main app</code></li>
+<li>Main application loads</li>
+<li>Left sidebar menu appears</li>
+<li>Dashboard or main app view is visible</li>
+</ul>
+<p><strong>What to Check</strong>:</p>
+<ul>
+<li>Application transitions smoothly to main app</li>
+<li>Left menu is visible with all sections (Create, Projects, Settings, etc.)</li>
+<li>No wizard reappears</li>
+<li><code>localStorage.getItem('hasCompletedFirstRun')</code> === <code>'true'</code></li>
+</ul>
+<h3 id="test-case-6-simulated-circuit-breaker-state">Test Case 6: Simulated Circuit Breaker State</h3>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Open DevTools Console</li>
+<li>Run: <code>localStorage.setItem('aura_circuit_breaker_state', JSON.stringify({global: {state: 'OPEN', failureCount: 10, successCount: 0, nextAttempt: Date.now() + 60000, timestamp: Date.now()}}))</code></li>
+<li>Reload the page</li>
+<li>Watch for circuit breaker clear message</li>
+</ol>
+<p><strong>Expected Behavior</strong>:</p>
+<ul>
+<li>Console shows circuit breaker cleared</li>
+<li>Application still works normally</li>
+<li>No stale circuit breaker state affects wizard</li>
+</ul>
+<h2 id="files-modified">Files Modified</h2>
+<ol>
+<li><p><strong>Aura.Web/src/App.tsx</strong></p>
+<ul>
+<li>Added PersistentCircuitBreaker import</li>
+<li>Added resetCircuitBreaker import</li>
+<li>Clear circuit breaker before first-run check</li>
+<li>Fixed onComplete callback order</li>
+<li>Added console logging for debugging</li>
+</ul>
+</li>
+<li><p><strong>Aura.Web/src/services/api/setupApi.ts</strong></p>
+<ul>
+<li>Added ExtendedAxiosRequestConfig import</li>
+<li>All methods now use _skipCircuitBreaker config</li>
+<li>Updated documentation</li>
+</ul>
+</li>
+<li><p><strong>Aura.Web/src/services/api/ffmpegClient.ts</strong></p>
+<ul>
+<li>Added ExtendedAxiosRequestConfig import</li>
+<li>All methods now use _skipCircuitBreaker config</li>
+<li>Updated documentation</li>
+</ul>
+</li>
+</ol>
+<h2 id="verification-checklist">Verification Checklist</h2>
+<ul>
+<li>[x] Circuit breaker cleared before API calls</li>
+<li>[x] Setup APIs bypass circuit breaker</li>
+<li>[x] FFmpeg APIs bypass circuit breaker</li>
+<li>[x] Navigation state updates correctly</li>
+<li>[x] TypeScript compilation passes</li>
+<li>[x] Linting passes</li>
+<li>[x] Pre-commit hooks pass</li>
+<li>[ ] Manual testing: Step 2 works without network error</li>
+<li>[ ] Manual testing: Step 3 works without network error</li>
+<li>[ ] Manual testing: Step 4 works correctly</li>
+<li>[ ] Manual testing: &quot;Go to Main App&quot; button navigates correctly</li>
+<li>[ ] Manual testing: Main app menu appears after wizard</li>
+</ul>
+<h2 id="additional-notes">Additional Notes</h2>
+<h3 id="why-circuit-breaker-exists">Why Circuit Breaker Exists</h3>
+<p>The circuit breaker pattern is a good practice for preventing cascading failures:</p>
+<ul>
+<li>If API is truly down, don't spam it with requests</li>
+<li>Give the service time to recover</li>
+<li>Provide better user experience during outages</li>
+</ul>
+<h3 id="why-this-issue-happened">Why This Issue Happened</h3>
+<p>The persistence of circuit breaker state across sessions was well-intentioned but caused problems:</p>
+<ul>
+<li><strong>Intention</strong>: Remember that API was down, don't retry immediately after app restart</li>
+<li><strong>Problem</strong>: Stale state persists indefinitely, blocking healthy API calls</li>
+<li><strong>Solution</strong>: Clear state on app start, but keep circuit breaker for runtime protection</li>
+</ul>
+<h3 id="future-improvements">Future Improvements</h3>
+<p>Consider these enhancements:</p>
+<ol>
+<li><strong>Shorter Circuit Breaker TTL</strong>: Currently 2 minutes, could be reduced for stale state</li>
+<li><strong>Per-Endpoint Circuit Breakers</strong>: Separate circuit breakers for different API endpoints</li>
+<li><strong>Circuit Breaker UI</strong>: Show user when circuit breaker is open and why</li>
+<li><strong>Health Check Endpoint</strong>: Ping simple health endpoint before complex operations</li>
+<li><strong>Better Error Messages</strong>: Distinguish between &quot;API down&quot; vs &quot;circuit breaker open&quot;</li>
+</ol>
+<h2 id="support">Support</h2>
+<p>If issues persist after these fixes:</p>
+<ol>
+<li><p><strong>Check Console Logs</strong>:</p>
+<ul>
+<li>Look for circuit breaker messages</li>
+<li>Look for API call errors (status codes)</li>
+<li>Check for CORS errors</li>
+</ul>
+</li>
+<li><p><strong>Check Network Tab</strong>:</p>
+<ul>
+<li>Are API calls being made?</li>
+<li>What status codes are returned?</li>
+<li>Are there timing issues?</li>
+</ul>
+</li>
+<li><p><strong>Clear All State</strong>:</p>
+<ul>
+<li>localStorage.clear()</li>
+<li>sessionStorage.clear()</li>
+<li>Clear cookies</li>
+<li>Hard reload (Ctrl+Shift+R)</li>
+</ul>
+</li>
+<li><p><strong>Check Backend</strong>:</p>
+<ul>
+<li>Is API running on correct port?</li>
+<li>Are endpoints responding?</li>
+<li>Check backend logs for errors</li>
+</ul>
+</li>
+<li><p><strong>Report with Details</strong>:</p>
+<ul>
+<li>Console logs screenshot</li>
+<li>Network tab screenshot</li>
+<li>Steps to reproduce</li>
+<li>Browser and version</li>
+</ul>
+</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/WIZARD_FIX_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

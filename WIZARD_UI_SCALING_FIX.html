@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>UI Scaling Fixes for First-Run Wizard | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="UI Scaling Fixes for First-Run Wizard | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/WIZARD_UI_SCALING_FIX.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ui-scaling-fixes-for-first-run-wizard">UI Scaling Fixes for First-Run Wizard</h1>
+
+<h2 id="problem">Problem</h2>
+<p>The first-run wizard had excessive spacing that made it feel awkward:</p>
+<ul>
+<li>Too much padding around elements</li>
+<li>Large gaps between content sections</li>
+<li>Cards felt spread out</li>
+<li>Inefficient use of vertical space</li>
+<li>Overall &quot;bloated&quot; appearance</li>
+</ul>
+<h2 id="root-cause">Root Cause</h2>
+<p>The wizard was using Fluent UI's largest spacing tokens (<code>spacingVerticalXXL</code>, <code>spacingVerticalL</code>) throughout, which are designed for very spacious layouts. This created too much whitespace for a wizard flow.</p>
+<h2 id="solution">Solution</h2>
+<p>Systematically reduced spacing throughout the wizard by using smaller, more appropriate Fluent UI spacing tokens.</p>
+<h2 id="detailed-changes">Detailed Changes</h2>
+<h3 id="container-layout">Container Layout</h3>
+<pre><code class="lang-typescript">// BEFORE
+container: {
+  padding: tokens.spacingVerticalXXL,  // ~48px all around
+}
+
+// AFTER
+container: {
+  padding: `${tokens.spacingVerticalL} ${tokens.spacingHorizontalXL}`,  // ~24px vertical, ~32px horizontal
+}
+</code></pre>
+<h3 id="header-spacing">Header Spacing</h3>
+<pre><code class="lang-typescript">// BEFORE
+header: {
+  marginBottom: tokens.spacingVerticalXXL,  // ~48px
+}
+paddingTop: tokens.spacingVerticalXXL  // ~48px
+
+// AFTER
+header: {
+  marginBottom: tokens.spacingVerticalL,  // ~24px
+}
+paddingTop: tokens.spacingVerticalL  // ~24px
+</code></pre>
+<h3 id="content-areas">Content Areas</h3>
+<pre><code class="lang-typescript">// BEFORE
+content: {
+  gap: tokens.spacingVerticalL,  // ~24px between sections
+  paddingBottom: tokens.spacingVerticalL,  // ~24px
+}
+
+// AFTER
+content: {
+  gap: tokens.spacingVerticalM,  // ~16px between sections
+  paddingBottom: tokens.spacingVerticalM,  // ~16px
+}
+</code></pre>
+<h3 id="footer">Footer</h3>
+<pre><code class="lang-typescript">// BEFORE
+footer: {
+  marginTop: tokens.spacingVerticalXXL,  // ~48px
+  paddingTop: tokens.spacingVerticalL,  // ~24px
+}
+
+// AFTER
+footer: {
+  marginTop: tokens.spacingVerticalL,  // ~24px
+  paddingTop: tokens.spacingVerticalM,  // ~16px
+}
+</code></pre>
+<h3 id="card-components">Card Components</h3>
+<pre><code class="lang-typescript">// BEFORE
+errorCard: {
+  padding: tokens.spacingVerticalL,  // ~24px
+}
+manualAttachCard: {
+  padding: tokens.spacingVerticalL,  // ~24px
+  gap: tokens.spacingVerticalM,  // ~16px
+}
+
+// AFTER
+errorCard: {
+  padding: tokens.spacingVerticalM,  // ~16px
+}
+manualAttachCard: {
+  padding: tokens.spacingVerticalM,  // ~16px
+  gap: tokens.spacingVerticalS,  // ~8px
+}
+</code></pre>
+<h3 id="list-items">List Items</h3>
+<pre><code class="lang-typescript">// BEFORE
+hardwareInfo: {
+  gap: tokens.spacingVerticalM,  // ~16px
+}
+installList: {
+  gap: tokens.spacingVerticalS,  // ~8px
+}
+
+// AFTER
+hardwareInfo: {
+  gap: tokens.spacingVerticalS,  // ~8px
+}
+installList: {
+  gap: tokens.spacingVerticalXS,  // ~4px
+}
+</code></pre>
+<h3 id="inline-step-styles">Inline Step Styles</h3>
+<p><strong>All step renderers updated</strong>:</p>
+<pre><code class="lang-typescript">// BEFORE
+&lt;div style={{ gap: tokens.spacingVerticalL }}&gt;  // ~24px
+  &lt;div style={{ marginBottom: tokens.spacingVerticalL }}&gt;  // ~24px
+    &lt;Text style={{ marginTop: tokens.spacingVerticalM }}&gt;  // ~16px
+    &lt;Card style={{ 
+      marginTop: tokens.spacingVerticalL,  // ~24px
+      padding: tokens.spacingVerticalM  // ~16px
+    }}&gt;
+
+// AFTER
+&lt;div style={{ gap: tokens.spacingVerticalM }}&gt;  // ~16px
+  &lt;div style={{ marginBottom: tokens.spacingVerticalM }}&gt;  // ~16px
+    &lt;Text style={{ marginTop: tokens.spacingVerticalS }}&gt;  // ~8px
+    &lt;Card style={{ 
+      marginTop: tokens.spacingVerticalM,  // ~16px
+      padding: tokens.spacingVerticalS  // ~8px
+    }}&gt;
+</code></pre>
+<h2 id="fluent-ui-spacing-token-reference">Fluent UI Spacing Token Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Token</th>
+<th>Approximate Size</th>
+<th>Usage After Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spacingVerticalXXS</code></td>
+<td>~2px</td>
+<td>Very tight spacing</td>
+</tr>
+<tr>
+<td><code>spacingVerticalXS</code></td>
+<td>~4px</td>
+<td>List items, tight gaps</td>
+</tr>
+<tr>
+<td><code>spacingVerticalS</code></td>
+<td>~8px</td>
+<td>Card content, text margins</td>
+</tr>
+<tr>
+<td><code>spacingVerticalM</code></td>
+<td>~16px</td>
+<td><strong>Primary spacing</strong> - sections, card padding</td>
+</tr>
+<tr>
+<td><code>spacingVerticalL</code></td>
+<td>~24px</td>
+<td><strong>Secondary spacing</strong> - major sections</td>
+</tr>
+<tr>
+<td><code>spacingVerticalXL</code></td>
+<td>~32px</td>
+<td>Horizontal padding</td>
+</tr>
+<tr>
+<td><code>spacingVerticalXXL</code></td>
+<td>~48px</td>
+<td>⚠️ Avoided except for special cases</td>
+</tr>
+</tbody>
+</table>
+<h2 id="visual-impact">Visual Impact</h2>
+<h3 id="before">Before</h3>
+<pre><code>┌─────────────────────────────────────┐
+│                                     │  ← 48px padding
+│         Welcome to Aura             │
+│                                     │
+│                                     │  ← 48px margin
+│                                     │
+│    ┌─────────────────────┐         │
+│    │                     │         │  ← 24px padding
+│    │   FFmpeg Setup      │         │
+│    │                     │         │
+│    └─────────────────────┘         │
+│                                     │
+│                                     │  ← 24px gap
+│                                     │
+│    ┌─────────────────────┐         │
+│    │                     │         │
+│    │   Card content      │         │
+│    │                     │         │
+│    └─────────────────────┘         │
+│                                     │
+│                                     │
+</code></pre>
+<h3 id="after">After</h3>
+<pre><code>┌─────────────────────────────────────┐
+│                                     │  ← 24px padding
+│       Welcome to Aura               │
+│                                     │  ← 24px margin
+│   ┌───────────────────────┐        │
+│   │  FFmpeg Setup         │        │  ← 16px padding
+│   └───────────────────────┘        │
+│                                     │  ← 16px gap
+│   ┌───────────────────────┐        │
+│   │  Card content         │        │  ← 16px padding
+│   └───────────────────────┘        │
+│                                     │  ← 16px gap
+│   ┌───────────────────────┐        │
+│   │  More content         │        │
+│   └───────────────────────┘        │
+│                                     │
+</code></pre>
+<h2 id="benefits">Benefits</h2>
+<ol>
+<li><strong>More Content Visible</strong>: Users see more of the wizard without scrolling</li>
+<li><strong>Better Visual Density</strong>: Content feels more organized and purposeful</li>
+<li><strong>Improved Flow</strong>: Reduced gaps make the wizard feel more cohesive</li>
+<li><strong>Professional Appearance</strong>: More polished, less &quot;drafty&quot; feeling</li>
+<li><strong>Better Space Utilization</strong>: Especially on smaller screens</li>
+<li><strong>Maintained Readability</strong>: Still has enough breathing room</li>
+</ol>
+<h2 id="design-principles-applied">Design Principles Applied</h2>
+<ol>
+<li><strong>Consistency</strong>: Use M (16px) as the primary spacing unit</li>
+<li><strong>Hierarchy</strong>: Larger spacing (L) for major sections, smaller (S/XS) for related items</li>
+<li><strong>Breathing Room</strong>: Reduced but not eliminated - still comfortable to read</li>
+<li><strong>Visual Weight</strong>: Use font size and weight for hierarchy, not just spacing</li>
+<li><strong>Content Density</strong>: Optimize for information display without cramping</li>
+</ol>
+<h2 id="areas-updated">Areas Updated</h2>
+<ol>
+<li>✅ Container padding</li>
+<li>✅ Header margins</li>
+<li>✅ Content section gaps</li>
+<li>✅ Card padding (all types)</li>
+<li>✅ List spacing</li>
+<li>✅ Text margins</li>
+<li>✅ Footer spacing</li>
+<li>✅ Button groups</li>
+<li>✅ All inline styles in step renderers</li>
+<li>✅ Completion step</li>
+</ol>
+<h2 id="verification">Verification</h2>
+<p>To verify the improvements:</p>
+<ol>
+<li><strong>Visual Inspection</strong>: Wizard should feel more compact but not cramped</li>
+<li><strong>Scrolling</strong>: Less scrolling needed on standard screens</li>
+<li><strong>Readability</strong>: Text is still easy to read</li>
+<li><strong>Touch Targets</strong>: Buttons and inputs still have adequate hit areas</li>
+<li><strong>Visual Hierarchy</strong>: Important elements still stand out</li>
+</ol>
+<h2 id="future-considerations">Future Considerations</h2>
+<ul>
+<li>Could create a dedicated <code>wizardSpacing</code> constant for consistency</li>
+<li>May want responsive spacing (smaller on mobile)</li>
+<li>Consider adding subtle animations to make transitions smoother</li>
+<li>Monitor user feedback on spacing comfort</li>
+</ul>
+<h2 id="file-modified">File Modified</h2>
+<ul>
+<li><code>Aura.Web/src/pages/Onboarding/FirstRunWizard.tsx</code>
+<ul>
+<li>Updated all <code>useStyles</code> definitions</li>
+<li>Updated all inline style objects</li>
+<li>Applied consistent spacing throughout</li>
+</ul>
+</li>
+</ul>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li>See <code>WIZARD_FIX_SUMMARY.md</code> for network error fixes</li>
+<li>See <code>WIZARD_FIX_QUICK_REF.md</code> for quick reference</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/WIZARD_UI_SCALING_FIX.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
