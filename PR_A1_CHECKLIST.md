@@ -7,7 +7,7 @@ This checklist ensures all components of the new Electron architecture are funct
 ## Environment Setup
 
 ### Development Environment
-- [ ] Node.js 18+ installed
+- [ ] Node.js 20+ installed
 - [ ] npm dependencies installed (`npm install` in Aura.Desktop/)
 - [ ] .NET 8 SDK installed
 - [ ] Aura.Api backend compiled (Debug mode)

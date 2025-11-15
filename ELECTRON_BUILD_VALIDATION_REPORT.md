@@ -200,7 +200,7 @@ ipcMain.handle('ffmpeg:checkStatus', async () => {
 **Validation Tests (25+ checks):**
 
 #### System Requirements
-- ✅ Node.js 18+ installed
+- ✅ Node.js 20+ installed
 - ✅ npm 9+ installed
 - ✅ .NET SDK 8.0+ installed
 - ✅ PowerShell 5.0+ available

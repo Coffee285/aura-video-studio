@@ -259,7 +259,7 @@ dotnet --list-runtimes
 ## Node.js
 
 **Required**: Yes (for Web UI)  
-**Version**: Node.js 18+ or 20+ (LTS recommended)
+**Version**: Node.js 20+ or 20+ (LTS recommended)
 
 ### Installation
 
@@ -587,7 +587,7 @@ choco upgrade nodejs
 Required for basic video generation:
 - .NET Runtime 8.0+
 - FFmpeg 4.4+
-- Node.js 18+ (for web UI)
+- Node.js 20+ (for web UI)
 
 **Total download size**: ~300-500 MB  
 **Disk space**: ~1-2 GB

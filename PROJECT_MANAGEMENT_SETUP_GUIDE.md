@@ -7,7 +7,7 @@ This guide will help you set up and use the new project management system in Aur
 ## Prerequisites
 
 - .NET 8.0 SDK
-- Node.js 18+ (for frontend)
+- Node.js 20+ (for frontend)
 - SQLite (included with .NET)
 
 ## Backend Setup

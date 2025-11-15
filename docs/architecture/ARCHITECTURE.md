@@ -308,7 +308,7 @@ npm run dev
 
 ### Desktop
 - **Electron**: 32.2.5
-- **Node.js**: 18.0.0+ (Desktop), 20.0.0+ (Web)
+- **Node.js**: 20.0.0+ (Both Desktop and Web)
 - **electron-builder**: 25.1.8
 - **electron-updater**: 6.3.9
 

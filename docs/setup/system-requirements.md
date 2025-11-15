@@ -418,7 +418,7 @@ Aura works fine without a GPU:
 
 **Additional requirements**:
 - .NET 8.0 SDK (not just runtime)
-- Node.js 18+ with npm
+- Node.js 20+ with npm
 - Git 2.30+
 - Text editor/IDE (VS Code, Visual Studio, Rider)
 

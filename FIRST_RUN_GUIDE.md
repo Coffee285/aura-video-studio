@@ -5,7 +5,7 @@ This guide will help you get Aura Video Studio running for the first time.
 ## Quick Start (Windows 11)
 
 ### Prerequisites
-- Node.js 18.0.0+ installed (18.18.0 recommended)
+- Node.js 20.0.0+ installed (18.18.0 recommended)
 - .NET 8 SDK installed
 - Git with long paths enabled
 

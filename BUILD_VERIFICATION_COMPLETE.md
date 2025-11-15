@@ -90,7 +90,7 @@ Validates configuration without building.
 ## Build Requirements
 
 ### Required for Development Build
-- ✅ Node.js 18.0.0+ (18.18.0 recommended)
+- ✅ Node.js 20.0.0+ (20.x recommended)
 - ✅ npm 9.0.0+
 - ✅ Electron dependencies installed
 

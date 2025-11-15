@@ -352,7 +352,7 @@ Click this button to start a demo video generation.
 ## Prerequisites
 
 Before starting, ensure you have:
-- Node.js 18.0.0 or higher
+- Node.js 20.0.0 or higher
 - .NET 8 SDK
 - FFmpeg 4.0 or later
 

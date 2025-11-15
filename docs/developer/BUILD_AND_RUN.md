@@ -49,7 +49,7 @@ This is the easiest way to build and run Aura Video Studio.
 - Windows 10/11
 - PowerShell 5.1 or later
 - .NET 8 SDK ([Download](https://dotnet.microsoft.com/download/dotnet/8.0))
-- Node.js 18+ ([Download](https://nodejs.org/))
+- Node.js 20+ ([Download](https://nodejs.org/))
 
 ### Build Steps
 

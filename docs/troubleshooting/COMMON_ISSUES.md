@@ -38,13 +38,13 @@ This guide covers the most frequently encountered issues and their solutions whe
 1. Check required version:
    ```bash
    cat Aura.Web/.nvmrc
-   # Shows required Node version (18.18.0)
+   # Shows required Node version (20.x)
    ```
 2. Install correct version:
    ```bash
    # Using nvm
-   nvm install 18.18.0
-   nvm use 18.18.0
+   nvm install 20.x
+   nvm use 20.x
    
    # Or download from nodejs.org
    ```

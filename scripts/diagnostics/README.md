@@ -317,7 +317,7 @@ To avoid white screen issues in the future:
 ## Requirements
 
 - PowerShell 5.1 or later
-- Node.js 18+ and npm 9+
+- Node.js 20+ and npm 9+
 - .NET 8 SDK
 - Write access to repository directory
 

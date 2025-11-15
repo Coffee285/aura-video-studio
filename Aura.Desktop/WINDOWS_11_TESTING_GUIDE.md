@@ -22,7 +22,7 @@ This comprehensive guide covers testing the Aura Video Studio Windows installer 
 ### Development Machine Requirements
 
 - Windows 10/11 with build tools
-- Node.js 18+ and npm 9+
+- Node.js 20+ and npm 9+
 - .NET 8.0 SDK
 - Git with long paths enabled
 - Visual Studio Build Tools (for native modules)

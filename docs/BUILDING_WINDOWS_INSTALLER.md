@@ -16,10 +16,10 @@ This guide shows developers how to build production-grade Windows installers for
 
 ### Required Software
 
-#### 1. Node.js (v18 or v20 LTS)
+#### 1. Node.js (v20 LTS)
 ```bash
 # Check if installed
-node --version  # Should be v18.x.x or v20.x.x
+node --version  # Should be v20.x.x or higher
 npm --version   # Should be 9.x.x or higher
 ```
 

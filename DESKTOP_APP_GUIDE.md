@@ -81,7 +81,7 @@ Aura.Desktop/
 
 ### Prerequisites
 
-- Node.js 18+ and npm 9+
+- Node.js 20+ and npm 9+
 - .NET 8.0 SDK
 - Git
 

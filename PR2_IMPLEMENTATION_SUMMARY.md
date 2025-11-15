@@ -785,7 +785,7 @@ public static class ProviderErrorCode
 
 ### Prerequisites:
 1. ✅ .NET 8.0 SDK
-2. ✅ Node.js 18+ (frontend)
+2. ✅ Node.js 20+ (frontend)
 3. ✅ FFmpeg installed and accessible
 4. ✅ At least one LLM provider configured (OpenAI or Ollama)
 5. ✅ At least one TTS provider configured

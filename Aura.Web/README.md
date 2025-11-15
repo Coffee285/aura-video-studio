@@ -85,7 +85,7 @@ This section documents all critical npm packages used in the project.
 
 The following minimum versions are required for compatibility:
 
-- **Node.js**: >= 18.x (LTS recommended)
+- **Node.js**: >= 20.0.0 (LTS recommended)
 - **npm**: >= 9.x
 - **React**: >= 18.2.0
 - **TypeScript**: >= 5.0.0
@@ -110,12 +110,12 @@ Last security audit: Zero vulnerabilities ✅ (as of Vite 6.4.1 update)
 
 ### Prerequisites
 
-- **Node.js 18.0.0 or higher** (18.18.0 recommended for consistency - see `.nvmrc`)
+- **Node.js 20.0.0 or higher** (20.x recommended for consistency - see `.nvmrc`)
 - **npm 9.x or higher**
 - Git for version control
 - FFmpeg (for video rendering features)
 
-**Supported Node.js versions:** 18.x, 20.x, 22.x, and newer
+**Supported Node.js versions:** 20.x, 22.x, and newer
 
 **Using nvm (recommended for consistency):**
 
@@ -123,15 +123,15 @@ Last security audit: Zero vulnerabilities ✅ (as of Vite 6.4.1 update)
 # Install nvm: https://github.com/nvm-sh/nvm (Linux/Mac)
 # or https://github.com/coreybutler/nvm-windows (Windows)
 
-# Install and use the recommended version (18.18.0)
-nvm install 18.18.0
-nvm use 18.18.0
+# Install and use the recommended version (20)
+nvm install 20
+nvm use 20
 
 # Or simply (reads .nvmrc)
 nvm use
 ```
 
-**Note:** While any Node.js version 18.0.0+ is supported, using the version specified in `.nvmrc` (18.18.0) ensures maximum consistency across development environments.
+**Note:** While any Node.js version 20.0.0+ is supported, using the version specified in `.nvmrc` (20) ensures maximum consistency across development environments.
 
 ### Installation
 

@@ -16,7 +16,7 @@ The pipeline validation tests ensure that:
 
 ### Required
 - .NET 8.0 SDK
-- Node.js 18+ and npm
+- Node.js 20+ and npm
 - FFmpeg installed and in PATH
 
 ### Provider Configuration (At least one of each)
@@ -251,7 +251,7 @@ To test error handling manually:
 ### Frontend Not Starting
 - Check port 5173 is not in use
 - Run `npm install` in Aura.Web
-- Verify Node.js 18+ installed
+- Verify Node.js 20+ installed
 
 ### Video Generation Fails
 - Check FFmpeg is installed and in PATH

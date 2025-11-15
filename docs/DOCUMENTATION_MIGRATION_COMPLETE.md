@@ -93,7 +93,7 @@ cd Aura.Web && npm run dev
 - Vite: 6.4.1 (updated)
 - Fluent UI: 9.47.0 (updated)
 - .NET: 8.0 (confirmed)
-- Node.js: 20.0.0+ for Aura.Web, 18.0.0+ for Aura.Desktop
+- Node.js: 20.0.0+ for both Aura.Web and Aura.Desktop
 
 **New Dependencies Documented:**
 - electron-builder 25.1.8

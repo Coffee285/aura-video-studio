@@ -21,7 +21,7 @@ Complete guide for building Aura Video Studio on Windows 11 from a fresh install
    - Build 22000 or higher
    - Long path support recommended (see setup instructions)
 
-2. **Node.js 18.x LTS or higher**
+2. **Node.js 20.x LTS or higher**
    - Download from: https://nodejs.org/
    - Recommended version: 18.18.0 (specified in `.nvmrc`)
    - Verify: `node --version` (should show v18.x.x)
@@ -560,4 +560,4 @@ If you encounter issues not covered here:
 ---
 
 **Last Updated:** 2025-10-28  
-**Minimum Requirements:** Node.js 18.0.0, .NET 8.0, Windows 11
+**Minimum Requirements:** Node.js 20.0.0, .NET 8.0, Windows 11

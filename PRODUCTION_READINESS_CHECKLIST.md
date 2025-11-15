@@ -779,7 +779,7 @@ Manual verification needed for:
 **Execution Date**: TBD
 **Executed By**: TBD
 **Environment**:
-- Frontend: Node.js 18.x/20.x, npm 9.x/10.x
+- Frontend: Node.js 20.x/22.x, npm 9.x/10.x
 - Backend: .NET 8.0
 - Browser: Chromium (Playwright)
 

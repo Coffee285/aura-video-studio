@@ -354,7 +354,7 @@ Each installer bundles:
 
 ```bash
 # Required
-- Node.js 18+
+- Node.js 20+
 - .NET 8.0 SDK
 - npm 9+
 

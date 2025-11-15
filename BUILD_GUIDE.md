@@ -38,7 +38,7 @@ Aura Video Studio is an Electron desktop application. There are two build approa
 1. **Node.js 20.0.0 or higher**
    - Download from [nodejs.org](https://nodejs.org/)
    - Or use [nvm](https://github.com/nvm-sh/nvm) (Linux/Mac) / [nvm-windows](https://github.com/coreybutler/nvm-windows) (Windows)
-   - **Note:** Aura.Web requires Node 20+, Aura.Desktop requires Node 18+
+   - **Note:** Both Aura.Web and Aura.Desktop require Node 20+
 
 2. **npm 9.x or higher**
    - Comes with Node.js
@@ -101,9 +101,9 @@ Using nvm ensures consistency with the recommended Node.js version:
 # Install nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 
-# Install and use recommended Node.js version (18.18.0)
-nvm install 18.18.0
-nvm use 18.18.0
+# Install and use recommended Node.js version (20)
+nvm install 20
+nvm use 20
 
 # Or use .nvmrc to auto-select
 nvm use
@@ -115,11 +115,11 @@ nvm use
 # https://github.com/coreybutler/nvm-windows/releases
 
 # Then run:
-nvm install 18.18.0
-nvm use 18.18.0
+nvm install 20
+nvm use 20
 ```
 
-**Note:** Any Node.js version 18.0.0+ is supported. Using 18.18.0 (from `.nvmrc`) ensures maximum consistency.
+**Note:** Any Node.js version 20.0.0+ is supported. Using Node 20.x (from `.nvmrc`) ensures maximum consistency.
 
 ## First-Time Setup
 
@@ -134,7 +134,7 @@ cd aura-video-studio
 
 ```bash
 node --version
-# Should output: v18.x.x, v20.x.x, v22.x.x or higher (v18.18.0 recommended)
+# Should output: v20.x.x, v22.x.x or higher (v20.x recommended)
 ```
 
 If not using a compatible version and you have nvm:
@@ -433,7 +433,7 @@ node scripts/build/validate-environment.js
 ```
 
 **Checks performed:**
-- ✅ Node.js version is 18.0.0 or higher (warns if not using recommended 18.18.0)
+- ✅ Node.js version is 20.0.0 or higher (warns if not using recommended Node 20.x)
 - ✅ npm version is 9.x or higher
 - ✅ Git configuration (long paths, line endings)
 - ✅ FFmpeg installation
@@ -965,20 +965,19 @@ git commit --no-verify
 
 ### Node.js Version Compatibility
 
-**Requirement:** Node.js 20.0.0+ for Aura.Web, 18.0.0+ for Aura.Desktop
+**Requirement:** Node.js 20.0.0+ for both Aura.Web and Aura.Desktop
 
-**Using different versions for different components:**
+**Using the correct version:**
 ```bash
-# For Aura.Web (requires 20+)
-cd Aura.Web
+# Use Node.js 20+ for all components
 nvm use 20
 
-# For Aura.Desktop (requires 18+, 20+ also works)
-cd ../Aura.Desktop
-nvm use 20  # or 18
+# Or use .nvmrc to auto-select
+cd Aura.Web
+nvm use
 ```
 
-**If you prefer a single version:** Use Node.js 20.x which satisfies all requirements.
+**Note:** Node.js 20.x is required for all project components.
 
 ### npm ci Fails
 
@@ -1225,7 +1224,7 @@ If you encounter issues not covered in this guide:
 
 **Quick Start Checklist:**
 
-- [ ] Install Node.js 18.0.0 or higher (18.18.0 recommended)
+- [ ] Install Node.js 20.0.0 or higher (20.x recommended)
 - [ ] Install .NET 8 SDK
 - [ ] Install FFmpeg
 - [ ] Configure Git (long paths, line endings)

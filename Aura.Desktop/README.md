@@ -39,7 +39,7 @@ See [INSTALLATION.md](../INSTALLATION.md) for detailed instructions.
 
 #### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - .NET 8.0 SDK
 - npm 9+
 - Windows 10 or later (for building)

@@ -81,7 +81,7 @@ If no certificate is provided, the build will succeed but the installer will be 
 ## Troubleshooting
 
 ### "electron-builder cannot execute"
-- Ensure Node.js 18+ and .NET 8.0 SDK are installed
+- Ensure Node.js 20+ and .NET 8.0 SDK are installed
 - Try building with `-SkipInstaller` flag first to test packaging
 
 ### "Backend not found"
