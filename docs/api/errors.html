@@ -107,6 +107,213 @@
 }
 </code></pre>
 <hr>
+<h3 id="provider-validation-errors">Provider Validation Errors</h3>
+<p>These error codes are returned by the provider validation system (<code>/api/providers/{name}/validate-detailed</code> endpoint) when checking provider connectivity and configuration.</p>
+<h4 id="providernotconfigured">ProviderNotConfigured</h4>
+<p><strong>Message:</strong> Provider is not configured. API key or required configuration is missing.</p>
+<p><strong>HTTP Status:</strong> 200 (returned in validation response, not as HTTP error)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>API key not set in application settings</li>
+<li>Environment variable for provider not configured</li>
+<li>Configuration was deleted or cleared</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Go to Settings → Providers in the UI</li>
+<li>Find the provider showing &quot;Not Configured&quot;</li>
+<li>Click &quot;Configure&quot; or &quot;Add API Key&quot;</li>
+<li>Enter your API key from the provider's dashboard</li>
+<li>Save and click &quot;Retry Validation&quot;</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: false,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderNotConfigured&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI API key is not configured&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Go to Settings → Providers&quot;,
+    &quot;Add your OpenAI API key&quot;,
+    &quot;Get an API key from https://platform.openai.com/api-keys&quot;
+  ],
+  &quot;category&quot;: &quot;LLM&quot;,
+  &quot;tier&quot;: &quot;Premium&quot;
+}
+</code></pre>
+<hr>
+<h4 id="providerkeyinvalid">ProviderKeyInvalid</h4>
+<p><strong>Message:</strong> Provider API key is invalid or expired.</p>
+<p><strong>HTTP Status:</strong> 200 (validation failure)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>API key contains typos</li>
+<li>API key has been revoked by provider</li>
+<li>API key has expired</li>
+<li>Wrong key format (e.g., missing 'sk-' prefix for OpenAI)</li>
+<li>Account lacks required permissions</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check API key format (OpenAI: <code>sk-...</code>, Anthropic: <code>sk-ant-...</code>)</li>
+<li>Copy key directly from provider dashboard to avoid typos</li>
+<li>Regenerate API key if it may have been compromised</li>
+<li>Verify account has required permissions/tier</li>
+<li>Test key manually with curl (see examples in <a href="../troubleshooting/provider-errors.html">provider-errors.md</a>)</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderKeyInvalid&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI API key is invalid or expired&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Check your API key for typos&quot;,
+    &quot;Verify the key is still valid at https://platform.openai.com/api-keys&quot;,
+    &quot;Generate a new API key if needed&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="providernetworkerror">ProviderNetworkError</h4>
+<p><strong>Message:</strong> Cannot connect to provider. Network error, DNS failure, or connection timeout.</p>
+<p><strong>HTTP Status:</strong> 200 (validation failure)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>No internet connection</li>
+<li>Firewall blocking outbound HTTPS connections</li>
+<li>DNS resolution failure</li>
+<li>Provider endpoint unreachable</li>
+<li>Connection timeout (&gt;5 seconds)</li>
+<li>Proxy configuration issues</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check internet connectivity: <code>ping 8.8.8.8</code></li>
+<li>Test DNS: <code>nslookup api.openai.com</code></li>
+<li>Check firewall allows outbound HTTPS (port 443)</li>
+<li>Test provider endpoint manually: <code>curl -v https://api.openai.com/v1/models</code></li>
+<li>Try different network (mobile hotspot, different WiFi)</li>
+<li>Check proxy settings if behind corporate firewall</li>
+<li>Verify DNS servers are working (try 8.8.8.8, 1.1.1.1)</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderNetworkError&quot;,
+  &quot;errorMessage&quot;: &quot;Connection to OpenAI timed out&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Check your internet connection&quot;,
+    &quot;Verify firewall settings&quot;,
+    &quot;Try again later&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="providerratelimited">ProviderRateLimited</h4>
+<p><strong>Message:</strong> Provider rate limit exceeded. Too many requests in given time period.</p>
+<p><strong>HTTP Status:</strong> 200 (provider is reachable but limiting requests)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Exceeded requests per minute/hour limit</li>
+<li>Exceeded monthly token quota</li>
+<li>Account tier has low rate limits</li>
+<li>Multiple Aura instances using same API key</li>
+<li>Validation check triggered while generation in progress</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Wait before retrying (typically 1 minute to 1 hour)</li>
+<li>Check usage dashboard:
+<ul>
+<li>OpenAI: <a href="https://platform.openai.com/usage">https://platform.openai.com/usage</a></li>
+<li>Anthropic: <a href="https://console.anthropic.com/">https://console.anthropic.com/</a></li>
+<li>ElevenLabs: <a href="https://elevenlabs.io/app/usage">https://elevenlabs.io/app/usage</a></li>
+</ul>
+</li>
+<li>Upgrade account tier for higher limits</li>
+<li>Configure provider fallback chains</li>
+<li>Avoid rapid validation retries</li>
+</ol>
+<p><strong>Rate Limit Examples:</strong></p>
+<ul>
+<li>OpenAI Free: 3 requests/min</li>
+<li>OpenAI Tier 1: 500 requests/day</li>
+<li>ElevenLabs Free: 10,000 characters/month</li>
+</ul>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: true,
+  &quot;errorCode&quot;: &quot;ProviderRateLimited&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI rate limit exceeded&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Wait a few minutes before trying again&quot;,
+    &quot;Check your OpenAI usage dashboard&quot;,
+    &quot;Consider upgrading your OpenAI plan for higher limits&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="providerservererror">ProviderServerError</h4>
+<p><strong>Message:</strong> Provider service is experiencing server-side issues (HTTP 5xx).</p>
+<p><strong>HTTP Status:</strong> 200 (validation failure)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Provider experiencing outage or maintenance</li>
+<li>Temporary server overload</li>
+<li>Internal provider bug</li>
+<li>Regional service degradation</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check provider status pages:
+<ul>
+<li>OpenAI: <a href="https://status.openai.com/">https://status.openai.com/</a></li>
+<li>Anthropic: <a href="https://status.anthropic.com/">https://status.anthropic.com/</a></li>
+</ul>
+</li>
+<li>Wait 5-15 minutes and retry</li>
+<li>Use fallback provider temporarily</li>
+<li>Check community forums for outage reports</li>
+<li>Contact provider support if issue persists &gt;1 hour</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderServerError&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI service is experiencing issues&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Check OpenAI status at https://status.openai.com&quot;,
+    &quot;Try again in a few minutes&quot;,
+    &quot;Use a fallback provider temporarily&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="validationerror">ValidationError</h4>
+<p><strong>Message:</strong> An unexpected error occurred during provider validation.</p>
+<p><strong>HTTP Status:</strong> 200</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Unexpected exception in validation logic</li>
+<li>Malformed provider response</li>
+<li>Internal service error</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check application logs for details</li>
+<li>Try again later</li>
+<li>If issue persists, report bug with correlation ID</li>
+</ol>
+<hr>
 <h3 id="requiresnvidiagpu">RequiresNvidiaGPU</h3>
 <p><strong>Message:</strong> This operation requires an NVIDIA GPU with CUDA support.</p>
 <p><strong>Typical Causes:</strong></p>
