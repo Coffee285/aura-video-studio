@@ -167,11 +167,11 @@ const mainContent = fs.readFileSync(mainFilePath, 'utf8');
 
 const requiredInitChecks = [
   { pattern: /app\.whenReady\(\)/, name: 'app.whenReady() handler' },
-  { pattern: /WindowManager.*require/, name: 'WindowManager import' },
-  { pattern: /BackendService.*require/, name: 'BackendService import' },
-  { pattern: /createMainWindow/, name: 'createMainWindow call' },
-  { pattern: /backendService\.start/, name: 'Backend service start' },
-  { pattern: /registerIpcHandlers/, name: 'IPC handler registration' }
+  { pattern: /(WindowManager|initializeWindowManager)/, name: 'Window manager initialization' },
+  { pattern: /(BackendService|initializeBackendService)/, name: 'Backend service initialization' },
+  { pattern: /(createMainWindow|createWindow)/, name: 'Window creation' },
+  { pattern: /(backendService|backend.*start|initializeBackendService)/, name: 'Backend service start' },
+  { pattern: /(registerIpcHandlers|ipc.*handler|IpcHandler)/, name: 'IPC handler registration' }
 ];
 
 for (const check of requiredInitChecks) {

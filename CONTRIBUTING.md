@@ -9,8 +9,7 @@ Thank you for your interest in contributing to Aura Video Studio! This guide out
 While the application is designed to support Windows, macOS, and Linux through Electron, the current primary focus is Windows 11 (64-bit).
 
 **Development Prerequisites:**
-- **Node.js 20.0.0 or higher** for Aura.Web frontend
-- **Node.js 18.0.0 or higher** for Aura.Desktop Electron app
+- **Node.js 20.0.0 or higher** for both Aura.Web frontend and Aura.Desktop Electron app
 - **.NET 8 SDK** for backend components
 - **npm 9.0.0 or higher**
 - **Git** with long paths enabled (Windows)
