@@ -113,15 +113,21 @@
     └── ffmpeg/            # FFmpeg binaries (optional)
 </code></pre>
 <h3 id="process-model">Process Model</h3>
+<blockquote>
+<p><strong>📘 Complete Documentation</strong>: See <a href="PROCESS_MODEL.html">PROCESS_MODEL.md</a> for comprehensive process architecture, shutdown behavior, and troubleshooting guide.</p>
+</blockquote>
+<p><strong>Quick Overview</strong>:</p>
 <ol>
 <li><p><strong>Main Process</strong> (<code>electron/main.js</code>)</p>
 <ul>
+<li>Root process: spawns and manages all child processes</li>
 <li>Spawns the ASP.NET Core backend on a random port</li>
 <li>Creates the main window via WindowManager</li>
 <li>Manages system tray via TrayManager</li>
+<li>Tracks child processes via ProcessManager</li>
+<li>Orchestrates graceful shutdown via ShutdownOrchestrator</li>
 <li>Handles auto-updates</li>
 <li>Manages IPC communication via IPC handlers</li>
-<li>Orchestrates all Electron modules</li>
 </ul>
 </li>
 <li><p><strong>Renderer Process</strong> (React frontend)</p>
@@ -132,15 +138,31 @@
 <li>Loaded from bundled frontend files</li>
 </ul>
 </li>
-<li><p><strong>Backend Process</strong> (ASP.NET Core)</p>
+<li><p><strong>Backend Process</strong> (ASP.NET Core child)</p>
 <ul>
 <li>Spawned as a child process by main process</li>
 <li>Runs on <code>http://localhost:&lt;random-port&gt;</code></li>
 <li>Provides REST API and Server-Sent Events (SSE)</li>
+<li>May spawn worker processes (FFmpeg, etc.)</li>
 <li>Fully embedded in the Electron app</li>
 </ul>
 </li>
+<li><p><strong>Worker Processes</strong> (FFmpeg, etc.)</p>
+<ul>
+<li>Spawned by backend for rendering tasks</li>
+<li>Tracked and managed by ProcessManager</li>
+<li>Cleaned up on app shutdown</li>
+</ul>
+</li>
 </ol>
+<p><strong>Shutdown Behavior</strong>:</p>
+<ul>
+<li><strong>Default</strong>: Closing window exits app completely (all processes terminated)</li>
+<li><strong>Optional</strong>: Enable &quot;Minimize to Tray&quot; in settings to keep app running in background</li>
+<li><strong>Graceful</strong>: Active render jobs prompt user before exit</li>
+<li><strong>Timeout</strong>: Force-kill after 10 seconds if graceful shutdown fails</li>
+</ul>
+<p>See <a href="PROCESS_MODEL.html">PROCESS_MODEL.md</a> for detailed shutdown sequence, troubleshooting, and diagnostics.</p>
 <h3 id="security-model">Security Model</h3>
 <ul>
 <li><strong>Context Isolation:</strong> Enabled (renderer can't access Node.js directly)</li>
