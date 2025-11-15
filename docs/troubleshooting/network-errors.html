@@ -76,6 +76,8 @@
 <p>This guide helps you troubleshoot network connectivity and communication errors in Aura Video Studio.</p>
 <h2 id="quick-navigation">Quick Navigation</h2>
 <ul>
+<li><a href="#using-network-diagnostics">Using Network Diagnostics</a></li>
+<li><a href="#error-codes-reference">Error Codes Reference</a></li>
 <li><a href="#provider-api-connectivity">Provider API Connectivity</a></li>
 <li><a href="#network-timeouts">Network Timeouts</a></li>
 <li><a href="#firewall-and-proxy-issues">Firewall and Proxy Issues</a></li>
@@ -83,19 +85,93 @@
 <li><a href="#dns-issues">DNS Issues</a></li>
 </ul>
 <hr>
-<h2 id="provider-api-connectivity">Provider API Connectivity</h2>
-<h3 id="cannot-connect-to-provider">Cannot Connect to Provider</h3>
-<p><strong>Error</strong>: &quot;Unable to connect to provider&quot; or &quot;Connection refused&quot;</p>
-<p><strong>Error Code</strong>: <strong>TransientNetworkFailure</strong></p>
-<p><strong>Common Provider Endpoints</strong>:</p>
+<h2 id="using-network-diagnostics">Using Network Diagnostics</h2>
+<p>Aura Video Studio includes a built-in diagnostics tool to help identify and resolve network issues.</p>
+<h3 id="accessing-diagnostics">Accessing Diagnostics</h3>
+<ol>
+<li><p><strong>From Settings:</strong></p>
 <ul>
-<li>OpenAI: <code>https://api.openai.com</code></li>
-<li>Anthropic: <code>https://api.anthropic.com</code></li>
-<li>ElevenLabs: <code>https://api.elevenlabs.io</code></li>
-<li>Stability AI: <code>https://api.stability.ai</code></li>
+<li>Navigate to Settings → Help &amp; Support → Network Diagnostics</li>
 </ul>
-<h3 id="solutions">Solutions</h3>
-<h4 id="1-check-internet-connection">1. Check Internet Connection</h4>
+</li>
+<li><p><strong>From First Run Wizard:</strong></p>
+<ul>
+<li>If a network error occurs during setup, click &quot;Run Diagnostics&quot; button</li>
+</ul>
+</li>
+<li><p><strong>From API:</strong></p>
+<ul>
+<li>Call <code>GET /api/system/network/diagnostics</code> to get diagnostic information programmatically</li>
+</ul>
+</li>
+</ol>
+<h3 id="what-diagnostics-check">What Diagnostics Check</h3>
+<ul>
+<li><strong>Backend Service:</strong> Verifies the backend API is running and accessible</li>
+<li><strong>FFmpeg:</strong> Checks if FFmpeg is installed and working properly</li>
+<li><strong>Configuration:</strong> Validates CORS and base URL settings</li>
+<li><strong>Network:</strong> Checks network configuration and connectivity</li>
+<li><strong>Providers:</strong> Tests connectivity to external provider services (OpenAI, Anthropic, etc.)</li>
+</ul>
+<h3 id="diagnostics-output">Diagnostics Output</h3>
+<p>The diagnostics tool provides:</p>
+<ul>
+<li>✅ <strong>Success indicators</strong> for working components</li>
+<li>❌ <strong>Error indicators</strong> for failing components</li>
+<li><strong>Specific error codes</strong> with links to troubleshooting guides</li>
+<li><strong>Recommended actions</strong> for each issue detected</li>
+<li><strong>Copy to clipboard</strong> button to share diagnostics with support</li>
+</ul>
+<hr>
+<h2 id="error-codes-reference">Error Codes Reference</h2>
+<h3 id="net001---backend-unreachable">NET001 - Backend Unreachable</h3>
+<p><strong>Error:</strong> &quot;Cannot reach backend service on <url>&quot;</url></p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Backend service is not running</li>
+<li>Port is incorrect or blocked by firewall</li>
+<li>Electron backend process failed to start</li>
+<li>Base URL is misconfigured</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p>Verify the backend service is running</p>
+<ul>
+<li>Check Task Manager (Windows) or Activity Monitor (macOS) for <code>Aura.Api</code> process</li>
+<li>Look for console errors in Electron main process logs</li>
+</ul>
+</li>
+<li><p>Check the port configuration</p>
+<ul>
+<li>Default port: <code>http://localhost:5005</code></li>
+<li>Verify <code>VITE_API_BASE_URL</code> in <code>.env.local</code> matches backend port</li>
+</ul>
+</li>
+<li><p>Check firewall settings</p>
+<ul>
+<li>Windows: Allow <code>Aura.Api.exe</code> through Windows Firewall</li>
+<li>macOS: Check System Preferences → Security &amp; Privacy → Firewall</li>
+</ul>
+</li>
+<li><p>If using Electron</p>
+<ul>
+<li>Check logs in <code>%APPDATA%\aura-video-studio\logs</code> (Windows) or <code>~/Library/Application Support/aura-video-studio/logs</code> (macOS)</li>
+<li>Look for backend startup errors</li>
+</ul>
+</li>
+<li><p>Restart the application completely</p>
+</li>
+</ol>
+<hr>
+<h3 id="net002---dns-resolution-failed">NET002 - DNS Resolution Failed</h3>
+<p><strong>Error:</strong> &quot;Cannot resolve hostname - DNS lookup failed&quot;</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>No internet connection</li>
+<li>DNS server is not responding</li>
+<li>Hostname is incorrect or does not exist</li>
+<li>Corporate DNS restrictions</li>
+</ul>
 <p><strong>Test basic connectivity</strong>:</p>
 <pre><code class="lang-bash"># Test general internet
 ping 8.8.8.8
@@ -143,17 +219,188 @@ curl -I https://api.elevenlabs.io/v1/voices
 <li>Contact network administrator</li>
 </ul>
 <hr>
-<h2 id="network-timeouts">Network Timeouts</h2>
-<h3 id="request-timeout-errors">Request Timeout Errors</h3>
-<p><strong>Error</strong>: &quot;Request timed out&quot; or &quot;Operation timeout&quot;</p>
-<p><strong>Causes</strong>:</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Test DNS resolution:</strong></p>
+<pre><code class="lang-bash"># Test DNS lookup
+nslookup api.openai.com
+</code></pre>
+</li>
+<li><p><strong>Use alternative DNS servers:</strong></p>
+<ul>
+<li>Google DNS: <code>8.8.8.8</code> and <code>8.8.4.4</code></li>
+<li>Cloudflare DNS: <code>1.1.1.1</code> and <code>1.0.0.1</code></li>
+</ul>
+<p><strong>Windows:</strong></p>
+<pre><code class="lang-powershell"># Set DNS via PowerShell (requires admin)
+Set-DnsClientServerAddress -InterfaceAlias &quot;Ethernet&quot; -ServerAddresses (&quot;8.8.8.8&quot;,&quot;8.8.4.4&quot;)
+</code></pre>
+<p><strong>macOS/Linux:</strong></p>
+<pre><code class="lang-bash"># Edit /etc/resolv.conf (requires sudo)
+sudo nano /etc/resolv.conf
+# Add:
+nameserver 8.8.8.8
+nameserver 1.1.1.1
+</code></pre>
+</li>
+<li><p><strong>Flush DNS cache:</strong></p>
+<ul>
+<li>Windows: <code>ipconfig /flushdns</code></li>
+<li>macOS: <code>sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder</code></li>
+<li>Linux: <code>sudo systemd-resolve --flush-caches</code></li>
+</ul>
+</li>
+<li><p><strong>Check hosts file for overrides:</strong></p>
+<ul>
+<li>Windows: <code>C:\Windows\System32\drivers\etc\hosts</code></li>
+<li>macOS/Linux: <code>/etc/hosts</code></li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net003---tls-handshake-failed">NET003 - TLS Handshake Failed</h3>
+<p><strong>Error:</strong> &quot;Failed to establish secure connection - SSL/TLS error&quot;</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Expired or invalid SSL certificates</li>
+<li>Outdated security certificates on system</li>
+<li>Corporate SSL inspection interfering</li>
+<li>Incorrect system date/time</li>
+<li>TLS version mismatch</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Update system certificates:</strong></p>
+<ul>
+<li>Windows: Run Windows Update</li>
+<li>macOS: Run <code>softwareupdate -l</code> and install available updates</li>
+<li>Linux: <code>sudo apt update &amp;&amp; sudo apt install ca-certificates</code> (Ubuntu/Debian)</li>
+</ul>
+</li>
+<li><p><strong>Verify system date and time:</strong></p>
+<ul>
+<li>Incorrect system time causes certificate validation failures</li>
+<li>Sync with internet time servers</li>
+</ul>
+</li>
+<li><p><strong>Corporate SSL inspection:</strong></p>
+<ul>
+<li>If on corporate network, install company SSL certificates</li>
+<li>Contact IT department for certificate installation instructions</li>
+</ul>
+</li>
+<li><p><strong>Check TLS version support:</strong></p>
+<ul>
+<li>Aura Video Studio requires TLS 1.2 or higher</li>
+<li>Update .NET runtime if using older version</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net004---network-timeout">NET004 - Network Timeout</h3>
+<p><strong>Error:</strong> &quot;Request timed out - server did not respond within <x> seconds&quot;</x></p>
+<p><strong>Typical Causes:</strong></p>
 <ul>
 <li>Slow internet connection</li>
-<li>Large requests (long prompts, high-res images)</li>
-<li>Provider overload</li>
+<li>Service is overloaded or experiencing issues</li>
+<li>Large request/response size</li>
+<li>VPN or proxy adding latency</li>
 <li>Network congestion</li>
 </ul>
-<h3 id="solutions-1">Solutions</h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check internet speed:</strong></p>
+<pre><code class="lang-bash"># Test download speed
+curl -o /dev/null -w '%{speed_download}' https://proof.ovh.net/files/10Mb.dat
+</code></pre>
+</li>
+<li><p><strong>Increase timeout settings:</strong></p>
+<ul>
+<li>Navigate to Settings → Advanced → Network</li>
+<li>Increase timeout values (default: 30 seconds)</li>
+<li>Recommended: 60-120 seconds for slow connections</li>
+</ul>
+</li>
+<li><p><strong>Try wired connection:</strong></p>
+<ul>
+<li>WiFi can be unreliable for large transfers</li>
+<li>Use Ethernet cable for better stability</li>
+</ul>
+</li>
+<li><p><strong>Check VPN/Proxy:</strong></p>
+<ul>
+<li>Temporarily disable VPN to test</li>
+<li>Configure proxy timeout settings if applicable</li>
+</ul>
+</li>
+<li><p><strong>Retry during off-peak hours:</strong></p>
+<ul>
+<li>Services may be less loaded at different times</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net006---cors-misconfigured">NET006 - CORS Misconfigured</h3>
+<p><strong>Error:</strong> &quot;Cross-origin request blocked - origin not allowed by CORS policy&quot;</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Frontend and backend are on different origins</li>
+<li>AllowedOrigins not configured in backend</li>
+<li>Incorrect API_BASE_URL in frontend</li>
+<li>Development vs production configuration mismatch</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check CORS configuration in backend:</strong></p>
+<pre><code class="lang-json">// appsettings.json or appsettings.Development.json
+{
+  &quot;Cors&quot;: {
+    &quot;AllowedOrigins&quot;: [
+      &quot;http://localhost:5173&quot;,  // Vite dev server
+      &quot;http://localhost:3000&quot;,  // Alternative port
+      &quot;app://.&quot;                 // Electron custom protocol
+    ]
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Verify frontend API base URL:</strong></p>
+<pre><code>// .env.local or .env.development
+VITE_API_BASE_URL=http://localhost:5005
+</code></pre>
+</li>
+<li><p><strong>Match origins exactly:</strong></p>
+<ul>
+<li>Include protocol (http:// or https://)</li>
+<li>Include port number if not default</li>
+<li>No trailing slashes</li>
+</ul>
+</li>
+<li><p><strong>Restart both frontend and backend:</strong></p>
+<ul>
+<li>Configuration changes require restart</li>
+<li>Clear browser cache if issue persists</li>
+</ul>
+</li>
+<li><p><strong>Check browser console for details:</strong></p>
+<ul>
+<li>Exact origin being blocked will be shown</li>
+<li>Look for &quot;Access-Control-Allow-Origin&quot; header issues</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net007---provider-unavailable">NET007 - Provider Unavailable</h3>
+<p><strong>Error:</strong> &quot;Provider <name> is unavailable - cannot reach service at <endpoint>&quot;</endpoint></name></p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Provider service is down or experiencing outage</li>
+<li>API key is invalid or revoked</li>
+<li>Provider blocked in your region</li>
+<li>Rate limiting or quota exceeded</li>
+<li>Network blocks provider endpoints</li>
+</ul>
+<p><strong>Solutions:</strong></p>
 <h4 id="1-increase-timeout-values">1. Increase Timeout Values</h4>
 <pre><code class="lang-json">{
   &quot;Providers&quot;: {
@@ -218,7 +465,7 @@ speedtest-cli
 <h2 id="firewall-and-proxy-issues">Firewall and Proxy Issues</h2>
 <h3 id="blocked-by-firewall">Blocked by Firewall</h3>
 <p><strong>Error</strong>: &quot;Connection refused&quot; or &quot;Connection blocked&quot;</p>
-<h3 id="solutions-2">Solutions</h3>
+<h3 id="solutions">Solutions</h3>
 <h4 id="1-check-firewall-rules">1. Check Firewall Rules</h4>
 <p><strong>Windows Firewall</strong>:</p>
 <ol>
@@ -303,7 +550,7 @@ curl -x http://user:pass@proxy.company.com:8080 https://api.openai.com
 <li>Corporate SSL inspection</li>
 <li>Outdated SSL libraries</li>
 </ul>
-<h3 id="solutions-3">Solutions</h3>
+<h3 id="solutions-1">Solutions</h3>
 <h4 id="1-update-system">1. Update System</h4>
 <p><strong>Windows</strong>:</p>
 <pre><code class="lang-powershell"># Update Windows
@@ -362,7 +609,7 @@ sudo update-ca-certificates
 <h2 id="dns-issues">DNS Issues</h2>
 <h3 id="cannot-resolve-hostname">Cannot Resolve Hostname</h3>
 <p><strong>Error</strong>: &quot;Could not resolve host&quot; or &quot;DNS lookup failed&quot;</p>
-<h3 id="solutions-4">Solutions</h3>
+<h3 id="solutions-2">Solutions</h3>
 <h4 id="1-test-dns-resolution">1. Test DNS Resolution</h4>
 <pre><code class="lang-bash"># Test DNS lookup
 nslookup api.openai.com
@@ -427,7 +674,7 @@ sudo killall -HUP mDNSResponder
 <h2 id="connection-pooling-issues">Connection Pooling Issues</h2>
 <h3 id="too-many-open-connections">Too Many Open Connections</h3>
 <p><strong>Error</strong>: &quot;Connection pool exhausted&quot; or &quot;Too many connections&quot;</p>
-<h3 id="solutions-5">Solutions</h3>
+<h3 id="solutions-3">Solutions</h3>
 <h4 id="1-configure-connection-pooling">1. Configure Connection Pooling</h4>
 <pre><code class="lang-json">{
   &quot;Network&quot;: {
@@ -458,7 +705,7 @@ sudo killall -HUP mDNSResponder
 <h2 id="ipv4-vs-ipv6-issues">IPv4 vs IPv6 Issues</h2>
 <h3 id="ipv6-connectivity-problems">IPv6 Connectivity Problems</h3>
 <p><strong>Error</strong>: &quot;Connection timeout&quot; (when IPv6 enabled but not working)</p>
-<h3 id="solutions-6">Solutions</h3>
+<h3 id="solutions-4">Solutions</h3>
 <h4 id="1-prefer-ipv4">1. Prefer IPv4</h4>
 <pre><code class="lang-json">{
   &quot;Network&quot;: {
