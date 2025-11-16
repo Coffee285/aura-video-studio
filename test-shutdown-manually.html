@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Manual Shutdown Testing Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Manual Shutdown Testing Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/test-shutdown-manually.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="manual-shutdown-testing-guide">Manual Shutdown Testing Guide</h1>
+
+<p>This guide helps verify that the shutdown fix works correctly and no processes linger after closing the app.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Windows 11 (primary target platform)</li>
+<li>Task Manager open and visible</li>
+<li>Aura Video Studio installed or running from development build</li>
+</ul>
+<h2 id="test-scenarios">Test Scenarios</h2>
+<h3 id="test-1-normal-shutdown-no-active-jobs">Test 1: Normal Shutdown (No Active Jobs)</h3>
+<p><strong>Purpose</strong>: Verify clean shutdown with no active work</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Launch Aura Video Studio</li>
+<li>Wait for app to fully load (main window visible)</li>
+<li>Open Task Manager (Ctrl+Shift+Esc)</li>
+<li>Go to &quot;Details&quot; tab and sort by Name</li>
+<li>Note the processes:
+<ul>
+<li>Look for &quot;Aura Video Studio.exe&quot; (Electron)</li>
+<li>Look for &quot;Aura.Api.exe&quot; or &quot;dotnet.exe&quot; (Backend)</li>
+<li>Look for any &quot;.NET Host&quot; processes</li>
+</ul>
+</li>
+<li>Close the app by clicking the X button</li>
+<li><strong>WATCH</strong>: Task Manager for 10 seconds</li>
+</ol>
+<p><strong>Expected Result</strong>:</p>
+<ul>
+<li>✅ All &quot;Aura Video Studio.exe&quot; processes disappear within 1-2 seconds</li>
+<li>✅ All &quot;Aura.Api.exe&quot; or &quot;dotnet.exe&quot; (hosting Aura) processes disappear within 3-5 seconds</li>
+<li>✅ No &quot;.NET Host&quot; processes remain after 5 seconds</li>
+<li>✅ No &quot;ffmpeg.exe&quot; processes remain</li>
+<li>✅ App can be re-launched immediately without errors</li>
+</ul>
+<p><strong>FAIL Criteria</strong>:</p>
+<ul>
+<li>❌ Any Aura-related process visible after 10 seconds</li>
+<li>❌ &quot;.NET Host&quot; processes remain</li>
+<li>❌ Cannot re-launch app due to &quot;port in use&quot; error</li>
+</ul>
+<hr>
+<h3 id="test-2-shutdown-during-active-video-generation">Test 2: Shutdown During Active Video Generation</h3>
+<p><strong>Purpose</strong>: Verify shutdown handles active work gracefully</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Launch Aura Video Studio</li>
+<li>Start a video generation job (Quick Demo or full workflow)</li>
+<li>While job is rendering (check progress bar), close the app window</li>
+<li><strong>WATCH</strong>: Dialog appears asking what to do</li>
+<li>Select &quot;Force Quit&quot;</li>
+<li><strong>WATCH</strong>: Task Manager for 10 seconds</li>
+</ol>
+<p><strong>Expected Result</strong>:</p>
+<ul>
+<li>✅ Dialog appears: &quot;Active Renders in Progress&quot; with 3 options</li>
+<li>✅ After selecting &quot;Force Quit&quot;, app closes within 5 seconds</li>
+<li>✅ All Aura processes terminate within 10 seconds total</li>
+<li>✅ FFmpeg process (if visible) is killed</li>
+<li>✅ No lingering processes</li>
+</ul>
+<p><strong>FAIL Criteria</strong>:</p>
+<ul>
+<li>❌ App hangs after clicking &quot;Force Quit&quot;</li>
+<li>❌ FFmpeg processes remain after 10 seconds</li>
+<li>❌ Backend or .NET Host processes remain</li>
+</ul>
+<hr>
+<h3 id="test-3-rapid-closereopen">Test 3: Rapid Close/Reopen</h3>
+<p><strong>Purpose</strong>: Verify app can be quickly restarted without conflicts</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Launch Aura Video Studio</li>
+<li>Wait 2 seconds for it to load</li>
+<li>Close it immediately (X button)</li>
+<li>Wait 2 seconds</li>
+<li>Launch Aura Video Studio again</li>
+<li>Repeat steps 3-5 three more times (total 4 cycles)</li>
+</ol>
+<p><strong>Expected Result</strong>:</p>
+<ul>
+<li>✅ Each launch succeeds without errors</li>
+<li>✅ No &quot;port already in use&quot; errors</li>
+<li>✅ No &quot;backend failed to start&quot; errors</li>
+<li>✅ Each shutdown completes within 5 seconds</li>
+<li>✅ No process accumulation in Task Manager</li>
+</ul>
+<p><strong>FAIL Criteria</strong>:</p>
+<ul>
+<li>❌ &quot;Port 50XX is already in use&quot; error on relaunch</li>
+<li>❌ Multiple backends running simultaneously</li>
+<li>❌ App fails to start after rapid close/reopen</li>
+</ul>
+<hr>
+<h3 id="test-4-force-kill-timeout-test">Test 4: Force Kill Timeout Test</h3>
+<p><strong>Purpose</strong>: Verify force-kill failsafe activates if clean shutdown fails</p>
+<p><strong>Steps</strong> (requires debugging/simulation):</p>
+<ol>
+<li>Launch Aura Video Studio in development mode</li>
+<li>Use debugger to pause backend thread (or kill backend process manually)</li>
+<li>Try to close the app</li>
+<li><strong>WATCH</strong>: Console output and Task Manager</li>
+</ol>
+<p><strong>Expected Result</strong>:</p>
+<ul>
+<li>✅ App attempts graceful shutdown</li>
+<li>✅ After 2-3 seconds, force kill is attempted</li>
+<li>✅ Console shows: &quot;Backend did not shut down gracefully, forcing termination...&quot;</li>
+<li>✅ Console shows: &quot;Executing: taskkill /F /T /PID ...&quot;</li>
+<li>✅ After timeout, failsafe kills processes by name</li>
+<li>✅ App exits within 5 seconds total</li>
+</ul>
+<p><strong>FAIL Criteria</strong>:</p>
+<ul>
+<li>❌ App hangs indefinitely</li>
+<li>❌ Force kill is never attempted</li>
+<li>❌ Processes remain after 10 seconds</li>
+</ul>
+<hr>
+<h2 id="diagnostic-commands-windows">Diagnostic Commands (Windows)</h2>
+<h3 id="check-for-lingering-processes-after-close">Check for lingering processes after close:</h3>
+<pre><code class="lang-powershell"># Check for Aura.Api.exe
+Get-Process -Name &quot;Aura.Api&quot; -ErrorAction SilentlyContinue
+
+# Check for .NET Host processes (look for Aura in command line)
+Get-Process | Where-Object { $_.ProcessName -like &quot;*dotnet*&quot; -or $_.ProcessName -like &quot;*host*&quot; } | Select-Object Id, ProcessName, Path
+
+# Check for FFmpeg
+Get-Process -Name &quot;ffmpeg&quot; -ErrorAction SilentlyContinue
+
+# Check for Aura Video Studio Electron process
+Get-Process | Where-Object { $_.MainWindowTitle -like &quot;*Aura*&quot; }
+</code></pre>
+<h3 id="force-kill-all-aura-processes-if-needed-for-cleanup">Force kill all Aura processes (if needed for cleanup):</h3>
+<pre><code class="lang-powershell"># Kill Aura.Api
+taskkill /F /IM Aura.Api.exe 2&gt;$null
+
+# Kill FFmpeg
+taskkill /F /IM ffmpeg.exe 2&gt;$null
+
+# Kill Electron (be careful - will kill all Electron apps)
+# Only run if you're sure no other Electron apps are running
+# taskkill /F /IM &quot;Aura Video Studio.exe&quot; 2&gt;$null
+</code></pre>
+<hr>
+<h2 id="logging">Logging</h2>
+<h3 id="where-to-find-logs">Where to find logs:</h3>
+<p><strong>Electron Logs</strong>:</p>
+<ul>
+<li>Windows: <code>%APPDATA%\aura-video-studio\logs\</code></li>
+<li>Look for: <code>startup-*.log</code>, <code>crash-*.log</code></li>
+</ul>
+<p><strong>Backend Logs</strong>:</p>
+<ul>
+<li>Windows: <code>%APPDATA%\aura-video-studio\logs\</code></li>
+<li>Look for: Structured JSON logs with shutdown events</li>
+</ul>
+<h3 id="what-to-look-for-in-logs">What to look for in logs:</h3>
+<p><strong>Good Shutdown Sequence</strong>:</p>
+<pre><code>[INFO] Initiating shutdown (Force: false, SkipChecks: true, AbsoluteTimeout: 4000ms)
+[INFO] Step 1/5: Windows closed
+[INFO] Step 2/5: Backend shutdown signal sent
+[INFO] Step 3/5: Backend stopped
+[INFO] Step 4/5: No child processes to terminate
+[INFO] Step 5/5: Cleanup complete
+[INFO] Shutdown completed successfully in 1247ms
+[INFO] Exiting application...
+</code></pre>
+<p><strong>Problem Indicators</strong>:</p>
+<pre><code>[ERROR] Shutdown hard timeout exceeded
+[ERROR] Attempting force kill of backend process tree...
+[WARN] Backend did not shut down gracefully, forcing termination...
+[ERROR] Activating failsafe process termination...
+</code></pre>
+<p>If you see these, the shutdown took too long and failsafe was activated. The fix should still work, but investigate why graceful shutdown failed.</p>
+<hr>
+<h2 id="reporting-issues">Reporting Issues</h2>
+<p>If any test fails, please provide:</p>
+<ol>
+<li><strong>Which test scenario failed</strong></li>
+<li><strong>Screenshots of Task Manager</strong> showing lingering processes</li>
+<li><strong>Console output</strong> (if running in dev mode)</li>
+<li><strong>Log files</strong> from <code>%APPDATA%\aura-video-studio\logs\</code></li>
+<li><strong>Steps to reproduce</strong> the issue</li>
+<li><strong>System info</strong>: Windows version, RAM, CPU</li>
+</ol>
+<p>Post in GitHub Issue with these details.</p>
+<hr>
+<h2 id="success-criteria-summary">Success Criteria Summary</h2>
+<p>After all tests, the following should be true:</p>
+<ul>
+<li>✅ App closes within 5 seconds in all scenarios</li>
+<li>✅ No lingering processes visible in Task Manager after 10 seconds</li>
+<li>✅ No &quot;.NET Host&quot; zombie processes</li>
+<li>✅ No FFmpeg processes remain</li>
+<li>✅ App can be rapidly closed and reopened without errors</li>
+<li>✅ Force-kill failsafe works if needed</li>
+<li>✅ Logs show clean shutdown sequence</li>
+</ul>
+<p>If all criteria are met, the fix is successful! ✨</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/test-shutdown-manually.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
