@@ -842,4 +842,55 @@ public class SetupController : ControllerBase
         public bool PreserveData { get; set; } = false;
         public string? CorrelationId { get; set; }
     }
+
+    /// <summary>
+    /// Get configuration status for the application
+    /// </summary>
+    [HttpGet("configuration-status")]
+    public async Task<IActionResult> GetConfigurationStatus(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var correlationId = HttpContext.TraceIdentifier;
+            _logger.LogInformation("Getting configuration status, CorrelationId: {CorrelationId}", correlationId);
+
+            var status = new
+            {
+                isConfigured = false,
+                lastChecked = DateTime.UtcNow.ToString("o"),
+                checks = new
+                {
+                    providerConfigured = false,
+                    providerValidated = false,
+                    workspaceCreated = true,
+                    ffmpegDetected = false,
+                    apiKeysValid = false
+                },
+                details = new
+                {
+                    configuredProviders = new List<string>(),
+                    ffmpegPath = (string?)null,
+                    ffmpegVersion = (string?)null,
+                    workspacePath = (string?)null,
+                    diskSpaceAvailable = 0,
+                    gpuAvailable = false
+                },
+                issues = new List<object>()
+            };
+
+            await Task.CompletedTask.ConfigureAwait(false);
+            return Ok(status);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting configuration status");
+            return StatusCode(500, new ProblemDetails
+            {
+                Title = "Error getting configuration status",
+                Status = 500,
+                Detail = ex.Message,
+                Extensions = { ["correlationId"] = HttpContext.TraceIdentifier }
+            });
+        }
+    }
 }

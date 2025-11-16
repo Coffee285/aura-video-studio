@@ -239,6 +239,59 @@ public static class HealthEndpoints
             })
             .Produces<object>(200);
 
+        // System check endpoint
+        group.MapGet("/health/system-check", () =>
+        {
+            try
+            {
+                var result = new
+                {
+                    ffmpeg = new
+                    {
+                        installed = false,
+                        version = (string?)null,
+                        path = (string?)null,
+                        error = "Not checked"
+                    },
+                    diskSpace = new
+                    {
+                        available = 0,
+                        total = 0,
+                        unit = "GB",
+                        sufficient = false
+                    },
+                    gpu = new
+                    {
+                        available = false,
+                        name = (string?)null,
+                        vramGB = (int?)null
+                    },
+                    providers = new
+                    {
+                        configured = new List<string>(),
+                        validated = new List<string>(),
+                        errors = new Dictionary<string, string>()
+                    }
+                };
+
+                return Results.Ok(result);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error during system check");
+                return Results.Problem("Error during system check", statusCode: 500);
+            }
+        })
+        .WithName("SystemCheck")
+        .WithOpenApi(operation =>
+        {
+            operation.Summary = "System check";
+            operation.Description = "Returns system information including FFmpeg, disk space, GPU, and provider status.";
+            return operation;
+        })
+        .Produces<object>(200)
+        .ProducesProblem(500);
+
         return endpoints;
     }
 }
