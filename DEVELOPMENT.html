@@ -278,6 +278,39 @@ AURA_OFFLINE_MODE=false
 AURA_ENABLE_ADVANCED_MODE=false
 </code></pre>
 <p><strong>Note:</strong> Aura works without any API keys using free/local providers.</p>
+<h3 id="backend-url-contract">Backend URL Contract</h3>
+<p>The frontend, backend, and Electron shell now share a single source of truth for the API origin:</p>
+<ul>
+<li>Set <strong><code>AURA_BACKEND_URL</code></strong> (preferred) or <code>ASPNETCORE_URLS</code> to the desired base URL, e.g. <code>http://127.0.0.1:5272</code>.</li>
+<li>Electron reads this value on startup, starts (or attaches to) the backend on that port, and exposes it to the renderer through a typed preload bridge (<code>window.desktopBridge</code>).</li>
+<li>The React app always resolves requests through this bridge or <code>VITE_API_BASE_URL</code>, so there is no longer any guessing or hard-coded <code>localhost</code> URLs.</li>
+</ul>
+<p>Example (PowerShell):</p>
+<pre><code class="lang-powershell">$env:AURA_BACKEND_URL = &quot;http://127.0.0.1:5272&quot;
+cd Aura.Api
+dotnet run
+</code></pre>
+<p>Then, in another terminal:</p>
+<pre><code class="lang-powershell">cd Aura.Web
+npm run dev
+</code></pre>
+<p>The Vite dev server will proxy <code>/api/*</code> calls to the backend URL from the bridge automatically.</p>
+<h3 id="provider-connectivity-testing">Provider Connectivity Testing</h3>
+<p>Provider key validation now relies on the unified ping endpoints inside <code>ProvidersController</code>:</p>
+<ul>
+<li><code>POST /api/providers/{providerId}/ping</code> — runs a live network call using the stored API key and returns detailed diagnostics (<code>success</code>, <code>statusCode</code>, <code>errorCode</code>, <code>endpoint</code>, <code>latencyMs</code>, <code>correlationId</code>).</li>
+<li><code>GET /api/providers/ping-all</code> — iterates over every supported provider (LLM, TTS, image, and local engines) and returns a map of results for dashboards.</li>
+</ul>
+<p>Ping requests never accept secrets; API keys are always retrieved from the secure key vault. Optional metadata (e.g., Azure endpoint, PlayHT user ID) can be passed via the request body when a provider requires additional configuration.</p>
+<p>Common error codes:</p>
+<ul>
+<li><code>MissingApiKey</code> — key not stored yet.</li>
+<li><code>InvalidApiKey</code> — provider returned 401/403.</li>
+<li><code>RateLimited</code> — provider throttled the request (HTTP 429).</li>
+<li><code>ProviderUnavailable</code> — provider returned 5xx.</li>
+<li><code>NetworkError</code> / <code>Timeout</code> — local connectivity issues.</li>
+</ul>
+<p>The web UI surfaces these details inside Settings → Providers, and <code>settingsService.testApiKey</code> automatically saves the key, triggers a ping, and displays the HTTP status, latency, and correlation ID for debugging.</p>
 <h2 id="component-development-workflows">Component Development Workflows</h2>
 <h3 id="quick-start-component-development-mode">Quick Start: Component Development Mode</h3>
 <p><strong>For rapid backend/frontend iteration without Electron:</strong></p>
@@ -422,7 +455,7 @@ curl http://localhost:5005/api/v1/your-endpoint
 <li><p><strong>Update frontend API client (if needed):</strong></p>
 <pre><code class="lang-typescript">// Aura.Web/src/services/api/apiClient.ts
 export async function getYourData() {
-  const response = await apiClient.get('/api/v1/your-endpoint');
+  const response = await apiClient.get(&quot;/api/v1/your-endpoint&quot;);
   return response.data;
 }
 </code></pre>
