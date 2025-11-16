@@ -168,8 +168,8 @@ export function SystemCheckCard({
     return null;
   }
 
-  // Don&apos;t show card if everything is healthy and user can dismiss
-  if (healthStatus.status === 'healthy' && onDismiss) {
+  // Only show card if there are issues or if explicitly requested
+  if (healthStatus.status === 'healthy' && !onDismiss) {
     return null;
   }
 

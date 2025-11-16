@@ -3,12 +3,22 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WelcomePage } from '../../pages/WelcomePage';
+import * as configurationStatusService from '../../services/configurationStatusService';
 import * as firstRunService from '../../services/firstRunService';
 
 // Mock the firstRunService
 vi.mock('../../services/firstRunService', () => ({
   hasCompletedFirstRun: vi.fn(),
   migrateLegacyFirstRunStatus: vi.fn(),
+}));
+
+// Mock the configurationStatusService
+vi.mock('../../services/configurationStatusService', () => ({
+  configurationStatusService: {
+    getStatus: vi.fn(),
+    subscribe: vi.fn(() => () => {}),
+    markConfigured: vi.fn(),
+  },
 }));
 
 // Mock the API URL
@@ -21,6 +31,14 @@ vi.mock('../../components/FirstRunDiagnostics', () => ({
   FirstRunDiagnostics: () => null,
 }));
 
+vi.mock('../../components/ConfigurationModal', () => ({
+  ConfigurationModal: () => null,
+}));
+
+vi.mock('../../components/ConfigurationStatusCard', () => ({
+  ConfigurationStatusCard: () => null,
+}));
+
 vi.mock('../../components/SystemCheckCard', () => ({
   SystemCheckCard: () => null,
 }));
@@ -30,7 +48,7 @@ vi.mock('../../components/Tooltips', () => ({
   TooltipWithLink: () => null,
 }));
 
-describe('WelcomePage - First-Run Callout', () => {
+describe('WelcomePage - Configuration Status', () => {
   const renderWithProviders = (component: React.ReactElement) => {
     return render(
       <FluentProvider theme={webLightTheme}>
@@ -65,60 +83,81 @@ describe('WelcomePage - First-Run Callout', () => {
     });
   });
 
-  it('should show first-time setup callout when user has not completed first run', async () => {
-    vi.mocked(firstRunService.hasCompletedFirstRun).mockResolvedValue(false);
-
-    renderWithProviders(<WelcomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Start Here: First-Time Setup/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText(/Begin Setup Wizard/i)).toBeInTheDocument();
-    expect(screen.getByText(/3-5 minute wizard/i)).toBeInTheDocument();
-  });
-
-  it('should hide first-time setup callout when user has completed first run', async () => {
+  it('should show setup required banner when system is not configured', async () => {
     vi.mocked(firstRunService.hasCompletedFirstRun).mockResolvedValue(true);
+    vi.mocked(configurationStatusService.configurationStatusService.getStatus).mockResolvedValue({
+      isConfigured: false,
+      lastChecked: new Date().toISOString(),
+      checks: {
+        providerConfigured: false,
+        providerValidated: false,
+        workspaceCreated: false,
+        ffmpegDetected: false,
+        apiKeysValid: false,
+      },
+      details: {
+        configuredProviders: [],
+      },
+      issues: [],
+    });
 
     renderWithProviders(<WelcomePage />);
 
     await waitFor(() => {
-      expect(screen.queryByText(/Start Here: First-Time Setup/i)).not.toBeInTheDocument();
+      expect(
+        screen.getByText(/Complete the quick setup to start creating videos/i)
+      ).toBeInTheDocument();
     });
 
-    expect(screen.queryByText(/Begin Setup Wizard/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Start Setup Wizard/i })).toBeInTheDocument();
   });
 
-  it('should show reconfigure callout with "Configure Setup" button when user has completed first run', async () => {
+  it('should show ready banner when system is configured', async () => {
     vi.mocked(firstRunService.hasCompletedFirstRun).mockResolvedValue(true);
+    vi.mocked(configurationStatusService.configurationStatusService.getStatus).mockResolvedValue({
+      isConfigured: true,
+      lastChecked: new Date().toISOString(),
+      checks: {
+        providerConfigured: true,
+        providerValidated: true,
+        workspaceCreated: true,
+        ffmpegDetected: true,
+        apiKeysValid: true,
+      },
+      details: {
+        configuredProviders: ['OpenAI'],
+        ffmpegVersion: '6.0',
+        ffmpegPath: '/usr/bin/ffmpeg',
+        diskSpaceAvailable: 100,
+        gpuAvailable: true,
+      },
+      issues: [],
+    });
 
     renderWithProviders(<WelcomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Need to Reconfigure Your Setup?/i)).toBeInTheDocument();
+      expect(screen.getByText(/System Ready!/i)).toBeInTheDocument();
     });
-
-    expect(screen.getByRole('button', { name: /Configure Setup/i })).toBeInTheDocument();
-    expect(screen.getByText(/Update API keys, configure dependencies/i)).toBeInTheDocument();
-  });
-
-  it('should hide reconfigure callout when showing first-time callout', async () => {
-    vi.mocked(firstRunService.hasCompletedFirstRun).mockResolvedValue(false);
-
-    renderWithProviders(<WelcomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Begin Setup Wizard/i)).toBeInTheDocument();
-    });
-
-    // The reconfigure callout should not be present
-    expect(screen.queryByText(/Need to Reconfigure Your Setup?/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Configure Setup/i })).not.toBeInTheDocument();
   });
 
   it('should always show Create Video and Settings buttons', async () => {
-    vi.mocked(firstRunService.hasCompletedFirstRun).mockResolvedValue(false);
+    vi.mocked(firstRunService.hasCompletedFirstRun).mockResolvedValue(true);
+    vi.mocked(configurationStatusService.configurationStatusService.getStatus).mockResolvedValue({
+      isConfigured: false,
+      lastChecked: new Date().toISOString(),
+      checks: {
+        providerConfigured: false,
+        providerValidated: false,
+        workspaceCreated: false,
+        ffmpegDetected: false,
+        apiKeysValid: false,
+      },
+      details: {
+        configuredProviders: [],
+      },
+      issues: [],
+    });
 
     renderWithProviders(<WelcomePage />);
 
@@ -129,8 +168,9 @@ describe('WelcomePage - First-Run Callout', () => {
     expect(screen.getByRole('button', { name: /Settings/i })).toBeInTheDocument();
   });
 
-  it('should handle error gracefully when checking first-run status fails', async () => {
-    vi.mocked(firstRunService.hasCompletedFirstRun).mockRejectedValue(
+  it('should handle error gracefully when checking configuration status fails', async () => {
+    vi.mocked(firstRunService.hasCompletedFirstRun).mockResolvedValue(true);
+    vi.mocked(configurationStatusService.configurationStatusService.getStatus).mockRejectedValue(
       new Error('Failed to check status')
     );
 
@@ -140,8 +180,5 @@ describe('WelcomePage - First-Run Callout', () => {
       // Should not crash and should show the page
       expect(screen.getByText(/Welcome to Aura Video Studio/i)).toBeInTheDocument();
     });
-
-    // Should not show the first-time callout on error (defaults to false)
-    expect(screen.queryByText(/Start Here: First-Time Setup/i)).not.toBeInTheDocument();
   });
 });

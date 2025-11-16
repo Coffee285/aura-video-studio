@@ -38,17 +38,18 @@ const useStyles = makeStyles({
   container: {
     maxWidth: '1200px',
     margin: '0 auto',
+    padding: tokens.spacingVerticalM,
   },
   hero: {
     textAlign: 'center',
-    marginBottom: tokens.spacingVerticalXXXL,
-    padding: tokens.spacingVerticalXXL,
+    marginBottom: tokens.spacingVerticalL,
+    padding: tokens.spacingVerticalL,
     borderRadius: tokens.borderRadiusLarge,
     background: `linear-gradient(135deg, ${tokens.colorNeutralBackground2} 0%, ${tokens.colorNeutralBackground1} 100%)`,
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
   },
   title: {
-    marginBottom: tokens.spacingVerticalM,
+    marginBottom: tokens.spacingVerticalS,
     display: 'block',
     background: `linear-gradient(135deg, ${tokens.colorBrandForeground1} 0%, ${tokens.colorPalettePurpleForeground2} 100%)`,
     WebkitBackgroundClip: 'text',
@@ -57,14 +58,14 @@ const useStyles = makeStyles({
   },
   subtitle: {
     color: tokens.colorNeutralForeground2,
-    marginBottom: tokens.spacingVerticalXL,
+    marginBottom: tokens.spacingVerticalM,
     display: 'block',
   },
   actions: {
     display: 'flex',
     gap: tokens.spacingHorizontalM,
     justifyContent: 'center',
-    marginTop: tokens.spacingVerticalXL,
+    marginTop: tokens.spacingVerticalM,
   },
   firstTimeCallout: {
     marginBottom: tokens.spacingVerticalXXXL,
@@ -129,8 +130,8 @@ const useStyles = makeStyles({
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-    gap: tokens.spacingVerticalL,
-    marginTop: tokens.spacingVerticalXXL,
+    gap: tokens.spacingVerticalM,
+    marginTop: tokens.spacingVerticalL,
   },
   card: {
     height: '100%',
@@ -150,10 +151,7 @@ const useStyles = makeStyles({
     gap: tokens.spacingVerticalS,
   },
   setupBanner: {
-    marginBottom: tokens.spacingVerticalXXL,
-  },
-  setupMessageBar: {
-    marginBottom: tokens.spacingVerticalXXL,
+    marginBottom: tokens.spacingVerticalL,
   },
   setupBannerActions: {
     display: 'flex',
@@ -171,10 +169,7 @@ const useStyles = makeStyles({
     margin: '0 auto',
   },
   readyBanner: {
-    marginBottom: tokens.spacingVerticalXXL,
-  },
-  readyMessageBar: {
-    marginBottom: tokens.spacingVerticalXXL,
+    marginBottom: tokens.spacingVerticalL,
   },
   disabledButtonTooltip: {
     padding: tokens.spacingVerticalM,
@@ -201,7 +196,6 @@ interface HealthStatus {
   timestamp: string;
 }
 
-// eslint-disable-next-line sonarjs/cognitive-complexity
 export function WelcomePage() {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -330,14 +324,9 @@ export function WelcomePage() {
             <MessageBarBody>
               <MessageBarTitle>Setup Required</MessageBarTitle>
               <Text>
-                Complete the quick setup wizard to start creating videos. This will configure AI
-                providers, install FFmpeg, and set up your workspace.
+                Complete the quick setup to start creating videos. Configure AI providers, install
+                FFmpeg, and set up your workspace.
               </Text>
-              <ul className={styles.setupBannerList}>
-                <li>Configure AI providers for script generation</li>
-                <li>Install FFmpeg for video rendering</li>
-                <li>Set up your workspace for saving projects</li>
-              </ul>
               <div className={styles.setupBannerActions}>
                 <Button
                   appearance="primary"
@@ -345,7 +334,7 @@ export function WelcomePage() {
                   icon={<Rocket24Regular />}
                   onClick={handleOpenConfigModal}
                 >
-                  Start Quick Setup
+                  Start Setup Wizard
                 </Button>
               </div>
             </MessageBarBody>
@@ -440,117 +429,95 @@ export function WelcomePage() {
         </div>
       </div>
 
-      {/* Configuration Summary - Show when ready */}
-      {isSystemReady && configStatus && (
+      {/* System Summary - Compact overview */}
+      {isSystemReady && (
         <Card className={styles.summaryCard}>
           <CardHeader
-            header={<Title2>Configuration Summary</Title2>}
-            description="Your current system configuration"
+            header={<Title2>System Overview</Title2>}
+            description="Quick status of your system"
           />
           <div className={styles.summaryGrid}>
+            <div className={styles.summaryItem}>
+              <Text weight="semibold">API Status</Text>
+              <Text size={300}>
+                {loading ? (
+                  <Spinner size="tiny" />
+                ) : health ? (
+                  <>
+                    {health.status}
+                    <Badge
+                      appearance="filled"
+                      color="success"
+                      style={{ marginLeft: tokens.spacingHorizontalXS }}
+                    >
+                      Online
+                    </Badge>
+                  </>
+                ) : (
+                  <>
+                    Unavailable
+                    <Badge
+                      appearance="filled"
+                      color="danger"
+                      style={{ marginLeft: tokens.spacingHorizontalXS }}
+                    >
+                      Offline
+                    </Badge>
+                  </>
+                )}
+              </Text>
+            </div>
+            <div className={styles.summaryItem}>
+              <Text weight="semibold">Hardware</Text>
+              <Text size={300}>
+                {loading ? (
+                  <Spinner size="tiny" />
+                ) : capabilities ? (
+                  <>
+                    Tier {capabilities.tier} • {capabilities.cpu.threads} threads •{' '}
+                    {capabilities.ram.gb}GB RAM
+                  </>
+                ) : (
+                  'Detection failed'
+                )}
+              </Text>
+            </div>
             <div className={styles.summaryItem}>
               <Text weight="semibold">AI Providers</Text>
               <Text size={300}>
                 {configStatus.details.configuredProviders.length > 0
                   ? configStatus.details.configuredProviders.join(', ')
-                  : 'None'}
+                  : 'None configured'}
               </Text>
             </div>
             <div className={styles.summaryItem}>
               <Text weight="semibold">FFmpeg</Text>
               <Text size={300}>
                 {configStatus.details.ffmpegVersion
-                  ? `Version ${configStatus.details.ffmpegVersion}`
+                  ? `v${configStatus.details.ffmpegVersion}`
                   : 'Not detected'}
               </Text>
             </div>
-            <div className={styles.summaryItem}>
-              <Text weight="semibold">GPU</Text>
-              <Text size={300}>
-                {configStatus.details.gpuAvailable ? 'Available' : 'Not available'}
-              </Text>
-            </div>
-            <div className={styles.summaryItem}>
-              <Text weight="semibold">Disk Space</Text>
-              <Text size={300}>
-                {configStatus.details.diskSpaceAvailable
-                  ? `${configStatus.details.diskSpaceAvailable.toFixed(1)} GB available`
-                  : 'Unknown'}
-              </Text>
-            </div>
+            {capabilities?.gpu && (
+              <div className={styles.summaryItem}>
+                <Text weight="semibold">GPU</Text>
+                <Text size={300}>
+                  {capabilities.gpu.model} ({capabilities.gpu.vramGB}GB)
+                  {capabilities.enableNVENC && ' • NVENC'}
+                </Text>
+              </div>
+            )}
+            {configStatus.details.diskSpaceAvailable && (
+              <div className={styles.summaryItem}>
+                <Text weight="semibold">Disk Space</Text>
+                <Text size={300}>
+                  {configStatus.details.diskSpaceAvailable.toFixed(1)} GB available
+                </Text>
+              </div>
+            )}
           </div>
         </Card>
       )}
-
-      <div className={styles.grid}>
-        <Card className={styles.card}>
-          <CardHeader
-            header={<Title2>System Status</Title2>}
-            description={
-              loading ? (
-                <Spinner size="small" label="Checking..." />
-              ) : health ? (
-                <Text>
-                  API is {health.status}
-                  <Badge appearance="filled" color="success" className={styles.statusBadge}>
-                    Online
-                  </Badge>
-                </Text>
-              ) : (
-                <Text>
-                  API unavailable
-                  <Badge appearance="filled" color="danger" className={styles.statusBadge}>
-                    Offline
-                  </Badge>
-                </Text>
-              )
-            }
-          />
-        </Card>
-
-        <Card className={styles.card}>
-          <CardHeader
-            header={<Title2>Hardware</Title2>}
-            description={
-              loading ? (
-                <Spinner size="small" label="Detecting..." />
-              ) : capabilities ? (
-                <div className={styles.cardContent}>
-                  <Text>Tier: {capabilities.tier}</Text>
-                  <Text>CPU: {capabilities.cpu.threads} threads</Text>
-                  <Text>RAM: {capabilities.ram.gb} GB</Text>
-                  {capabilities.gpu && (
-                    <Text>
-                      GPU: {capabilities.gpu.model} ({capabilities.gpu.vramGB} GB)
-                    </Text>
-                  )}
-                </div>
-              ) : (
-                <Text>Hardware detection failed</Text>
-              )
-            }
-          />
-        </Card>
-
-        <Card className={styles.card}>
-          <CardHeader
-            header={<Title2>Features Available</Title2>}
-            description={
-              loading ? (
-                <Spinner size="small" />
-              ) : capabilities ? (
-                <div className={styles.cardContent}>
-                  <Text>NVENC: {capabilities.enableNVENC ? '✓ Yes' : '✗ No'}</Text>
-                  <Text>Stable Diffusion: {capabilities.enableSD ? '✓ Yes' : '✗ No'}</Text>
-                  <Text>Offline Mode: {capabilities.offlineOnly ? '✓ Active' : '✗ Inactive'}</Text>
-                </div>
-              ) : (
-                <Text>No capability data</Text>
-              )
-            }
-          />
-        </Card>
-      </div>
     </div>
   );
 }

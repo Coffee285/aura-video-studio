@@ -200,6 +200,26 @@ const providers: ProviderConfig[] = [
     category: 'llm',
   },
   {
+    id: 'ollama',
+    name: 'Ollama',
+    logo: '🦙',
+    description: 'Local LLM for offline script generation',
+    usedFor: 'Run AI models locally on your machine for script generation without API costs',
+    signupUrl: 'https://ollama.ai',
+    steps: [
+      'Download and install Ollama from ollama.ai',
+      'Run Ollama in the background',
+      'Pull a model (e.g., "ollama pull llama2")',
+      'No API key required - runs locally',
+    ],
+    pricingInfo: {
+      freeTier: 'Completely free - runs on your hardware',
+      costEstimate: 'Free (requires local compute resources)',
+    },
+    keyFormat: 'No API key needed for local Ollama',
+    category: 'llm',
+  },
+  {
     id: 'elevenlabs',
     name: 'ElevenLabs',
     logo: '🎙️',

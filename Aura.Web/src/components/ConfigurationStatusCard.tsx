@@ -1,6 +1,6 @@
 /**
  * Configuration Status Card
- * 
+ *
  * Displays a visual checklist of configuration requirements with status indicators
  */
 
@@ -26,14 +26,14 @@ import { configurationStatusService } from '../services/configurationStatusServi
 
 const useStyles = makeStyles({
   card: {
-    padding: tokens.spacingVerticalXL,
-    marginBottom: tokens.spacingVerticalL,
+    padding: tokens.spacingVerticalL,
+    marginBottom: tokens.spacingVerticalM,
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: tokens.spacingVerticalL,
+    marginBottom: tokens.spacingVerticalM,
   },
   title: {
     display: 'flex',
@@ -47,13 +47,13 @@ const useStyles = makeStyles({
   checklistContainer: {
     display: 'flex',
     flexDirection: 'column',
-    gap: tokens.spacingVerticalM,
+    gap: tokens.spacingVerticalS,
   },
   checkItem: {
     display: 'flex',
     alignItems: 'center',
     gap: tokens.spacingHorizontalM,
-    padding: tokens.spacingVerticalS,
+    padding: tokens.spacingVerticalXS,
     borderRadius: tokens.borderRadiusMedium,
     transition: 'background-color 0.2s ease',
     ':hover': {
@@ -202,9 +202,10 @@ export function ConfigurationStatusCard({
     {
       id: 'provider',
       label: 'Provider Configured',
-      detail: status.details.configuredProviders.length > 0
-        ? `Using: ${status.details.configuredProviders.join(', ')}`
-        : 'No AI provider configured',
+      detail:
+        status.details.configuredProviders.length > 0
+          ? `Using: ${status.details.configuredProviders.join(', ')}`
+          : 'No AI provider configured',
       status: status.checks.providerConfigured ? 'success' : 'error',
     },
     {
@@ -213,7 +214,11 @@ export function ConfigurationStatusCard({
       detail: status.checks.providerValidated
         ? 'All configured providers tested successfully'
         : 'API keys not validated',
-      status: status.checks.apiKeysValid ? 'success' : status.checks.providerConfigured ? 'warning' : 'error',
+      status: status.checks.apiKeysValid
+        ? 'success'
+        : status.checks.providerConfigured
+          ? 'warning'
+          : 'error',
     },
     {
       id: 'workspace',
@@ -236,7 +241,9 @@ export function ConfigurationStatusCard({
   const getIcon = (itemStatus: 'success' | 'error' | 'warning') => {
     switch (itemStatus) {
       case 'success':
-        return <CheckmarkCircle24Filled className={`${styles.checkIcon} ${styles.checkIconSuccess}`} />;
+        return (
+          <CheckmarkCircle24Filled className={`${styles.checkIcon} ${styles.checkIconSuccess}`} />
+        );
       case 'error':
         return <DismissCircle24Filled className={`${styles.checkIcon} ${styles.checkIconError}`} />;
       case 'warning':
@@ -266,18 +273,6 @@ export function ConfigurationStatusCard({
             </Button>
           )}
         </div>
-      </div>
-
-      <div
-        className={`${styles.statusBanner} ${
-          status.isConfigured ? styles.statusBannerReady : styles.statusBannerNotReady
-        }`}
-      >
-        <Text weight="semibold" size={400}>
-          {status.isConfigured
-            ? '✅ System Ready - All requirements met'
-            : '⚠️ Configuration Required - Complete setup to use video generation'}
-        </Text>
       </div>
 
       <div className={styles.checklistContainer}>
