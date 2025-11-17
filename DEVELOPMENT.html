@@ -277,6 +277,45 @@ AURA_ELEVENLABS_API_KEY=  # For premium TTS voices
 AURA_OFFLINE_MODE=false
 AURA_ENABLE_ADVANCED_MODE=false
 </code></pre>
+<h3 id="desktop-data-paths">Desktop Data Paths</h3>
+<p>When running inside the Electron shell, the main process sets a trio of environment variables so the ASP.NET backend and React UI agree on where data lives:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Purpose</th>
+<th>Default (when unset)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AURA_DATA_PATH</code></td>
+<td>Root for user data (database, settings, projects, media)</td>
+<td><code>%LOCALAPPDATA%\Aura</code> on Windows, <code>~/.local/share/Aura</code> on Linux/macOS</td>
+</tr>
+<tr>
+<td><code>AURA_LOGS_PATH</code></td>
+<td>Directory for rolling log files</td>
+<td><code>&lt;AURA_DATA_PATH&gt;\logs</code></td>
+</tr>
+<tr>
+<td><code>AURA_TEMP_PATH</code></td>
+<td>Scratch space for renders/SSE/temp files</td>
+<td><code>&lt;AURA_DATA_PATH&gt;\Temp</code></td>
+</tr>
+</tbody>
+</table>
+<p>Under <code>AURA_DATA_PATH</code> the backend now creates a stable structure:</p>
+<pre><code>&lt;AURA_DATA_PATH&gt;/
+├── AuraData/           # settings.json, provider paths, portable metadata
+├── MediaLibrary/       # uploads, thumbnails, chunked uploads
+├── Workspace/          # enhanced workspace (projects, exports, cache, previews)
+├── Temp/               # transient render + SSE artifacts (also synced to AURA_TEMP_PATH)
+├── jobs/               # telemetry JSON artifacts
+├── proxy/              # generated proxy media
+└── logs/               # Serilog rolling logs (mirrors AURA_LOGS_PATH)
+</code></pre>
+<p>You can override any of these by exporting the environment variables above before launching the backend (handy for portable builds, dev sandboxes, or Windows paths with spaces). When unset, the previous portable behavior (storing data next to the executable) is preserved.</p>
 <p><strong>Note:</strong> Aura works without any API keys using free/local providers.</p>
 <h3 id="backend-url-contract">Backend URL Contract</h3>
 <p>The frontend, backend, and Electron shell now share a single source of truth for the API origin:</p>

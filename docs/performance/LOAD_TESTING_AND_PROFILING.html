@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Load Testing and Profiling Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Load Testing and Profiling Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/performance/LOAD_TESTING_AND_PROFILING.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="load-testing-and-profiling-guide">Load Testing and Profiling Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide provides a comprehensive plan for load testing and profiling Aura Video Studio to ensure it can handle large jobs without degradation, especially on Windows.</p>
+<h2 id="objectives">Objectives</h2>
+<ol>
+<li><strong>Identify Performance Bottlenecks</strong>: Find hot spots in both .NET backend and Node/Electron processes</li>
+<li><strong>Memory Leak Detection</strong>: Ensure memory usage remains stable during long-running operations</li>
+<li><strong>Concurrent Job Handling</strong>: Verify the system can handle multiple video generation jobs</li>
+<li><strong>Windows-Specific Testing</strong>: Validate performance on Windows with various hardware configurations</li>
+<li><strong>Resource Usage Validation</strong>: Confirm CPU, GPU, and memory usage are within acceptable limits</li>
+</ol>
+<h2 id="load-testing-scenarios">Load Testing Scenarios</h2>
+<h3 id="scenario-1-sequential-video-generation">Scenario 1: Sequential Video Generation</h3>
+<p><strong>Objective</strong>: Test system stability when generating multiple videos one after another.</p>
+<p><strong>Test Plan</strong>:</p>
+<ol>
+<li>Generate 5 videos sequentially (each 1-2 minutes long)</li>
+<li>Monitor:
+<ul>
+<li>Memory usage after each video</li>
+<li>CPU utilization</li>
+<li>Disk I/O</li>
+<li>Backend process memory</li>
+<li>Electron process memory</li>
+</ul>
+</li>
+<li><strong>Success Criteria</strong>:
+<ul>
+<li>Memory growth &lt; 20% over 5 videos</li>
+<li>No memory leaks (memory returns to baseline after GC)</li>
+<li>CPU usage returns to idle between jobs</li>
+<li>No crashes or errors</li>
+</ul>
+</li>
+</ol>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-bash"># Use the API to generate videos sequentially
+for i in {1..5}; do
+  curl -X POST http://localhost:5000/api/jobs \
+    -H &quot;Content-Type: application/json&quot; \
+    -d '{&quot;projectId&quot;: &quot;test-project&quot;, &quot;duration&quot;: 120}'
+  # Wait for job to complete
+  sleep 60
+done
+</code></pre>
+<h3 id="scenario-2-concurrent-video-generation">Scenario 2: Concurrent Video Generation</h3>
+<p><strong>Objective</strong>: Test system behavior when multiple videos are generated simultaneously.</p>
+<p><strong>Test Plan</strong>:</p>
+<ol>
+<li>Start 3 video generation jobs concurrently</li>
+<li>Monitor:
+<ul>
+<li>Resource contention</li>
+<li>Job completion times</li>
+<li>Error rates</li>
+<li>Memory usage per job</li>
+</ul>
+</li>
+<li><strong>Success Criteria</strong>:
+<ul>
+<li>All jobs complete successfully</li>
+<li>No significant performance degradation</li>
+<li>Memory usage scales linearly (not exponentially)</li>
+<li>No deadlocks or race conditions</li>
+</ul>
+</li>
+</ol>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-bash"># Start 3 concurrent jobs
+for i in {1..3}; do
+  curl -X POST http://localhost:5000/api/jobs \
+    -H &quot;Content-Type: application/json&quot; \
+    -d &quot;{\&quot;projectId\&quot;: \&quot;test-project-$i\&quot;, \&quot;duration\&quot;: 120}&quot; &amp;
+done
+wait
+</code></pre>
+<h3 id="scenario-3-long-running-job">Scenario 3: Long-Running Job</h3>
+<p><strong>Objective</strong>: Test system stability during a single long-running job (10+ minutes).</p>
+<p><strong>Test Plan</strong>:</p>
+<ol>
+<li>Generate a single 10-minute video</li>
+<li>Monitor continuously:
+<ul>
+<li>Memory usage over time</li>
+<li>CPU/GPU utilization</li>
+<li>FFmpeg process health</li>
+<li>Backend responsiveness</li>
+</ul>
+</li>
+<li><strong>Success Criteria</strong>:
+<ul>
+<li>Memory usage remains stable (no continuous growth)</li>
+<li>No crashes or timeouts</li>
+<li>Backend remains responsive to health checks</li>
+<li>FFmpeg processes don't accumulate</li>
+</ul>
+</li>
+</ol>
+<p><strong>Implementation</strong>:</p>
+<pre><code class="lang-bash"># Generate a long video
+curl -X POST http://localhost:5000/api/jobs \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;projectId&quot;: &quot;long-test&quot;, &quot;duration&quot;: 600}'
+</code></pre>
+<h3 id="scenario-4-stress-test---maximum-concurrent-jobs">Scenario 4: Stress Test - Maximum Concurrent Jobs</h3>
+<p><strong>Objective</strong>: Find the maximum number of concurrent jobs the system can handle.</p>
+<p><strong>Test Plan</strong>:</p>
+<ol>
+<li>Gradually increase concurrent jobs (1, 2, 3, 4, 5...)</li>
+<li>Monitor system behavior at each level</li>
+<li>Identify the breaking point</li>
+<li><strong>Success Criteria</strong>:
+<ul>
+<li>System gracefully handles maximum load</li>
+<li>Clear error messages when limits are exceeded</li>
+<li>No data corruption</li>
+<li>System recovers after load decreases</li>
+</ul>
+</li>
+</ol>
+<h2 id="profiling-tools-and-setup">Profiling Tools and Setup</h2>
+<h3 id="net-backend-profiling">.NET Backend Profiling</h3>
+<h4 id="1-dotnet-counters-real-time-metrics">1. <strong>dotnet-counters</strong> (Real-time Metrics)</h4>
+<p><strong>Setup</strong>:</p>
+<pre><code class="lang-bash"># Install dotnet-counters
+dotnet tool install -g dotnet-counters
+
+# Monitor the backend process
+dotnet-counters monitor --process-id &lt;PID&gt; \
+  System.Runtime \
+  Microsoft.AspNetCore.Hosting
+</code></pre>
+<p><strong>Key Metrics to Monitor</strong>:</p>
+<ul>
+<li><code>gc-heap-size</code>: Managed memory usage</li>
+<li><code>gen-0-gc-count</code>: Generation 0 GC frequency</li>
+<li><code>gen-1-gc-count</code>: Generation 1 GC frequency</li>
+<li><code>gen-2-gc-count</code>: Generation 2 GC frequency (indicates memory pressure)</li>
+<li><code>exception-count</code>: Unhandled exceptions</li>
+<li><code>threadpool-thread-count</code>: Thread pool usage</li>
+<li><code>aspnet-requests-per-sec</code>: Request throughput</li>
+</ul>
+<p><strong>Example Session</strong>:</p>
+<pre><code class="lang-bash"># Find the backend process ID
+Get-Process -Name &quot;Aura.Api&quot; | Select-Object Id
+
+# Monitor for 5 minutes
+dotnet-counters collect --process-id &lt;PID&gt; \
+  --format csv \
+  --output performance.csv \
+  --duration 00:05:00
+</code></pre>
+<h4 id="2-dotnet-trace-event-tracing">2. <strong>dotnet-trace</strong> (Event Tracing)</h4>
+<p><strong>Setup</strong>:</p>
+<pre><code class="lang-bash"># Install dotnet-trace
+dotnet tool install -g dotnet-trace
+
+# Collect trace during load test
+dotnet-trace collect --process-id &lt;PID&gt; \
+  --format speedscope \
+  --output trace.nettrace
+</code></pre>
+<p><strong>Analyze with PerfView or Visual Studio</strong>:</p>
+<ul>
+<li>Open <code>trace.nettrace</code> in Visual Studio</li>
+<li>View CPU sampling</li>
+<li>Identify hot methods</li>
+<li>Check allocation rates</li>
+</ul>
+<h4 id="3-dotnet-dump-memory-analysis">3. <strong>dotnet-dump</strong> (Memory Analysis)</h4>
+<p><strong>Setup</strong>:</p>
+<pre><code class="lang-bash"># Install dotnet-dump
+dotnet tool install -g dotnet-dump
+
+# Capture heap dump during high memory usage
+dotnet-dump collect --process-id &lt;PID&gt; \
+  --output memory.dump
+</code></pre>
+<p><strong>Analyze with dotnet-dump</strong>:</p>
+<pre><code class="lang-bash"># Analyze the dump
+dotnet-dump analyze memory.dump
+
+# Commands:
+&gt; dumpheap -stat          # Show heap statistics
+&gt; dumpheap -mt &lt;MethodTable&gt;  # Show objects of specific type
+&gt; gcroot &lt;object-address&gt;     # Find what's keeping object alive
+</code></pre>
+<h4 id="4-application-insights--performance-profiler">4. <strong>Application Insights / Performance Profiler</strong></h4>
+<p>If Application Insights is configured:</p>
+<ul>
+<li>View live metrics dashboard</li>
+<li>Analyze performance traces</li>
+<li>Check dependency calls</li>
+<li>Review exception telemetry</li>
+</ul>
+<h3 id="electronnode-profiling">Electron/Node Profiling</h3>
+<h4 id="1-chrome-devtools-performance-profiler">1. <strong>Chrome DevTools Performance Profiler</strong></h4>
+<p><strong>Setup</strong>:</p>
+<ol>
+<li><p>Enable remote debugging in Electron:</p>
+<pre><code class="lang-javascript">// In main.js
+app.commandLine.appendSwitch('remote-debugging-port', '9222');
+</code></pre>
+</li>
+<li><p>Open Chrome and navigate to <code>chrome://inspect</code></p>
+</li>
+<li><p>Click &quot;inspect&quot; on the Electron process</p>
+</li>
+<li><p>Use Performance tab to record CPU profile</p>
+</li>
+</ol>
+<p><strong>Key Metrics</strong>:</p>
+<ul>
+<li>Scripting time</li>
+<li>Rendering time</li>
+<li>Painting time</li>
+<li>Memory timeline</li>
+</ul>
+<h4 id="2-nodejs-built-in-profiler">2. <strong>Node.js Built-in Profiler</strong></h4>
+<p><strong>Setup</strong>:</p>
+<pre><code class="lang-bash"># Start Electron with profiling
+node --prof electron.js
+
+# After test, generate report
+node --prof-process isolate-*.log &gt; profile.txt
+</code></pre>
+<h4 id="3-clinicjs-comprehensive-node-profiling">3. <strong>clinic.js</strong> (Comprehensive Node Profiling)</h4>
+<p><strong>Setup</strong>:</p>
+<pre><code class="lang-bash"># Install clinic.js
+npm install -g clinic
+
+# Profile Electron process
+clinic doctor -- node electron.js
+
+# Or use flame profiler
+clinic flame -- node electron.js
+</code></pre>
+<h4 id="4-memory-profiling-with-chrome-devtools">4. <strong>Memory Profiling with Chrome DevTools</strong></h4>
+<p><strong>Setup</strong>:</p>
+<ol>
+<li>Open DevTools in Electron</li>
+<li>Go to Memory tab</li>
+<li>Take heap snapshots before and after operations</li>
+<li>Compare snapshots to find memory leaks</li>
+</ol>
+<p><strong>Analysis</strong>:</p>
+<ul>
+<li>Look for objects that grow between snapshots</li>
+<li>Check for detached DOM nodes</li>
+<li>Identify event listeners that aren't cleaned up</li>
+</ul>
+<h3 id="windows-specific-profiling">Windows-Specific Profiling</h3>
+<h4 id="1-windows-performance-recorder-wpr">1. <strong>Windows Performance Recorder (WPR)</strong></h4>
+<p><strong>Setup</strong>:</p>
+<pre><code class="lang-powershell"># Start recording
+wpr -start GeneralProfile -file trace.etl
+
+# Run load test
+# ... perform operations ...
+
+# Stop recording
+wpr -stop trace.etl
+</code></pre>
+<p><strong>Analyze with Windows Performance Analyzer (WPA)</strong>:</p>
+<ul>
+<li>CPU usage by process/thread</li>
+<li>Memory allocations</li>
+<li>Disk I/O</li>
+<li>Network activity</li>
+</ul>
+<h4 id="2-process-monitor-procmon">2. <strong>Process Monitor (ProcMon)</strong></h4>
+<p><strong>Setup</strong>:</p>
+<ol>
+<li>Download Process Monitor from Microsoft</li>
+<li>Filter for <code>Aura.Api.exe</code> and <code>electron.exe</code></li>
+<li>Monitor:
+<ul>
+<li>File system operations</li>
+<li>Registry access</li>
+<li>Network activity</li>
+<li>Process/thread activity</li>
+</ul>
+</li>
+</ol>
+<h4 id="3-resource-monitor-resmonexe">3. <strong>Resource Monitor (resmon.exe)</strong></h4>
+<p><strong>Setup</strong>:</p>
+<ol>
+<li>Open Resource Monitor</li>
+<li>Select Aura processes</li>
+<li>Monitor:
+<ul>
+<li>CPU usage per thread</li>
+<li>Memory usage (working set, private bytes)</li>
+<li>Disk I/O (read/write bytes per second)</li>
+<li>Network activity</li>
+</ul>
+</li>
+</ol>
+<h2 id="memory-leak-detection">Memory Leak Detection</h2>
+<h3 id="backend-memory-leak-detection">Backend Memory Leak Detection</h3>
+<p><strong>Signs of Memory Leaks</strong>:</p>
+<ol>
+<li>Continuous growth in <code>gc-heap-size</code> even after operations complete</li>
+<li>Increasing frequency of Gen-2 GCs</li>
+<li>Objects not being collected after operations</li>
+</ol>
+<p><strong>Detection Steps</strong>:</p>
+<ol>
+<li><strong>Baseline</strong>: Take heap dump before load test</li>
+<li><strong>During Test</strong>: Monitor <code>gc-heap-size</code> continuously</li>
+<li><strong>After Test</strong>: Take another heap dump</li>
+<li><strong>Compare</strong>: Use dotnet-dump or PerfView to compare dumps</li>
+</ol>
+<p><strong>Common Leak Sources</strong>:</p>
+<ul>
+<li>Event handlers not unsubscribed</li>
+<li>Static collections growing</li>
+<li>Cached objects never evicted</li>
+<li>DbContext instances not disposed</li>
+<li>HttpClient instances not reused</li>
+</ul>
+<h3 id="frontend-memory-leak-detection">Frontend Memory Leak Detection</h3>
+<p><strong>Signs of Memory Leak</strong>:</p>
+<ol>
+<li>Memory usage grows continuously during normal operation</li>
+<li>Objects persist in heap snapshots after component unmount</li>
+<li>Event listeners accumulate</li>
+</ol>
+<p><strong>Detection Steps</strong>:</p>
+<ol>
+<li>Take heap snapshot before operation</li>
+<li>Perform operation multiple times</li>
+<li>Take heap snapshot after operations</li>
+<li>Compare snapshots in Chrome DevTools</li>
+</ol>
+<p><strong>Common Leak Sources</strong>:</p>
+<ul>
+<li>Event listeners not removed</li>
+<li>Timers/intervals not cleared</li>
+<li>SSE connections not closed</li>
+<li>Subscriptions not unsubscribed</li>
+<li>DOM references held after unmount</li>
+</ul>
+<h2 id="performance-benchmarks">Performance Benchmarks</h2>
+<h3 id="target-metrics">Target Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>Measurement Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Memory Growth (1 hour)</td>
+<td>&lt; 20%</td>
+<td>dotnet-counters / Chrome DevTools</td>
+</tr>
+<tr>
+<td>Gen-2 GC Frequency</td>
+<td>&lt; 1 per minute</td>
+<td>dotnet-counters</td>
+</tr>
+<tr>
+<td>P95 Request Latency</td>
+<td>&lt; 2s</td>
+<td>Application logs / APM</td>
+</tr>
+<tr>
+<td>Concurrent Jobs</td>
+<td>≥ 3</td>
+<td>Load test</td>
+</tr>
+<tr>
+<td>FFmpeg Process Cleanup</td>
+<td>100%</td>
+<td>Process monitoring</td>
+</tr>
+<tr>
+<td>Electron Memory (idle)</td>
+<td>&lt; 500MB</td>
+<td>Task Manager / Resource Monitor</td>
+</tr>
+<tr>
+<td>Backend Memory (idle)</td>
+<td>&lt; 200MB</td>
+<td>Task Manager / Resource Monitor</td>
+</tr>
+</tbody>
+</table>
+<h2 id="load-testing-scripts">Load Testing Scripts</h2>
+<h3 id="powershell-load-test-script">PowerShell Load Test Script</h3>
+<pre><code class="lang-powershell"># load-test.ps1
+param(
+    [int]$ConcurrentJobs = 3,
+    [int]$JobDuration = 120,
+    [string]$ApiUrl = &quot;http://localhost:5000&quot;
+)
+
+$jobs = @()
+
+Write-Host &quot;Starting $ConcurrentJobs concurrent jobs...&quot;
+
+for ($i = 1; $i -le $ConcurrentJobs; $i++) {
+    $job = Start-Job -ScriptBlock {
+        param($url, $duration, $jobId)
+        
+        $body = @{
+            projectId = &quot;load-test-$jobId&quot;
+            duration = $duration
+        } | ConvertTo-Json
+        
+        try {
+            $response = Invoke-RestMethod -Uri &quot;$url/api/jobs&quot; `
+                -Method POST `
+                -ContentType &quot;application/json&quot; `
+                -Body $body
+            
+            Write-Output &quot;Job $jobId started: $($response.jobId)&quot;
+            return $response.jobId
+        }
+        catch {
+            Write-Error &quot;Job $jobId failed: $_&quot;
+            return $null
+        }
+    } -ArgumentList $ApiUrl, $JobDuration, $i
+    
+    $jobs += $job
+}
+
+Write-Host &quot;Waiting for jobs to complete...&quot;
+$results = $jobs | Wait-Job | Receive-Job
+
+Write-Host &quot;Results:&quot;
+$results | ForEach-Object { Write-Host &quot;  $_&quot; }
+</code></pre>
+<h3 id="python-load-test-script">Python Load Test Script</h3>
+<pre><code class="lang-python"># load_test.py
+import requests
+import concurrent.futures
+import time
+import sys
+
+API_URL = &quot;http://localhost:5000&quot;
+CONCURRENT_JOBS = 3
+JOB_DURATION = 120
+
+def create_job(job_id):
+    &quot;&quot;&quot;Create a video generation job&quot;&quot;&quot;
+    url = f&quot;{API_URL}/api/jobs&quot;
+    payload = {
+        &quot;projectId&quot;: f&quot;load-test-{job_id}&quot;,
+        &quot;duration&quot;: JOB_DURATION
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=30)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f&quot;Job {job_id} failed: {e}&quot;)
+        return None
+
+def main():
+    print(f&quot;Starting {CONCURRENT_JOBS} concurrent jobs...&quot;)
+    start_time = time.time()
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CONCURRENT_JOBS) as executor:
+        futures = {
+            executor.submit(create_job, i): i 
+            for i in range(1, CONCURRENT_JOBS + 1)
+        }
+        
+        results = []
+        for future in concurrent.futures.as_completed(futures):
+            job_id = futures[future]
+            try:
+                result = future.result()
+                results.append(result)
+                print(f&quot;Job {job_id} completed: {result}&quot;)
+            except Exception as e:
+                print(f&quot;Job {job_id} exception: {e}&quot;)
+    
+    elapsed = time.time() - start_time
+    print(f&quot;\nCompleted {len(results)} jobs in {elapsed:.2f} seconds&quot;)
+    print(f&quot;Average time per job: {elapsed / CONCURRENT_JOBS:.2f} seconds&quot;)
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</code></pre>
+<h2 id="continuous-monitoring">Continuous Monitoring</h2>
+<h3 id="during-development">During Development</h3>
+<ol>
+<li><p><strong>Enable Performance Monitoring</strong>:</p>
+<ul>
+<li>Backend: Already enabled via <code>QueryPerformanceMiddleware</code></li>
+<li>Frontend: Enable via <code>localStorage.setItem('enablePerformanceMonitoring', 'true')</code></li>
+</ul>
+</li>
+<li><p><strong>Monitor Logs</strong>:</p>
+<ul>
+<li>Backend: <code>AURA_LOGS_PATH/performance-*.log</code></li>
+<li>Electron: <code>%APPDATA%/Aura Video Studio/logs/</code></li>
+</ul>
+</li>
+<li><p><strong>Use Performance Dashboard</strong>:</p>
+<ul>
+<li>Frontend: Navigate to <code>/performance</code> (if available)</li>
+<li>Backend: <code>/api/performance/metrics</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="in-production">In Production</h3>
+<ol>
+<li><p><strong>Application Insights</strong> (if configured):</p>
+<ul>
+<li>View live metrics</li>
+<li>Set up alerts for performance degradation</li>
+<li>Analyze trends over time</li>
+</ul>
+</li>
+<li><p><strong>Log Aggregation</strong>:</p>
+<ul>
+<li>Collect logs from all instances</li>
+<li>Analyze error rates</li>
+<li>Monitor response times</li>
+</ul>
+</li>
+<li><p><strong>Health Checks</strong>:</p>
+<ul>
+<li><code>/health</code> endpoint for overall health</li>
+<li><code>/health/ready</code> for readiness</li>
+<li>Monitor these endpoints</li>
+</ul>
+</li>
+</ol>
+<h2 id="troubleshooting-performance-issues">Troubleshooting Performance Issues</h2>
+<h3 id="high-memory-usage">High Memory Usage</h3>
+<ol>
+<li><p><strong>Check for Leaks</strong>:</p>
+<ul>
+<li>Take heap dumps before/after operations</li>
+<li>Compare object counts</li>
+<li>Look for growing collections</li>
+</ul>
+</li>
+<li><p><strong>Review GC Behavior</strong>:</p>
+<ul>
+<li>Monitor Gen-2 GC frequency</li>
+<li>Check if GC is keeping up with allocations</li>
+<li>Consider GC settings tuning</li>
+</ul>
+</li>
+<li><p><strong>Check Resource Disposal</strong>:</p>
+<ul>
+<li>Ensure <code>IDisposable</code> is implemented correctly</li>
+<li>Verify <code>using</code> statements or <code>Dispose()</code> calls</li>
+<li>Check for event handler leaks</li>
+</ul>
+</li>
+</ol>
+<h3 id="slow-performance">Slow Performance</h3>
+<ol>
+<li><p><strong>Profile CPU Usage</strong>:</p>
+<ul>
+<li>Use dotnet-trace or Chrome DevTools</li>
+<li>Identify hot methods</li>
+<li>Optimize frequently called code paths</li>
+</ul>
+</li>
+<li><p><strong>Check Database Queries</strong>:</p>
+<ul>
+<li>Review query performance logs</li>
+<li>Check for N+1 queries</li>
+<li>Verify indexes are used</li>
+</ul>
+</li>
+<li><p><strong>Review Network Calls</strong>:</p>
+<ul>
+<li>Check for unnecessary API calls</li>
+<li>Verify caching is working</li>
+<li>Look for slow external dependencies</li>
+</ul>
+</li>
+</ol>
+<h3 id="high-cpu-usage">High CPU Usage</h3>
+<ol>
+<li><p><strong>Identify CPU-Intensive Operations</strong>:</p>
+<ul>
+<li>Profile with dotnet-trace</li>
+<li>Check for tight loops</li>
+<li>Look for blocking operations</li>
+</ul>
+</li>
+<li><p><strong>Optimize Algorithms</strong>:</p>
+<ul>
+<li>Use more efficient data structures</li>
+<li>Parallelize where possible</li>
+<li>Cache expensive computations</li>
+</ul>
+</li>
+<li><p><strong>Review Threading</strong>:</p>
+<ul>
+<li>Check thread pool usage</li>
+<li>Look for thread contention</li>
+<li>Verify async/await usage</li>
+</ul>
+</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Run Load Tests Regularly</strong>: After major changes, run load tests to catch regressions</li>
+<li><strong>Profile Before Optimizing</strong>: Don't guess - profile first to find real bottlenecks</li>
+<li><strong>Monitor in Production</strong>: Set up continuous monitoring to catch issues early</li>
+<li><strong>Document Baselines</strong>: Keep records of baseline performance for comparison</li>
+<li><strong>Automate Testing</strong>: Integrate load tests into CI/CD pipeline where possible</li>
+</ol>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/dotnet/core/diagnostics/">.NET Performance Tools</a></li>
+<li><a href="https://developer.chrome.com/docs/devtools/performance/">Chrome DevTools Performance</a></li>
+<li><a href="https://docs.microsoft.com/en-us/windows-hardware/test/wpt/">Windows Performance Toolkit</a></li>
+<li><a href="https://nodejs.org/en/docs/guides/simple-profiling/">Node.js Profiling Guide</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/performance/LOAD_TESTING_AND_PROFILING.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
