@@ -88,11 +88,12 @@
 <h2 id="overview">Overview</h2>
 <p>Aura Video Studio is an <strong>Electron desktop application</strong> that bundles:</p>
 <ul>
-<li><strong>React frontend</strong> (Aura.Web) - UI components built with React + TypeScript + Vite</li>
-<li><strong>ASP.NET Core backend</strong> (Aura.Api) - REST API with Server-Sent Events</li>
+<li><strong>React frontend</strong> (Aura.Web) - UI components built with React + TypeScript + Vite, <strong>always bundled into Electron</strong></li>
+<li><strong>ASP.NET Core backend</strong> (Aura.Api) - REST API with Server-Sent Events, embedded as child process</li>
 <li><strong>Electron shell</strong> (Aura.Desktop) - Native desktop wrapper, IPC, window management</li>
 </ul>
-<p>This guide focuses on developing the backend and frontend <strong>components</strong> in isolation for rapid iteration. For full desktop app development (Electron main process, IPC, packaging), see <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a>.</p>
+<p><strong>This guide focuses on developing the backend and frontend components in isolation for rapid iteration.</strong> For full desktop app development (Electron main process, IPC, packaging), see <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a>.</p>
+<p><strong>Important:</strong> Aura.Web is the React frontend that is <strong>always bundled into Aura.Desktop</strong> (the Electron shell). Running Aura.Web standalone in the browser is useful for faster frontend iteration, <strong>but it is not the deployment target</strong>. The production runtime is the Electron desktop application.</p>
 <h2 id="desktop-app-vs-component-development">Desktop App vs Component Development</h2>
 <h3 id="desktop-app-development-production-like">Desktop App Development (Production-like)</h3>
 <p><strong>When to use:</strong> Final testing, Electron-specific features, IPC development, packaging</p>
@@ -103,6 +104,14 @@
 <li>Native desktop features (menus, tray, dialogs)</li>
 <li>Building installers and distribution</li>
 </ul>
+<p><strong>Workflow:</strong></p>
+<pre><code class="lang-bash"># Build frontend
+cd Aura.Web &amp;&amp; npm run build:prod
+
+# Run Electron app
+cd ../Aura.Desktop &amp;&amp; npm run dev
+</code></pre>
+<p><strong>This is the production-like runtime.</strong> Use this for final testing to ensure all Electron IPC, tray, window management, protocol handling, and backend lifecycle behavior work correctly.</p>
 <h3 id="component-development-rapid-iteration">Component Development (Rapid Iteration)</h3>
 <p><strong>When to use:</strong> Backend API development, frontend UI development, quick testing</p>
 <p><strong>This guide covers:</strong></p>
@@ -111,6 +120,21 @@
 <li>Running frontend in browser with Vite hot-reload</li>
 <li>API endpoint development</li>
 <li>UI component development</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<pre><code class="lang-bash"># Terminal 1: Backend
+cd Aura.Api &amp;&amp; dotnet run
+
+# Terminal 2: Frontend
+cd Aura.Web &amp;&amp; npm run dev
+# Open browser to http://localhost:5173
+</code></pre>
+<p><strong>⚠️ Important Limitations:</strong></p>
+<ul>
+<li>This does <strong>not</strong> exercise Electron IPC, tray, native dialogs, window management, or protocol handling</li>
+<li>This does <strong>not</strong> test the embedded backend lifecycle (spawned by Electron main process)</li>
+<li>This is a <strong>development aid only</strong>, not the deployment target</li>
+<li>Use this for rapid UI/API iteration, but <strong>always perform final testing in Electron</strong></li>
 </ul>
 <h2 id="architecture">Architecture</h2>
 <h3 id="high-level-overview-electron-desktop-app">High-Level Overview (Electron Desktop App)</h3>
@@ -150,12 +174,12 @@
 </ul>
 <h3 id="project-structure">Project Structure</h3>
 <pre><code>Aura/
-├── Aura.Desktop/        # Electron desktop application
+├── Aura.Desktop/        # Electron desktop application (primary runtime, production target)
 │   ├── electron/        # Main process, IPC handlers, window management
 │   ├── assets/          # Icons, splash screen
 │   ├── build/           # Build configuration (NSIS, DMG)
 │   └── package.json     # Electron dependencies and build scripts
-├── Aura.Api/            # REST API + SSE endpoints
+├── Aura.Api/            # REST API + SSE endpoints (embedded as child process)
 │   ├── Controllers/     # API controllers
 │   ├── HealthChecks/    # Health check implementations
 │   ├── Data/            # Database context and seed data
@@ -171,7 +195,7 @@
 │   ├── Tts/             # Text-to-speech providers
 │   ├── Images/          # Image providers
 │   └── Video/           # Video processing
-├── Aura.Web/            # React frontend (bundled into Electron)
+├── Aura.Web/            # React frontend (always bundled into Aura.Desktop)
 │   ├── src/
 │   │   ├── api/         # API client
 │   │   ├── components/  # React components
@@ -182,6 +206,7 @@
 ├── Aura.Tests/          # Unit and integration tests
 └── Aura.E2E/            # End-to-end tests (Playwright)
 </code></pre>
+<p><strong>Note:</strong> <strong>Aura.Web is the React frontend that is always bundled into Aura.Desktop (Electron shell).</strong> Running Aura.Web standalone in the browser is useful for faster frontend iteration, but <strong>it is not the deployment target</strong>. The production runtime is the Electron desktop application, where the frontend is loaded from bundled files and communicates with the embedded backend.</p>
 <h2 id="development-environment">Development Environment</h2>
 <h3 id="prerequisites">Prerequisites</h3>
 <table>
@@ -352,7 +377,7 @@ npm run dev
 <p>The web UI surfaces these details inside Settings → Providers, and <code>settingsService.testApiKey</code> automatically saves the key, triggers a ping, and displays the HTTP status, latency, and correlation ID for debugging.</p>
 <h2 id="component-development-workflows">Component Development Workflows</h2>
 <h3 id="quick-start-component-development-mode">Quick Start: Component Development Mode</h3>
-<p><strong>For rapid backend/frontend iteration without Electron:</strong></p>
+<p><strong>For rapid backend/frontend iteration without Electron (development aid only):</strong></p>
 <pre><code class="lang-bash"># Terminal 1: Start backend API
 cd Aura.Api
 dotnet run
@@ -374,12 +399,13 @@ npm run dev
 </ul>
 <p><strong>Limitations:</strong></p>
 <ul>
-<li>❌ No Electron-specific features (IPC, native dialogs, menus)</li>
+<li>❌ No Electron-specific features (IPC, native dialogs, menus, tray, protocol handling)</li>
 <li>❌ Not testing final desktop app behavior</li>
 <li>❌ Browser environment differs from Electron renderer</li>
+<li>❌ Not testing embedded backend lifecycle (spawned by Electron main process)</li>
 </ul>
 <p><strong>When to use:</strong> Backend API development, frontend UI components, quick prototyping</p>
-<p><strong>When to switch to Electron:</strong> Testing IPC, native features, final integration testing</p>
+<p><strong>When to switch to Electron:</strong> Testing IPC, native features, backend lifecycle, final integration testing</p>
 <h3 id="desktop-app-development-mode">Desktop App Development Mode</h3>
 <p><strong>For full Electron app development (recommended for final testing):</strong></p>
 <p>See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for complete instructions.</p>
@@ -391,6 +417,7 @@ npm run build:prod
 cd ../Aura.Desktop
 npm run dev
 </code></pre>
+<p><strong>This is the production-like runtime.</strong> Always test in Electron before committing to ensure all features work correctly.</p>
 <h3 id="typical-development-session">Typical Development Session</h3>
 <pre><code class="lang-bash"># Morning: Start component development mode
 cd Aura.Api &amp;&amp; dotnet watch run &amp;  # Backend with auto-reload

@@ -87,11 +87,11 @@
 </ul>
 <hr>
 <h2 id="architecture-overview">Architecture Overview</h2>
-<p>The Aura Video Studio desktop app uses <strong>Electron</strong> to wrap the React frontend and ASP.NET Core backend into a native desktop application.</p>
+<p>The Aura Video Studio desktop app uses <strong>Electron</strong> to wrap the React frontend and ASP.NET Core backend into a native desktop application. <strong>This is the authoritative, production runtime</strong> — the canonical way users interact with Aura Video Studio.</p>
 <h3 id="components">Components</h3>
 <pre><code>Aura.Desktop/
 ├── electron/
-│   ├── main.js            # Main process entry point
+│   ├── main.js            # Main process entry point (modular main process)
 │   ├── preload.js         # Preload script (sandboxed bridge)
 │   ├── window-manager.js  # Window lifecycle management
 │   ├── backend-service.js # Backend process management
@@ -112,6 +112,17 @@
     ├── frontend/          # Built React app
     └── ffmpeg/            # FFmpeg binaries (optional)
 </code></pre>
+<p><strong>For complete Electron main process architecture, IPC handlers, window manager, backend service, tray, menu, and protocol handler details, see:</strong><br>
+<a href="electron/README.md">Aura.Desktop/electron/README.md</a></p>
+<h3 id="do-not-use-legacy-entry-files">Do Not Use Legacy Entry Files</h3>
+<p><strong>⚠️ Important:</strong><br>
+The file <code>Aura.Desktop/preload.js</code> at the root is a <strong>legacy artifact</strong> that simply redirects to <code>electron/preload.js</code>. It exists for backwards compatibility only. All new configurations and development should reference the modular entry points in the <code>electron/</code> directory:</p>
+<ul>
+<li><strong>Main entry:</strong> <code>electron/main.js</code></li>
+<li><strong>Preload script:</strong> <code>electron/preload.js</code></li>
+<li><strong>IPC handlers:</strong> <code>electron/ipc-handlers/</code></li>
+</ul>
+<p>Do not wire <code>electron.js</code> (if present) or root <code>preload.js</code> into new Electron configurations. Always use the modular structure under <code>Aura.Desktop/electron/</code>.</p>
 <h3 id="process-model">Process Model</h3>
 <blockquote>
 <p><strong>📘 Complete Documentation</strong>: See <a href="PROCESS_MODEL.html">PROCESS_MODEL.md</a> for comprehensive process architecture, shutdown behavior, and troubleshooting guide.</p>

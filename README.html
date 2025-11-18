@@ -118,17 +118,17 @@
 </ul>
 </li>
 </ul>
-<h2 id="architecture">Architecture</h2>
-<p>Aura Video Studio is built as an <strong>Electron desktop application</strong> with an embedded backend:</p>
+<h2 id="architecture-at-a-glance">Architecture at a Glance</h2>
+<p>Aura Video Studio is built as an <strong>Electron desktop application</strong> — this is the primary, user-facing runtime:</p>
 <ul>
-<li><strong>Aura.Desktop</strong> — Electron app (main process, window management, IPC, bundling)
+<li><strong>Aura.Desktop</strong> — Electron shell (primary runtime and distribution target)
 <ul>
-<li><strong>Main Process</strong>: Orchestrates backend, manages windows, handles IPC</li>
-<li><strong>Renderer Process</strong>: React frontend loaded in Electron window</li>
-<li><strong>Preload Script</strong>: Secure bridge for frontend-Electron communication</li>
+<li><strong>Main Process</strong>: Entry point at <code>electron/main.js</code>; orchestrates backend, manages windows, handles IPC, tray, menu, and protocol handling</li>
+<li><strong>Renderer Process</strong>: React frontend loaded from bundled files into Electron window</li>
+<li><strong>Preload Script</strong>: Secure bridge for frontend-Electron communication via IPC</li>
 </ul>
 </li>
-<li><strong>Aura.Web</strong> — React + TypeScript + Vite frontend (bundled into Electron)</li>
+<li><strong>Aura.Web</strong> — React + TypeScript + Vite frontend (always bundled into Electron; not deployed as standalone SaaS SPA)</li>
 <li><strong>Aura.Api</strong> — ASP.NET Core backend (embedded as child process, REST + SSE)</li>
 <li><strong>Aura.Core</strong> — Domain logic, orchestration, models, validation, rendering</li>
 <li><strong>Aura.Providers</strong> — LLM, TTS, images, video provider integrations</li>
@@ -138,6 +138,7 @@
 <pre><code>┌──────────────────────────────────────┐
 │     Electron Main Process            │
 │  (Node.js, window mgmt, lifecycle)   │
+│  Main entry: electron/main.js        │
 └────┬─────────────────────┬───────────┘
      │                     │
      │ spawns              │ IPC
@@ -148,6 +149,7 @@
 │  (child)     │───►│  (React UI)     │
 └──────────────┘    └─────────────────┘
 </code></pre>
+<p><strong>Migration Status:</strong> The migration from pure web deployment to Electron desktop is <strong>complete</strong>. All new integrations should be tested in the Electron app, not just in the browser. Running Aura.Web standalone in a browser is supported only as a development aid for rapid UI iteration.</p>
 <h2 id="installation-options">Installation Options</h2>
 <h3 id="option-1-desktop-app-recommended-for-users">Option 1: Desktop App (Recommended for Users)</h3>
 <p><strong>No command-line knowledge required!</strong></p>
@@ -161,8 +163,8 @@
 <h3 id="option-2-development-setup">Option 2: Development Setup</h3>
 <p>See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for comprehensive Electron development instructions.</p>
 <h2 id="quick-start-development">Quick start (Development)</h2>
-<h3 id="electron-desktop-development">Electron Desktop Development</h3>
-<p><strong>Recommended approach for desktop app development:</strong></p>
+<h3 id="electron-desktop-development-primary-workflow">Electron Desktop Development (Primary Workflow)</h3>
+<p><strong>The canonical, production-like development experience:</strong></p>
 <pre><code class="lang-bash"># 1. Install dependencies
 cd Aura.Web
 npm install
@@ -182,9 +184,14 @@ cd ../Aura.Desktop
 npm run dev
 </code></pre>
 <p>The Electron app will start with the embedded backend and frontend. Changes to the backend require a rebuild and restart. Frontend changes require rebuilding and reloading the Electron window.</p>
-<p>For detailed Electron development workflows, debugging, and hot-reload setup, see <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a>.</p>
-<h3 id="alternative-component-development-web-only">Alternative: Component Development (Web Only)</h3>
-<p>For rapid frontend iteration without Electron:</p>
+<p><strong>This is the recommended workflow for testing the complete application stack</strong>, including Electron IPC, native dialogs, window management, tray integration, protocol handling, and backend lifecycle.</p>
+<p>For detailed Electron development workflows, debugging, and hot-reload setup, see:</p>
+<ul>
+<li><a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> — Comprehensive Electron development guide</li>
+<li><a href="Aura.Desktop/electron/README.md">Aura.Desktop/electron/README.md</a> — Electron main process architecture (IPC, window manager, backend service, tray, menu, protocol handler)</li>
+</ul>
+<h3 id="alternative-browser-only-development-mode-component-testing-only">Alternative: Browser-Only Development Mode (Component Testing Only)</h3>
+<p><strong>For rapid frontend/backend iteration without Electron (development aid only, not deployment target):</strong></p>
 <pre><code class="lang-bash"># Terminal 1: Start backend API
 cd Aura.Api
 dotnet run
@@ -195,7 +202,27 @@ cd Aura.Web
 npm run dev
 # Web UI at http://localhost:5173 with hot reload
 </code></pre>
-<p><strong>Note:</strong> This runs the frontend standalone in a browser (not in Electron). Use this for quick UI development, but final testing should always be done in the Electron app.</p>
+<p><strong>⚠️ Important Limitations:</strong></p>
+<ul>
+<li>This runs the frontend standalone in a browser (not in Electron)</li>
+<li>Does <strong>not</strong> exercise Electron IPC, tray, protocol, window management, or shutdown behavior</li>
+<li>Does <strong>not</strong> test the embedded backend lifecycle (spawned by Electron main process)</li>
+<li>Use this for quick UI/API component development only</li>
+<li><strong>Always perform final testing in the Electron app</strong> before committing</li>
+</ul>
+<p><strong>When to use browser-only mode:</strong></p>
+<ul>
+<li>Rapid UI component iteration with hot-reload</li>
+<li>Backend API endpoint testing</li>
+<li>Frontend unit tests and debugging</li>
+</ul>
+<p><strong>When to use Electron mode:</strong></p>
+<ul>
+<li>Testing complete application stack</li>
+<li>Verifying IPC communication</li>
+<li>Testing native integrations (dialogs, menus, tray)</li>
+<li>Final integration and acceptance testing</li>
+</ul>
 <h3 id="next-steps">Next Steps</h3>
 <ul>
 <li><p><strong>For Users:</strong></p>
