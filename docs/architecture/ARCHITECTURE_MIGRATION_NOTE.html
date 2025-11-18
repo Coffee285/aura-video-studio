@@ -159,33 +159,43 @@ npm run dev
 </ul>
 <p><strong>Status:</strong> These references are obsolete for current architecture.</p>
 <h3 id="localhost5005">localhost:5005</h3>
-<p><strong>Context:</strong> Backend API port (both standalone and in Electron)</p>
+<p><strong>Context:</strong> Standalone backend API port for development <strong>only</strong></p>
 <p><strong>When Used:</strong></p>
 <ol>
-<li><p><strong>Component Development Mode:</strong></p>
+<li><p><strong>Standalone Backend Development Mode (Component Mode):</strong></p>
 <ul>
 <li>Backend runs standalone: <code>cd Aura.Api &amp;&amp; dotnet run</code></li>
 <li>API available at http://localhost:5005</li>
 <li>Used for testing API endpoints directly</li>
+<li><strong>This is NOT used in the Electron app runtime</strong></li>
 </ul>
 </li>
-<li><p><strong>Electron App (Development):</strong></p>
+<li><p><strong>Electron App Runtime:</strong></p>
 <ul>
 <li>Backend spawned by Electron main process</li>
-<li>Usually runs on random port (e.g., 54321)</li>
-<li>Sometimes uses 5005 if available</li>
-<li>Frontend connects automatically via Electron configuration</li>
+<li><strong>Port is dynamically chosen</strong> based on the <code>networkContract</code></li>
+<li>Default dev port: 5272 (from <code>AURA_DEV_BACKEND_URL</code>)</li>
+<li>Default prod port: 5890 (from <code>AURA_PROD_BACKEND_URL</code>)</li>
+<li>Can be overridden via <code>AURA_BACKEND_URL</code> environment variable</li>
+<li>Frontend connects automatically via <code>desktopBridge.backend.getUrl()</code></li>
+<li><strong>Port 5005 is NOT guaranteed or expected in Electron</strong></li>
 </ul>
 </li>
 </ol>
+<p><strong>Important:</strong> When running the Electron desktop app, the backend does <strong>not</strong> use port 5005. The port is resolved dynamically through the network contract system. Port 5005 is strictly for standalone backend development where you run <code>dotnet run</code> directly.</p>
 <p><strong>Example:</strong></p>
-<pre><code class="lang-bash"># Standalone backend for API testing
+<pre><code class="lang-bash"># Standalone backend for API testing (uses port 5005)
 cd Aura.Api
 dotnet run
 # API at http://localhost:5005
 
 # Health check
 curl http://localhost:5005/health/live
+
+# Note: In Electron, the backend URL comes from the contract:
+# - Dev: http://127.0.0.1:5272 (default)
+# - Prod: http://127.0.0.1:5890 (default)
+# - Or whatever is set in AURA_BACKEND_URL
 </code></pre>
 <h2 id="development-modes">Development Modes</h2>
 <h3 id="electron-desktop-app-development">Electron Desktop App Development</h3>

@@ -377,6 +377,45 @@ AURA_ENABLE_ADVANCED_MODE=false
 </ul>
 </li>
 </ol>
+<h4 id="port-behavior-summary">Port Behavior Summary</h4>
+<p>The following table clarifies how backend ports are determined in different scenarios:</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Port Determination</th>
+<th>Configuration</th>
+<th>Frontend Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Standalone API Dev</strong></td>
+<td>Fixed <code>http://127.0.0.1:5005</code></td>
+<td><code>ASPNETCORE_URLS</code> in appsettings or via <code>dotnet run</code></td>
+<td>Frontend dev server proxies to <code>http://localhost:5005</code> via <code>VITE_API_BASE_URL</code></td>
+</tr>
+<tr>
+<td><strong>Electron Dev</strong></td>
+<td>Dynamic from contract (default <code>http://127.0.0.1:5272</code>)</td>
+<td><code>AURA_BACKEND_URL</code> env var (optional), otherwise <code>resolveBackendContract</code> uses defaults</td>
+<td><code>desktopBridge.backend.getUrl()</code> or <code>window.AURA_BACKEND_URL</code></td>
+</tr>
+<tr>
+<td><strong>Electron Production</strong></td>
+<td>Dynamic from contract (default <code>http://127.0.0.1:5890</code>)</td>
+<td>Contract resolved internally by Electron main process</td>
+<td><code>desktopBridge.backend.getUrl()</code> - port not meant to be known a priori</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key Points:</strong></p>
+<ul>
+<li><strong>Port 5005</strong> is exclusively for standalone backend development (<code>cd Aura.Api &amp;&amp; dotnet run</code>)</li>
+<li><strong>Electron does NOT use port 5005</strong> - it uses the contract-resolved port (5272 dev, 5890 prod by default)</li>
+<li>Setting <code>AURA_BACKEND_URL</code> overrides the default contract URL for Electron</li>
+<li>The frontend always gets the URL from the contract when running in Electron</li>
+</ul>
 <h4 id="environment-variables-1">Environment Variables</h4>
 <ul>
 <li><strong><code>AURA_BACKEND_URL</code></strong> (preferred) - Full base URL including protocol, host, and port
