@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Provider Configuration Unification - Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Provider Configuration Unification - Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/PROVIDER_CONFIG_UNIFICATION_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="provider-configuration-unification---implementation-summary">Provider Configuration Unification - Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This PR unifies how provider configuration (OpenAI, Ollama, Stable Diffusion, Anthropic, Gemini, ElevenLabs, and other external providers) is handled across the entire Aura Video Studio stack.</p>
+<p><strong>Problem Solved:</strong> Previously, provider URLs and settings could drift between frontend (Aura.Web), desktop app (Electron), and backend (Aura.Core), causing &quot;it works locally but not in production&quot; issues and configuration confusion.</p>
+<p><strong>Solution:</strong> Establish <code>Aura.Core.ProviderSettings</code> as the single source of truth for all provider configuration, with consistent REST endpoints for frontend access and secure secret handling.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="single-source-of-truth-auracore-providersettings">Single Source of Truth: Aura.Core ProviderSettings</h3>
+<p><strong>File:</strong> <code>Aura.Core/Configuration/ProviderSettings.cs</code></p>
+<p><strong>New Capabilities Added:</strong></p>
+<ul>
+<li><code>GetOpenAiEndpoint()</code> / <code>SetOpenAiEndpoint(string endpoint)</code> - OpenAI API endpoint URL</li>
+<li><code>SetOpenAiKey(string apiKey)</code> - OpenAI API key setter</li>
+<li><code>GetAnthropicKey()</code> / <code>SetAnthropicKey(string apiKey)</code> - Anthropic configuration</li>
+<li><code>SetGeminiKey(string apiKey)</code> - Gemini API key setter</li>
+<li><code>SetOllamaUrl(string url)</code> - Ollama base URL setter</li>
+<li><code>SetStableDiffusionUrl(string url)</code> - Stable Diffusion WebUI URL setter</li>
+<li><code>SetElevenLabsKey(string apiKey)</code> - ElevenLabs API key setter</li>
+<li><code>UpdateAsync(Action&lt;ProviderSettings&gt; updateAction, CancellationToken ct)</code> - Thread-safe async updates</li>
+</ul>
+<p><strong>Storage:</strong> All settings persisted to <code>{AURA_DATA_PATH}/AuraData/settings.json</code></p>
+<h3 id="unified-api-endpoints">Unified API Endpoints</h3>
+<p><strong>File:</strong> <code>Aura.Api/Controllers/ProviderConfigurationController.cs</code></p>
+<p>Three new endpoints added:</p>
+<h4 id="1-get-apiproviderconfigurationconfig">1. GET /api/ProviderConfiguration/config</h4>
+<p><strong>Purpose:</strong> Retrieve current provider configuration (non-secret fields only)</p>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;openAi&quot;: {
+    &quot;apiKey&quot;: null,
+    &quot;endpoint&quot;: &quot;https://api.openai.com/v1&quot;
+  },
+  &quot;ollama&quot;: {
+    &quot;url&quot;: &quot;http://127.0.0.1:11434&quot;,
+    &quot;model&quot;: &quot;llama3.1:8b-q4_k_m&quot;
+  },
+  &quot;stableDiffusion&quot;: {
+    &quot;url&quot;: &quot;http://127.0.0.1:7860&quot;
+  },
+  &quot;anthropic&quot;: { &quot;apiKey&quot;: null },
+  &quot;gemini&quot;: { &quot;apiKey&quot;: null },
+  &quot;elevenLabs&quot;: { &quot;apiKey&quot;: null }
+}
+</code></pre>
+<p><strong>Security:</strong> API keys always return <code>null</code> in GET responses.</p>
+<h4 id="2-post-apiproviderconfigurationconfig">2. POST /api/ProviderConfiguration/config</h4>
+<p><strong>Purpose:</strong> Update non-secret provider configuration (URLs, endpoints, models)</p>
+<p><strong>Request Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;openAi&quot;: {
+    &quot;endpoint&quot;: &quot;https://my-proxy.com/v1&quot;
+  },
+  &quot;ollama&quot;: {
+    &quot;url&quot;: &quot;http://192.168.1.100:11434&quot;,
+    &quot;model&quot;: &quot;llama3.1:70b&quot;
+  },
+  &quot;stableDiffusion&quot;: {
+    &quot;url&quot;: &quot;http://10.0.0.5:7860&quot;
+  }
+}
+</code></pre>
+<p><strong>Returns:</strong> 204 No Content on success</p>
+<h4 id="3-post-apiproviderconfigurationconfigsecrets">3. POST /api/ProviderConfiguration/config/secrets</h4>
+<p><strong>Purpose:</strong> Update provider API keys securely</p>
+<p><strong>Request Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;openAiApiKey&quot;: &quot;sk-...&quot;,
+  &quot;anthropicApiKey&quot;: &quot;sk-ant-...&quot;,
+  &quot;geminiApiKey&quot;: &quot;...&quot;,
+  &quot;elevenLabsApiKey&quot;: &quot;...&quot;
+}
+</code></pre>
+<p><strong>Security:</strong></p>
+<ul>
+<li>Separate endpoint for clear security boundary</li>
+<li>Keys are logged (sanitized) but never returned</li>
+<li>Empty/whitespace keys are ignored (won't overwrite existing)</li>
+</ul>
+<p><strong>Returns:</strong> 204 No Content on success</p>
+<h3 id="frontend-api-client">Frontend API Client</h3>
+<p><strong>File:</strong> <code>Aura.Web/src/services/api/providerConfigClient.ts</code></p>
+<p><strong>Usage Example:</strong></p>
+<pre><code class="lang-typescript">import { 
+  getProviderConfiguration, 
+  updateProviderConfiguration, 
+  updateProviderSecrets 
+} from '@/services/api/providerConfigClient';
+
+// Load current configuration
+const config = await getProviderConfiguration();
+console.log(config.ollama.url); // &quot;http://127.0.0.1:11434&quot;
+
+// Update provider URL
+await updateProviderConfiguration({
+  ollama: { url: 'http://192.168.1.100:11434' }
+});
+
+// Update API key
+await updateProviderSecrets({
+  openAiApiKey: 'sk-...'
+});
+</code></pre>
+<p><strong>Key Principle:</strong> Frontend never stores provider configuration in localStorage or Electron config.</p>
+<h3 id="electron-desktop-integration">Electron Desktop Integration</h3>
+<p><strong>File:</strong> <code>Aura.Desktop/electron/app-config.js</code></p>
+<p><strong>Updated Secure Storage:</strong></p>
+<pre><code class="lang-javascript">this.secureStore = new Store({
+  name: 'aura-secure',
+  encryptionKey: this._getEncryptionKey(),
+  defaults: {
+    // API keys - stored securely for desktop convenience
+    OpenAiKey: '',
+    AnthropicKey: '',
+    GeminiKey: '',
+    ElevenLabsKey: '',
+    // ... other keys
+  }
+});
+</code></pre>
+<p><strong>What Electron Stores:</strong></p>
+<ul>
+<li>✅ API keys in encrypted <code>aura-secure</code> store</li>
+<li>✅ UI preferences and window state</li>
+</ul>
+<p><strong>What Electron Does NOT Store:</strong></p>
+<ul>
+<li>❌ Provider URLs (managed by backend)</li>
+<li>❌ Provider endpoint configuration (managed by backend)</li>
+<li>❌ Model selections (managed by backend)</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<p><strong>File:</strong> <code>Aura.Tests/ProviderConfigurationUnifiedTests.cs</code></p>
+<p><strong>11 comprehensive tests covering:</strong></p>
+<ol>
+<li>✅ GET /config returns default configuration</li>
+<li>✅ GET /config returns configured endpoints</li>
+<li>✅ POST /config updates OpenAI endpoint</li>
+<li>✅ POST /config updates Ollama URL and model</li>
+<li>✅ POST /config updates Stable Diffusion URL</li>
+<li>✅ POST /config rejects null request</li>
+<li>✅ POST /config/secrets updates OpenAI API key</li>
+<li>✅ POST /config/secrets updates multiple API keys</li>
+<li>✅ POST /config/secrets ignores empty strings</li>
+<li>✅ POST /config/secrets rejects null request</li>
+<li>✅ GET /config never exposes secrets</li>
+</ol>
+<p><strong>All tests passing:</strong> 11/11 ✓</p>
+<h2 id="documentation">Documentation</h2>
+<h3 id="updated-files">Updated Files</h3>
+<p><strong>PROVIDER_INTEGRATION_GUIDE.md:</strong></p>
+<ul>
+<li>Added comprehensive &quot;Configuration Ownership&quot; section</li>
+<li>Documented unified configuration model</li>
+<li>Explained benefits and migration guidance</li>
+<li>Provided code examples for all three layers</li>
+</ul>
+<p><strong>New Example Component:</strong></p>
+<ul>
+<li><code>Aura.Web/src/components/Settings/UnifiedProviderConfigExample.tsx</code></li>
+<li>Shows complete integration pattern</li>
+<li>Demonstrates proper separation of config vs. secrets</li>
+<li>Ready-to-use reference implementation</li>
+</ul>
+<h2 id="benefits">Benefits</h2>
+<h3 id="1-no-configuration-drift">1. No Configuration Drift</h3>
+<ul>
+<li>Frontend, Electron, and backend always see the same provider URLs</li>
+<li>No &quot;it works locally but not in production&quot; scenarios</li>
+<li>Single update point for all configuration</li>
+</ul>
+<h3 id="2-simpler-provider-validation">2. Simpler Provider Validation</h3>
+<ul>
+<li><code>/api/providers/status</code> checks use the same config the UI is editing</li>
+<li>No need to reconcile multiple sources of truth</li>
+<li>Consistent behavior across all environments</li>
+</ul>
+<h3 id="3-easier-to-add-new-providers">3. Easier to Add New Providers</h3>
+<ul>
+<li>Add getters/setters to <code>ProviderSettings</code></li>
+<li>Add fields to DTOs</li>
+<li>Update frontend client</li>
+<li>Single, consistent flow</li>
+</ul>
+<h3 id="4-clear-security-boundaries">4. Clear Security Boundaries</h3>
+<ul>
+<li>Secrets go through dedicated <code>/config/secrets</code> endpoint</li>
+<li>Non-secret config goes through <code>/config</code> endpoint</li>
+<li>API keys never returned in GET responses</li>
+<li>Separate endpoints make security audits easier</li>
+</ul>
+<h3 id="5-better-desktop-experience">5. Better Desktop Experience</h3>
+<ul>
+<li>Electron stores API keys securely for convenience</li>
+<li>Backend remains authoritative for all logic</li>
+<li>Desktop app can work offline with cached keys</li>
+<li>No sync issues between Electron and backend</li>
+</ul>
+<h2 id="migration-guide">Migration Guide</h2>
+<h3 id="for-existing-code">For Existing Code</h3>
+<p>If you have code that:</p>
+<ul>
+<li>Stores provider URLs in Electron config</li>
+<li>Reads provider settings from localStorage</li>
+<li>Manages provider state independently</li>
+</ul>
+<p><strong>Action Required:</strong></p>
+<ol>
+<li><strong>Remove Electron config writes for provider URLs:</strong></li>
+</ol>
+<pre><code class="lang-javascript">// ❌ OLD - Don't do this
+ipcRenderer.invoke('config:set', 'ollamaUrl', url);
+
+// ✅ NEW - Use backend API
+await updateProviderConfiguration({ ollama: { url } });
+</code></pre>
+<ol start="2">
+<li><strong>Update Settings UI to use new client:</strong></li>
+</ol>
+<pre><code class="lang-typescript">// ❌ OLD - Direct Electron IPC
+const url = await window.electron.config.get('ollamaUrl');
+
+// ✅ NEW - Backend API
+const config = await getProviderConfiguration();
+const url = config.ollama.url;
+</code></pre>
+<ol start="3">
+<li><strong>Remove localStorage provider config:</strong></li>
+</ol>
+<pre><code class="lang-typescript">// ❌ OLD - Don't store in localStorage
+localStorage.setItem('openaiEndpoint', endpoint);
+
+// ✅ NEW - Store in backend
+await updateProviderConfiguration({ openAi: { endpoint } });
+</code></pre>
+<ol start="4">
+<li><strong>Ensure all reads go through backend:</strong></li>
+</ol>
+<pre><code class="lang-typescript">// ✅ Always load from backend
+const config = await getProviderConfiguration();
+</code></pre>
+<h2 id="compatibility-with-pr-384-ffmpeg-unification">Compatibility with PR #384 (FFmpeg Unification)</h2>
+<p><strong>PR #384</strong> unifies FFmpeg configuration using the same architectural pattern:</p>
+<ul>
+<li>Adds <code>IFfmpegConfigurationService</code> to handle FFmpeg paths</li>
+<li>Makes <code>ProviderSettings</code> the source of truth for FFmpeg config</li>
+<li>Exposes unified configuration via API endpoints</li>
+</ul>
+<p><strong>Our PR (Provider Unification):</strong></p>
+<ul>
+<li>Handles LLM, TTS, Image, and other provider configuration</li>
+<li>Uses the same pattern as PR #384</li>
+<li>No conflicts - different methods and properties</li>
+</ul>
+<p><strong>Both PRs are complementary</strong> and follow the same design principle: centralize configuration in <code>Aura.Core.ProviderSettings</code>.</p>
+<h2 id="files-changed">Files Changed</h2>
+<h3 id="backend">Backend</h3>
+<ul>
+<li>✅ <code>Aura.Core/Configuration/ProviderSettings.cs</code> - Added 10+ new methods</li>
+<li>✅ <code>Aura.Api/Models/ApiModels.V1/ProviderConfigDtos.cs</code> - New DTOs (7 records)</li>
+<li>✅ <code>Aura.Api/Controllers/ProviderConfigurationController.cs</code> - Added 3 endpoints</li>
+</ul>
+<h3 id="frontend">Frontend</h3>
+<ul>
+<li>✅ <code>Aura.Web/src/services/api/providerConfigClient.ts</code> - New API client</li>
+<li>✅ <code>Aura.Web/src/components/Settings/UnifiedProviderConfigExample.tsx</code> - Example component</li>
+</ul>
+<h3 id="desktop">Desktop</h3>
+<ul>
+<li>✅ <code>Aura.Desktop/electron/app-config.js</code> - Updated secure store defaults</li>
+</ul>
+<h3 id="tests">Tests</h3>
+<ul>
+<li>✅ <code>Aura.Tests/ProviderConfigurationUnifiedTests.cs</code> - 11 comprehensive tests</li>
+</ul>
+<h3 id="documentation-1">Documentation</h3>
+<ul>
+<li>✅ <code>PROVIDER_INTEGRATION_GUIDE.md</code> - Added Configuration Ownership section</li>
+<li>✅ <code>PROVIDER_CONFIG_UNIFICATION_SUMMARY.md</code> - This document</li>
+</ul>
+<h2 id="verification">Verification</h2>
+<h3 id="build-status">Build Status</h3>
+<pre><code>✅ .NET Build: 0 Warnings, 0 Errors
+✅ Frontend TypeScript: No errors in new files
+✅ Tests: 11/11 Passing
+✅ Pre-commit Checks: Passed (no placeholders)
+</code></pre>
+<h3 id="test-results">Test Results</h3>
+<pre><code>Passed!  - Failed: 0, Passed: 11, Skipped: 0, Total: 11
+Duration: 295 ms
+</code></pre>
+<h2 id="next-steps">Next Steps</h2>
+<p><strong>For Production Deployment:</strong></p>
+<ol>
+<li>Merge this PR</li>
+<li>Update existing Settings UI components to use new <code>providerConfigClient</code></li>
+<li>Remove any Electron IPC calls for provider URLs</li>
+<li>Test configuration persistence across app restarts</li>
+<li>Verify all provider status checks use unified configuration</li>
+</ol>
+<p><strong>For Future Enhancements:</strong></p>
+<ol>
+<li>Add configuration validation API endpoint</li>
+<li>Add configuration export/import for provider settings</li>
+<li>Add configuration versioning and migration</li>
+<li>Add configuration change notifications (WebSocket/SSE)</li>
+</ol>
+<h2 id="conclusion">Conclusion</h2>
+<p>This PR establishes a unified, secure, and maintainable approach to provider configuration management. By centralizing all provider settings in <code>Aura.Core.ProviderSettings</code> and exposing them through consistent REST endpoints, we eliminate configuration drift and provide a clear, auditable path for all configuration changes.</p>
+<p>The implementation follows established patterns (similar to PR #384 for FFmpeg), includes comprehensive tests, and provides clear documentation for integration.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/PROVIDER_CONFIG_UNIFICATION_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

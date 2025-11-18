@@ -2156,12 +2156,150 @@ Response:
 </ul>
 </li>
 </ol>
+<h2 id="configuration-ownership">Configuration Ownership</h2>
+<h3 id="unified-configuration-model">Unified Configuration Model</h3>
+<p>Aura Video Studio uses a <strong>unified configuration model</strong> to ensure consistency across the stack and avoid configuration drift between frontend, Electron, and backend.</p>
+<h4 id="single-source-of-truth-auracore-providersettings">Single Source of Truth: Aura.Core ProviderSettings</h4>
+<p><code>Aura.Core.Configuration.ProviderSettings</code> is the authoritative source for all provider configuration:</p>
+<ul>
+<li><strong>Provider URLs</strong>: OpenAI endpoint, Ollama URL, Stable Diffusion URL</li>
+<li><strong>Provider Settings</strong>: Model selections, default voices, regional settings</li>
+<li><strong>API Keys</strong>: Securely stored, never exposed in GET responses</li>
+</ul>
+<h4 id="backend-api-surface">Backend API Surface</h4>
+<p><code>Aura.Api</code> exposes consistent REST endpoints for provider configuration:</p>
+<p><strong>GET /api/ProviderConfiguration/config</strong></p>
+<ul>
+<li>Returns current provider configuration (URLs, endpoints, model selections)</li>
+<li><strong>Never returns API keys or secrets</strong> for security</li>
+<li>Used by frontend to display current settings</li>
+</ul>
+<p><strong>POST /api/ProviderConfiguration/config</strong></p>
+<ul>
+<li>Updates non-secret provider configuration (URLs, endpoints, models)</li>
+<li>Changes are persisted to disk by ProviderSettings</li>
+<li>Use for updating provider URLs, Ollama models, etc.</li>
+</ul>
+<p><strong>POST /api/ProviderConfiguration/config/secrets</strong></p>
+<ul>
+<li>Updates provider API keys securely</li>
+<li>Separate endpoint for clear security boundary</li>
+<li>Keys are logged (sanitized) but never returned in responses</li>
+</ul>
+<h4 id="frontend-integration">Frontend Integration</h4>
+<p><code>Aura.Web</code> reads and writes provider settings <strong>exclusively through backend APIs</strong>:</p>
+<pre><code class="lang-typescript">import { 
+  getProviderConfiguration, 
+  updateProviderConfiguration, 
+  updateProviderSecrets 
+} from '@/services/api/providerConfigClient';
+
+// Load current configuration
+const config = await getProviderConfiguration();
+console.log(config.ollama.url); // e.g., &quot;http://127.0.0.1:11434&quot;
+
+// Update provider URL
+await updateProviderConfiguration({
+  ollama: { url: 'http://192.168.1.100:11434' }
+});
+
+// Update API key
+await updateProviderSecrets({
+  openAiApiKey: 'sk-...'
+});
+</code></pre>
+<p><strong>Key principles:</strong></p>
+<ul>
+<li>Frontend never persists provider URLs in Electron or browser storage</li>
+<li>All configuration reads go through <code>getProviderConfiguration()</code></li>
+<li>All configuration writes go through <code>updateProviderConfiguration()</code> or <code>updateProviderSecrets()</code></li>
+<li>No conflicting configuration between frontend and backend</li>
+</ul>
+<h4 id="electron-desktop-integration">Electron Desktop Integration</h4>
+<p><code>Aura.Desktop</code> handles <strong>secure storage of secrets only</strong> for desktop convenience:</p>
+<p><strong>What Electron Stores:</strong></p>
+<ul>
+<li>API keys in encrypted <code>aura-secure</code> store (OpenAI, Anthropic, Gemini, ElevenLabs, etc.)</li>
+<li>UI preferences and window state in <code>aura-config</code> store</li>
+</ul>
+<p><strong>What Electron Does NOT Store:</strong></p>
+<ul>
+<li>Provider URLs (managed by backend ProviderSettings)</li>
+<li>Provider endpoint configuration (managed by backend)</li>
+<li>Model selections (managed by backend)</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<ol>
+<li>User enters API key in Settings UI</li>
+<li>Frontend sends key to backend via <code>POST /api/ProviderConfiguration/config/secrets</code></li>
+<li>Backend persists to ProviderSettings</li>
+<li>Optionally, Electron stores a copy in secure storage for convenience</li>
+<li>Backend is always the source of truth for provider readiness checks</li>
+</ol>
+<h4 id="benefits-of-unified-configuration">Benefits of Unified Configuration</h4>
+<p><strong>No Configuration Drift:</strong></p>
+<ul>
+<li>Frontend, Electron, and backend always see the same provider URLs</li>
+<li>No risk of &quot;it works locally but not in production&quot; scenarios</li>
+</ul>
+<p><strong>Simpler Provider Validation:</strong></p>
+<ul>
+<li><code>/api/providers/status</code> checks use the same configuration the UI is editing</li>
+<li>No need to reconcile multiple sources of truth</li>
+</ul>
+<p><strong>Easier to Add New Providers:</strong></p>
+<ul>
+<li>Add getters/setters to <code>ProviderSettings</code></li>
+<li>Add fields to API DTOs</li>
+<li>Update frontend client</li>
+<li>Single flow, no duplication</li>
+</ul>
+<p><strong>Clear Security Boundaries:</strong></p>
+<ul>
+<li>Secrets go through dedicated <code>/config/secrets</code> endpoint</li>
+<li>Non-secret config goes through <code>/config</code> endpoint</li>
+<li>API keys never returned in GET responses</li>
+</ul>
+<h3 id="configuration-persistence">Configuration Persistence</h3>
+<p><strong>Backend Storage:</strong></p>
+<ul>
+<li>Configuration stored in <code>{AURA_DATA_PATH}/AuraData/settings.json</code></li>
+<li>Reloaded on demand via <code>ProviderSettings.Reload()</code></li>
+<li>Thread-safe updates via <code>ProviderSettings.UpdateAsync()</code></li>
+</ul>
+<p><strong>Electron Secure Storage:</strong></p>
+<ul>
+<li>API keys in <code>%APPDATA%/Roaming/aura-video-studio/aura-secure.json</code> (encrypted)</li>
+<li>Encryption key derived from machine-specific data</li>
+<li>Not synced between machines (intentional security feature)</li>
+</ul>
+<p><strong>Frontend:</strong></p>
+<ul>
+<li>No persistent provider configuration storage</li>
+<li>All state loaded from backend on startup</li>
+<li>Configuration changes sent immediately to backend</li>
+</ul>
+<h3 id="migration-from-old-model">Migration from Old Model</h3>
+<p>If you have existing code that:</p>
+<ul>
+<li>Stores provider URLs in Electron config</li>
+<li>Reads provider settings from local storage</li>
+<li>Manages provider state independently</li>
+</ul>
+<p><strong>Action Required:</strong></p>
+<ol>
+<li>Remove Electron config writes for provider URLs</li>
+<li>Update Settings UI to use new <code>providerConfigClient</code> methods</li>
+<li>Remove any <code>localStorage.setItem()</code> calls for provider config</li>
+<li>Ensure all reads go through <code>getProviderConfiguration()</code></li>
+</ol>
 <h3 id="related-documentation">Related Documentation</h3>
 <ul>
 <li><a href="LLM_INTEGRATION_AUDIT.html">LLM_INTEGRATION_AUDIT.md</a> - LLM provider details</li>
 <li><a href="TTS_PROVIDER_IMPLEMENTATION_SUMMARY.html">TTS_PROVIDER_IMPLEMENTATION_SUMMARY.md</a> - TTS provider details</li>
 <li><a href="LATENCY_PATIENCE_POLICY.html">LATENCY_PATIENCE_POLICY.md</a> - Provider patience thresholds</li>
 <li><a href="PROVIDER_STICKINESS_IMPLEMENTATION_SUMMARY.html">PROVIDER_STICKINESS_IMPLEMENTATION_SUMMARY.md</a> - Technical implementation details</li>
+<li><a href="PROVIDER_INTEGRATION_IMPLEMENTATION.html">PROVIDER_INTEGRATION_IMPLEMENTATION.md</a> - Implementation guide</li>
 </ul>
 
 </article>
