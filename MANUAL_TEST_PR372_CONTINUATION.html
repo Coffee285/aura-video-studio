@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Manual Test Verification for PR 372 Continuation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Manual Test Verification for PR 372 Continuation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/MANUAL_TEST_PR372_CONTINUATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="manual-test-verification-for-pr-372-continuation">Manual Test Verification for PR 372 Continuation</h1>
+
+<h2 id="purpose">Purpose</h2>
+<p>Verify the fixes from PR 372 continuation addressing:</p>
+<ol>
+<li>Circular dependency bug in Program.cs</li>
+<li>Cancelled token bug in SseService.cs</li>
+<li>Shutdown behavior with active SSE connections</li>
+<li>Shutdown sequence logging integrity</li>
+<li>Rapid restart scenarios</li>
+</ol>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Aura Video Studio built in Release mode</li>
+<li>.NET 8 SDK installed</li>
+<li>Windows 11 (or compatible OS)</li>
+</ul>
+<h2 id="test-scenarios">Test Scenarios</h2>
+<h3 id="test-1-normal-shutdown-with-no-active-connections">Test 1: Normal Shutdown with No Active Connections</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Wait for application to fully start (check logs for &quot;Application started successfully&quot;)</li>
+<li>Close the application (Ctrl+C in console or close window)</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Application stops within 2 seconds</li>
+<li>✅ Log shows: &quot;Application stopping - shutting down gracefully&quot;</li>
+<li>✅ Log shows: &quot;Graceful shutdown completed successfully&quot;</li>
+<li>✅ Log shows: &quot;Application host stopped, flushing logs...&quot;</li>
+<li>✅ No error logs during shutdown</li>
+<li>✅ Process terminates completely (verify in Task Manager)</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-2-shutdown-with-active-sse-connection">Test 2: Shutdown with Active SSE Connection</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Open a SSE connection (e.g., via browser or curl to <code>/api/jobs/{id}/events</code>)</li>
+<li>While SSE connection is active, close the application</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Application detects active SSE connection</li>
+<li>✅ Shutdown sequence includes: &quot;Notifying N active SSE connections of shutdown&quot;</li>
+<li>✅ SSE connection receives error notification (if client is monitoring)</li>
+<li>✅ Application stops within 3 seconds despite active connection</li>
+<li>✅ Log shows: &quot;Closed N connections&quot;</li>
+<li>✅ No hanging processes in Task Manager</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-3-shutdown-with-multiple-active-sse-connections">Test 3: Shutdown with Multiple Active SSE Connections</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Open 5 simultaneous SSE connections</li>
+<li>Close the application while all connections are active</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Log shows: &quot;Notifying 5 active SSE connections of shutdown&quot;</li>
+<li>✅ All connections receive shutdown notification</li>
+<li>✅ Application stops within 3 seconds</li>
+<li>✅ Log shows: &quot;Closed 5 connections&quot;</li>
+<li>✅ No orphaned processes</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-4-rapid-restart-scenario">Test 4: Rapid Restart Scenario</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Wait 2 seconds for startup</li>
+<li>Close the application (Ctrl+C)</li>
+<li>Immediately start the application again (within 1 second of closing)</li>
+<li>Repeat steps 3-4 three more times</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Each restart succeeds without &quot;port in use&quot; errors</li>
+<li>✅ Each shutdown completes in under 2 seconds</li>
+<li>✅ No lingering processes between restarts</li>
+<li>✅ No memory leaks (check Task Manager between restarts)</li>
+<li>✅ Logs show consistent shutdown/startup sequence</li>
+<li>✅ Final application starts successfully</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-5-shutdown-during-dependency-scan">Test 5: Shutdown During Dependency Scan</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Immediately close the application (within 5 seconds, during startup scan)</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Application responds to shutdown signal immediately</li>
+<li>✅ Log shows: &quot;Dependency scan cancelled due to application shutdown&quot;</li>
+<li>✅ No exceptions or errors related to cancelled scan</li>
+<li>✅ Application stops within 2 seconds</li>
+<li>✅ Clean shutdown sequence completes</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-6-shutdown-sequence-logging-verification">Test 6: Shutdown Sequence Logging Verification</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application with logging set to Information level</li>
+<li>Perform normal shutdown</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Log contains in order:
+<ol>
+<li>&quot;Application stopping - shutting down gracefully&quot;</li>
+<li>&quot;Initiating graceful shutdown (Force: false, PID: XXXX)&quot;</li>
+<li>&quot;Step 1/4 Complete: Notified N connections&quot;</li>
+<li>&quot;Step 2/4 Complete: Closed N connections&quot;</li>
+<li>&quot;Step 3/4 Complete: Terminated N FFmpeg process(es)&quot;</li>
+<li>&quot;Step 4/4 Complete: Terminated N process(es)&quot;</li>
+<li>&quot;Graceful shutdown completed successfully (Total: XXXXms)&quot;</li>
+<li>&quot;Calling IHostApplicationLifetime.StopApplication()...&quot;</li>
+<li>&quot;StopApplication() called - host shutdown initiated&quot;</li>
+<li>&quot;Application host stopped, flushing logs...&quot;</li>
+<li>&quot;Application stopped successfully&quot;</li>
+</ol>
+</li>
+<li>✅ All shutdown timing logs show &lt; 2000ms total</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-7-force-shutdown-mode">Test 7: Force Shutdown Mode</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Trigger force shutdown (if available via API or gracefully shutdown with force flag)</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Application stops in under 500ms</li>
+<li>✅ Log shows: &quot;Initiating graceful shutdown (Force: true, PID: XXXX)&quot;</li>
+<li>✅ Minimal delays in shutdown sequence</li>
+<li>✅ Process terminates immediately</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-8-shutdown-with-background-tasks">Test 8: Shutdown with Background Tasks</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Start a video generation job (if available)</li>
+<li>While job is running, close the application</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Application detects running job/task</li>
+<li>✅ Graceful cancellation of background work</li>
+<li>✅ FFmpeg processes are terminated cleanly</li>
+<li>✅ Application stops within 3 seconds</li>
+<li>✅ No zombie processes left behind</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-9-verify-no-circular-dependency-issues">Test 9: Verify No Circular Dependency Issues</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Let it run for 30 seconds</li>
+<li>Perform graceful shutdown</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ No premature shutdown triggers</li>
+<li>✅ Application runs normally until shutdown requested</li>
+<li>✅ Shutdown completes successfully</li>
+<li>✅ No unexpected OperationCanceledException in logs</li>
+<li>✅ ApplicationStopping token only fires during shutdown</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h3 id="test-10-sse-error-notification-delivery">Test 10: SSE Error Notification Delivery</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start the Aura.Api application</li>
+<li>Connect SSE client to job progress endpoint</li>
+<li>Trigger operation cancellation (user-initiated or timeout)</li>
+<li>Monitor SSE client for error event</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ SSE client receives &quot;event: error&quot; message</li>
+<li>✅ Error message contains &quot;Operation cancelled&quot;</li>
+<li>✅ Error is received before connection closes</li>
+<li>✅ Client can parse and display error message</li>
+<li>✅ No exceptions in server logs about sending error</li>
+</ul>
+<p><strong>Pass/Fail:</strong> ___________</p>
+<p><strong>Notes:</strong></p>
+<hr>
+<hr>
+<h2 id="summary">Summary</h2>
+<p><strong>Total Tests:</strong> 10<br>
+<strong>Passed:</strong> _____ / 10<br>
+<strong>Failed:</strong> _____ / 10</p>
+<p><strong>Overall Assessment:</strong> ___________</p>
+<p><strong>Critical Issues Found:</strong></p>
+<hr>
+<p><strong>Recommendations:</strong></p>
+<hr>
+<p><strong>Tested By:</strong> _____________________<br>
+<strong>Date:</strong> _____________________<br>
+<strong>Environment:</strong> _____________________</p>
+<hr>
+<h2 id="automated-test-results-reference">Automated Test Results Reference</h2>
+<p>For automated test coverage, see:</p>
+<ul>
+<li><code>Aura.Tests/Services/SseServiceShutdownTests.cs</code> - 8 tests</li>
+<li><code>Aura.Tests/Services/ShutdownWithSseTests.cs</code> - 10 tests</li>
+<li><code>Aura.Tests/Services/RapidRestartTests.cs</code> - 8 tests</li>
+<li><code>Aura.Tests/ShutdownOrchestratorTests.cs</code> - 11 existing tests</li>
+</ul>
+<p><strong>All 37 automated tests passing ✅</strong></p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/MANUAL_TEST_PR372_CONTINUATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
