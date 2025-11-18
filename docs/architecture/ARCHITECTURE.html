@@ -210,15 +210,23 @@
 <h3 id="4-auraapi-backend-api">4. Aura.Api (Backend API)</h3>
 <p><strong>Technology</strong>: ASP.NET Core 8 (Minimal API + Controllers)<br>
 <strong>Purpose</strong>: RESTful API backend embedded in Electron app</p>
-<p><strong>Key Endpoints</strong>:</p>
+<p><strong>Key Endpoints</strong> (Contracted paths expected by Electron main and frontend):</p>
 <ul>
-<li><code>GET /health/live</code>, <code>/health/ready</code> - Health checks</li>
+<li><code>GET /health/live</code> - Liveness check (fast startup detection, HTTP server ready)</li>
+<li><code>GET /health/ready</code> - Readiness check (dependencies available, returns 200/503)</li>
+<li><code>GET /api/jobs/{id}/events</code> - Server-Sent Events (SSE) for job progress updates</li>
 <li><code>GET /api/jobs</code>, <code>POST /api/jobs</code> - Job management</li>
-<li><code>GET /api/jobs/{id}/events</code> - Server-Sent Events (SSE) for progress</li>
 <li><code>POST /api/quick/demo</code> - Quick demo generation</li>
 <li><code>GET /api/settings</code>, <code>POST /api/settings</code> - Settings persistence</li>
 <li><code>GET /api/system/capabilities</code> - Hardware detection</li>
 <li><code>GET /api/providers/status</code> - Provider health checks</li>
+</ul>
+<p><strong>Endpoint Contract</strong>:
+All health and SSE endpoint paths are defined in <code>Aura.Api/Contracts/BackendEndpoints.cs</code> as constants to ensure consistency across:</p>
+<ul>
+<li>Backend API route registration (Program.cs, HealthEndpoints.cs)</li>
+<li>Electron main process (network-contract.js, backend-service.js)</li>
+<li>Frontend API clients (via network contract exposed through preload bridge)</li>
 </ul>
 <p><strong>Configuration:</strong></p>
 <ul>

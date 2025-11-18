@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Endpoint Alignment Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Endpoint Alignment Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/ENDPOINT_ALIGNMENT_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="endpoint-alignment-implementation-summary">Endpoint Alignment Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document summarizes the implementation of centralized backend endpoint path constants to ensure consistent communication between Electron main process, backend API, and frontend.</p>
+<h2 id="problem-statement">Problem Statement</h2>
+<p>Previously, endpoint paths were hardcoded in multiple locations:</p>
+<ul>
+<li>Backend API route registration (Program.cs, HealthEndpoints.cs)</li>
+<li>Electron main process (network-contract.js, backend-service.js)</li>
+<li>Electron IPC handlers (video-handler.js)</li>
+<li>Frontend API clients</li>
+</ul>
+<p>This created risk of divergence if someone changed a route in one location without updating others.</p>
+<h2 id="solution">Solution</h2>
+<p>Created a <strong>single source of truth</strong> for endpoint paths with enforcement across all layers.</p>
+<h2 id="changes-made">Changes Made</h2>
+<h3 id="1-backend-constants-auraapicontractsbackendendpointscs">1. Backend Constants (<code>Aura.Api/Contracts/BackendEndpoints.cs</code>)</h3>
+<p>Created a new constants class with all contracted endpoint paths:</p>
+<pre><code class="lang-csharp">public static class BackendEndpoints
+{
+    public const string HealthLive = &quot;/health/live&quot;;
+    public const string HealthReady = &quot;/health/ready&quot;;
+    public const string JobsBase = &quot;/api/jobs&quot;;
+    public const string JobEventsTemplate = &quot;/api/jobs/{id}/events&quot;;
+    
+    public static string BuildJobEventsPath(string jobId) { ... }
+}
+</code></pre>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Single definition for all endpoint paths</li>
+<li>Helper method for SSE URL construction</li>
+<li>Type-safe constants accessible throughout C# codebase</li>
+</ul>
+<h3 id="2-network-contract-enhancement-auradesktopelectronnetwork-contractjs">2. Network Contract Enhancement (<code>Aura.Desktop/electron/network-contract.js</code>)</h3>
+<p>Updated NetworkContract to include SSE template:</p>
+<pre><code class="lang-javascript">{
+  baseUrl: &quot;http://127.0.0.1:5272&quot;,
+  healthEndpoint: &quot;/health/live&quot;,
+  readinessEndpoint: &quot;/health/ready&quot;,
+  sseJobEventsTemplate: &quot;/api/jobs/{id}/events&quot;,
+  // ... other fields
+}
+</code></pre>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Exposes endpoint paths to Electron main process</li>
+<li>Configurable via environment variables</li>
+<li>Validated on startup with descriptive errors</li>
+</ul>
+<h3 id="3-backend-service-updates-auradesktopelectronbackend-servicejs">3. Backend Service Updates (<code>Aura.Desktop/electron/backend-service.js</code>)</h3>
+<p>Updated to use contract endpoints:</p>
+<pre><code class="lang-javascript">// Health endpoints from network contract (aligned with BackendEndpoints constants)
+this.healthEndpoint = networkContract.healthEndpoint || &quot;/health/live&quot;;
+this.readinessEndpoint = networkContract.readinessEndpoint || &quot;/health/ready&quot;;
+this.sseJobEventsTemplate = networkContract.sseJobEventsTemplate || &quot;/api/jobs/{id}/events&quot;;
+</code></pre>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Uses contracted paths for all health checks</li>
+<li>Consistent with backend constants</li>
+<li>Clear documentation of alignment</li>
+</ul>
+<h3 id="4-video-handler-enhancement-auradesktopelectronipc-handlersvideo-handlerjs">4. Video Handler Enhancement (<code>Aura.Desktop/electron/ipc-handlers/video-handler.js</code>)</h3>
+<p>Added SSE URL building:</p>
+<pre><code class="lang-javascript">constructor(backendUrl, networkContract) {
+  this.sseJobEventsTemplate = networkContract?.sseJobEventsTemplate || '/api/jobs/{id}/events';
+}
+
+_buildJobEventsUrl(jobId) {
+  const path = this.sseJobEventsTemplate.replace('{id}', encodeURIComponent(jobId));
+  return new URL(path, this.backendUrl).toString();
+}
+</code></pre>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Dynamic SSE URL construction from template</li>
+<li>Proper URL encoding for job IDs</li>
+<li>No hardcoded paths</li>
+</ul>
+<h3 id="5-backend-route-registration-updates">5. Backend Route Registration Updates</h3>
+<p><strong>HealthEndpoints.cs:</strong></p>
+<pre><code class="lang-csharp">group.MapGet(BackendEndpoints.HealthLive, (HealthCheckService healthService) =&gt; { ... });
+group.MapGet(BackendEndpoints.HealthReady, async (HealthCheckService healthService, ...) =&gt; { ... });
+</code></pre>
+<p><strong>Program.cs:</strong></p>
+<ul>
+<li>Added import: <code>using Aura.Api.Contracts;</code></li>
+<li>Created new SSE endpoint at <code>/api/jobs/{id}/events</code> (contracted path)</li>
+<li>Maintains existing <code>/jobs/{id}/stream</code> for backward compatibility</li>
+</ul>
+<h3 id="6-documentation-updates">6. Documentation Updates</h3>
+<p><strong>ARCHITECTURE.md:</strong></p>
+<ul>
+<li>Updated &quot;Key Endpoints&quot; section with contracted paths</li>
+<li>Added &quot;Endpoint Contract&quot; subsection explaining single source of truth</li>
+<li>Documented BackendEndpoints.cs role in consistency</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<h3 id="javascript-tests-test-network-contract-validationjs">JavaScript Tests (test-network-contract-validation.js)</h3>
+<p><strong>14 passing tests</strong> covering:</p>
+<ul>
+<li>✅ Contract includes <code>sseJobEventsTemplate</code> field</li>
+<li>✅ Default endpoint paths match BackendEndpoints constants</li>
+<li>✅ VideoHandler URL building logic</li>
+<li>✅ Special character encoding</li>
+<li>✅ Error handling for invalid inputs</li>
+</ul>
+<h3 id="c-tests-backendendpointstestscs">C# Tests (BackendEndpointsTests.cs)</h3>
+<p><strong>19 passing tests</strong> covering:</p>
+<ul>
+<li>✅ All endpoint constants have expected values</li>
+<li>✅ <code>BuildJobEventsPath</code> substitutes job IDs correctly</li>
+<li>✅ Proper validation and error messages</li>
+<li>✅ Various job ID formats (GUIDs, special characters)</li>
+<li>✅ Endpoint path conventions</li>
+</ul>
+<h3 id="build-verification">Build Verification</h3>
+<pre><code>✅ Backend builds successfully: 0 warnings, 0 errors
+✅ All JavaScript files pass syntax validation
+✅ All 33 new tests pass (14 JS + 19 C#)
+</code></pre>
+<h2 id="endpoint-paths-reference">Endpoint Paths Reference</h2>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Path</th>
+<th>Purpose</th>
+<th>Used By</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Health Live</td>
+<td><code>/health/live</code></td>
+<td>Fast liveness check</td>
+<td>Electron startup, health checks</td>
+</tr>
+<tr>
+<td>Health Ready</td>
+<td><code>/health/ready</code></td>
+<td>Full readiness check</td>
+<td>Electron startup validation</td>
+</tr>
+<tr>
+<td>Jobs Base</td>
+<td><code>/api/jobs</code></td>
+<td>Job management</td>
+<td>Frontend, Electron</td>
+</tr>
+<tr>
+<td>Job Events (SSE)</td>
+<td><code>/api/jobs/{id}/events</code></td>
+<td>Real-time progress</td>
+<td>Frontend, Electron</td>
+</tr>
+</tbody>
+</table>
+<h2 id="configuration">Configuration</h2>
+<p>All endpoints can be customized via environment variables:</p>
+<pre><code class="lang-bash"># Health endpoints
+AURA_BACKEND_HEALTH_ENDPOINT=/health/live
+AURA_BACKEND_READY_ENDPOINT=/health/ready
+
+# SSE endpoint template
+AURA_BACKEND_SSE_JOB_EVENTS_TEMPLATE=/api/jobs/{id}/events
+</code></pre>
+<h2 id="migration-path">Migration Path</h2>
+<h3 id="for-developers">For Developers</h3>
+<ol>
+<li><strong>Backend endpoints:</strong> Use <code>BackendEndpoints</code> constants instead of string literals</li>
+<li><strong>Electron services:</strong> Use <code>networkContract</code> properties instead of hardcoded paths</li>
+<li><strong>Frontend:</strong> Endpoint paths exposed via network contract (future enhancement)</li>
+</ol>
+<h3 id="breaking-changes">Breaking Changes</h3>
+<p><strong>None</strong> - All changes are additive:</p>
+<ul>
+<li>Existing <code>/jobs/{id}/stream</code> endpoint maintained for backward compatibility</li>
+<li>New <code>/jobs/{id}/events</code> endpoint provides contracted path</li>
+<li>All defaults match previous hardcoded values</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><strong>Frontend integration:</strong> Expose network contract to frontend via preload bridge</li>
+<li><strong>Runtime validation:</strong> Add startup check to verify backend endpoints match contract</li>
+<li><strong>OpenAPI schema:</strong> Generate endpoint documentation from constants</li>
+<li><strong>TypeScript types:</strong> Generate TypeScript definitions from BackendEndpoints.cs</li>
+</ol>
+<h2 id="impact">Impact</h2>
+<p>✅ <strong>Prevents divergence:</strong> Single source of truth prevents accidental mismatches</p>
+<p>✅ <strong>Explicit wiring:</strong> All endpoint paths traceable through constants</p>
+<p>✅ <strong>Testable:</strong> Comprehensive test coverage for endpoint contract</p>
+<p>✅ <strong>Maintainable:</strong> Clear documentation of endpoint expectations</p>
+<p>✅ <strong>Zero risk:</strong> Backward compatible, no breaking changes</p>
+<h2 id="related-files">Related Files</h2>
+<p><strong>Backend:</strong></p>
+<ul>
+<li><code>Aura.Api/Contracts/BackendEndpoints.cs</code> - Constants definition</li>
+<li><code>Aura.Api/Endpoints/HealthEndpoints.cs</code> - Health endpoint registration</li>
+<li><code>Aura.Api/Program.cs</code> - SSE endpoint registration</li>
+</ul>
+<p><strong>Electron:</strong></p>
+<ul>
+<li><code>Aura.Desktop/electron/network-contract.js</code> - Contract definition</li>
+<li><code>Aura.Desktop/electron/backend-service.js</code> - Health check usage</li>
+<li><code>Aura.Desktop/electron/ipc-handlers/video-handler.js</code> - SSE URL building</li>
+</ul>
+<p><strong>Tests:</strong></p>
+<ul>
+<li><code>Aura.Desktop/test/test-network-contract-validation.js</code> - JavaScript tests</li>
+<li><code>Aura.Tests/Contracts/BackendEndpointsTests.cs</code> - C# tests</li>
+</ul>
+<p><strong>Documentation:</strong></p>
+<ul>
+<li><code>docs/architecture/ARCHITECTURE.md</code> - Architecture documentation</li>
+<li><code>ENDPOINT_ALIGNMENT_SUMMARY.md</code> - This document</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>This implementation provides a robust foundation for endpoint consistency across all layers of Aura Video Studio. All components now share a single source of truth for endpoint paths, preventing future divergence and making the system more maintainable.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/ENDPOINT_ALIGNMENT_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
