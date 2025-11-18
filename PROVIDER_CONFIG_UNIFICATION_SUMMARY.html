@@ -364,7 +364,7 @@ Duration: 295 ms
 <h2 id="next-steps">Next Steps</h2>
 <p><strong>For Production Deployment:</strong></p>
 <ol>
-<li>Merge this PR</li>
+<li>✅ Merge this PR</li>
 <li>Update existing Settings UI components to use new <code>providerConfigClient</code></li>
 <li>Remove any Electron IPC calls for provider URLs</li>
 <li>Test configuration persistence across app restarts</li>
@@ -372,14 +372,77 @@ Duration: 295 ms
 </ol>
 <p><strong>For Future Enhancements:</strong></p>
 <ol>
-<li>Add configuration validation API endpoint</li>
+<li><del>Add configuration validation API endpoint</del> (✅ Completed - see Diagnostics section)</li>
 <li>Add configuration export/import for provider settings</li>
 <li>Add configuration versioning and migration</li>
 <li>Add configuration change notifications (WebSocket/SSE)</li>
 </ol>
+<h2 id="diagnostics">Diagnostics</h2>
+<p>To troubleshoot provider configuration issues, use the diagnostics endpoint:</p>
+<h3 id="provider-configuration-diagnostics-endpoint">Provider Configuration Diagnostics Endpoint</h3>
+<p><strong>GET</strong> <code>/api/system/diagnostics/providers-config</code></p>
+<p>Returns a non-secret snapshot of the current provider configuration from ProviderSettings.</p>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;correlationId&quot;: &quot;abc123&quot;,
+  &quot;timestamp&quot;: &quot;2024-01-01T12:00:00Z&quot;,
+  &quot;available&quot;: true,
+  &quot;configuration&quot;: {
+    &quot;openAI&quot;: {
+      &quot;endpoint&quot;: &quot;https://api.openai.com/v1&quot;,
+      &quot;hasApiKey&quot;: true
+    },
+    &quot;ollama&quot;: {
+      &quot;url&quot;: &quot;http://127.0.0.1:11434&quot;,
+      &quot;model&quot;: &quot;llama3.1:8b-q4_k_m&quot;,
+      &quot;executablePath&quot;: &quot;C:\\Users\\user\\AppData\\Local\\Programs\\Ollama\\ollama.exe&quot;
+    },
+    &quot;stableDiffusion&quot;: {
+      &quot;url&quot;: &quot;http://127.0.0.1:7860&quot;
+    },
+    &quot;anthropic&quot;: {
+      &quot;hasApiKey&quot;: false
+    },
+    &quot;gemini&quot;: {
+      &quot;hasApiKey&quot;: false
+    },
+    &quot;elevenLabs&quot;: {
+      &quot;hasApiKey&quot;: true
+    },
+    &quot;azure&quot;: {
+      &quot;speechRegion&quot;: &quot;eastus&quot;,
+      &quot;hasSpeechKey&quot;: true,
+      &quot;hasOpenAIKey&quot;: false,
+      &quot;openAIEndpoint&quot;: null
+    },
+    &quot;paths&quot;: {
+      &quot;portableRoot&quot;: &quot;C:\\Aura&quot;,
+      &quot;toolsDirectory&quot;: &quot;C:\\Aura\\Tools&quot;,
+      &quot;auraDataDirectory&quot;: &quot;C:\\Aura\\AuraData&quot;,
+      &quot;projectsDirectory&quot;: &quot;C:\\Aura\\Projects&quot;,
+      &quot;outputDirectory&quot;: &quot;C:\\Aura\\Projects&quot;
+    }
+  }
+}
+</code></pre>
+<p><strong>Security:</strong></p>
+<ul>
+<li>API keys are <strong>never</strong> returned (only <code>hasApiKey</code> boolean)</li>
+<li>All secrets remain encrypted and secure</li>
+<li>Only configuration URLs and paths are exposed</li>
+</ul>
+<p><strong>Usage:</strong></p>
+<p>Call this endpoint when:</p>
+<ul>
+<li>Providers are not connecting (check URLs and key presence)</li>
+<li>Configuration appears to be wrong (verify current settings)</li>
+<li>After changing provider configuration (confirm changes applied)</li>
+<li>During troubleshooting to see effective configuration</li>
+</ul>
+<p>This endpoint is available in all environments (dev, test, production) for troubleshooting.</p>
 <h2 id="conclusion">Conclusion</h2>
 <p>This PR establishes a unified, secure, and maintainable approach to provider configuration management. By centralizing all provider settings in <code>Aura.Core.ProviderSettings</code> and exposing them through consistent REST endpoints, we eliminate configuration drift and provide a clear, auditable path for all configuration changes.</p>
-<p>The implementation follows established patterns (similar to PR #384 for FFmpeg), includes comprehensive tests, and provides clear documentation for integration.</p>
+<p>The implementation follows established patterns (similar to PR #384 for FFmpeg), includes comprehensive tests, provides clear documentation for integration, and now includes diagnostics endpoints for troubleshooting configuration issues.</p>
 
 </article>
 

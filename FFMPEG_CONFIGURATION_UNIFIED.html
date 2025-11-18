@@ -262,6 +262,77 @@ var ffmpegPath = config.Path ?? &quot;ffmpeg&quot;;
 <li><code>Aura.Api/Program.cs</code> - Service registration</li>
 <li><code>Aura.Desktop/electron/backend-service.js</code> - Electron integration</li>
 </ul>
+<h2 id="diagnostics">Diagnostics</h2>
+<p>To troubleshoot FFmpeg configuration issues, use the diagnostics endpoint:</p>
+<h3 id="ffmpeg-configuration-diagnostics-endpoint">FFmpeg Configuration Diagnostics Endpoint</h3>
+<p><strong>GET</strong> <code>/api/system/diagnostics/ffmpeg-config</code></p>
+<p>Returns the current effective FFmpeg configuration from the unified configuration service.</p>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;correlationId&quot;: &quot;abc123&quot;,
+  &quot;timestamp&quot;: &quot;2024-01-01T12:00:00Z&quot;,
+  &quot;available&quot;: true,
+  &quot;mode&quot;: &quot;Custom&quot;,
+  &quot;path&quot;: &quot;C:\\Tools\\ffmpeg\\bin\\ffmpeg.exe&quot;,
+  &quot;isValid&quot;: true,
+  &quot;source&quot;: &quot;Persisted&quot;,
+  &quot;lastValidatedAt&quot;: &quot;2024-01-01T11:55:00Z&quot;,
+  &quot;validationResult&quot;: &quot;Ok&quot;
+}
+</code></pre>
+<p><strong>Fields:</strong></p>
+<ul>
+<li><code>available</code>: Whether the FFmpeg configuration service is available</li>
+<li><code>mode</code>: Configuration mode (Auto, Custom, Bundled, etc.)</li>
+<li><code>path</code>: Effective FFmpeg executable path</li>
+<li><code>isValid</code>: Whether the FFmpeg binary was successfully validated</li>
+<li><code>source</code>: Where the configuration came from (Persisted, Environment, Configured, PATH)</li>
+<li><code>lastValidatedAt</code>: When the FFmpeg binary was last validated</li>
+<li><code>validationResult</code>: Result of last validation (Ok, NotFound, Invalid, etc.)</li>
+</ul>
+<h3 id="usage-1">Usage</h3>
+<p>Call this endpoint when:</p>
+<ul>
+<li>FFmpeg is not being detected</li>
+<li>Video rendering fails with FFmpeg errors</li>
+<li>After changing FFmpeg configuration</li>
+<li>During initial setup to verify FFmpeg is properly configured</li>
+</ul>
+<p>This endpoint is available in all environments (dev, test, production) for troubleshooting.</p>
+<h2 id="legacy-configuration-migration">Legacy Configuration Migration</h2>
+<p><strong>Note:</strong> The following legacy configuration methods are <strong>no longer supported</strong> and have been removed:</p>
+<ol>
+<li><p><strong>Environment Variables:</strong></p>
+<ul>
+<li>❌ <code>FFMPEG_PATH</code> (removed)</li>
+<li>❌ <code>FFMPEG_BINARIES_PATH</code> (removed)</li>
+<li>✅ <code>AURA_FFMPEG_PATH</code> (supported, but only as a hint from Electron)</li>
+</ul>
+</li>
+<li><p><strong>Direct Configuration Access:</strong></p>
+<ul>
+<li>❌ Reading <code>Configuration[&quot;FFmpeg:ExecutablePath&quot;]</code> directly</li>
+<li>✅ Use <code>IFfmpegConfigurationService.GetEffectiveConfigurationAsync()</code></li>
+</ul>
+</li>
+<li><p><strong>ProviderSettings FFmpeg Path:</strong></p>
+<ul>
+<li>⚠️  <code>ProviderSettings.GetFfmpegPath()</code> now delegates to <code>IFfmpegConfigurationService</code></li>
+<li>Legacy settings.json fallback maintained for backward compatibility but deprecated</li>
+</ul>
+</li>
+</ol>
+<p><strong>Migration Path:</strong></p>
+<p>If your code currently uses:</p>
+<pre><code class="lang-csharp">// OLD (deprecated)
+var ffmpegPath = Environment.GetEnvironmentVariable(&quot;FFMPEG_PATH&quot;);
+var configuredPath = _configuration[&quot;FFmpeg:ExecutablePath&quot;];
+</code></pre>
+<p>Update to:</p>
+<pre><code class="lang-csharp">// NEW (unified configuration)
+var config = await _ffmpegConfigurationService.GetEffectiveConfigurationAsync();
+var ffmpegPath = config.Path;
+</code></pre>
 
 </article>
 
