@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Resilience Runbook | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Resilience Runbook | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/RESILIENCE_RUNBOOK.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="resilience-runbook">Resilience Runbook</h1>
+
+<h2 id="quick-reference-guide-for-operators">Quick Reference Guide for Operators</h2>
+<h3 id="emergency-procedures">Emergency Procedures</h3>
+<h4 id="circuit-breaker-opened---service-unavailable">Circuit Breaker Opened - Service Unavailable</h4>
+<p><strong>Symptoms:</strong></p>
+<ul>
+<li>API returns 503 Service Unavailable</li>
+<li>Logs show &quot;Circuit breaker OPENED&quot; messages</li>
+<li><code>/api/resilience/health</code> shows degraded services</li>
+</ul>
+<p><strong>Diagnosis:</strong></p>
+<pre><code class="lang-bash"># Check which services have open circuits
+curl http://localhost:5000/api/resilience/circuit-breakers
+
+# Get detailed metrics for the service
+curl http://localhost:5000/api/resilience/metrics/ServiceName
+
+# Check recent errors
+curl http://localhost:5000/api/resilience/errors/recent?count=50
+</code></pre>
+<p><strong>Resolution:</strong></p>
+<ol>
+<li><p><strong>Identify root cause:</strong></p>
+<ul>
+<li>Check external service status (OpenAI, Anthropic, etc.)</li>
+<li>Verify network connectivity</li>
+<li>Check API keys are valid</li>
+<li>Review recent errors for patterns</li>
+</ul>
+</li>
+<li><p><strong>Quick fixes:</strong></p>
+<pre><code class="lang-bash"># If temporary issue resolved, reset metrics to allow retry
+curl -X POST http://localhost:5000/api/resilience/metrics/ServiceName/reset
+</code></pre>
+</li>
+<li><p><strong>Configuration adjustments:</strong></p>
+<ul>
+<li>Edit <code>appsettings.json</code> to adjust circuit breaker thresholds</li>
+<li>Increase <code>OpenDurationSeconds</code> if service needs more recovery time</li>
+<li>Decrease <code>FailureThreshold</code> if too sensitive</li>
+</ul>
+</li>
+</ol>
+<h4 id="high-error-rate-alert">High Error Rate Alert</h4>
+<p><strong>Symptoms:</strong></p>
+<ul>
+<li>Alert: &quot;High error rate detected&quot;</li>
+<li>Dashboard shows &gt;10 errors/minute</li>
+<li><code>/api/resilience/health</code> status is &quot;Degraded&quot;</li>
+</ul>
+<p><strong>Diagnosis:</strong></p>
+<pre><code class="lang-bash"># Get error rate trend
+curl &quot;http://localhost:5000/api/resilience/metrics/ServiceName/error-rate?windowMinutes=15&quot;
+
+# Check error categories
+curl http://localhost:5000/api/resilience/metrics/ServiceName
+
+# Get active alerts
+curl http://localhost:5000/api/resilience/alerts
+</code></pre>
+<p><strong>Resolution:</strong></p>
+<ol>
+<li><p><strong>Check error categories:</strong></p>
+<ul>
+<li>Timeout errors → Increase timeout or optimize operations</li>
+<li>Rate limit errors → Reduce request rate or upgrade API plan</li>
+<li>Network errors → Check connectivity, firewall rules</li>
+<li>Validation errors → Check input data quality</li>
+</ul>
+</li>
+<li><p><strong>Temporary mitigation:</strong></p>
+<ul>
+<li>Enable fallback providers</li>
+<li>Reduce parallel request limit</li>
+<li>Increase retry delays</li>
+</ul>
+</li>
+</ol>
+<h4 id="saga-compensation-failed">Saga Compensation Failed</h4>
+<p><strong>Symptoms:</strong></p>
+<ul>
+<li>Logs show &quot;Failed to compensate saga step&quot;</li>
+<li>Partial state changes visible</li>
+<li>Data inconsistency reported</li>
+</ul>
+<p><strong>Diagnosis:</strong></p>
+<pre><code class="lang-bash"># Check logs for saga execution
+grep &quot;SagaOrchestrator&quot; logs/aura-api-*.log
+
+# Look for compensation_failed events
+grep &quot;compensation_failed&quot; logs/aura-api-*.log
+</code></pre>
+<p><strong>Resolution:</strong></p>
+<ol>
+<li><p><strong>Identify failed step:</strong></p>
+<ul>
+<li>Review saga events in logs</li>
+<li>Check CorrelationId for full transaction trace</li>
+</ul>
+</li>
+<li><p><strong>Manual compensation:</strong></p>
+<ul>
+<li>Run manual cleanup scripts</li>
+<li>Delete/rollback created resources</li>
+<li>Update database records</li>
+</ul>
+</li>
+<li><p><strong>Prevention:</strong></p>
+<ul>
+<li>Ensure compensation actions are idempotent</li>
+<li>Add validation before creating resources</li>
+<li>Consider implementing saga persistence</li>
+</ul>
+</li>
+</ol>
+<h3 id="health-monitoring">Health Monitoring</h3>
+<h4 id="dashboard-urls">Dashboard URLs</h4>
+<pre><code>Health Overview:          /api/resilience/health
+Circuit Breakers:         /api/resilience/circuit-breakers
+Error Metrics:            /api/resilience/metrics
+Recent Errors:            /api/resilience/errors/recent?count=100
+Active Alerts:            /api/resilience/alerts
+</code></pre>
+<h4 id="health-status-interpretation">Health Status Interpretation</h4>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+<th>Action Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Healthy</td>
+<td>All systems operational</td>
+<td>None</td>
+</tr>
+<tr>
+<td>Degraded</td>
+<td>Some issues detected</td>
+<td>Monitor, investigate if persists</td>
+</tr>
+<tr>
+<td>Unhealthy</td>
+<td>Critical issues present</td>
+<td>Immediate action required</td>
+</tr>
+</tbody>
+</table>
+<h4 id="key-metrics">Key Metrics</h4>
+<pre><code class="lang-json">{
+  &quot;errorRate&quot;: 0.025,          // &lt;5% is healthy
+  &quot;errorsPerMinute&quot;: 2.5,      // &lt;10 is healthy
+  &quot;circuitState&quot;: &quot;Closed&quot;,    // Closed is healthy
+  &quot;lastErrorTime&quot;: &quot;...&quot;       // Recent = investigate
+}
+</code></pre>
+<h3 id="configuration-guide">Configuration Guide</h3>
+<h4 id="circuit-breaker-tuning">Circuit Breaker Tuning</h4>
+<p><strong>Default Settings:</strong></p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;FailureThreshold&quot;: 5,           // Consecutive failures before opening
+    &quot;FailureRateThreshold&quot;: 0.5,     // 50% failure rate threshold
+    &quot;OpenDurationSeconds&quot;: 30,       // Time to stay open before half-open
+    &quot;TimeoutSeconds&quot;: 10,            // Request timeout
+    &quot;RollingWindowSize&quot;: 100,        // Number of requests to track
+    &quot;RollingWindowMinutes&quot;: 5        // Time window for failure rate
+  }
+}
+</code></pre>
+<p><strong>Tuning Recommendations:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Adjust</th>
+<th>To</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Too sensitive (opens too often)</td>
+<td>↑ <code>FailureThreshold</code></td>
+<td>7-10</td>
+</tr>
+<tr>
+<td>Not sensitive enough</td>
+<td>↓ <code>FailureThreshold</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td>Service needs more recovery time</td>
+<td>↑ <code>OpenDurationSeconds</code></td>
+<td>60-120</td>
+</tr>
+<tr>
+<td>Fast recovery expected</td>
+<td>↓ <code>OpenDurationSeconds</code></td>
+<td>10-20</td>
+</tr>
+<tr>
+<td>Slow API calls timing out</td>
+<td>↑ <code>TimeoutSeconds</code></td>
+<td>30-60</td>
+</tr>
+</tbody>
+</table>
+<h4 id="retry-policy-tuning">Retry Policy Tuning</h4>
+<p><strong>Provider-Specific Settings:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Max Retries</th>
+<th>Base Delay</th>
+<th>Backoff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td>4</td>
+<td>2s</td>
+<td>Exponential + Jitter</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>4</td>
+<td>2s</td>
+<td>Exponential + Jitter</td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>3</td>
+<td>100ms</td>
+<td>Constant</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Custom Configuration:</strong></p>
+<pre><code class="lang-csharp">var pipeline = _factory.CreateCustomPipeline&lt;Result&gt;(new ResiliencePipelineOptions
+{
+    Name = &quot;CustomService&quot;,
+    MaxRetryAttempts = 5,
+    RetryDelay = TimeSpan.FromSeconds(3),
+    CircuitBreakerBreakDuration = TimeSpan.FromMinutes(2)
+});
+</code></pre>
+<h3 id="monitoring-automation">Monitoring Automation</h3>
+<h4 id="setting-up-alerts">Setting Up Alerts</h4>
+<p><strong>Prometheus/Grafana Integration:</strong></p>
+<pre><code class="lang-yaml"># Add to prometheus.yml
+scrape_configs:
+  - job_name: 'aura_resilience'
+    metrics_path: '/api/resilience/metrics'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:5000']
+</code></pre>
+<p><strong>Alert Rules:</strong></p>
+<pre><code class="lang-yaml">groups:
+  - name: resilience
+    interval: 30s
+    rules:
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state == 1
+        for: 1m
+        annotations:
+          summary: &quot;Circuit breaker opened for {{ $labels.service }}&quot;
+      
+      - alert: HighErrorRate
+        expr: error_rate &gt; 0.1
+        for: 5m
+        annotations:
+          summary: &quot;High error rate on {{ $labels.service }}&quot;
+</code></pre>
+<h4 id="log-analysis">Log Analysis</h4>
+<p><strong>Common Log Patterns:</strong></p>
+<pre><code class="lang-bash"># Find all circuit breaker state changes
+grep &quot;Circuit breaker&quot; logs/aura-api-*.log | tail -20
+
+# Find error spikes
+grep -c &quot;ERROR&quot; logs/aura-api-$(date +%Y%m%d).log
+
+# Find specific error categories
+grep &quot;category.*Timeout&quot; logs/aura-api-*.log
+
+# Find saga failures
+grep &quot;Saga.*failed&quot; logs/aura-api-*.log
+</code></pre>
+<h3 id="performance-optimization">Performance Optimization</h3>
+<h4 id="reducing-error-rates">Reducing Error Rates</h4>
+<ol>
+<li><p><strong>Optimize retry logic:</strong></p>
+<ul>
+<li>Add intelligent backoff based on error type</li>
+<li>Skip retries for known non-retryable errors</li>
+<li>Use circuit breakers to fail fast</li>
+</ul>
+</li>
+<li><p><strong>Connection pooling:</strong></p>
+<pre><code class="lang-csharp">builder.Services.AddHttpClient&lt;MyService&gt;()
+    .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+    .ConfigurePrimaryHttpMessageHandler(() =&gt; new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        MaxConnectionsPerServer = 10
+    });
+</code></pre>
+</li>
+<li><p><strong>Request deduplication:</strong></p>
+<pre><code class="lang-csharp">var result = await _idempotencyManager.ExecuteIdempotentAsync(
+    idempotencyKey,
+    () =&gt; CallExpensiveOperation()
+);
+</code></pre>
+</li>
+</ol>
+<h4 id="memory-management">Memory Management</h4>
+<p><strong>Cleanup Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;Idempotency&quot;: {
+      &quot;DefaultTtlHours&quot;: 24,
+      &quot;MaxRecords&quot;: 10000,
+      &quot;CleanupIntervalHours&quot;: 1
+    },
+    &quot;Monitoring&quot;: {
+      &quot;CleanupIntervalHours&quot;: 1,
+      &quot;AlertRetentionHours&quot;: 24
+    }
+  }
+}
+</code></pre>
+<p><strong>Manual Cleanup:</strong></p>
+<pre><code class="lang-bash"># Clear old idempotency records
+curl -X POST http://localhost:5000/api/admin/cleanup/idempotency
+
+# Clear old alerts
+curl -X POST http://localhost:5000/api/admin/cleanup/alerts
+</code></pre>
+<h3 id="testing-procedures">Testing Procedures</h3>
+<h4 id="chaos-engineering-tests">Chaos Engineering Tests</h4>
+<p><strong>Simulate Circuit Breaker Opening:</strong></p>
+<pre><code class="lang-csharp">// In test environment
+for (int i = 0; i &lt; 10; i++)
+{
+    try {
+        await _service.CallExternalApi();
+    } catch {
+        // Expected failures to trigger circuit breaker
+    }
+}
+
+// Verify circuit is open
+var state = await _client.GetAsync(&quot;/api/resilience/circuit-breakers/ExternalApi&quot;);
+Assert.Equal(&quot;Open&quot;, state.State);
+</code></pre>
+<p><strong>Simulate High Error Rate:</strong></p>
+<pre><code class="lang-bash"># Load test with intentional failures
+ab -n 1000 -c 10 http://localhost:5000/api/test/failure-injection
+</code></pre>
+<p><strong>Test Saga Compensation:</strong></p>
+<pre><code class="lang-csharp">// Test that compensation runs on failure
+var saga = new TestSaga();
+var result = await _orchestrator.ExecuteAsync(context, saga.Steps);
+Assert.False(result.Success);
+Assert.True(saga.Step1.WasCompensated);
+</code></pre>
+<h4 id="recovery-time-testing">Recovery Time Testing</h4>
+<pre><code class="lang-bash"># 1. Open circuit breaker
+curl -X POST http://localhost:5000/api/test/circuit-breaker/open
+
+# 2. Wait for recovery period
+sleep 35
+
+# 3. Verify half-open state
+curl http://localhost:5000/api/resilience/circuit-breakers/TestService
+
+# 4. Send success request to close
+curl http://localhost:5000/api/test/success
+
+# 5. Verify closed state
+curl http://localhost:5000/api/resilience/circuit-breakers/TestService
+</code></pre>
+<h3 id="common-issues-and-solutions">Common Issues and Solutions</h3>
+<h4 id="issue-circuit-breaker-wont-close">Issue: Circuit Breaker Won't Close</h4>
+<p><strong>Possible Causes:</strong></p>
+<ul>
+<li>External service still failing</li>
+<li>Timeout too short for service</li>
+<li>Health check failing</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash"># 1. Verify external service is actually healthy
+curl https://api.openai.com/v1/models -H &quot;Authorization: Bearer $KEY&quot;
+
+# 2. Check timeout configuration
+# 3. Reset metrics if service is confirmed healthy
+curl -X POST http://localhost:5000/api/resilience/metrics/OpenAI/reset
+</code></pre>
+<h4 id="issue-idempotency-records-growing-too-large">Issue: Idempotency Records Growing Too Large</h4>
+<p><strong>Symptoms:</strong></p>
+<ul>
+<li>Memory usage increasing</li>
+<li>Slow idempotency checks</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;Idempotency&quot;: {
+      &quot;DefaultTtlHours&quot;: 6,      // Reduce from 24
+      &quot;MaxRecords&quot;: 5000,        // Reduce from 10000
+      &quot;CleanupIntervalHours&quot;: 0.5 // Increase frequency
+    }
+  }
+}
+</code></pre>
+<h4 id="issue-saga-steps-not-compensating">Issue: Saga Steps Not Compensating</h4>
+<p><strong>Possible Causes:</strong></p>
+<ul>
+<li>CanCompensate = false</li>
+<li>Compensation logic throwing exception</li>
+<li>State not stored in context</li>
+</ul>
+<p><strong>Debugging:</strong></p>
+<pre><code class="lang-csharp">// Add logging in BaseSagaStep
+protected override async Task CompensateAsync(SagaContext context, CancellationToken ct)
+{
+    _logger.LogInformation(&quot;Compensating step {StepId}&quot;, StepId);
+    
+    try {
+        // Your compensation logic
+    } catch (Exception ex) {
+        _logger.LogError(ex, &quot;Compensation failed for {StepId}&quot;, StepId);
+        throw;
+    }
+}
+</code></pre>
+<h3 id="sla-targets">SLA Targets</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>Threshold</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Transient Error Recovery</td>
+<td>&lt;5 seconds</td>
+<td>10 seconds</td>
+</tr>
+<tr>
+<td>Circuit Breaker Recovery</td>
+<td>&lt;30 seconds</td>
+<td>60 seconds</td>
+</tr>
+<tr>
+<td>Saga Compensation</td>
+<td>&lt;10 seconds</td>
+<td>30 seconds</td>
+</tr>
+<tr>
+<td>Overall Availability</td>
+<td>99.9%</td>
+<td>99.5%</td>
+</tr>
+<tr>
+<td>Error Rate</td>
+<td>&lt;5%</td>
+<td>&lt;10%</td>
+</tr>
+</tbody>
+</table>
+<h3 id="contact-and-escalation">Contact and Escalation</h3>
+<p><strong>Level 1 - Operations:</strong></p>
+<ul>
+<li>Monitor dashboards</li>
+<li>Basic troubleshooting</li>
+<li>Configuration adjustments</li>
+<li>Metric resets</li>
+</ul>
+<p><strong>Level 2 - Engineering:</strong></p>
+<ul>
+<li>Circuit breaker tuning</li>
+<li>Retry policy optimization</li>
+<li>Saga compensation debugging</li>
+<li>Performance optimization</li>
+</ul>
+<p><strong>Level 3 - Architecture:</strong></p>
+<ul>
+<li>Resilience pattern redesign</li>
+<li>External service integration issues</li>
+<li>Distributed transaction problems</li>
+<li>System-wide reliability concerns</li>
+</ul>
+<h2 id="appendix">Appendix</h2>
+<h3 id="useful-commands-reference">Useful Commands Reference</h3>
+<pre><code class="lang-bash"># Health check
+curl http://localhost:5000/api/resilience/health | jq
+
+# All circuit breakers
+curl http://localhost:5000/api/resilience/circuit-breakers | jq
+
+# Service metrics
+curl http://localhost:5000/api/resilience/metrics | jq
+
+# Recent errors
+curl 'http://localhost:5000/api/resilience/errors/recent?count=50' | jq
+
+# Error rate (5 min window)
+curl 'http://localhost:5000/api/resilience/metrics/OpenAI/error-rate?windowMinutes=5' | jq
+
+# Active alerts
+curl http://localhost:5000/api/resilience/alerts | jq
+
+# Reset service metrics
+curl -X POST http://localhost:5000/api/resilience/metrics/OpenAI/reset
+
+# Tail logs for errors
+tail -f logs/errors-$(date +%Y%m%d).log
+
+# Count errors by service
+grep ERROR logs/aura-api-*.log | awk '{print $NF}' | sort | uniq -c | sort -rn
+
+# Find correlation ID
+grep &quot;correlation-id-here&quot; logs/aura-api-*.log
+</code></pre>
+<h3 id="configuration-templates">Configuration Templates</h3>
+<p><strong>Production (Conservative):</strong></p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;FailureThreshold&quot;: 7,
+    &quot;FailureRateThreshold&quot;: 0.4,
+    &quot;OpenDurationSeconds&quot;: 60,
+    &quot;TimeoutSeconds&quot;: 30
+  }
+}
+</code></pre>
+<p><strong>Development (Aggressive):</strong></p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;FailureThreshold&quot;: 3,
+    &quot;FailureRateThreshold&quot;: 0.6,
+    &quot;OpenDurationSeconds&quot;: 10,
+    &quot;TimeoutSeconds&quot;: 10
+  }
+}
+</code></pre>
+<p><strong>High-Traffic (Optimized):</strong></p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;FailureThreshold&quot;: 10,
+    &quot;FailureRateThreshold&quot;: 0.3,
+    &quot;OpenDurationSeconds&quot;: 45,
+    &quot;TimeoutSeconds&quot;: 20,
+    &quot;RollingWindowSize&quot;: 200
+  }
+}
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/RESILIENCE_RUNBOOK.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Script Refinement Pipeline Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Script Refinement Pipeline Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/SCRIPT_REFINEMENT_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="script-refinement-pipeline-guide">Script Refinement Pipeline Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Script Refinement Pipeline implements a multi-stage &quot;Draft-Critique-Revise&quot; pattern that iteratively improves script quality through self-critique and targeted revisions. This feature ensures generated scripts meet high quality standards before production.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="core-components">Core Components</h3>
+<ol>
+<li><p><strong>ScriptRefinementOrchestrator</strong> (<code>Aura.Core/Services/ScriptRefinementOrchestrator.cs</code>)</p>
+<ul>
+<li>Orchestrates the complete refinement workflow</li>
+<li>Manages iteration cycles and quality tracking</li>
+<li>Integrates with IntelligentContentAdvisor for validation</li>
+</ul>
+</li>
+<li><p><strong>ScriptQualityMetrics</strong> (<code>Aura.Core/Models/ScriptQualityMetrics.cs</code>)</p>
+<ul>
+<li>5-dimensional quality scoring (0-100 scale):
+<ul>
+<li>Narrative Coherence: Logical flow and story structure</li>
+<li>Pacing Appropriateness: Rhythm and timing suitability</li>
+<li>Audience Alignment: Content matches target audience</li>
+<li>Visual Clarity: Script supports visual storytelling</li>
+<li>Engagement Potential: Predicted viewer engagement</li>
+</ul>
+</li>
+<li>Overall score: Weighted average of all dimensions</li>
+</ul>
+</li>
+<li><p><strong>ScriptRefinementConfig</strong> (<code>Aura.Core/Models/ScriptQualityMetrics.cs</code> - contains multiple related classes)</p>
+<ul>
+<li>Configurable refinement parameters</li>
+<li>Early stopping conditions</li>
+<li>Integration settings</li>
+</ul>
+</li>
+</ol>
+<h2 id="refinement-workflow">Refinement Workflow</h2>
+<h3 id="stage-1-initial-draft-generation">Stage 1: Initial Draft Generation</h3>
+<ul>
+<li>LLM generates first version of script based on Brief and PlanSpec</li>
+<li>No refinement applied yet</li>
+</ul>
+<h3 id="stage-2-quality-assessment">Stage 2: Quality Assessment</h3>
+<ul>
+<li>Script is evaluated across 5 quality dimensions</li>
+<li>Structured feedback is extracted</li>
+<li>Baseline metrics established</li>
+</ul>
+<h3 id="stage-3-iterative-refinement-1-3-passes">Stage 3: Iterative Refinement (1-3 passes)</h3>
+<p>For each refinement pass:</p>
+<h4 id="3a-critique-generation">3a. Critique Generation</h4>
+<ul>
+<li>LLM analyzes current script against quality criteria</li>
+<li>Identifies specific issues with examples</li>
+<li>Lists strengths to preserve</li>
+<li>Provides actionable improvement suggestions</li>
+</ul>
+<h4 id="3b-script-revision">3b. Script Revision</h4>
+<ul>
+<li>LLM generates revised version incorporating critique</li>
+<li>Maintains original topic, tone, and target duration</li>
+<li>Addresses identified issues while preserving strengths</li>
+</ul>
+<h4 id="3c-quality-reassessment">3c. Quality Reassessment</h4>
+<ul>
+<li>Revised script is evaluated</li>
+<li>Quality delta calculated vs. previous iteration</li>
+<li>Metrics logged for tracking</li>
+</ul>
+<h4 id="early-stopping-conditions">Early Stopping Conditions:</h4>
+<ol>
+<li><strong>Quality Threshold Met</strong>: Script reaches configured threshold (default: 85/100)</li>
+<li><strong>Minimal Improvement</strong>: Quality delta &lt; minimum threshold (default: 5 points)</li>
+<li><strong>Max Passes Reached</strong>: Configured maximum iterations completed (default: 2)</li>
+</ol>
+<h3 id="stage-4-optional-validation">Stage 4: Optional Validation</h3>
+<ul>
+<li>If enabled, IntelligentContentAdvisor performs final validation</li>
+<li>Additional quality checks applied</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="appsettingsjson">appsettings.json</h3>
+<pre><code class="lang-json">{
+  &quot;ScriptRefinement&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;MaxRefinementPasses&quot;: 2,
+    &quot;QualityThreshold&quot;: 85.0,
+    &quot;MinimumImprovement&quot;: 5.0,
+    &quot;EnableAdvisorValidation&quot;: true,
+    &quot;PassTimeoutMinutes&quot;: 2
+  }
+}
+</code></pre>
+<h3 id="programmatic-configuration">Programmatic Configuration</h3>
+<pre><code class="lang-csharp">var config = new ScriptRefinementConfig
+{
+    MaxRefinementPasses = 2,        // 1-3 passes allowed
+    QualityThreshold = 85.0,        // 0-100 scale
+    MinimumImprovement = 5.0,       // Delta to continue refining
+    EnableAdvisorValidation = true, // Final validation with ContentAdvisor
+    PassTimeout = TimeSpan.FromMinutes(2)
+};
+</code></pre>
+<h3 id="planspec-integration">PlanSpec Integration</h3>
+<pre><code class="lang-csharp">var planSpec = new PlanSpec(
+    TargetDuration: TimeSpan.FromMinutes(3),
+    Pacing: Pacing.Conversational,
+    Density: Density.Balanced,
+    Style: &quot;educational&quot;,
+    RefinementConfig: config  // Optional refinement configuration
+);
+</code></pre>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="basic-refinement">Basic Refinement</h3>
+<pre><code class="lang-csharp">var orchestrator = new ScriptRefinementOrchestrator(
+    logger,
+    llmProvider,
+    contentAdvisor
+);
+
+var brief = new Brief(
+    Topic: &quot;Climate Change Solutions&quot;,
+    Audience: &quot;General public&quot;,
+    Goal: &quot;Educate and inspire action&quot;,
+    Tone: &quot;optimistic&quot;,
+    Language: &quot;en&quot;,
+    Aspect: Aspect.Widescreen16x9
+);
+
+var spec = new PlanSpec(
+    TargetDuration: TimeSpan.FromMinutes(3),
+    Pacing: Pacing.Conversational,
+    Density: Density.Balanced,
+    Style: &quot;educational&quot;
+);
+
+var config = new ScriptRefinementConfig
+{
+    MaxRefinementPasses = 2,
+    QualityThreshold = 85.0
+};
+
+var result = await orchestrator.RefineScriptAsync(brief, spec, config);
+
+if (result.Success)
+{
+    Console.WriteLine($&quot;Final Script: {result.FinalScript}&quot;);
+    Console.WriteLine($&quot;Quality: {result.FinalMetrics?.OverallScore:F1}/100&quot;);
+    Console.WriteLine($&quot;Total Passes: {result.TotalPasses}&quot;);
+    Console.WriteLine($&quot;Duration: {result.TotalDuration.TotalSeconds:F1}s&quot;);
+    Console.WriteLine($&quot;Stop Reason: {result.StopReason}&quot;);
+    
+    var improvement = result.GetTotalImprovement();
+    if (improvement != null)
+    {
+        Console.WriteLine($&quot;Quality Improvement: +{improvement.OverallDelta:F1} points&quot;);
+    }
+}
+</code></pre>
+<h3 id="api-usage">API Usage</h3>
+<pre><code class="lang-json">POST /api/script
+{
+  &quot;topic&quot;: &quot;Future of AI in Healthcare&quot;,
+  &quot;audience&quot;: &quot;Healthcare professionals&quot;,
+  &quot;goal&quot;: &quot;Educational overview&quot;,
+  &quot;tone&quot;: &quot;professional&quot;,
+  &quot;language&quot;: &quot;en&quot;,
+  &quot;aspect&quot;: &quot;Widescreen16x9&quot;,
+  &quot;targetDurationMinutes&quot;: 4.0,
+  &quot;pacing&quot;: &quot;Conversational&quot;,
+  &quot;density&quot;: &quot;Balanced&quot;,
+  &quot;style&quot;: &quot;educational&quot;,
+  &quot;refinementConfig&quot;: {
+    &quot;maxRefinementPasses&quot;: 2,
+    &quot;qualityThreshold&quot;: 85.0,
+    &quot;minimumImprovement&quot;: 5.0,
+    &quot;enableAdvisorValidation&quot;: true,
+    &quot;passTimeoutMinutes&quot;: 2
+  }
+}
+</code></pre>
+<h3 id="quality-metrics-analysis">Quality Metrics Analysis</h3>
+<pre><code class="lang-csharp">foreach (var metrics in result.IterationMetrics)
+{
+    Console.WriteLine($&quot;\nIteration {metrics.Iteration}:&quot;);
+    Console.WriteLine($&quot;  Overall: {metrics.OverallScore:F1}&quot;);
+    Console.WriteLine($&quot;  Narrative Coherence: {metrics.NarrativeCoherence:F1}&quot;);
+    Console.WriteLine($&quot;  Pacing: {metrics.PacingAppropriateness:F1}&quot;);
+    Console.WriteLine($&quot;  Audience Alignment: {metrics.AudienceAlignment:F1}&quot;);
+    Console.WriteLine($&quot;  Visual Clarity: {metrics.VisualClarity:F1}&quot;);
+    Console.WriteLine($&quot;  Engagement: {metrics.EngagementPotential:F1}&quot;);
+    
+    if (metrics.Issues.Count &gt; 0)
+    {
+        Console.WriteLine(&quot;  Issues:&quot;);
+        foreach (var issue in metrics.Issues)
+        {
+            Console.WriteLine($&quot;    - {issue}&quot;);
+        }
+    }
+    
+    if (metrics.Suggestions.Count &gt; 0)
+    {
+        Console.WriteLine(&quot;  Suggestions:&quot;);
+        foreach (var suggestion in metrics.Suggestions)
+        {
+            Console.WriteLine($&quot;    - {suggestion}&quot;);
+        }
+    }
+}
+</code></pre>
+<h2 id="performance-characteristics">Performance Characteristics</h2>
+<h3 id="expected-performance">Expected Performance</h3>
+<ul>
+<li><strong>Single Pass (Initial Draft Only)</strong>: Baseline time</li>
+<li><strong>Two-Pass Refinement</strong>: ~60% time increase (acceptable per requirements)</li>
+<li><strong>Three-Pass Refinement</strong>: ~100-120% time increase</li>
+</ul>
+<h3 id="performance-optimization-tips">Performance Optimization Tips</h3>
+<ol>
+<li>Use appropriate <code>MaxRefinementPasses</code> based on content complexity</li>
+<li>Set realistic <code>QualityThreshold</code> to enable early stopping</li>
+<li>Disable <code>EnableAdvisorValidation</code> for faster processing when not needed</li>
+<li>Monitor <code>TotalDuration</code> in results to track performance</li>
+</ol>
+<h3 id="performance-test-example">Performance Test Example</h3>
+<pre><code class="lang-csharp">var singlePassConfig = new ScriptRefinementConfig 
+{ 
+    MaxRefinementPasses = 1 
+};
+
+var twoPassConfig = new ScriptRefinementConfig 
+{ 
+    MaxRefinementPasses = 2 
+};
+
+var result1 = await orchestrator.RefineScriptAsync(brief, spec, singlePassConfig);
+var result2 = await orchestrator.RefineScriptAsync(brief, spec, twoPassConfig);
+
+var timeIncrease = result2.TotalDuration.TotalSeconds / result1.TotalDuration.TotalSeconds;
+Console.WriteLine($&quot;Time increase for 2-pass: {(timeIncrease - 1) * 100:F1}%&quot;);
+</code></pre>
+<h2 id="quality-metrics-details">Quality Metrics Details</h2>
+<h3 id="scoring-system">Scoring System</h3>
+<p>All metrics use a 0-100 scale:</p>
+<ul>
+<li><strong>0-59</strong>: Poor quality, needs significant improvement</li>
+<li><strong>60-74</strong>: Below threshold, improvement recommended</li>
+<li><strong>75-84</strong>: Good quality, approaching threshold</li>
+<li><strong>85-94</strong>: High quality, meets threshold</li>
+<li><strong>95-100</strong>: Excellent quality, exceeds expectations</li>
+</ul>
+<h3 id="overall-score-calculation">Overall Score Calculation</h3>
+<pre><code>OverallScore = (NarrativeCoherence × 0.25) +
+               (PacingAppropriateness × 0.20) +
+               (AudienceAlignment × 0.20) +
+               (VisualClarity × 0.15) +
+               (EngagementPotential × 0.20)
+</code></pre>
+<h3 id="interpretation">Interpretation</h3>
+<p><strong>Narrative Coherence (25% weight)</strong></p>
+<ul>
+<li>Logical flow and progression</li>
+<li>Clear beginning, middle, end</li>
+<li>Smooth transitions between ideas</li>
+<li>Compelling throughline</li>
+</ul>
+<p><strong>Pacing Appropriateness (20% weight)</strong></p>
+<ul>
+<li>Information density matches duration</li>
+<li>Natural rhythm variations</li>
+<li>Appropriate for tone and audience</li>
+<li>Strategic timing of reveals</li>
+</ul>
+<p><strong>Audience Alignment (20% weight)</strong></p>
+<ul>
+<li>Language level appropriate</li>
+<li>Relatable examples and references</li>
+<li>Addresses audience needs</li>
+<li>Appropriate complexity</li>
+</ul>
+<p><strong>Visual Clarity (15% weight)</strong></p>
+<ul>
+<li>Scenes easily visualized</li>
+<li>Clear B-roll opportunities</li>
+<li>Supports visual storytelling</li>
+<li>Graphics/demonstration moments</li>
+</ul>
+<p><strong>Engagement Potential (20% weight)</strong></p>
+<ul>
+<li>Strong opening hook</li>
+<li>Pattern interrupts and surprises</li>
+<li>Clear value proposition</li>
+<li>Memorable conclusion</li>
+</ul>
+<h2 id="integration-with-existing-systems">Integration with Existing Systems</h2>
+<h3 id="intelligentcontentadvisor-integration">IntelligentContentAdvisor Integration</h3>
+<p>The refinement pipeline optionally integrates with <code>IntelligentContentAdvisor</code> for additional validation:</p>
+<pre><code class="lang-csharp">var advisor = new IntelligentContentAdvisor(logger, llmProvider);
+var orchestrator = new ScriptRefinementOrchestrator(
+    logger,
+    llmProvider,
+    advisor  // Pass advisor for validation
+);
+
+var config = new ScriptRefinementConfig
+{
+    EnableAdvisorValidation = true  // Enable final validation
+};
+</code></pre>
+<p>When enabled, the advisor performs:</p>
+<ul>
+<li>AI-powered quality analysis</li>
+<li>Heuristic checks for common issues</li>
+<li>Detection of AI-generation patterns</li>
+<li>Additional authenticity scoring</li>
+</ul>
+<h3 id="scriptorchestrator-integration">ScriptOrchestrator Integration</h3>
+<p>The refinement can be integrated into <code>ScriptOrchestrator</code> for seamless script generation:</p>
+<pre><code class="lang-csharp">// Generate initial draft
+var scriptResult = await scriptOrchestrator.GenerateScriptAsync(
+    brief, spec, tier, offlineOnly, ct);
+
+if (scriptResult.Success &amp;&amp; spec.RefinementConfig != null)
+{
+    // Apply refinement if configured
+    var refinementResult = await refinementOrchestrator.RefineScriptAsync(
+        brief, spec, spec.RefinementConfig, ct);
+    
+    if (refinementResult.Success)
+    {
+        scriptResult = scriptResult with 
+        { 
+            Script = refinementResult.FinalScript 
+        };
+    }
+}
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p>Location: <code>Aura.Tests/ScriptRefinementOrchestratorTests.cs</code></p>
+<p>Test coverage:</p>
+<ul>
+<li>Configuration validation</li>
+<li>Quality metrics calculation</li>
+<li>Improvement tracking</li>
+<li>Threshold detection</li>
+<li>Max passes enforcement</li>
+<li>Early stopping conditions</li>
+</ul>
+<h3 id="integration-tests">Integration Tests</h3>
+<p>Location: <code>Aura.Tests/Integration/ScriptRefinementPipelineTests.cs</code></p>
+<p>Test scenarios:</p>
+<ul>
+<li>Full refinement pipeline</li>
+<li>Performance characteristics</li>
+<li>Quality improvement tracking</li>
+<li>Advisor integration</li>
+<li>Cancellation handling</li>
+<li>Structured metrics output</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="common-issues">Common Issues</h3>
+<p><strong>Issue</strong>: Refinement takes too long</p>
+<ul>
+<li><strong>Solution</strong>: Reduce <code>MaxRefinementPasses</code> or increase <code>QualityThreshold</code> for earlier stopping</li>
+</ul>
+<p><strong>Issue</strong>: Quality not improving between iterations</p>
+<ul>
+<li><strong>Solution</strong>: Check LLM provider quality, ensure critique prompts are working, review logs</li>
+</ul>
+<p><strong>Issue</strong>: Early stopping not working</p>
+<ul>
+<li><strong>Solution</strong>: Verify <code>MinimumImprovement</code> threshold is appropriate, check quality metrics</li>
+</ul>
+<p><strong>Issue</strong>: Out of memory during refinement</p>
+<ul>
+<li><strong>Solution</strong>: Monitor script length, consider breaking into segments for very long scripts</li>
+</ul>
+<h3 id="logging">Logging</h3>
+<p>The orchestrator provides detailed logging at each stage:</p>
+<pre><code>Starting script refinement: MaxPasses=2, QualityThreshold=85
+Stage 1: Generating initial draft (Pass 0)
+Stage 2: Assessing initial draft quality
+Initial draft quality: Overall=74.5, Narrative=75.0, Pacing=73.0, ...
+Starting refinement pass 1/2
+Pass 1 - Stage 3a: Generating critique
+Pass 1 - Stage 3b: Generating revised script
+Pass 1 - Stage 3c: Assessing revised quality
+Pass 1 quality: Overall=82.3 (Δ+7.8), Narrative=83.0 (Δ+8.0), ...
+Starting refinement pass 2/2
+...
+Quality threshold met at pass 2 (87.1 &gt;= 85.0), stopping refinement
+Script refinement complete: Duration=45.2s, Passes=3, TotalImprovement=+12.6, Final=87.1
+</code></pre>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements for future iterations:</p>
+<ol>
+<li>Machine learning-based quality prediction</li>
+<li>Fine-tuned critique models for specific domains</li>
+<li>Multi-model consensus for quality assessment</li>
+<li>Automated A/B testing of refinement strategies</li>
+<li>Real-time refinement progress streaming to UI</li>
+<li>Refinement history and learning from user feedback</li>
+<li>Domain-specific quality metrics</li>
+<li>Collaborative refinement with human-in-the-loop</li>
+</ol>
+<h2 id="ssml-preview-and-timing-alignment">SSML Preview and Timing Alignment</h2>
+<h3 id="overview-1">Overview</h3>
+<p>After script generation and refinement, Aura provides an SSML (Speech Synthesis Markup Language) preview UI that allows precise control over timing, prosody, and voice characteristics on a per-scene basis.</p>
+<h3 id="features">Features</h3>
+<h4 id="1-provider-specific-ssml-generation">1. Provider-Specific SSML Generation</h4>
+<p>The SSML Planner automatically generates provider-optimized SSML markup:</p>
+<ul>
+<li>Maps generic prosody adjustments to provider-specific tags</li>
+<li>Validates SSML against provider constraints</li>
+<li>Suggests auto-repairs for invalid markup</li>
+<li>Supports multiple providers: ElevenLabs, PlayHT, Windows SAPI, Piper, Mimic3</li>
+</ul>
+<h4 id="2-duration-fitting-loop">2. Duration Fitting Loop</h4>
+<p>Automatically adjusts SSML to match target scene durations:</p>
+<ul>
+<li>±2% tolerance by default</li>
+<li>Iterative fitting with rate, pitch, and pause adjustments</li>
+<li>Reports deviation statistics per scene</li>
+<li>95%+ scenes typically fit within tolerance</li>
+</ul>
+<h4 id="3-per-scene-controls">3. Per-Scene Controls</h4>
+<p>Edit SSML for individual scenes:</p>
+<ul>
+<li><strong>Pace Slider</strong>: Adjust speech rate (0.5x - 2.0x)</li>
+<li><strong>SSML Editor</strong>: Direct markup editing with syntax highlighting</li>
+<li><strong>Pause Editor</strong>: Insert/adjust pauses at specific positions</li>
+<li><strong>Emphasis Toggles</strong>: Mark text spans for emphasis</li>
+<li><strong>Validation</strong>: Real-time SSML validation with error messages</li>
+<li><strong>Auto-Repair</strong>: One-click fix for common SSML errors</li>
+</ul>
+<h4 id="4-timing-visualization">4. Timing Visualization</h4>
+<p>Visual feedback on duration alignment:</p>
+<ul>
+<li>Target vs actual duration per scene</li>
+<li>Deviation percentage with color-coded badges</li>
+<li>Aggregate statistics (within tolerance %, avg/max deviation)</li>
+<li>Iteration count per scene</li>
+</ul>
+<h3 id="usage">Usage</h3>
+<h4 id="api-endpoint-apissmlplan">API Endpoint: <code>/api/ssml/plan</code></h4>
+<pre><code class="lang-json">POST /api/ssml/plan
+{
+  &quot;scriptLines&quot;: [
+    {
+      &quot;sceneIndex&quot;: 0,
+      &quot;text&quot;: &quot;Welcome to our video&quot;,
+      &quot;startSeconds&quot;: 0,
+      &quot;durationSeconds&quot;: 3.5
+    }
+  ],
+  &quot;targetProvider&quot;: &quot;ElevenLabs&quot;,
+  &quot;voiceSpec&quot;: {
+    &quot;voiceName&quot;: &quot;Rachel&quot;,
+    &quot;rate&quot;: 1.0,
+    &quot;pitch&quot;: 0.0,
+    &quot;volume&quot;: 1.0
+  },
+  &quot;targetDurations&quot;: {
+    &quot;0&quot;: 3.5
+  },
+  &quot;durationTolerance&quot;: 0.02,
+  &quot;maxFittingIterations&quot;: 10
+}
+</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;segments&quot;: [
+    {
+      &quot;sceneIndex&quot;: 0,
+      &quot;originalText&quot;: &quot;Welcome to our video&quot;,
+      &quot;ssmlMarkup&quot;: &quot;&lt;speak&gt;&lt;prosody rate=\&quot;1.05\&quot;&gt;Welcome to our video&lt;/prosody&gt;&lt;/speak&gt;&quot;,
+      &quot;estimatedDurationMs&quot;: 3480,
+      &quot;targetDurationMs&quot;: 3500,
+      &quot;deviationPercent&quot;: -0.57,
+      &quot;adjustments&quot;: {
+        &quot;rate&quot;: 1.05,
+        &quot;pitch&quot;: 0.0,
+        &quot;volume&quot;: 1.0,
+        &quot;pauses&quot;: {},
+        &quot;emphasis&quot;: [],
+        &quot;iterations&quot;: 2
+      },
+      &quot;timingMarkers&quot;: []
+    }
+  ],
+  &quot;stats&quot;: {
+    &quot;segmentsAdjusted&quot;: 1,
+    &quot;averageFitIterations&quot;: 2.0,
+    &quot;maxFitIterations&quot;: 2,
+    &quot;withinTolerancePercent&quot;: 100.0,
+    &quot;averageDeviation&quot;: 0.57,
+    &quot;maxDeviation&quot;: 0.57,
+    &quot;targetDurationSeconds&quot;: 3.5,
+    &quot;actualDurationSeconds&quot;: 3.48
+  },
+  &quot;warnings&quot;: [],
+  &quot;planningDurationMs&quot;: 245
+}
+</code></pre>
+<h4 id="frontend-integration">Frontend Integration</h4>
+<pre><code class="lang-typescript">import { SSMLPreview } from '@/components/ssml';
+
+// In your voice/script workflow
+&lt;SSMLPreview
+  scriptLines={scriptLines}
+  voiceName=&quot;Rachel&quot;
+  initialProvider=&quot;ElevenLabs&quot;
+  onSSMLGenerated={(ssmlMarkups) =&gt; {
+    // Use generated SSML for TTS synthesis
+    console.log('Generated SSML:', ssmlMarkups);
+  }}
+/&gt;
+</code></pre>
+<h3 id="provider-support-matrix">Provider Support Matrix</h3>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>SSML Tags</th>
+<th>Rate</th>
+<th>Pitch</th>
+<th>Volume</th>
+<th>Pauses</th>
+<th>Emphasis</th>
+<th>Timing Markers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ElevenLabs</td>
+<td>speak, break, prosody</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>PlayHT</td>
+<td>speak, break, prosody</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Windows SAPI</td>
+<td>speak, break, prosody, emphasis</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td>Piper</td>
+<td>speak, break</td>
+<td>✓</td>
+<td>Limited</td>
+<td>✗</td>
+<td>✓</td>
+<td>✗</td>
+<td>✗</td>
+</tr>
+<tr>
+<td>Mimic3</td>
+<td>speak, break, prosody</td>
+<td>✓</td>
+<td>✓</td>
+<td>✗</td>
+<td>✓</td>
+<td>Limited</td>
+<td>✗</td>
+</tr>
+</tbody>
+</table>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li><strong>Start with Provider Selection</strong>: Choose provider before generating SSML to ensure compatibility</li>
+<li><strong>Review Auto-Generated SSML</strong>: Always review and test generated SSML before final synthesis</li>
+<li><strong>Iterate on Deviations</strong>: Scenes with &gt;5% deviation may need manual adjustment</li>
+<li><strong>Use Validation</strong>: Run validation before synthesis to catch provider-specific errors</li>
+<li><strong>Lock Approved Sections</strong>: Use script locking (from Guided Mode) to prevent changes during regeneration</li>
+<li><strong>Test with Real Voices</strong>: Different voices may have slightly different timing characteristics</li>
+</ol>
+<h3 id="troubleshooting-1">Troubleshooting</h3>
+<p><strong>Issue</strong>: SSML validation fails<br>
+<strong>Solution</strong>: Click &quot;Auto-Repair&quot; to fix common issues, or manually edit markup according to provider constraints</p>
+<p><strong>Issue</strong>: Duration deviation &gt;10%<br>
+<strong>Solution</strong>: Increase max fitting iterations, or manually adjust rate/pauses in scene editor</p>
+<p><strong>Issue</strong>: Provider constraints unknown<br>
+<strong>Solution</strong>: Ensure provider is properly configured in settings with valid API keys</p>
+<h2 id="references">References</h2>
+<ul>
+<li>Draft-Critique-Revise pattern: Inspired by Constitutional AI approaches</li>
+<li>Quality metrics: Based on video production best practices</li>
+<li>Integration: Designed for seamless integration with existing Aura pipeline</li>
+<li>SSML: W3C Speech Synthesis Markup Language specification</li>
+</ul>
+<h2 id="translation-workflow-integration">Translation Workflow Integration</h2>
+<h3 id="overview-2">Overview</h3>
+<p>The Script Refinement Pipeline now integrates with the Translation and Localization system, enabling refined scripts to be automatically translated for multilingual video production while maintaining quality standards.</p>
+<h3 id="translation-after-refinement">Translation After Refinement</h3>
+<p>After script refinement completes, the refined script can be:</p>
+<ol>
+<li><strong>Translated</strong> to target languages with cultural adaptation</li>
+<li><strong>Validated</strong> for timing compatibility</li>
+<li><strong>Enhanced</strong> with SSML for speech synthesis</li>
+<li><strong>Exported</strong> with subtitles for video production</li>
+</ol>
+<h3 id="best-practices-for-translation-integration">Best Practices for Translation Integration</h3>
+<h4 id="refinement-before-translation">Refinement Before Translation</h4>
+<ol>
+<li><strong>Always refine first</strong>: Ensures high-quality source for translation</li>
+<li><strong>Meet quality thresholds</strong>: ≥85% overall score recommended</li>
+<li><strong>Review narrative coherence</strong>: Logical flow translates better</li>
+<li><strong>Check timing appropriateness</strong>: Proper pacing aids translation timing</li>
+</ol>
+<h4 id="translation-workflow">Translation Workflow</h4>
+<ol>
+<li><strong>Get voice recommendations</strong>: Use appropriate voices for each language</li>
+<li><strong>Enable timing adjustment</strong>: Prevents duration mismatches</li>
+<li><strong>Use localized mode</strong>: Better cultural adaptation</li>
+<li><strong>Enable back-translation</strong>: Validates accuracy</li>
+<li><strong>Validate subtitle timing</strong>: Check for overlaps and gaps</li>
+</ol>
+<h4 id="quality-validation">Quality Validation</h4>
+<ol>
+<li><strong>Check all quality metrics</strong>: Don't rely on overall score alone</li>
+<li><strong>Review cultural adaptations</strong>: Ensure appropriateness for target audience</li>
+<li><strong>Validate timing adjustments</strong>: Confirm acceptable compression levels</li>
+<li><strong>Test visual recommendations</strong>: Address text-in-image issues</li>
+<li><strong>Preview subtitles</strong>: Verify RTL layout for RTL languages</li>
+</ol>
+<h3 id="integration-documentation">Integration Documentation</h3>
+<p>For complete translation integration details, see <a href="TRANSLATION_USER_GUIDE.md">Translation User Guide</a>.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/SCRIPT_REFINEMENT_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

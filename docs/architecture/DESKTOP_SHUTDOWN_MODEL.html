@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Desktop Application Shutdown Model | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Desktop Application Shutdown Model | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/DESKTOP_SHUTDOWN_MODEL.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="desktop-application-shutdown-model">Desktop Application Shutdown Model</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the process architecture and shutdown behavior of Aura Video Studio desktop application to ensure clean process termination when the application closes.</p>
+<h2 id="process-tree-architecture">Process Tree Architecture</h2>
+<h3 id="root-process">Root Process</h3>
+<p><strong>Electron Main Process</strong> (<code>Aura Video Studio.exe</code>)</p>
+<ul>
+<li><strong>PID</strong>: Managed by Electron framework</li>
+<li><strong>Role</strong>: Main application shell, window management, orchestration</li>
+<li><strong>Lifetime</strong>: Lives for entire application session</li>
+<li><strong>Children</strong>: Backend API server, utility processes</li>
+</ul>
+<h3 id="child-processes">Child Processes</h3>
+<h4 id="1-backend-api-server-auraapiexe--dotnet-auraapidll">1. Backend API Server (<code>Aura.Api.exe</code> / <code>dotnet Aura.Api.dll</code>)</h4>
+<ul>
+<li><strong>Parent</strong>: Electron Main Process</li>
+<li><strong>Spawned by</strong>: <code>backend-service.js</code> via Node.js <code>spawn()</code></li>
+<li><strong>Startup</strong>: On application launch (in <code>startApplication()</code>)</li>
+<li><strong>Port</strong>: Dynamic (auto-detected via <code>_findAvailablePort()</code>)</li>
+<li><strong>Tracking</strong>:
+<ul>
+<li>Registered with <code>ProcessManager</code> on spawn</li>
+<li>PID stored in <code>backendService.pid</code></li>
+<li>Process handle stored in <code>backendService.process</code></li>
+</ul>
+</li>
+<li><strong>Environment</strong>:
+<pre><code class="lang-javascript">{
+  ASPNETCORE_URLS: `http://localhost:${port}`,
+  DOTNET_ENVIRONMENT: isDev ? 'Development' : 'Production',
+  AURA_DATA_PATH: app.getPath('userData'),
+  AURA_LOGS_PATH: path.join(app.getPath('userData'), 'logs'),
+  AURA_TEMP_PATH: path.join(app.getPath('temp'), 'aura-video-studio'),
+  FFMPEG_PATH: ffmpegPath,
+  FFMPEG_BINARIES_PATH: ffmpegPath
+}
+</code></pre>
+</li>
+<li><strong>Shutdown Contract</strong>:
+<ul>
+<li>Responds to <code>/api/system/shutdown</code> POST endpoint</li>
+<li>Gracefully stops IHostedServices via <code>IHostApplicationLifetime.StopApplication()</code></li>
+<li>Should terminate within 2 seconds of graceful shutdown request</li>
+<li>Force-killed via <code>taskkill /F /T /PID {pid}</code> on Windows if timeout exceeded</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-ffmpeg-processes-video-rendering">2. FFmpeg Processes (Video Rendering)</h4>
+<ul>
+<li><strong>Parent</strong>: Backend API Server</li>
+<li><strong>Spawned by</strong>: <code>FFmpegService</code> in <code>Aura.Core</code> during video rendering</li>
+<li><strong>Count</strong>: Variable (depends on active jobs, typically 1 per active render)</li>
+<li><strong>Tracking</strong>:
+<ul>
+<li><strong>CURRENT</strong>: Not explicitly registered with central process manager</li>
+<li><strong>SHOULD BE</strong>: Registered with <code>ShutdownOrchestrator</code> in backend</li>
+</ul>
+</li>
+<li><strong>Lifetime</strong>: Duration of single video render operation</li>
+<li><strong>Shutdown Contract</strong>:
+<ul>
+<li>Should be terminated when parent job is cancelled</li>
+<li>Should register with backend's ShutdownOrchestrator for cleanup on app shutdown</li>
+<li>Must be killed via process tree termination if parent terminates</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-background-workers-job-processing">3. Background Workers (Job Processing)</h4>
+<ul>
+<li><strong>Parent</strong>: Backend API Server</li>
+<li><strong>Spawned by</strong>:
+<ul>
+<li><code>BackgroundJobProcessorService</code> (IHostedService)</li>
+<li>Various job runners in orchestration pipeline</li>
+</ul>
+</li>
+<li><strong>Tracking</strong>:
+<ul>
+<li>Managed by ASP.NET Core hosted services lifecycle</li>
+<li>Use CancellationToken for cooperative cancellation</li>
+</ul>
+</li>
+<li><strong>Shutdown Contract</strong>:
+<ul>
+<li>Respect CancellationToken passed from <code>IHostApplicationLifetime.ApplicationStopping</code></li>
+<li>Complete in-flight operations or cancel within timeout</li>
+<li>No new work accepted after shutdown signal</li>
+</ul>
+</li>
+</ul>
+<h2 id="shutdown-sequence">Shutdown Sequence</h2>
+<h3 id="user-action-close-window">User Action: Close Window</h3>
+<p>When user clicks the X button or selects File → Exit:</p>
+<pre><code>1. Window 'close' event triggered
+   ↓
+2. mainWindow.on('close') handler checks minimizeToTray setting
+   ↓
+3. If minimizeToTray = false (default):
+   → Event not prevented
+   → Continues to next step
+   ↓
+4. 'window-all-closed' event fires (Windows/Linux)
+   ↓
+5. ShutdownOrchestrator.initiateShutdown() called
+   ↓
+6. Shutdown sequence executes (see below)
+</code></pre>
+<h3 id="detailed-shutdown-sequence">Detailed Shutdown Sequence</h3>
+<p>Orchestrated by <code>ShutdownOrchestrator</code> (Electron) which coordinates with backend <code>ShutdownOrchestrator</code> (C#):</p>
+<h4 id="step-1-check-active-renders-optional-unless-skipcheckstrue">Step 1: Check Active Renders (Optional, unless skipChecks=true)</h4>
+<pre><code class="lang-javascript">const renderCheck = await checkActiveRenders();
+// Calls: GET /api/jobs/active
+// If jobs exist:
+//   → Show dialog: &quot;Cancel Quit&quot; | &quot;Wait for Completion&quot; | &quot;Force Quit&quot;
+//   → User chooses action
+</code></pre>
+<p><strong>Timeout</strong>: 2 seconds to check API
+<strong>Skip on</strong>: Force shutdown or skipChecks flag</p>
+<h4 id="step-2-close-windows--tray">Step 2: Close Windows &amp; Tray</h4>
+<pre><code class="lang-javascript">closeWindows()
+// - mainWindow.close()
+// - splashWindow.close()
+// - trayManager.destroy()
+</code></pre>
+<p><strong>Timeout</strong>: Immediate (synchronous)</p>
+<h4 id="step-3-signal-backend-shutdown-graceful">Step 3: Signal Backend Shutdown (Graceful)</h4>
+<pre><code class="lang-javascript">await signalBackendShutdown()
+// Calls: POST /api/system/shutdown
+// Backend executes:
+//   1. Notify SSE connections (1 second timeout)
+//   2. Close SSE connections (500ms delay)
+//   3. Terminate child processes (FFmpeg, etc.)
+//   4. Call IHostApplicationLifetime.StopApplication()
+</code></pre>
+<p><strong>Timeout</strong>: 3 seconds for API call
+<strong>Fallback</strong>: If API call fails (ECONNREFUSED), continue to next step</p>
+<h4 id="step-4-stop-backend-process">Step 4: Stop Backend Process</h4>
+<pre><code class="lang-javascript">await backendService.stop()
+// Electron side termination:
+//   1. Attempt graceful via API (Step 3)
+//   2. Wait 2 seconds (GRACEFUL_SHUTDOWN_TIMEOUT)
+//   3. If still running, Windows: taskkill /PID {pid} /T
+//                        Unix: process.kill(SIGTERM)
+//   4. Wait 1 second (FORCE_KILL_TIMEOUT)
+//   5. If still running: taskkill /F /PID {pid} /T (force)
+//                        Unix: process.kill(SIGKILL)
+</code></pre>
+<p><strong>Total Timeout</strong>:</p>
+<ul>
+<li>Graceful: 2 seconds</li>
+<li>Force: 1 second after graceful timeout</li>
+<li><strong>Maximum</strong>: 3 seconds per backend termination</li>
+</ul>
+<h4 id="step-5-terminate-tracked-processes">Step 5: Terminate Tracked Processes</h4>
+<pre><code class="lang-javascript">await processManager.terminateAll(timeout)
+// For each registered process:
+//   1. Try graceful termination
+//   2. Wait up to timeout
+//   3. Force kill if still alive
+</code></pre>
+<p><strong>Timeout</strong>: 3 seconds (configurable via COMPONENT_TIMEOUT_MS)</p>
+<h4 id="step-6-cleanup-temp-files">Step 6: Cleanup Temp Files</h4>
+<pre><code class="lang-javascript">await cleanup()
+// Remove: ${TEMP}/aura-video-studio/*
+</code></pre>
+<p><strong>Timeout</strong>: 2 seconds
+<strong>Non-blocking</strong>: Failure logged but doesn't prevent app exit</p>
+<h3 id="total-shutdown-time-budget">Total Shutdown Time Budget</h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Expected Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clean (no active jobs)</td>
+<td>1-3 seconds</td>
+</tr>
+<tr>
+<td>With active jobs (user chooses wait)</td>
+<td>Variable (up to 5 minutes)</td>
+</tr>
+<tr>
+<td>With active jobs (user chooses force)</td>
+<td>3-5 seconds</td>
+</tr>
+<tr>
+<td>Hung backend (graceful fails)</td>
+<td>5-8 seconds (force kill)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Critical</strong>: Maximum 10 seconds before force exit</p>
+<h2 id="current-issues-and-fixes-applied">Current Issues and Fixes Applied</h2>
+<h3 id="issue-1-competing-shutdown-event-handlers----fixed">Issue 1: Competing Shutdown Event Handlers - ✅ FIXED</h3>
+<p><strong>Problem</strong>: <code>window-all-closed</code> and <code>before-quit</code> both tried to run shutdown, creating deadlock.</p>
+<p><strong>Impact</strong>: App hung indefinitely on close, processes never terminated.</p>
+<p><strong>Fix Applied</strong>:</p>
+<ul>
+<li><code>window-all-closed</code> now only calls <code>app.quit()</code> to trigger the quit sequence</li>
+<li><code>before-quit</code> is the single point of shutdown coordination</li>
+<li><code>before-quit</code> uses <code>event.preventDefault()</code> once, runs cleanup, then calls <code>process.exit(0)</code></li>
+<li>Added 5-second hard timeout in main.js with <code>process.exit(0)</code> failsafe</li>
+</ul>
+<p><strong>Result</strong>: Clean, single shutdown path without deadlock.</p>
+<hr>
+<h3 id="issue-2-untracked-ffmpeg-processes----fixed">Issue 2: Untracked FFmpeg Processes - ✅ FIXED</h3>
+<p><strong>Problem</strong>: FFmpeg processes spawned by backend were not registered with any central process manager.</p>
+<p><strong>Impact</strong>: When backend was killed, FFmpeg processes were orphaned (not terminated with parent).</p>
+<p><strong>Fix Applied</strong>:</p>
+<ul>
+<li>Registered <code>IProcessManager</code> in DI container (Program.cs)</li>
+<li>Backend's <code>ShutdownOrchestrator</code> now receives <code>IProcessManager</code> via constructor injection</li>
+<li>Added <code>TerminateFFmpegProcessesAsync()</code> step in shutdown sequence</li>
+<li>FFmpeg processes are tracked and terminated explicitly on shutdown</li>
+</ul>
+<p><strong>Result</strong>: FFmpeg processes are properly tracked and terminated.</p>
+<hr>
+<h3 id="issue-3-backend-hosted-services-may-not-respect-shutdown----mitigated">Issue 3: Backend Hosted Services May Not Respect Shutdown - ⏳ MITIGATED</h3>
+<p><strong>Problem</strong>: Long-running background jobs (e.g., <code>BackgroundJobProcessorService</code>) may not exit quickly.</p>
+<p><strong>Impact</strong>: Backend process may not terminate within timeout, requiring force kill.</p>
+<p><strong>Fix Applied</strong>:</p>
+<ul>
+<li>Reduced graceful timeout to 2 seconds (was 3-5 seconds)</li>
+<li>Reduced component timeout to 1 second (was 2-3 seconds)</li>
+<li>Force kill after graceful timeout</li>
+<li>Absolute 4-second timeout wraps entire shutdown</li>
+</ul>
+<p><strong>Result</strong>: Faster timeouts ensure force kill happens quickly. Hosted services should check CancellationToken frequently for best results.</p>
+<hr>
+<h3 id="issue-4-process-tree-termination-not-guaranteed----fixed">Issue 4: Process Tree Termination Not Guaranteed - ✅ FIXED</h3>
+<p><strong>Problem</strong>: On Windows, <code>taskkill /T</code> should terminate process tree, but may fail if processes are detached or re-parented.</p>
+<p><strong>Impact</strong>: Child processes (FFmpeg, workers) may survive parent termination.</p>
+<p><strong>Fix Applied</strong>:</p>
+<ul>
+<li>Backend spawns processes with proper parent relationship (not detached)</li>
+<li>Added explicit cleanup loop in backend to kill known child PIDs via ProcessManager</li>
+<li>Added <code>killAllAuraProcesses()</code> failsafe in Electron to scan and kill all Aura-related processes by name</li>
+<li>Failsafe kills: <code>Aura.Api.exe</code>, <code>dotnet.exe</code>, <code>ffmpeg.exe</code>, <code>Aura Video Studio.exe</code></li>
+</ul>
+<p><strong>Result</strong>: Multiple layers of process termination ensure no orphans.</p>
+<hr>
+<h3 id="issue-5-no-absolute-hard-timeout----fixed">Issue 5: No Absolute Hard Timeout - ✅ FIXED</h3>
+<p><strong>Problem</strong>: Shutdown could theoretically wait indefinitely if user chose &quot;Wait for Completion&quot; on long job.</p>
+<p><strong>Impact</strong>: User had no escape from waiting if job was stuck.</p>
+<p><strong>Fix Applied</strong>:</p>
+<ul>
+<li>Added 5-second absolute timeout in main.js</li>
+<li>Added 4-second absolute timeout in shutdown orchestrator</li>
+<li>After timeout, force-kill failsafe activates automatically</li>
+<li>User can't be stuck waiting indefinitely</li>
+</ul>
+<p><strong>Result</strong>: App always exits within 5 seconds maximum.</p>
+<h2 id="testing-strategy">Testing Strategy</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<ul>
+<li>[x] <code>test-process-manager.js</code> - ProcessManager registration and termination</li>
+<li>[x] <code>test-shutdown-orchestrator.js</code> - Shutdown sequence steps</li>
+<li>[ ] <strong>NEW</strong>: <code>test-ffmpeg-process-cleanup.js</code> - FFmpeg termination on job cancel</li>
+<li>[ ] <strong>NEW</strong>: <code>test-backend-shutdown-timeout.js</code> - Force kill after timeout</li>
+</ul>
+<h3 id="integration-tests">Integration Tests</h3>
+<ul>
+<li>[ ] <strong>NEW</strong>: Full app startup + shutdown with no jobs</li>
+<li>[ ] <strong>NEW</strong>: Full app shutdown with active video render</li>
+<li>[ ] <strong>NEW</strong>: Full app shutdown with hung backend (simulated)</li>
+<li>[ ] <strong>NEW</strong>: Verify no processes remain after shutdown</li>
+</ul>
+<h3 id="manual-testing-checklist">Manual Testing Checklist</h3>
+<p>On Windows 11:</p>
+<ol>
+<li><p><strong>Normal Shutdown</strong></p>
+<ul>
+<li>[ ] Launch app</li>
+<li>[ ] Close window</li>
+<li>[ ] Verify in Task Manager: No &quot;Aura Video Studio&quot; processes remain</li>
+<li>[ ] Verify in Task Manager: No &quot;.NET Host&quot; processes related to Aura remain</li>
+<li>[ ] Wait 10 seconds and verify again</li>
+</ul>
+</li>
+<li><p><strong>Shutdown with Active Job</strong></p>
+<ul>
+<li>[ ] Launch app</li>
+<li>[ ] Start video generation job</li>
+<li>[ ] While rendering, close window</li>
+<li>[ ] Choose &quot;Force Quit&quot; in dialog</li>
+<li>[ ] Verify all processes terminate within 5 seconds</li>
+</ul>
+</li>
+<li><p><strong>Shutdown with Hung Backend</strong></p>
+<ul>
+<li>[ ] Launch app</li>
+<li>[ ] Use debugger to pause backend thread (simulate hang)</li>
+<li>[ ] Close window</li>
+<li>[ ] Verify force kill occurs after timeout (~3 seconds)</li>
+<li>[ ] Verify all processes terminate</li>
+</ul>
+</li>
+<li><p><strong>Rapid Restart</strong></p>
+<ul>
+<li>[ ] Launch app</li>
+<li>[ ] Close window immediately</li>
+<li>[ ] Launch app again within 2 seconds</li>
+<li>[ ] Verify no port conflicts</li>
+<li>[ ] Verify app starts successfully</li>
+</ul>
+</li>
+</ol>
+<h2 id="diagnostics-and-logging">Diagnostics and Logging</h2>
+<h3 id="shutdown-log-example-success">Shutdown Log Example (Success)</h3>
+<pre><code>[INFO] Initiating graceful shutdown (Force: false, SkipChecks: false)
+[INFO] Checking for active renders...
+[INFO] No active renders found
+[INFO] Step 1/5: Windows closed
+[INFO] Step 2/5: Backend shutdown signal sent
+[INFO] Step 3/5: Backend stopped
+[INFO] Step 4/5: No child processes to terminate
+[INFO] Step 5/5: Cleanup complete
+[INFO] Graceful shutdown completed in 1247ms
+</code></pre>
+<h3 id="shutdown-log-example-force-kill-required">Shutdown Log Example (Force Kill Required)</h3>
+<pre><code>[INFO] Initiating graceful shutdown (Force: false, SkipChecks: false)
+[INFO] Checking for active renders...
+[INFO] No active renders found
+[INFO] Step 1/5: Windows closed
+[INFO] Step 2/5: Backend shutdown signal sent
+[WARN] Backend did not shut down gracefully, forcing termination...
+[INFO] Executing: taskkill /PID 12345 /T
+[INFO] Step 3/5: Backend force killed after timeout
+[INFO] Step 4/5: No child processes to terminate
+[INFO] Step 5/5: Cleanup complete
+[WARN] Graceful shutdown completed in 3512ms
+</code></pre>
+<h3 id="process-diagnostic-endpoint">Process Diagnostic Endpoint</h3>
+<p>For debugging, backend exposes (dev mode only):</p>
+<pre><code>GET /api/system/process-info
+Response:
+{
+  &quot;currentProcess&quot;: {
+    &quot;pid&quot;: 12345,
+    &quot;parentPid&quot;: 11111,
+    &quot;name&quot;: &quot;Aura.Api.exe&quot;
+  },
+  &quot;trackedChildProcesses&quot;: [
+    {
+      &quot;pid&quot;: 12346,
+      &quot;name&quot;: &quot;ffmpeg.exe&quot;,
+      &quot;registeredAt&quot;: &quot;2025-11-16T00:20:00Z&quot;,
+      &quot;metadata&quot;: { &quot;jobId&quot;: &quot;abc123&quot; }
+    }
+  ]
+}
+</code></pre>
+<h2 id="developer-guidelines">Developer Guidelines</h2>
+<h3 id="when-spawning-a-process">When Spawning a Process</h3>
+<ol>
+<li><strong>Always register</strong> with ProcessManager (Electron) or ShutdownOrchestrator (Backend)</li>
+<li><strong>Store the PID</strong> for later cleanup</li>
+<li><strong>Listen for exit</strong> and unregister</li>
+<li><strong>Use CancellationToken</strong> if process is async/long-running</li>
+</ol>
+<p>Example (Electron):</p>
+<pre><code class="lang-javascript">const process = spawn('ffmpeg', args);
+processManager.register('FFmpeg - Video Encode', process, { jobId: 'abc123' });
+</code></pre>
+<p>Example (Backend C#):</p>
+<pre><code class="lang-csharp">var process = Process.Start(psi);
+_shutdownOrchestrator.RegisterChildProcess(process.Id);
+</code></pre>
+<h3 id="when-implementing-a-hosted-service">When Implementing a Hosted Service</h3>
+<ol>
+<li><strong>Accept CancellationToken</strong> in ExecuteAsync</li>
+<li><strong>Check token frequently</strong> (at least every 100ms in loops)</li>
+<li><strong>Complete quickly</strong> on cancellation (&lt; 2 seconds)</li>
+<li><strong>Dispose resources</strong> in Dispose() method</li>
+</ol>
+<p>Example:</p>
+<pre><code class="lang-csharp">protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+{
+    while (!stoppingToken.IsCancellationRequested)
+    {
+        // Do work
+        await Task.Delay(100, stoppingToken);
+    }
+    // Cleanup
+}
+</code></pre>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>[ ] Add telemetry for shutdown duration</li>
+<li>[ ] Implement &quot;Emergency Shutdown&quot; button if shutdown takes &gt; 10 seconds</li>
+<li>[ ] Add process tree visualization in diagnostics panel</li>
+<li>[ ] Automated test suite that runs on every PR (requires Windows runner)</li>
+<li>[ ] Add health check that detects orphaned processes from previous runs</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>Electron Main Process: <code>Aura.Desktop/electron/main.js</code></li>
+<li>Backend Service: <code>Aura.Desktop/electron/backend-service.js</code></li>
+<li>Process Manager: <code>Aura.Desktop/electron/process-manager.js</code></li>
+<li>Shutdown Orchestrator (Electron): <code>Aura.Desktop/electron/shutdown-orchestrator.js</code></li>
+<li>Shutdown Orchestrator (Backend): <code>Aura.Api/Services/ShutdownOrchestrator.cs</code></li>
+<li>System Controller: <code>Aura.Api/Controllers/SystemController.cs</code></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/DESKTOP_SHUTDOWN_MODEL.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

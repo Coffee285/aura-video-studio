@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Project Management System - Setup Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Project Management System - Setup Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/PROJECT_MANAGEMENT_SETUP_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="project-management-system---setup-guide">Project Management System - Setup Guide</h1>
+
+<h2 id="quick-start">Quick Start</h2>
+<p>This guide will help you set up and use the new project management system in Aura Video Studio.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>.NET 8.0 SDK</li>
+<li>Node.js 18+ (for frontend)</li>
+<li>SQLite (included with .NET)</li>
+</ul>
+<h2 id="backend-setup">Backend Setup</h2>
+<h3 id="1-apply-database-migration">1. Apply Database Migration</h3>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet ef database update
+</code></pre>
+<p>This will create/update the database with all necessary tables:</p>
+<ul>
+<li>ProjectStates</li>
+<li>ProjectVersions</li>
+<li>Templates</li>
+<li>SceneStates</li>
+<li>AssetStates</li>
+<li>RenderCheckpoints</li>
+<li>ContentBlobs</li>
+</ul>
+<h3 id="2-verify-service-registration">2. Verify Service Registration</h3>
+<p>Ensure services are registered in <code>Aura.Api/Program.cs</code>:</p>
+<pre><code class="lang-csharp">// Add these services if not already present
+builder.Services.AddScoped&lt;ProjectManagementService&gt;();
+builder.Services.AddScoped&lt;TemplateManagementService&gt;();
+builder.Services.AddScoped&lt;ProjectExportImportService&gt;();
+builder.Services.AddScoped&lt;ProjectStateRepository&gt;();
+builder.Services.AddScoped&lt;ProjectVersionRepository&gt;();
+</code></pre>
+<h3 id="3-seed-system-templates">3. Seed System Templates</h3>
+<p>On first run, seed the system templates:</p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5000/api/template-management/templates/seed
+</code></pre>
+<p>Or through the API once the backend is running.</p>
+<h3 id="4-start-the-backend">4. Start the Backend</h3>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet run
+</code></pre>
+<p>The API will be available at <code>http://localhost:5000</code> (or configured port).</p>
+<h2 id="frontend-setup">Frontend Setup</h2>
+<h3 id="1-install-dependencies">1. Install Dependencies</h3>
+<pre><code class="lang-bash">cd Aura.Web
+npm install
+</code></pre>
+<h3 id="2-configure-api-url">2. Configure API URL</h3>
+<p>Verify the API URL in your environment configuration (<code>.env</code> or similar):</p>
+<pre><code class="lang-env">VITE_API_URL=http://localhost:5000
+</code></pre>
+<h3 id="3-start-the-frontend">3. Start the Frontend</h3>
+<pre><code class="lang-bash">cd Aura.Web
+npm run dev
+</code></pre>
+<p>The web app will be available at <code>http://localhost:5173</code> (Vite default).</p>
+<h2 id="accessing-the-project-management-interface">Accessing the Project Management Interface</h2>
+<h3 id="navigation">Navigation</h3>
+<ol>
+<li>Open the web app: <code>http://localhost:5173</code></li>
+<li>Navigate to <strong>Projects</strong> in the main menu</li>
+<li>You'll see the project management interface</li>
+</ol>
+<h3 id="available-routes">Available Routes</h3>
+<ul>
+<li><code>/projects</code> - Main projects list (grid/list view)</li>
+<li><code>/projects/:id</code> - Project details view</li>
+<li><code>/projects/new</code> - Create new project (via dialog)</li>
+<li><code>/templates</code> - Browse templates (via dialog)</li>
+</ul>
+<h2 id="using-the-system">Using the System</h2>
+<h3 id="creating-your-first-project">Creating Your First Project</h3>
+<ol>
+<li>Click <strong>&quot;New Project&quot;</strong> button</li>
+<li>Fill in:
+<ul>
+<li>Project Name (required)</li>
+<li>Description (optional)</li>
+<li>Category (optional)</li>
+<li>Tags (comma-separated, optional)</li>
+</ul>
+</li>
+<li>Click <strong>&quot;Create Project&quot;</strong></li>
+</ol>
+<h3 id="creating-from-template">Creating from Template</h3>
+<ol>
+<li>Click <strong>&quot;From Template&quot;</strong> button</li>
+<li>Browse available templates:
+<ul>
+<li>Product Demo</li>
+<li>Tutorial Video</li>
+<li>Social Media Ad</li>
+<li>Story Narrative</li>
+</ul>
+</li>
+<li>Select a template</li>
+<li>Enter project name</li>
+<li>Click <strong>&quot;Create Project&quot;</strong></li>
+</ol>
+<h3 id="managing-projects">Managing Projects</h3>
+<h4 id="grid-view">Grid View</h4>
+<ul>
+<li>Visual cards with thumbnails</li>
+<li>Status badges</li>
+<li>Quick actions menu</li>
+<li>Bulk selection checkboxes</li>
+</ul>
+<h4 id="list-view">List View</h4>
+<ul>
+<li>Compact table view</li>
+<li>Sortable columns</li>
+<li>Detailed information</li>
+<li>Quick actions</li>
+</ul>
+<h4 id="search--filter">Search &amp; Filter</h4>
+<ul>
+<li><strong>Search</strong>: Type in search box to filter by title/description</li>
+<li><strong>Filters</strong>: Click &quot;Filters&quot; button to show filter panel
+<ul>
+<li>Status filter</li>
+<li>Category filter</li>
+<li>Sort by field</li>
+<li>Sort direction</li>
+</ul>
+</li>
+<li><strong>Clear</strong>: Clear filters to show all projects</li>
+</ul>
+<h4 id="bulk-actions">Bulk Actions</h4>
+<ul>
+<li>Select multiple projects using checkboxes</li>
+<li>Click <strong>&quot;Delete&quot;</strong> in the bulk actions bar</li>
+<li>Confirm deletion</li>
+</ul>
+<h3 id="project-details">Project Details</h3>
+<p>Click on any project to view:</p>
+<ul>
+<li><strong>Overview Tab</strong>: Generation parameters, checkpoints, status</li>
+<li><strong>Scenes Tab</strong>: All video scenes with scripts</li>
+<li><strong>Assets Tab</strong>: All project files and assets</li>
+<li><strong>Version History Tab</strong>: Complete version history</li>
+</ul>
+<h3 id="export--import">Export &amp; Import</h3>
+<h4 id="export-project">Export Project</h4>
+<ol>
+<li>Open project details</li>
+<li>Click <strong>&quot;Export&quot;</strong> button</li>
+<li>Choose format:
+<ul>
+<li>JSON only (lightweight)</li>
+<li>Package with assets (ZIP)</li>
+</ul>
+</li>
+<li>File downloads automatically</li>
+</ol>
+<h4 id="import-project">Import Project</h4>
+<ol>
+<li>Go to Projects list</li>
+<li>Click <strong>&quot;Import&quot;</strong> button (if added to UI)</li>
+<li>Select <code>.aura.json</code> or <code>.aura.zip</code> file</li>
+<li>Project is imported with new ID</li>
+</ol>
+<h2 id="api-usage-examples">API Usage Examples</h2>
+<h3 id="curl-examples">cURL Examples</h3>
+<h4 id="get-all-projects">Get All Projects</h4>
+<pre><code class="lang-bash">curl http://localhost:5000/api/project-management/projects
+</code></pre>
+<h4 id="get-projects-with-filters">Get Projects with Filters</h4>
+<pre><code class="lang-bash">curl &quot;http://localhost:5000/api/project-management/projects?status=Completed&amp;category=Tutorial&amp;page=1&amp;pageSize=20&quot;
+</code></pre>
+<h4 id="create-project">Create Project</h4>
+<pre><code class="lang-bash">curl -X POST http://localhost:5000/api/project-management/projects \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;title&quot;: &quot;My Video&quot;,
+    &quot;description&quot;: &quot;A tutorial video&quot;,
+    &quot;category&quot;: &quot;Tutorial&quot;,
+    &quot;tags&quot;: [&quot;education&quot;, &quot;how-to&quot;]
+  }'
+</code></pre>
+<h4 id="create-from-template">Create from Template</h4>
+<pre><code class="lang-bash">curl -X POST http://localhost:5000/api/template-management/templates/template-tutorial/create-project \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;projectName&quot;: &quot;My Tutorial&quot;
+  }'
+</code></pre>
+<h4 id="export-project-1">Export Project</h4>
+<pre><code class="lang-bash">curl -X POST http://localhost:5000/api/project-management/projects/{projectId}/export \
+  -o project.aura.json
+</code></pre>
+<h3 id="javascripttypescript-examples">JavaScript/TypeScript Examples</h3>
+<pre><code class="lang-typescript">import { projectManagementApi } from './api/projectManagement';
+
+// Create project
+const project = await projectManagementApi.createProject({
+  title: &quot;My Project&quot;,
+  description: &quot;Description&quot;,
+  category: &quot;Tutorial&quot;,
+  tags: [&quot;tag1&quot;, &quot;tag2&quot;]
+});
+
+// Get projects with filters
+const result = await projectManagementApi.getProjects({
+  search: &quot;tutorial&quot;,
+  status: &quot;Completed&quot;,
+  page: 1,
+  pageSize: 20
+});
+
+// Get project details
+const details = await projectManagementApi.getProject(projectId);
+
+// Update project
+await projectManagementApi.updateProject(projectId, {
+  title: &quot;Updated Title&quot;,
+  status: &quot;Completed&quot;
+});
+
+// Duplicate project
+const duplicate = await projectManagementApi.duplicateProject(projectId);
+
+// Delete project
+await projectManagementApi.deleteProject(projectId);
+
+// Bulk delete
+await projectManagementApi.bulkDeleteProjects([id1, id2, id3]);
+
+// Get templates
+const templates = await projectManagementApi.getTemplates();
+
+// Create from template
+const project = await projectManagementApi.createProjectFromTemplate(
+  templateId,
+  &quot;Project Name&quot;
+);
+</code></pre>
+<h2 id="database-management">Database Management</h2>
+<h3 id="view-database">View Database</h3>
+<p>Using SQLite CLI:</p>
+<pre><code class="lang-bash">cd Aura.Api
+sqlite3 Aura.db
+</code></pre>
+<p>Useful commands:</p>
+<pre><code class="lang-sql">-- List all tables
+.tables
+
+-- View ProjectStates
+SELECT * FROM ProjectStates;
+
+-- View Templates
+SELECT * FROM Templates;
+
+-- Count projects
+SELECT COUNT(*) FROM ProjectStates WHERE IsDeleted = 0;
+
+-- Projects by status
+SELECT Status, COUNT(*) 
+FROM ProjectStates 
+WHERE IsDeleted = 0 
+GROUP BY Status;
+</code></pre>
+<h3 id="backup-database">Backup Database</h3>
+<pre><code class="lang-bash"># Create backup
+cp Aura.Api/Aura.db Aura.Api/Aura.db.backup
+
+# Restore from backup
+cp Aura.Api/Aura.db.backup Aura.Api/Aura.db
+</code></pre>
+<h3 id="reset-database">Reset Database</h3>
+<pre><code class="lang-bash">cd Aura.Api
+
+# Delete database
+rm Aura.db
+
+# Re-run migrations
+dotnet ef database update
+
+# Seed templates
+curl -X POST http://localhost:5000/api/template-management/templates/seed
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="backend-issues">Backend Issues</h3>
+<h4 id="table-does-not-exist-error">&quot;Table does not exist&quot; Error</h4>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet ef database update
+</code></pre>
+<h4 id="service-not-registered-error">&quot;Service not registered&quot; Error</h4>
+<p>Check <code>Program.cs</code> for service registration. Add:</p>
+<pre><code class="lang-csharp">builder.Services.AddScoped&lt;ProjectManagementService&gt;();
+builder.Services.AddScoped&lt;TemplateManagementService&gt;();
+builder.Services.AddScoped&lt;ProjectExportImportService&gt;();
+</code></pre>
+<h4 id="port-already-in-use">Port Already in Use</h4>
+<p>Change port in <code>launchSettings.json</code> or use:</p>
+<pre><code class="lang-bash">dotnet run --urls &quot;http://localhost:5001&quot;
+</code></pre>
+<h3 id="frontend-issues">Frontend Issues</h3>
+<h4 id="api-connection-failed">API Connection Failed</h4>
+<ol>
+<li>Check backend is running: <code>curl http://localhost:5000/health</code></li>
+<li>Verify API URL in frontend config</li>
+<li>Check CORS settings in backend</li>
+</ol>
+<h4 id="components-not-loading">Components Not Loading</h4>
+<ol>
+<li>Clear browser cache</li>
+<li>Check console for errors</li>
+<li>Verify all dependencies installed: <code>npm install</code></li>
+<li>Rebuild: <code>npm run build</code></li>
+</ol>
+<h4 id="search-not-working">Search Not Working</h4>
+<ol>
+<li>Check network tab for API calls</li>
+<li>Verify search parameter in URL</li>
+<li>Check backend logs for errors</li>
+</ol>
+<h3 id="database-issues">Database Issues</h3>
+<h4 id="database-locked">Database Locked</h4>
+<ol>
+<li>Stop all running instances</li>
+<li>Delete <code>Aura.db-wal</code> and <code>Aura.db-shm</code> files</li>
+<li>Restart</li>
+</ol>
+<h4 id="slow-queries">Slow Queries</h4>
+<ol>
+<li>Check indexes: <code>PRAGMA index_list(ProjectStates);</code></li>
+<li>Analyze query plan: <code>EXPLAIN QUERY PLAN SELECT ...</code></li>
+<li>Vacuum database: <code>VACUUM;</code></li>
+</ol>
+<h2 id="testing">Testing</h2>
+<h3 id="backend-unit-tests">Backend Unit Tests</h3>
+<pre><code class="lang-bash">cd Aura.Tests
+dotnet test --filter &quot;ProjectManagement&quot;
+</code></pre>
+<h3 id="frontend-tests">Frontend Tests</h3>
+<pre><code class="lang-bash">cd Aura.Web
+npm test -- ProjectManagement
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-bash">cd Aura.E2E
+dotnet test
+</code></pre>
+<h2 id="performance-tips">Performance Tips</h2>
+<h3 id="database">Database</h3>
+<ul>
+<li>Keep database file size reasonable (&lt; 500MB recommended)</li>
+<li>Run <code>VACUUM</code> periodically to compact database</li>
+<li>Archive old projects regularly</li>
+<li>Use pagination for large result sets</li>
+</ul>
+<h3 id="frontend">Frontend</h3>
+<ul>
+<li>Use grid view for better visual experience</li>
+<li>Use list view for better performance with many projects</li>
+<li>Enable caching in React Query</li>
+<li>Debounce search input</li>
+</ul>
+<h3 id="api">API</h3>
+<ul>
+<li>Use appropriate page sizes (10-50 items)</li>
+<li>Filter aggressively to reduce data transfer</li>
+<li>Use projection to return only needed fields</li>
+<li>Enable gzip compression</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="auto-save-settings">Auto-Save Settings</h3>
+<p>Modify in <code>ProjectManagementService.cs</code>:</p>
+<pre><code class="lang-csharp">public const int AutoSaveIntervalSeconds = 30; // Default: 30 seconds
+</code></pre>
+<h3 id="pagination-settings">Pagination Settings</h3>
+<p>Default page size: 20
+Max page size: 100</p>
+<p>Modify in controller if needed:</p>
+<pre><code class="lang-csharp">[FromQuery] int pageSize = 20
+</code></pre>
+<h3 id="template-settings">Template Settings</h3>
+<p>Add more system templates in <code>TemplateManagementService.SeedSystemTemplatesAsync()</code>.</p>
+<h2 id="next-steps">Next Steps</h2>
+<ol>
+<li><strong>Explore Templates</strong>: Try creating projects from all 4 system templates</li>
+<li><strong>Test Search</strong>: Create multiple projects and test search/filter</li>
+<li><strong>Try Bulk Actions</strong>: Select and delete multiple projects</li>
+<li><strong>Export/Import</strong>: Test project portability</li>
+<li><strong>Check Version History</strong>: Make changes and view versions</li>
+</ol>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ol>
+<li>Check logs in <code>Aura.Api/logs/</code></li>
+<li>Check browser console for frontend errors</li>
+<li>Review API response codes and messages</li>
+<li>Refer to full implementation doc: <code>PR5_PROJECT_MANAGEMENT_IMPLEMENTATION.md</code></li>
+</ol>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a href="./PR5_PROJECT_MANAGEMENT_IMPLEMENTATION.md">Full Implementation Summary</a></li>
+<li><a href="./api/index.md">API Documentation</a></li>
+<li>Database Schema</li>
+<li>Component Library</li>
+</ul>
+<hr>
+<p><strong>Version</strong>: 1.0
+<strong>Last Updated</strong>: 2025-11-10
+<strong>Status</strong>: Production Ready ✅</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/PROJECT_MANAGEMENT_SETUP_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

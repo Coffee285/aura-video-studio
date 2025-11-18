@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Unified LLM Orchestrator Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Unified LLM Orchestrator Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/UNIFIED_LLM_ORCHESTRATOR_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="unified-llm-orchestrator-guide">Unified LLM Orchestrator Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Unified LLM Orchestrator provides centralized control over all LLM operations in Aura Video Studio, including:</p>
+<ul>
+<li><strong>Prompt Governance</strong>: Standardized parameter presets per operation type</li>
+<li><strong>Budget Management</strong>: Token and cost tracking with hard/soft limits</li>
+<li><strong>Telemetry</strong>: Comprehensive metrics for all LLM calls</li>
+<li><strong>Caching</strong>: Automatic response caching with TTL</li>
+<li><strong>Cost Estimation</strong>: Real-time cost tracking per operation</li>
+<li><strong>Parameter Optimization</strong>: LLM-assisted or rule-based parameter suggestions</li>
+</ul>
+<h2 id="architecture">Architecture</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                    Application Layer                         │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│              UnifiedLlmOrchestrator                          │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  • LlmOperationRequest → LlmOperationResponse        │  │
+│  │  • Session budget tracking                            │  │
+│  │  • Telemetry collection                               │  │
+│  │  • Cache integration                                  │  │
+│  └──────────────────────────────────────────────────────┘  │
+└────┬───────┬──────────┬────────────┬────────────┬──────────┘
+     │       │          │            │            │
+     ▼       ▼          ▼            ▼            ▼
+┌────────┐ ┌──────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Budget │ │Cache │ │Telemetry │ │  Cost    │ │ Provider │
+│Manager │ │      │ │Collector │ │ Tracking │ │          │
+└────────┘ └──────┘ └──────────┘ └──────────┘ └──────────┘
+</code></pre>
+<h2 id="core-components">Core Components</h2>
+<h3 id="1-llmoperationtype-and-presets">1. LlmOperationType and Presets</h3>
+<p><strong>Location</strong>: <code>Aura.Core/AI/Orchestration/LlmOperationType.cs</code></p>
+<p>Defines 13 operation types with optimized parameter presets:</p>
+<pre><code class="lang-csharp">public enum LlmOperationType
+{
+    Planning,              // Video plan generation (temp: 0.7, tokens: 2000)
+    Scripting,             // Script content (temp: 0.8, tokens: 4000)
+    SsmlPlanning,          // SSML markup (temp: 0.3, tokens: 3000)
+    VisualPrompts,         // Visual generation (temp: 0.9, tokens: 1500)
+    RagRetrieval,          // RAG content (temp: 0.2, tokens: 2000)
+    SceneAnalysis,         // Scene importance (temp: 0.3, tokens: 800)
+    ComplexityAnalysis,    // Content complexity (temp: 0.2, tokens: 1000)
+    CoherenceValidation,   // Scene coherence (temp: 0.2, tokens: 800)
+    NarrativeValidation,   // Narrative arc (temp: 0.3, tokens: 1500)
+    TransitionGeneration,  // Transition text (temp: 0.7, tokens: 500)
+    ScriptRefinement,      // Script editing (temp: 0.6, tokens: 3000)
+    Creative,              // Creative generation (temp: 0.9, tokens: 3000)
+    Completion             // General (temp: 0.7, tokens: 2000)
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">// Get preset for an operation
+var preset = LlmOperationPresets.GetPreset(LlmOperationType.Planning);
+
+// Create custom preset
+var custom = LlmOperationPresets.CreateCustomPreset(
+    LlmOperationType.Planning,
+    temperature: 0.5,
+    maxTokens: 3000);
+
+// Get all presets
+var allPresets = LlmOperationPresets.GetAllPresets();
+</code></pre>
+<h3 id="2-budget-management">2. Budget Management</h3>
+<p><strong>Location</strong>: <code>Aura.Core/AI/Orchestration/LlmBudgetManager.cs</code></p>
+<p>Tracks token and cost budgets per session:</p>
+<pre><code class="lang-csharp">// Configure budget constraints
+var constraint = new LlmBudgetConstraint
+{
+    MaxTokensPerOperation = 5000,
+    MaxCostPerOperation = 0.50m,
+    MaxTokensPerSession = 50000,
+    MaxCostPerSession = 5.00m,
+    EnforceHardLimits = true  // Throw error vs. log warning
+};
+
+var budgetManager = new LlmBudgetManager(logger, constraint);
+
+// Check budget before operation
+var check = budgetManager.CheckBudget(
+    sessionId: &quot;video-123&quot;,
+    estimatedTokens: 1000,
+    estimatedCost: 0.05m);
+
+if (!check.IsWithinBudget)
+{
+    Console.WriteLine($&quot;Budget warnings: {string.Join(&quot;, &quot;, check.Warnings)}&quot;);
+}
+
+// Record actual usage after operation
+budgetManager.RecordUsage(
+    sessionId: &quot;video-123&quot;,
+    actualTokens: 950,
+    actualCost: 0.048m);
+
+// Get session status
+var budget = budgetManager.GetSessionBudget(&quot;video-123&quot;);
+Console.WriteLine($&quot;Session total: {budget.TotalTokensUsed} tokens, ${budget.TotalCostAccrued:F4}&quot;);
+
+// Clear completed session
+budgetManager.ClearSession(&quot;video-123&quot;);
+</code></pre>
+<h3 id="3-telemetry-and-metrics">3. Telemetry and Metrics</h3>
+<p><strong>Location</strong>: <code>Aura.Core/AI/Orchestration/LlmTelemetry.cs</code></p>
+<p>Collects comprehensive metrics for every LLM operation:</p>
+<pre><code class="lang-csharp">public record LlmOperationTelemetry
+{
+    public string OperationId { get; init; }
+    public string SessionId { get; init; }
+    public LlmOperationType OperationType { get; init; }
+    public string ProviderName { get; init; }
+    public string ModelName { get; init; }
+    public int TokensIn { get; init; }
+    public int TokensOut { get; init; }
+    public int RetryCount { get; init; }
+    public long LatencyMs { get; init; }
+    public bool Success { get; init; }
+    public bool CacheHit { get; init; }
+    public decimal EstimatedCost { get; init; }
+    public DateTime StartedAt { get; init; }
+    public DateTime CompletedAt { get; init; }
+    public double Temperature { get; init; }
+    public double TopP { get; init; }
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">var collector = new LlmTelemetryCollector();
+
+// Get statistics for all operations
+var stats = collector.GetStatistics();
+Console.WriteLine($&quot;Total operations: {stats.TotalOperations}&quot;);
+Console.WriteLine($&quot;Cache hit rate: {stats.CacheHitRate:P}&quot;);
+Console.WriteLine($&quot;Total cost: ${stats.TotalEstimatedCost:F4}&quot;);
+Console.WriteLine($&quot;Average latency: {stats.AverageLatencyMs}ms&quot;);
+Console.WriteLine($&quot;P95 latency: {stats.P95LatencyMs}ms&quot;);
+
+// Get statistics for specific session
+var sessionStats = collector.GetSessionStatistics(&quot;video-123&quot;);
+
+// Get operations by provider
+foreach (var (provider, count) in stats.OperationsByProvider)
+{
+    Console.WriteLine($&quot;{provider}: {count} operations&quot;);
+}
+</code></pre>
+<h3 id="4-unified-orchestrator">4. Unified Orchestrator</h3>
+<p><strong>Location</strong>: <code>Aura.Core/AI/Orchestration/UnifiedLlmOrchestrator.cs</code></p>
+<p>Central orchestrator coordinating all LLM operations:</p>
+<pre><code class="lang-csharp">// Setup
+var orchestrator = new UnifiedLlmOrchestrator(
+    logger,
+    cache,
+    budgetManager,
+    telemetryCollector,
+    schemaValidator,
+    costTrackingService);
+
+// Execute operation
+var request = new LlmOperationRequest
+{
+    SessionId = &quot;video-123&quot;,
+    OperationType = LlmOperationType.Planning,
+    Prompt = &quot;Create a plan for a video about...&quot;,
+    SystemPrompt = &quot;You are a video planning assistant&quot;,
+    EnableCache = true,
+    CacheTtlSeconds = 3600,
+    BudgetConstraint = constraint
+};
+
+var response = await orchestrator.ExecuteAsync(request, llmProvider, ct);
+
+if (response.Success)
+{
+    Console.WriteLine($&quot;Content: {response.Content}&quot;);
+    Console.WriteLine($&quot;Cached: {response.WasCached}&quot;);
+    Console.WriteLine($&quot;Tokens: {response.Telemetry.TotalTokens}&quot;);
+    Console.WriteLine($&quot;Cost: ${response.Telemetry.EstimatedCost:F4}&quot;);
+    Console.WriteLine($&quot;Latency: {response.Telemetry.LatencyMs}ms&quot;);
+}
+else
+{
+    Console.WriteLine($&quot;Error: {response.ErrorMessage}&quot;);
+}
+</code></pre>
+<h3 id="5-parameter-optimization">5. Parameter Optimization</h3>
+<p><strong>Location</strong>: <code>Aura.Core/AI/Orchestration/LlmParameterOptimizer.cs</code></p>
+<p>Suggests optimal parameters based on constraints:</p>
+<pre><code class="lang-csharp">var optimizer = new LlmParameterOptimizer(logger);
+
+// Optimize parameters
+var optimizationRequest = new OptimizationRequest
+{
+    OperationType = LlmOperationType.Planning,
+    Constraints = new OptimizationConstraints
+    {
+        MaxTokens = 1500,
+        MaxCost = 0.25m,
+        MaxLatencySeconds = 30,
+        PrioritizeQuality = true
+    },
+    UseCase = &quot;Quick video planning for social media&quot;
+};
+
+// Rule-based optimization
+var suggestion = await optimizer.OptimizeAsync(optimizationRequest);
+
+// LLM-assisted optimization (optional)
+var llmSuggestion = await optimizer.OptimizeAsync(
+    optimizationRequest,
+    llmProvider,
+    ct);
+
+Console.WriteLine($&quot;Suggested temperature: {suggestion.Temperature}&quot;);
+Console.WriteLine($&quot;Suggested tokens: {suggestion.MaxTokens}&quot;);
+Console.WriteLine($&quot;Rationale: {suggestion.Rationale}&quot;);
+Console.WriteLine($&quot;Confidence: {suggestion.Confidence:P}&quot;);
+
+// Explain adjustments
+var explanation = await optimizer.ExplainAdjustmentsAsync(
+    basePreset,
+    adjustedPreset,
+    &quot;cost constraints&quot;,
+    llmProvider,
+    ct);
+
+Console.WriteLine($&quot;Explanation: {explanation}&quot;);
+</code></pre>
+<h2 id="integration-patterns">Integration Patterns</h2>
+<h3 id="basic-integration">Basic Integration</h3>
+<pre><code class="lang-csharp">public class VideoGenerationService
+{
+    private readonly UnifiedLlmOrchestrator _orchestrator;
+    private readonly ILlmProvider _provider;
+    
+    public async Task&lt;VideoScript&gt; GenerateScriptAsync(
+        VideoBrief brief,
+        string sessionId,
+        CancellationToken ct)
+    {
+        var request = new LlmOperationRequest
+        {
+            SessionId = sessionId,
+            OperationType = LlmOperationType.Scripting,
+            Prompt = BuildScriptPrompt(brief),
+            EnableCache = true
+        };
+        
+        var response = await _orchestrator.ExecuteAsync(request, _provider, ct);
+        
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(
+                $&quot;Script generation failed: {response.ErrorMessage}&quot;);
+        }
+        
+        return ParseScript(response.Content);
+    }
+}
+</code></pre>
+<h3 id="multi-provider-fallback">Multi-Provider Fallback</h3>
+<pre><code class="lang-csharp">public class ResilientVideoService
+{
+    private readonly UnifiedLlmOrchestrator _orchestrator;
+    private readonly ILlmProvider[] _providers;  // Ordered by preference
+    
+    public async Task&lt;string&gt; GenerateWithFallbackAsync(
+        LlmOperationRequest request,
+        CancellationToken ct)
+    {
+        foreach (var provider in _providers)
+        {
+            try
+            {
+                var response = await _orchestrator.ExecuteAsync(request, provider, ct);
+                
+                if (response.Success)
+                {
+                    return response.Content;
+                }
+                
+                // Log and try next provider
+                _logger.LogWarning(
+                    &quot;Provider {Provider} failed: {Error}&quot;,
+                    GetProviderName(provider),
+                    response.ErrorMessage);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, &quot;Provider {Provider} threw exception&quot;, 
+                    GetProviderName(provider));
+            }
+        }
+        
+        throw new InvalidOperationException(&quot;All providers failed&quot;);
+    }
+}
+</code></pre>
+<h3 id="progressive-cost-control">Progressive Cost Control</h3>
+<pre><code class="lang-csharp">public class CostAwareService
+{
+    private readonly UnifiedLlmOrchestrator _orchestrator;
+    
+    public async Task&lt;Result&gt; GenerateWithCostControlAsync(
+        string sessionId,
+        CancellationToken ct)
+    {
+        // Start with basic budget
+        var constraint = new LlmBudgetConstraint
+        {
+            MaxTokensPerSession = 10000,
+            MaxCostPerSession = 1.00m,
+            EnforceHardLimits = false
+        };
+        
+        var request = new LlmOperationRequest
+        {
+            SessionId = sessionId,
+            OperationType = LlmOperationType.Planning,
+            Prompt = &quot;...&quot;,
+            BudgetConstraint = constraint
+        };
+        
+        var response = await _orchestrator.ExecuteAsync(request, _provider, ct);
+        
+        // Check budget status
+        var budget = _orchestrator.GetSessionBudget(sessionId);
+        
+        if (budget.TotalCostAccrued &gt; 0.75m)
+        {
+            _logger.LogWarning(
+                &quot;Session {SessionId} approaching budget limit: ${Cost:F4}&quot;,
+                sessionId, budget.TotalCostAccrued);
+            
+            // Switch to cheaper operation
+            request = request with
+            {
+                CustomPreset = LlmOperationPresets.CreateCustomPreset(
+                    request.OperationType,
+                    maxTokens: 1000,
+                    temperature: 0.5)
+            };
+        }
+        
+        // Continue with adjusted parameters...
+    }
+}
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-always-use-session-ids">1. Always Use Session IDs</h3>
+<p>Group related operations under a single session ID for accurate budget tracking:</p>
+<pre><code class="lang-csharp">var sessionId = $&quot;video-{videoId}&quot;;
+
+// All operations for this video use the same session ID
+await GeneratePlanAsync(sessionId, ...);
+await GenerateScriptAsync(sessionId, ...);
+await GenerateVisualsAsync(sessionId, ...);
+
+// Clear session when complete
+orchestrator.ClearSession(sessionId);
+</code></pre>
+<h3 id="2-enable-caching-for-deterministic-operations">2. Enable Caching for Deterministic Operations</h3>
+<pre><code class="lang-csharp">// Cache deterministic operations
+var analysisRequest = new LlmOperationRequest
+{
+    OperationType = LlmOperationType.SceneAnalysis,
+    EnableCache = true,
+    CacheTtlSeconds = 3600
+};
+
+// Don't cache creative operations
+var creativeRequest = new LlmOperationRequest
+{
+    OperationType = LlmOperationType.Creative,
+    EnableCache = false
+};
+</code></pre>
+<h3 id="3-monitor-telemetry">3. Monitor Telemetry</h3>
+<pre><code class="lang-csharp">// Periodic monitoring
+var stats = orchestrator.GetStatistics();
+
+if (stats.CacheHitRate &lt; 0.3)
+{
+    _logger.LogWarning(&quot;Low cache hit rate: {Rate:P}&quot;, stats.CacheHitRate);
+}
+
+if (stats.P95LatencyMs &gt; 5000)
+{
+    _logger.LogWarning(&quot;High P95 latency: {Latency}ms&quot;, stats.P95LatencyMs);
+}
+</code></pre>
+<h3 id="4-use-parameter-optimization">4. Use Parameter Optimization</h3>
+<pre><code class="lang-csharp">// Let the system suggest optimal parameters
+var suggestion = await optimizer.OptimizeAsync(
+    new OptimizationRequest
+    {
+        OperationType = operationType,
+        Constraints = constraints
+    });
+
+// Use suggested parameters
+var request = new LlmOperationRequest
+{
+    CustomPreset = new LlmOperationPreset
+    {
+        Temperature = suggestion.Temperature,
+        TopP = suggestion.TopP,
+        MaxTokens = suggestion.MaxTokens,
+        TimeoutSeconds = suggestion.TimeoutSeconds,
+        MaxRetries = suggestion.MaxRetries
+    }
+};
+</code></pre>
+<h3 id="5-handle-budget-exhaustion-gracefully">5. Handle Budget Exhaustion Gracefully</h3>
+<pre><code class="lang-csharp">var response = await orchestrator.ExecuteAsync(request, provider, ct);
+
+if (!response.Success &amp;&amp; response.ErrorMessage?.Contains(&quot;Budget exceeded&quot;) == true)
+{
+    // Notify user
+    await NotifyUserAsync(&quot;Operation paused due to budget limit&quot;);
+    
+    // Log for admin review
+    _logger.LogWarning(
+        &quot;Session {SessionId} exhausted budget at {Cost:F4}&quot;,
+        sessionId, budget.TotalCostAccrued);
+    
+    // Optionally, allow user to increase budget
+    return new Result { RequiresBudgetIncrease = true };
+}
+</code></pre>
+<h2 id="diagnostic-apis">Diagnostic APIs</h2>
+<h3 id="get-session-statistics">Get Session Statistics</h3>
+<pre><code class="lang-csharp">[HttpGet(&quot;sessions/{sessionId}/statistics&quot;)]
+public ActionResult&lt;LlmTelemetryStatistics&gt; GetSessionStatistics(string sessionId)
+{
+    var stats = _orchestrator.GetSessionStatistics(sessionId);
+    return Ok(stats);
+}
+</code></pre>
+<h3 id="get-budget-status">Get Budget Status</h3>
+<pre><code class="lang-csharp">[HttpGet(&quot;sessions/{sessionId}/budget&quot;)]
+public ActionResult&lt;SessionBudget&gt; GetSessionBudget(string sessionId)
+{
+    var budget = _orchestrator.GetSessionBudget(sessionId);
+    return Ok(budget);
+}
+</code></pre>
+<h3 id="get-overall-statistics">Get Overall Statistics</h3>
+<pre><code class="lang-csharp">[HttpGet(&quot;statistics&quot;)]
+public ActionResult&lt;LlmTelemetryStatistics&gt; GetStatistics()
+{
+    var stats = _orchestrator.GetStatistics();
+    return Ok(stats);
+}
+</code></pre>
+<h2 id="migration-from-direct-llm-calls">Migration from Direct LLM Calls</h2>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-csharp">var response = await llmProvider.CompleteAsync(prompt, ct);
+</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-csharp">var request = new LlmOperationRequest
+{
+    SessionId = sessionId,
+    OperationType = LlmOperationType.Completion,
+    Prompt = prompt
+};
+
+var response = await orchestrator.ExecuteAsync(request, llmProvider, ct);
+var content = response.Content;
+</code></pre>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ol>
+<li><strong>Caching</strong>: First call incurs full latency, subsequent calls are ~10ms</li>
+<li><strong>Budget checking</strong>: Adds &lt;1ms overhead per operation</li>
+<li><strong>Telemetry</strong>: Non-blocking, adds ~2ms overhead</li>
+<li><strong>Cost estimation</strong>: Simple calculation, &lt;1ms overhead</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="high-cache-miss-rate">High Cache Miss Rate</h3>
+<ul>
+<li>Check if operations have low temperature (&lt; 0.3)</li>
+<li>Verify prompts are normalized consistently</li>
+<li>Consider increasing cache TTL</li>
+</ul>
+<h3 id="budget-warnings-too-aggressive">Budget Warnings Too Aggressive</h3>
+<ul>
+<li>Increase session limits in <code>LlmBudgetConstraint</code></li>
+<li>Set <code>EnforceHardLimits = false</code> for soft limits</li>
+<li>Review operation-specific token limits</li>
+</ul>
+<h3 id="unexpected-cost">Unexpected Cost</h3>
+<ul>
+<li>Review telemetry to identify expensive operations</li>
+<li>Check for retry storms (high <code>RetryCount</code>)</li>
+<li>Verify provider cost rates in <code>EstimateCost()</code></li>
+</ul>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="LLM_CACHE_GUIDE.html">LLM Cache Guide</a> - Caching strategies and configuration</li>
+<li><a href="LLM_LATENCY_MANAGEMENT.html">LLM Latency Management</a> - Latency optimization</li>
+<li><a href="LLM_OUTPUT_VALIDATION_GUIDE.html">LLM Output Validation Guide</a> - Schema validation</li>
+<li><a href="PROMPT_ENGINEERING_API.md">Prompt Engineering API</a> - Prompt customization</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/UNIFIED_LLM_ORCHESTRATOR_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

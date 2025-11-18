@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>LLM Cache and Prewarm Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="LLM Cache and Prewarm Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/LLM_CACHE_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="llm-cache-and-prewarm-guide">LLM Cache and Prewarm Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The LLM caching system provides deterministic response caching for LLM operations to dramatically reduce latency for repeatable steps like plan scaffolds and outline transforms. This guide covers configuration, usage, and best practices for leveraging the cache to improve user experience.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="components">Components</h3>
+<h4 id="core-layer-auracoreaicache">Core Layer (Aura.Core/AI/Cache/)</h4>
+<ul>
+<li><strong>ILlmCache</strong>: Interface defining cache operations (Get, Set, Remove, Clear, Statistics)</li>
+<li><strong>MemoryLlmCache</strong>: In-memory implementation with LRU eviction and TTL support</li>
+<li><strong>LlmCacheKeyGenerator</strong>: Deterministic key generation from request parameters</li>
+<li><strong>CachedLlmProviderService</strong>: Service wrapper for cache-first LLM operations</li>
+<li><strong>LlmPrewarmService</strong>: Preloads common prompts at application startup</li>
+</ul>
+<h4 id="api-layer-auraapi">API Layer (Aura.Api/)</h4>
+<ul>
+<li><strong>CacheController</strong>: REST endpoints for cache management</li>
+<li><strong>LlmCacheMaintenanceService</strong>: Background service for periodic cache maintenance</li>
+</ul>
+<h4 id="frontend-auraweb">Frontend (Aura.Web/)</h4>
+<ul>
+<li><strong>cacheApi.ts</strong>: API client for cache operations</li>
+<li><strong>cache.ts</strong>: TypeScript type definitions</li>
+</ul>
+<h3 id="cache-key-generation">Cache Key Generation</h3>
+<p>Cache keys are generated deterministically from:</p>
+<ol>
+<li><strong>Provider name</strong> (e.g., &quot;OpenAI&quot;, &quot;Anthropic&quot;)</li>
+<li><strong>Model name</strong> (e.g., &quot;gpt-4&quot;, &quot;claude-3-opus&quot;)</li>
+<li><strong>Operation type</strong> (e.g., &quot;PlanScaffold&quot;, &quot;OutlineTransform&quot;)</li>
+<li><strong>System prompt</strong> (if provided)</li>
+<li><strong>User prompt</strong> (normalized: trimmed, lowercased)</li>
+<li><strong>Temperature</strong> (formatted to 2 decimal places)</li>
+<li><strong>Max tokens</strong></li>
+<li><strong>Additional parameters</strong> (sorted alphabetically for consistency)</li>
+</ol>
+<p>The key is a SHA256 hash of the concatenated parameters, ensuring:</p>
+<ul>
+<li>Same inputs always produce same key</li>
+<li>Different inputs produce different keys</li>
+<li>Case-insensitive and whitespace-normalized prompts</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="appsettingsjson">appsettings.json</h3>
+<pre><code class="lang-json">{
+  &quot;LlmCache&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;MaxEntries&quot;: 1000,
+    &quot;DefaultTtlSeconds&quot;: 3600,
+    &quot;UseDiskStorage&quot;: false,
+    &quot;DiskStoragePath&quot;: &quot;./cache/llm&quot;,
+    &quot;MaxDiskSizeMB&quot;: 100
+  },
+  &quot;LlmPrewarm&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;MaxConcurrentPrewarms&quot;: 3,
+    &quot;PrewarmPrompts&quot;: [
+      {
+        &quot;ProviderName&quot;: &quot;OpenAI&quot;,
+        &quot;ModelName&quot;: &quot;gpt-4&quot;,
+        &quot;OperationType&quot;: &quot;PlanScaffold&quot;,
+        &quot;UserPrompt&quot;: &quot;technology tutorial&quot;,
+        &quot;Temperature&quot;: 0.2,
+        &quot;MaxTokens&quot;: 1000,
+        &quot;TtlSeconds&quot;: 7200
+      }
+    ]
+  }
+}
+</code></pre>
+<h3 id="configuration-options">Configuration Options</h3>
+<h4 id="llmcache">LlmCache</h4>
+<ul>
+<li><strong>Enabled</strong> (bool): Enable/disable caching globally. Default: <code>true</code></li>
+<li><strong>MaxEntries</strong> (int): Maximum number of entries in memory. Default: <code>1000</code></li>
+<li><strong>DefaultTtlSeconds</strong> (int): Default time-to-live for entries. Default: <code>3600</code> (1 hour)</li>
+<li><strong>UseDiskStorage</strong> (bool): Enable optional disk-based storage. Default: <code>false</code></li>
+<li><strong>DiskStoragePath</strong> (string): Directory for disk cache. Default: <code>&quot;./cache/llm&quot;</code></li>
+<li><strong>MaxDiskSizeMB</strong> (int): Maximum disk cache size in MB. Default: <code>100</code></li>
+</ul>
+<h4 id="llmprewarm">LlmPrewarm</h4>
+<ul>
+<li><strong>Enabled</strong> (bool): Enable/disable prewarming. Default: <code>true</code></li>
+<li><strong>MaxConcurrentPrewarms</strong> (int): Max concurrent prewarm operations. Default: <code>3</code></li>
+<li><strong>PrewarmPrompts</strong> (array): List of prompts to prewarm on startup</li>
+</ul>
+<h2 id="cacheable-operations">Cacheable Operations</h2>
+<h3 id="operations-eligible-for-caching">Operations Eligible for Caching</h3>
+<p>The following operation types are considered deterministic and cacheable:</p>
+<ul>
+<li><strong>PlanScaffold</strong>: Initial plan structure generation</li>
+<li><strong>OutlineTransform</strong>: Converting outlines to structured content</li>
+<li><strong>SceneAnalysis</strong>: Analyzing scene importance and pacing</li>
+<li><strong>ContentComplexity</strong>: Analyzing content difficulty</li>
+<li><strong>SceneCoherence</strong>: Evaluating scene transitions</li>
+<li><strong>NarrativeArc</strong>: Validating story structure</li>
+<li><strong>VisualPrompt</strong>: Generating image generation prompts</li>
+<li><strong>TransitionText</strong>: Creating scene transition text</li>
+</ul>
+<h3 id="temperature-threshold">Temperature Threshold</h3>
+<p>Caching is only enabled when <code>temperature &lt;= 0.3</code> to ensure deterministic responses. Creative operations with higher temperatures are never cached.</p>
+<h3 id="operations-not-cached">Operations Not Cached</h3>
+<ul>
+<li>Creative content generation (temperature &gt; 0.3)</li>
+<li>Long-form narrative generation</li>
+<li>User-specific creative requests</li>
+<li>Real-time conversational responses</li>
+</ul>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="get-apicachestats">GET /api/cache/stats</h3>
+<p>Returns cache statistics.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;totalEntries&quot;: 152,
+  &quot;totalHits&quot;: 487,
+  &quot;totalMisses&quot;: 203,
+  &quot;hitRate&quot;: 0.71,
+  &quot;totalSizeBytes&quot;: 1048576,
+  &quot;totalEvictions&quot;: 23,
+  &quot;totalExpirations&quot;: 15
+}
+</code></pre>
+<h3 id="post-apicacheclear">POST /api/cache/clear</h3>
+<p>Clears all cache entries.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;Cache cleared successfully. Removed 152 entries.&quot;,
+  &quot;entriesRemoved&quot;: 152
+}
+</code></pre>
+<h3 id="post-apicacheevict-expired">POST /api/cache/evict-expired</h3>
+<p>Removes expired entries based on TTL.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;Evicted 15 expired entries.&quot;,
+  &quot;entriesRemoved&quot;: 15,
+  &quot;entriesRemaining&quot;: 137
+}
+</code></pre>
+<h2 id="usage-patterns">Usage Patterns</h2>
+<h3 id="automatic-caching">Automatic Caching</h3>
+<p>The cache is consulted automatically for eligible operations. No code changes required for consumers.</p>
+<pre><code class="lang-csharp">// This operation will be cached if eligible
+var script = await llmProvider.DraftScriptAsync(brief, spec, ct);
+</code></pre>
+<h3 id="explicit-cache-usage">Explicit Cache Usage</h3>
+<p>For advanced scenarios, use <code>CachedLlmProviderService</code>:</p>
+<pre><code class="lang-csharp">var cacheKey = cachedService.GenerateDraftScriptCacheKey(
+    &quot;OpenAI&quot;,
+    &quot;gpt-4&quot;, 
+    brief, 
+    spec, 
+    temperature: 0.2);
+
+var result = await cachedService.ExecuteWithCacheAsync(
+    cacheKey,
+    metadata,
+    ct =&gt; llmProvider.DraftScriptAsync(brief, spec, ct),
+    response =&gt; JsonSerializer.Serialize(response),
+    json =&gt; JsonSerializer.Deserialize&lt;string&gt;(json)!,
+    ct);
+
+if (result.FromCache)
+{
+    logger.LogInformation(&quot;Using cached response&quot;);
+}
+</code></pre>
+<h2 id="cache-maintenance">Cache Maintenance</h2>
+<h3 id="automatic-maintenance">Automatic Maintenance</h3>
+<p>The <code>LlmCacheMaintenanceService</code> runs every 5 minutes to:</p>
+<ol>
+<li>Evict expired entries based on TTL</li>
+<li>Log cache statistics</li>
+<li>Monitor cache health</li>
+</ol>
+<h3 id="manual-maintenance">Manual Maintenance</h3>
+<p>Clear cache via API:</p>
+<pre><code class="lang-bash"># Get statistics
+curl http://localhost:5005/api/cache/stats
+
+# Clear all entries
+curl -X POST http://localhost:5005/api/cache/clear
+
+# Evict expired entries
+curl -X POST http://localhost:5005/api/cache/evict-expired
+</code></pre>
+<h2 id="performance-impact">Performance Impact</h2>
+<h3 id="expected-latency-improvements">Expected Latency Improvements</h3>
+<ul>
+<li><strong>Cache Hit</strong>: &lt; 5ms (vs 2-10 seconds for LLM call)</li>
+<li><strong>First Call</strong>: No overhead (cache miss, normal LLM latency)</li>
+<li><strong>Subsequent Calls</strong>: 99.5% latency reduction</li>
+</ul>
+<h3 id="memory-usage">Memory Usage</h3>
+<ul>
+<li><strong>Per Entry</strong>: ~2-10 KB (depends on response size)</li>
+<li><strong>1000 Entries</strong>: ~2-10 MB</li>
+<li><strong>Configurable</strong>: Adjust <code>MaxEntries</code> based on available memory</li>
+</ul>
+<h3 id="hit-rate-targets">Hit Rate Targets</h3>
+<ul>
+<li><strong>Good</strong>: 40-60% hit rate for typical usage</li>
+<li><strong>Excellent</strong>: 70%+ hit rate with prewarming</li>
+<li><strong>Monitor</strong>: Use <code>/api/cache/stats</code> to track</li>
+</ul>
+<h2 id="prewarming-strategy">Prewarming Strategy</h2>
+<h3 id="when-to-prewarm">When to Prewarm</h3>
+<ul>
+<li><strong>Application Startup</strong>: Load common prompts on initialization</li>
+<li><strong>Project Open</strong>: Load project-specific templates</li>
+<li><strong>Feature Entry</strong>: Load feature-specific prompts when user navigates</li>
+</ul>
+<h3 id="prewarm-configuration">Prewarm Configuration</h3>
+<p>Add prompts to <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;LlmPrewarm&quot;: {
+    &quot;PrewarmPrompts&quot;: [
+      {
+        &quot;ProviderName&quot;: &quot;OpenAI&quot;,
+        &quot;ModelName&quot;: &quot;gpt-4&quot;,
+        &quot;OperationType&quot;: &quot;PlanScaffold&quot;,
+        &quot;UserPrompt&quot;: &quot;technology tutorial&quot;,
+        &quot;Temperature&quot;: 0.2,
+        &quot;MaxTokens&quot;: 1000,
+        &quot;TtlSeconds&quot;: 7200
+      },
+      {
+        &quot;ProviderName&quot;: &quot;OpenAI&quot;,
+        &quot;ModelName&quot;: &quot;gpt-4&quot;,
+        &quot;OperationType&quot;: &quot;OutlineTransform&quot;,
+        &quot;UserPrompt&quot;: &quot;product demonstration&quot;,
+        &quot;Temperature&quot;: 0.2,
+        &quot;MaxTokens&quot;: 1000,
+        &quot;TtlSeconds&quot;: 7200
+      }
+    ]
+  }
+}
+</code></pre>
+<h3 id="prewarm-best-practices">Prewarm Best Practices</h3>
+<ol>
+<li><strong>Focus on Common Patterns</strong>: Prewarm the most frequently used prompts</li>
+<li><strong>Use Longer TTL</strong>: Set <code>TtlSeconds</code> higher (e.g., 7200 = 2 hours) for prewarmed entries</li>
+<li><strong>Limit Concurrency</strong>: Keep <code>MaxConcurrentPrewarms</code> low (3-5) to avoid overwhelming providers</li>
+<li><strong>Monitor Effectiveness</strong>: Check hit rates to validate prewarm value</li>
+</ol>
+<h2 id="cache-invalidation">Cache Invalidation</h2>
+<h3 id="automatic-invalidation">Automatic Invalidation</h3>
+<p>Cache entries are automatically invalidated when:</p>
+<ol>
+<li><strong>TTL Expires</strong>: Entry exceeds configured <code>TtlSeconds</code></li>
+<li><strong>LRU Eviction</strong>: Cache reaches <code>MaxEntries</code> and least recently used entries are evicted</li>
+<li><strong>Manual Clear</strong>: User or admin clears cache via API</li>
+</ol>
+<h3 id="safe-invalidation">Safe Invalidation</h3>
+<p>The cache uses conservative invalidation to prevent stale results:</p>
+<ul>
+<li><strong>Input Changes</strong>: Any parameter change produces a new cache key</li>
+<li><strong>Provider Changes</strong>: Switching providers invalidates previous results</li>
+<li><strong>Model Updates</strong>: Model version changes invalidate cache</li>
+<li><strong>Temperature Changes</strong>: Even small temperature differences invalidate cache</li>
+</ul>
+<h3 id="force-refresh">Force Refresh</h3>
+<p>To bypass cache for a specific request, temporarily disable caching:</p>
+<pre><code class="lang-csharp">// Disable cache temporarily
+_options.Enabled = false;
+var freshResult = await llmProvider.DraftScriptAsync(brief, spec, ct);
+_options.Enabled = true;
+</code></pre>
+<p>Or clear specific entries via API.</p>
+<h2 id="monitoring-and-observability">Monitoring and Observability</h2>
+<h3 id="logs">Logs</h3>
+<p>Cache operations are logged with structured logging:</p>
+<pre><code>[INFO] Cache HIT for PlanScaffold (provider=OpenAI, model=gpt-4, accessCount=5)
+[INFO] Cached response for PlanScaffold (provider=OpenAI, model=gpt-4, ttl=3600s)
+[INFO] Evicted 12 expired entries from cache
+</code></pre>
+<h3 id="metrics">Metrics</h3>
+<p>Monitor via <code>/api/cache/stats</code>:</p>
+<ul>
+<li><strong>Hit Rate</strong>: Target 40-70% for good cache effectiveness</li>
+<li><strong>Evictions</strong>: High evictions may indicate <code>MaxEntries</code> too low</li>
+<li><strong>Expirations</strong>: Track TTL effectiveness</li>
+</ul>
+<h3 id="telemetry">Telemetry</h3>
+<p>Cache performance is included in application telemetry:</p>
+<ul>
+<li>Cache hit latency</li>
+<li>Cache miss latency</li>
+<li>Serialization overhead</li>
+<li>Eviction patterns</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="low-hit-rate">Low Hit Rate</h3>
+<p><strong>Symptoms</strong>: Hit rate &lt; 20%</p>
+<p><strong>Causes</strong>:</p>
+<ul>
+<li>TTL too short</li>
+<li>High temperature (&gt; 0.3) disables caching</li>
+<li>Prompts have high variability</li>
+<li>Not prewarming common patterns</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Increase <code>DefaultTtlSeconds</code></li>
+<li>Lower temperature for deterministic operations</li>
+<li>Add prewarming for common prompts</li>
+<li>Normalize input variations</li>
+</ol>
+<h3 id="high-memory-usage">High Memory Usage</h3>
+<p><strong>Symptoms</strong>: Memory usage growing unbounded</p>
+<p><strong>Causes</strong>:</p>
+<ul>
+<li><code>MaxEntries</code> too high</li>
+<li>Large responses being cached</li>
+<li>Memory leak (unlikely, uses weak references)</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Reduce <code>MaxEntries</code></li>
+<li>Enable disk storage for overflow</li>
+<li>Reduce TTL to expire entries faster</li>
+<li>Clear cache periodically</li>
+</ol>
+<h3 id="stale-results">Stale Results</h3>
+<p><strong>Symptoms</strong>: Cached results don't reflect latest data</p>
+<p><strong>Causes</strong>:</p>
+<ul>
+<li>TTL too long</li>
+<li>Cache not invalidated on relevant changes</li>
+<li>Provider updated but cache not cleared</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Reduce TTL for frequently changing content</li>
+<li>Clear cache after provider/model updates</li>
+<li>Use force refresh for critical operations</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="development">Development</h3>
+<ol>
+<li><strong>Enable in Dev</strong>: Keep caching enabled during development to catch issues early</li>
+<li><strong>Clear on Schema Changes</strong>: Clear cache when prompt formats change</li>
+<li><strong>Test Cache Miss Path</strong>: Ensure code works correctly on cache misses</li>
+<li><strong>Monitor Hit Rates</strong>: Track effectiveness of caching strategy</li>
+</ol>
+<h3 id="production">Production</h3>
+<ol>
+<li><strong>Conservative TTL</strong>: Start with lower TTL (1 hour) and increase if safe</li>
+<li><strong>Monitor Memory</strong>: Track cache size and evictions</li>
+<li><strong>Graceful Degradation</strong>: Ensure system works if cache fails</li>
+<li><strong>Regular Maintenance</strong>: Schedule periodic cache clears if needed</li>
+</ol>
+<h3 id="security">Security</h3>
+<ol>
+<li><strong>No Sensitive Data</strong>: Never cache responses containing PII or secrets</li>
+<li><strong>Access Control</strong>: Secure cache management endpoints</li>
+<li><strong>Audit Logging</strong>: Log all manual cache operations</li>
+<li><strong>Key Isolation</strong>: Cache keys include provider/model to prevent cross-contamination</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<h3 id="planned-features">Planned Features</h3>
+<ul>
+<li><strong>Disk-based Storage</strong>: Persistent cache across restarts (currently in-memory only)</li>
+<li><strong>Distributed Cache</strong>: Redis/Memcached support for multi-instance deployments</li>
+<li><strong>Cache Warming API</strong>: Endpoint to trigger prewarm on demand</li>
+<li><strong>Advanced Eviction</strong>: Frequency-based eviction in addition to LRU</li>
+<li><strong>Cache Partitioning</strong>: Separate caches per user/tenant</li>
+</ul>
+<h3 id="experimental-features">Experimental Features</h3>
+<ul>
+<li><strong>Semantic Similarity</strong>: Cache hits for semantically similar prompts</li>
+<li><strong>Partial Matches</strong>: Return partial results while fetching full response</li>
+<li><strong>Predictive Prewarming</strong>: ML-based prediction of likely next prompts</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>The LLM caching system provides significant latency improvements for deterministic operations while maintaining safety through conservative invalidation. Monitor hit rates and adjust configuration to optimize for your workload.</p>
+<p>For questions or issues, see:</p>
+<ul>
+<li>Issue Tracker: <a href="https://github.com/Saiyan9001/aura-video-studio/issues">GitHub Issues</a></li>
+<li>LLM Documentation: <code>LLM_IMPLEMENTATION_GUIDE.md</code></li>
+<li>Latency Management: <code>LLM_LATENCY_MANAGEMENT.md</code></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/LLM_CACHE_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

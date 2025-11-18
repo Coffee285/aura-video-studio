@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Network Resilience &amp; Retry Logic Configuration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Network Resilience &amp; Retry Logic Configuration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/NETWORK_RESILIENCE_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="network-resilience--retry-logic-configuration-guide">Network Resilience &amp; Retry Logic Configuration Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio implements comprehensive network resilience at both frontend and backend layers to handle network failures, API timeouts, and service disruptions gracefully.</p>
+<h2 id="frontend-resilience">Frontend Resilience</h2>
+<h3 id="1-network-resilience-service">1. Network Resilience Service</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/services/networkResilience.ts</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Offline request queueing</li>
+<li>Priority-based request processing</li>
+<li>Automatic retry when network restores</li>
+<li>LocalStorage persistence across page reloads</li>
+</ul>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-typescript">import { networkResilienceService } from '@/services/api/apiClient';
+
+// Configure the service
+networkResilienceService.configure({
+  enableOfflineQueue: true,
+  maxQueueSize: 50,
+  autoRetryOnReconnect: true,
+  queuePersistence: true
+});
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-typescript">// Queue a request when offline
+const requestId = networkResilienceService.queueRequest(
+  '/api/jobs',
+  'POST',
+  { data: jobData },
+  { priority: 'high', maxRetries: 3 }
+);
+
+// Process queue when online
+await networkResilienceService.processQueue(async (request) =&gt; {
+  try {
+    await apiClient.post(request.url, request.data);
+    return true; // Success
+  } catch (error) {
+    return false; // Retry
+  }
+});
+</code></pre>
+<h3 id="2-timeout-configuration">2. Timeout Configuration</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/config/timeouts.ts</code></p>
+<p><strong>Default Timeouts</strong>:</p>
+<pre><code class="lang-typescript">{
+  default: 30000,        // 30 seconds
+  health: 5000,          // 5 seconds
+  auth: 10000,           // 10 seconds
+  scriptGeneration: 120000,   // 2 minutes
+  tts: 60000,            // 1 minute
+  imageGeneration: 180000,    // 3 minutes
+  videoGeneration: 300000,    // 5 minutes
+  videoRendering: 600000,     // 10 minutes
+  fileUpload: 120000,    // 2 minutes
+  fileDownload: 180000,  // 3 minutes
+  quickOperations: 5000  // 5 seconds
+}
+</code></pre>
+<p><strong>Customization</strong>:</p>
+<pre><code class="lang-typescript">import { timeoutConfig, getOperationTimeout } from '@/config/timeouts';
+
+// Update specific timeout
+timeoutConfig.setTimeout('videoRendering', 900000); // 15 minutes
+
+// Update multiple timeouts
+timeoutConfig.setTimeouts({
+  scriptGeneration: 180000,
+  tts: 90000
+});
+
+// Get timeout for operation
+const timeout = getOperationTimeout('render');
+
+// Reset to defaults
+timeoutConfig.resetToDefaults();
+timeoutConfig.resetTimeout('videoRendering');
+</code></pre>
+<h3 id="3-circuit-breaker">3. Circuit Breaker</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/services/api/apiClient.ts</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-typescript">// Circuit breaker is automatic with these thresholds:
+{
+  failureThreshold: 5,      // Number of failures before opening
+  successThreshold: 2,      // Successes needed to close from half-open
+  timeout: 60000            // Wait time before retry (1 minute)
+}
+</code></pre>
+<p><strong>Manual Control</strong>:</p>
+<pre><code class="lang-typescript">import { resetCircuitBreaker, getCircuitBreakerState } from '@/services/api/apiClient';
+
+// Check state
+const state = getCircuitBreakerState(); // 'CLOSED', 'OPEN', or 'HALF_OPEN'
+
+// Manual reset (testing/recovery)
+resetCircuitBreaker();
+</code></pre>
+<p><strong>State Persistence</strong>: Circuit breaker state is persisted to localStorage and restored on page reload.</p>
+<h3 id="4-exponential-backoff">4. Exponential Backoff</h3>
+<p><strong>Automatic for all API calls</strong> with the following configuration:</p>
+<ul>
+<li>Base delay: 1 second</li>
+<li>Max delay: 8 seconds</li>
+<li>Max retries: 3</li>
+<li>Applies to transient errors (5xx, network errors, timeouts)</li>
+</ul>
+<p><strong>Custom retry configuration</strong>:</p>
+<pre><code class="lang-typescript">import { post } from '@/services/api/apiClient';
+
+// Skip retry for specific request
+await post('/api/jobs', data, {
+  _skipRetry: true
+});
+
+// Custom timeout
+await post('/api/jobs', data, {
+  timeout: 60000 // 60 seconds
+});
+</code></pre>
+<h3 id="5-offline-detection">5. Offline Detection</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/stores/appStore.ts</code></p>
+<p><strong>Automatic Features</strong>:</p>
+<ul>
+<li>Monitors <code>navigator.onLine</code> status</li>
+<li>Shows notification when offline/online</li>
+<li>Updates global state for UI adaptation</li>
+</ul>
+<p><strong>Usage in Components</strong>:</p>
+<pre><code class="lang-typescript">import { useAppStore } from '@/stores/appStore';
+
+function MyComponent() {
+  const isOnline = useAppStore((state) =&gt; state.isOnline);
+  
+  return (
+    &lt;div&gt;
+      {!isOnline &amp;&amp; &lt;OfflineWarning /&gt;}
+      &lt;button disabled={!isOnline}&gt;Submit&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h2 id="backend-resilience">Backend Resilience</h2>
+<h3 id="1-resilience-pipelines-polly">1. Resilience Pipelines (Polly)</h3>
+<p><strong>Location</strong>: <code>Aura.Core/Resilience/ResiliencePipelineFactory.cs</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Exponential backoff retry</li>
+<li>Circuit breaker</li>
+<li>Timeout policies</li>
+<li>HTTP-specific handling</li>
+</ul>
+<p><strong>HTTP Client Configuration</strong>:</p>
+<pre><code class="lang-csharp">// In Startup/Program.cs
+services.AddResilientHttpClient(&quot;OpenAI&quot;, client =&gt;
+{
+    client.BaseAddress = new Uri(&quot;https://api.openai.com&quot;);
+    client.DefaultRequestHeaders.Add(&quot;Authorization&quot;, $&quot;Bearer {apiKey}&quot;);
+});
+
+// Or typed client
+services.AddResilientHttpClient&lt;OpenAiLlmProvider&gt;(client =&gt;
+{
+    client.Timeout = TimeSpan.FromMinutes(2);
+});
+</code></pre>
+<h3 id="2-circuit-breaker-settings">2. Circuit Breaker Settings</h3>
+<p><strong>Location</strong>: <code>appsettings.json</code> or <code>appsettings.resilience.json</code></p>
+<pre><code class="lang-json">{
+  &quot;CircuitBreaker&quot;: {
+    &quot;FailureThreshold&quot;: 5,
+    &quot;BreakDurationSeconds&quot;: 60,
+    &quot;RollingWindowMinutes&quot;: 5,
+    &quot;MinimumThroughput&quot;: 10
+  }
+}
+</code></pre>
+<p><strong>Per-Service Configuration</strong>:</p>
+<pre><code class="lang-csharp">var pipelineOptions = new ResiliencePipelineOptions
+{
+    Name = &quot;OpenAI&quot;,
+    EnableRetry = true,
+    MaxRetryAttempts = 3,
+    RetryDelay = TimeSpan.FromSeconds(1),
+    EnableCircuitBreaker = true,
+    CircuitBreakerFailureRatio = 0.5,
+    CircuitBreakerBreakDuration = TimeSpan.FromMinutes(1),
+    EnableTimeout = true,
+    Timeout = TimeSpan.FromMinutes(2)
+};
+
+var pipeline = pipelineFactory.CreateCustomPipeline&lt;HttpResponseMessage&gt;(pipelineOptions);
+</code></pre>
+<h3 id="3-retry-strategy">3. Retry Strategy</h3>
+<p><strong>Default Configuration</strong>:</p>
+<ul>
+<li>Max attempts: 3</li>
+<li>Base delay: 1 second</li>
+<li>Backoff type: Exponential</li>
+<li>Jitter: Enabled (randomizes delays)</li>
+</ul>
+<p><strong>Transient Error Detection</strong>:</p>
+<ul>
+<li><code>HttpRequestException</code></li>
+<li><code>TimeoutException</code></li>
+<li>HTTP 5xx status codes</li>
+<li>HTTP 408 (Request Timeout)</li>
+<li>HTTP 429 (Too Many Requests)</li>
+</ul>
+<h3 id="4-provider-specific-resilience">4. Provider-Specific Resilience</h3>
+<p>Many providers (LLM, TTS, Image) have built-in retry logic that complements the HTTP client resilience:</p>
+<p><strong>OpenAiLlmProvider</strong>:</p>
+<pre><code class="lang-csharp">// Has configurable retries
+public OpenAiLlmProvider(
+    ILogger logger,
+    HttpClient httpClient,
+    string apiKey,
+    string model = &quot;gpt-4o-mini&quot;,
+    int maxRetries = 2,  // Provider-level retries
+    int timeoutSeconds = 120)
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="frontend">Frontend</h3>
+<ol>
+<li><strong>Use appropriate timeouts</strong> for different operations</li>
+<li><strong>Queue non-critical requests</strong> when offline</li>
+<li><strong>Provide feedback</strong> to users about network status</li>
+<li><strong>Implement retry UI</strong> for failed operations</li>
+<li><strong>Test offline scenarios</strong> regularly</li>
+</ol>
+<h3 id="backend">Backend</h3>
+<ol>
+<li><strong>Use resilient HTTP clients</strong> for all external API calls</li>
+<li><strong>Configure appropriate timeouts</strong> per service</li>
+<li><strong>Monitor circuit breaker states</strong> via health checks</li>
+<li><strong>Log retry attempts</strong> for debugging</li>
+<li><strong>Implement fallback strategies</strong> when all retries fail</li>
+</ol>
+<h2 id="monitoring">Monitoring</h2>
+<h3 id="frontend-monitoring">Frontend Monitoring</h3>
+<p>Check browser DevTools Console for:</p>
+<ul>
+<li><code>[networkResilience]</code> - Queue operations</li>
+<li><code>[apiClient]</code> - Circuit breaker state changes</li>
+<li><code>[apiClient]</code> - Retry attempts</li>
+</ul>
+<h3 id="backend-monitoring">Backend Monitoring</h3>
+<p>Check application logs for:</p>
+<ul>
+<li><code>Retry attempt {N}/{Max}</code> - Retry operations</li>
+<li><code>Circuit breaker OPENED</code> - Service failures</li>
+<li><code>Circuit breaker CLOSED</code> - Service recovery</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="circuit-breaker-stuck-open">Circuit Breaker Stuck Open</h3>
+<p><strong>Symptom</strong>: All requests fail immediately with &quot;Circuit breaker is open&quot;</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-typescript">// Frontend
+import { resetCircuitBreaker } from '@/services/api/apiClient';
+resetCircuitBreaker();
+
+// Backend - wait for timeout or restart service
+</code></pre>
+<h3 id="requests-timing-out">Requests Timing Out</h3>
+<p><strong>Check</strong>:</p>
+<ol>
+<li>Network connectivity</li>
+<li>Timeout configuration for the operation</li>
+<li>Backend service health</li>
+<li>Provider API status</li>
+</ol>
+<p><strong>Adjust timeouts if needed</strong>:</p>
+<pre><code class="lang-typescript">timeoutConfig.setTimeout('videoRendering', 1200000); // 20 minutes
+</code></pre>
+<h3 id="queue-not-processing">Queue Not Processing</h3>
+<p><strong>Check</strong>:</p>
+<ol>
+<li>Network status: <code>networkResilienceService.isOnline()</code></li>
+<li>Queue contents: <code>networkResilienceService.getQueuedRequests()</code></li>
+<li>Processing state: Check logs for <code>[networkResilience] [process]</code></li>
+</ol>
+<p><strong>Manual trigger</strong>:</p>
+<pre><code class="lang-typescript">await networkResilienceService.processQueue(executeRequest);
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="frontend-1">Frontend</h3>
+<pre><code class="lang-typescript">// Test offline handling
+window.dispatchEvent(new Event('offline'));
+// ... perform actions
+window.dispatchEvent(new Event('online'));
+
+// Test circuit breaker
+for (let i = 0; i &lt; 5; i++) {
+  // Trigger failures to open circuit
+}
+
+// Test timeout configuration
+timeoutConfig.setTimeout('quick', 1000);
+</code></pre>
+<h3 id="backend-1">Backend</h3>
+<pre><code class="lang-csharp">// Mock transient failures
+var mockHandler = new Mock&lt;HttpMessageHandler&gt;();
+mockHandler
+    .Protected()
+    .Setup&lt;Task&lt;HttpResponseMessage&gt;&gt;(
+        &quot;SendAsync&quot;,
+        ItExpr.IsAny&lt;HttpRequestMessage&gt;(),
+        ItExpr.IsAny&lt;CancellationToken&gt;())
+    .ThrowsAsync(new HttpRequestException(&quot;Simulated failure&quot;));
+
+// Test with resilient client
+var httpClient = new HttpClient(mockHandler.Object);
+var provider = new OpenAiLlmProvider(logger, httpClient, apiKey);
+
+// Should retry automatically
+await provider.DraftScriptAsync(brief, spec, CancellationToken.None);
+</code></pre>
+<h2 id="configuration-files">Configuration Files</h2>
+<h3 id="frontend-2">Frontend</h3>
+<ul>
+<li><code>src/config/timeouts.ts</code> - Timeout configuration</li>
+<li><code>src/services/networkResilience.ts</code> - Queue service</li>
+<li><code>src/services/api/apiClient.ts</code> - Circuit breaker &amp; retry</li>
+<li><code>src/stores/appStore.ts</code> - Offline detection</li>
+</ul>
+<h3 id="backend-2">Backend</h3>
+<ul>
+<li><code>Aura.Core/Resilience/ResiliencePipelineFactory.cs</code> - Pipeline factory</li>
+<li><code>Aura.Api/Startup/ResilienceServicesExtensions.cs</code> - DI setup</li>
+<li><code>appsettings.json</code> - Circuit breaker settings</li>
+<li>Provider constructors - Provider-specific retries</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>Health dashboard showing circuit breaker states</li>
+<li>Configurable retry strategies per endpoint</li>
+<li>Request queue size metrics</li>
+<li>Automatic queue processing on network restore</li>
+<li>Provider fallback chains</li>
+<li>Rate limiting per provider</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/NETWORK_RESILIENCE_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

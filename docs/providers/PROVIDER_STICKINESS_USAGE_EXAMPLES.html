@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Provider Stickiness System - Usage Examples | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Provider Stickiness System - Usage Examples | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/PROVIDER_STICKINESS_USAGE_EXAMPLES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="provider-stickiness-system---usage-examples">Provider Stickiness System - Usage Examples</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document provides practical examples of using the provider stickiness infrastructure for patience-centric provider management.</p>
+<h2 id="basic-setup">Basic Setup</h2>
+<h3 id="1-load-configuration">1. Load Configuration</h3>
+<pre><code class="lang-csharp">using Aura.Core.Services.Providers.Stickiness;
+using Microsoft.Extensions.Logging;
+
+// Load timeout profiles from JSON
+var loader = new ProviderTimeoutProfileLoader(logger);
+var config = loader.LoadConfiguration();
+
+// Get profile for a specific provider
+var ollamaProfile = loader.GetProfileForProvider(&quot;Ollama&quot;, patienceProfile: &quot;longForm&quot;);
+</code></pre>
+<h3 id="2-initialize-gateway">2. Initialize Gateway</h3>
+<pre><code class="lang-csharp">// Create stall detector
+var stallDetector = new StallDetector(logger, checkIntervalMs: 5000);
+
+// Create provider gateway
+var gateway = new ProviderGateway(logger, stallDetector);
+
+// Subscribe to events
+gateway.StallSuspected += OnStallDetected;
+gateway.FallbackDecisionMade += OnFallbackDecision;
+</code></pre>
+<h2 id="example-1-lock-provider-for-job">Example 1: Lock Provider for Job</h2>
+<pre><code class="lang-csharp">// User selects Ollama for their video generation job
+var providerLock = gateway.LockProvider(
+    jobId: &quot;job-12345&quot;,
+    providerName: &quot;Ollama&quot;,
+    providerType: &quot;local_llm&quot;,
+    correlationId: &quot;corr-67890&quot;,
+    isOverrideable: true, // Allow user to switch if needed
+    &quot;script-generation&quot;, &quot;refinement&quot; // Stages governed by this lock
+);
+
+Console.WriteLine($&quot;Provider locked: {providerLock}&quot;);
+// Output: ProviderLock[Ollama (local_llm) for Job job-12345, Stages: script-generation, refinement, Active]
+</code></pre>
+<h2 id="example-2-execute-operation-with-patience">Example 2: Execute Operation with Patience</h2>
+<pre><code class="lang-csharp">// Define heartbeat strategy for LLM streaming
+var tokenCount = 0;
+var heartbeatStrategy = new LlmStreamingHeartbeatStrategy(
+    getTokenCount: async () =&gt; 
+    {
+        // Your logic to get current token count from provider
+        return await GetCurrentTokenCountAsync();
+    },
+    heartbeatIntervalMs: 15000, // Check every 15s
+    stallMultiplier: 3 // Stall if no heartbeat for 45s
+);
+
+// Execute with patience monitoring
+try
+{
+    var result = await gateway.ExecuteWithPatienceAsync(
+        jobId: &quot;job-12345&quot;,
+        providerName: &quot;Ollama&quot;,
+        providerType: &quot;local_llm&quot;,
+        stageName: &quot;script-generation&quot;,
+        correlationId: &quot;corr-67890&quot;,
+        heartbeatStrategy: heartbeatStrategy,
+        operation: async (ct) =&gt;
+        {
+            // Your actual LLM call
+            var script = await llmProvider.DraftScriptAsync(brief, planSpec, ct);
+            return script;
+        },
+        ct: cancellationToken
+    );
+
+    Console.WriteLine($&quot;Script generated: {result.Length} characters&quot;);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($&quot;Operation failed: {ex.Message}&quot;);
+}
+</code></pre>
+<h2 id="example-3-handle-stall-detection">Example 3: Handle Stall Detection</h2>
+<pre><code class="lang-csharp">private void OnStallDetected(object? sender, StallSuspectedEvent e)
+{
+    Console.WriteLine($&quot;⚠️ Stall suspected for {e.ProviderName}&quot;);
+    Console.WriteLine($&quot;   No heartbeat for {e.ElapsedSinceLastHeartbeat.TotalSeconds:F1}s&quot;);
+    Console.WriteLine($&quot;   Total elapsed: {e.TotalElapsed.TotalSeconds:F1}s&quot;);
+
+    // Present user dialog (pseudo-code)
+    var userChoice = ShowStallDialog(new StallDialogOptions
+    {
+        ProviderName = e.ProviderName,
+        ElapsedTime = e.TotalElapsed,
+        Options = new[]
+        {
+            &quot;Continue Waiting (30s)&quot;,
+            &quot;Continue Waiting (5 min)&quot;,
+            &quot;Try Alternative Provider&quot;,
+            &quot;Cancel Job&quot;
+        }
+    });
+
+    if (userChoice == &quot;Try Alternative Provider&quot;)
+    {
+        // Show fallback panel to user
+        ShowFallbackPanel(e.CorrelationId);
+    }
+}
+</code></pre>
+<h2 id="example-4-user-initiated-fallback">Example 4: User-Initiated Fallback</h2>
+<pre><code class="lang-csharp">// User explicitly decides to switch providers
+public async Task&lt;bool&gt; SwitchProviderAsync(
+    string jobId,
+    string fromProvider,
+    string toProvider,
+    long elapsedMs,
+    string correlationId)
+{
+    // Show confirmation dialog
+    var confirmed = await ShowConfirmationDialogAsync(
+        $&quot;Switch from {fromProvider} to {toProvider}?&quot;,
+        &quot;Switching providers may alter the output style and tone. &quot; +
+        &quot;Previous work will be preserved but future stages will use the new provider.&quot;
+    );
+
+    if (!confirmed)
+        return false;
+
+    // Create fallback decision
+    var decision = FallbackDecision.CreateUserRequested(
+        jobId,
+        fromProvider,
+        toProvider,
+        elapsedMs,
+        correlationId,
+        new[] { &quot;script-generation&quot;, &quot;refinement&quot; }
+    );
+
+    // Record the decision
+    gateway.RecordFallbackDecision(decision);
+
+    // Lock new provider
+    var newLock = gateway.LockProvider(
+        jobId,
+        toProvider,
+        &quot;cloud_llm&quot;,
+        correlationId,
+        isOverrideable: true
+    );
+
+    return true;
+}
+</code></pre>
+<h2 id="example-5-query-provider-state">Example 5: Query Provider State</h2>
+<pre><code class="lang-csharp">// Get current state of a provider operation
+var state = gateway.GetProviderState(correlationId);
+
+if (state != null)
+{
+    Console.WriteLine($&quot;Provider: {state.ProviderName}&quot;);
+    Console.WriteLine($&quot;Category: {state.CurrentCategory}&quot;);
+    Console.WriteLine($&quot;Elapsed: {state.ElapsedTime.TotalSeconds:F1}s&quot;);
+    Console.WriteLine($&quot;Heartbeats: {state.HeartbeatCount}&quot;);
+
+    if (state.LastHeartbeat.HasValue)
+    {
+        Console.WriteLine($&quot;Last heartbeat: {state.TimeSinceLastHeartbeat!.Value.TotalSeconds:F1}s ago&quot;);
+    }
+
+    if (state.Progress != null)
+    {
+        Console.WriteLine($&quot;Progress: {state.Progress}&quot;);
+    }
+}
+</code></pre>
+<h2 id="example-6-get-fallback-history">Example 6: Get Fallback History</h2>
+<pre><code class="lang-csharp">// Retrieve all fallback decisions for a job
+var history = gateway.GetFallbackHistory(jobId);
+
+Console.WriteLine($&quot;Fallback history for job {jobId}:&quot;);
+foreach (var decision in history)
+{
+    Console.WriteLine($&quot;  {decision.Timestamp:HH:mm:ss} - {decision.FromProvider} → {decision.ToProvider}&quot;);
+    Console.WriteLine($&quot;    Reason: {decision.ReasonCode}&quot;);
+    Console.WriteLine($&quot;    User confirmed: {decision.UserConfirmed}&quot;);
+    Console.WriteLine($&quot;    Elapsed: {decision.ElapsedBeforeSwitchMs}ms&quot;);
+}
+</code></pre>
+<h2 id="example-7-tts-with-heartbeat">Example 7: TTS with Heartbeat</h2>
+<pre><code class="lang-csharp">// TTS provider with chunk-based heartbeat
+var chunkCount = 0;
+var ttsHeartbeat = new TtsChunkHeartbeatStrategy(
+    getChunkCount: async () =&gt;
+    {
+        // Your logic to track TTS chunk generation
+        return await GetTtsChunkCountAsync();
+    },
+    heartbeatIntervalMs: 10000,
+    stallMultiplier: 3
+);
+
+var audioPath = await gateway.ExecuteWithPatienceAsync(
+    jobId,
+    &quot;ElevenLabs&quot;,
+    &quot;tts&quot;,
+    &quot;tts-synthesis&quot;,
+    correlationId,
+    ttsHeartbeat,
+    async (ct) =&gt;
+    {
+        return await ttsProvider.SynthesizeAsync(lines, voiceSpec, ct);
+    },
+    cancellationToken
+);
+</code></pre>
+<h2 id="example-8-image-generation-with-percentage-progress">Example 8: Image Generation with Percentage Progress</h2>
+<pre><code class="lang-csharp">// Image generation with percentage-based heartbeat
+var currentProgress = 0.0;
+var imageHeartbeat = new PercentageHeartbeatStrategy(
+    getPercentComplete: async () =&gt;
+    {
+        // Poll progress from image generation service
+        return await GetImageGenerationProgressAsync();
+    },
+    heartbeatIntervalMs: 20000,
+    stallMultiplier: 2
+);
+
+var imagePaths = await gateway.ExecuteWithPatienceAsync(
+    jobId,
+    &quot;StableDiffusion&quot;,
+    &quot;image_gen&quot;,
+    &quot;visual-generation&quot;,
+    correlationId,
+    imageHeartbeat,
+    async (ct) =&gt;
+    {
+        return await imageProvider.FetchOrGenerateAsync(scene, visualSpec, ct);
+    },
+    cancellationToken
+);
+</code></pre>
+<h2 id="example-9-provider-without-heartbeat-support">Example 9: Provider Without Heartbeat Support</h2>
+<pre><code class="lang-csharp">// Fallback provider without heartbeat capability
+var noHeartbeat = new NoHeartbeatStrategy();
+
+var result = await gateway.ExecuteWithPatienceAsync(
+    jobId,
+    &quot;RuleBased&quot;,
+    &quot;fallback_provider&quot;,
+    &quot;script-generation&quot;,
+    correlationId,
+    noHeartbeat, // No progress monitoring, just basic timeout
+    async (ct) =&gt;
+    {
+        return await ruleBasedProvider.DraftScriptAsync(brief, planSpec, ct);
+    },
+    cancellationToken
+);
+</code></pre>
+<h2 id="example-10-gateway-statistics">Example 10: Gateway Statistics</h2>
+<pre><code class="lang-csharp">// Get gateway statistics for monitoring
+var stats = gateway.GetStatistics();
+
+Console.WriteLine($&quot;Gateway Statistics:&quot;);
+Console.WriteLine($&quot;  Active Locks: {stats.ActiveLocks}&quot;);
+Console.WriteLine($&quot;  Active Operations: {stats.ActiveOperations}&quot;);
+Console.WriteLine($&quot;  Total Fallbacks: {stats.TotalFallbackDecisions}&quot;);
+Console.WriteLine($&quot;  User-Requested: {stats.UserRequestedFallbacks}&quot;);
+Console.WriteLine($&quot;  Error-Triggered: {stats.ErrorTriggeredFallbacks}&quot;);
+
+// Fallback rate should be low in a well-functioning system
+var fallbackRate = stats.ActiveLocks &gt; 0 
+    ? (double)stats.TotalFallbackDecisions / stats.ActiveLocks 
+    : 0;
+Console.WriteLine($&quot;  Fallback Rate: {fallbackRate:P1}&quot;);
+</code></pre>
+<h2 id="example-11-release-lock-after-job-completion">Example 11: Release Lock After Job Completion</h2>
+<pre><code class="lang-csharp">try
+{
+    // Job execution...
+    await GenerateVideoAsync(jobId);
+}
+finally
+{
+    // Always release lock when job completes
+    var released = gateway.ReleaseProviderLock(jobId);
+    if (released)
+    {
+        Console.WriteLine($&quot;Provider lock released for job {jobId}&quot;);
+    }
+}
+</code></pre>
+<h2 id="example-12-apply-patience-profile">Example 12: Apply Patience Profile</h2>
+<pre><code class="lang-csharp">// Load profile with user's patience preference
+var conservativeProfile = loader.GetProfileForProvider(
+    &quot;Ollama&quot;,
+    patienceProfile: &quot;conservative&quot; // Quick results preference
+);
+
+var longFormProfile = loader.GetProfileForProvider(
+    &quot;Ollama&quot;,
+    patienceProfile: &quot;longForm&quot; // Maximum patience for complex content
+);
+
+Console.WriteLine(&quot;Conservative profile:&quot;);
+Console.WriteLine($&quot;  Extended threshold: {conservativeProfile.ExtendedThresholdMs}ms&quot;);
+
+Console.WriteLine(&quot;Long-form profile:&quot;);
+Console.WriteLine($&quot;  Extended threshold: {longFormProfile.ExtendedThresholdMs}ms&quot;);
+</code></pre>
+<h2 id="integration-with-existing-orchestrator">Integration with Existing Orchestrator</h2>
+<pre><code class="lang-csharp">public class VideoOrchestrator
+{
+    private readonly ProviderGateway _providerGateway;
+    private readonly ProviderTimeoutProfileLoader _profileLoader;
+
+    public async Task&lt;string&gt; GenerateVideoAsync(
+        Brief brief,
+        PlanSpec planSpec,
+        string preferredProvider,
+        CancellationToken ct)
+    {
+        var jobId = Guid.NewGuid().ToString();
+        var correlationId = Guid.NewGuid().ToString();
+
+        // Lock provider for entire job
+        var providerLock = _providerGateway.LockProvider(
+            jobId,
+            preferredProvider,
+            &quot;local_llm&quot;,
+            correlationId,
+            isOverrideable: true
+        );
+
+        try
+        {
+            // Get timeout profile
+            var profile = _profileLoader.GetProfileForProvider(
+                preferredProvider,
+                patienceProfile: &quot;balanced&quot;
+            );
+
+            // Create heartbeat strategy
+            var heartbeat = CreateHeartbeatStrategy(preferredProvider, profile);
+
+            // Execute script generation with patience
+            var script = await _providerGateway.ExecuteWithPatienceAsync(
+                jobId,
+                preferredProvider,
+                &quot;local_llm&quot;,
+                &quot;script-generation&quot;,
+                correlationId,
+                heartbeat,
+                async (ct) =&gt; await GenerateScriptAsync(brief, planSpec, ct),
+                ct
+            );
+
+            // Continue with other stages...
+            // All use the same locked provider
+
+            return outputPath;
+        }
+        finally
+        {
+            _providerGateway.ReleaseProviderLock(jobId);
+        }
+    }
+}
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Always Lock Provider First</strong>: Call <code>LockProvider()</code> before any stage execution</li>
+<li><strong>Use Appropriate Heartbeat Strategy</strong>: Match strategy to provider capabilities</li>
+<li><strong>Handle Stall Events</strong>: Present clear options to users, never auto-switch</li>
+<li><strong>Release Locks</strong>: Use try-finally to ensure locks are released</li>
+<li><strong>Apply Patience Profiles</strong>: Respect user's patience preferences</li>
+<li><strong>Log All Decisions</strong>: Fallback decisions provide valuable audit trail</li>
+<li><strong>Monitor Statistics</strong>: Track fallback rates to identify provider issues</li>
+</ol>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="LATENCY_PATIENCE_POLICY.md">LATENCY_PATIENCE_POLICY.md</a> - Full policy documentation</li>
+<li><a href="PROVIDER_INTEGRATION_GUIDE.md">PROVIDER_INTEGRATION_GUIDE.md</a> - Provider implementation guide</li>
+<li>providerTimeoutProfiles.json - Configuration reference</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/PROVIDER_STICKINESS_USAGE_EXAMPLES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

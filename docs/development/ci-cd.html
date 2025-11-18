@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>CI/CD Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="CI/CD Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/ci-cd.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="cicd-guide">CI/CD Guide</h1>
+
+<p>Continuous Integration and Deployment workflows for Aura Video Studio.</p>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio uses GitHub Actions for CI/CD with multiple workflows:</p>
+<ul>
+<li><strong>Build Validation</strong> - Validates builds on every PR</li>
+<li><strong>Unified CI</strong> - Comprehensive testing and quality checks</li>
+<li><strong>No Placeholders</strong> - Enforces zero-placeholder policy</li>
+<li><strong>Platform-Specific Builds</strong> - Windows/Linux/macOS builds</li>
+</ul>
+<h2 id="workflows">Workflows</h2>
+<h3 id="build-validation-build-validationyml">Build Validation (<code>build-validation.yml</code>)</h3>
+<p>Runs on every pull request and push to main/develop.</p>
+<p><strong>Jobs:</strong></p>
+<ol>
+<li><p><strong>Windows Build Test</strong> (windows-latest)</p>
+<ul>
+<li>Setup Node.js 20.x from .nvmrc</li>
+<li>Run <code>npm ci</code> (clean install)</li>
+<li>Run <code>npm run build</code></li>
+<li>Verify build artifacts exist</li>
+<li>Run <code>npm test</code></li>
+</ul>
+</li>
+<li><p><strong>.NET Build Test</strong> (windows-latest)</p>
+<ul>
+<li>Setup .NET 8 SDK</li>
+<li>Run <code>dotnet restore</code></li>
+<li>Run <code>dotnet build -c Release</code> (warnings as errors)</li>
+<li>Run <code>dotnet test</code></li>
+</ul>
+</li>
+<li><p><strong>Lint and Type Check</strong> (ubuntu-latest)</p>
+<ul>
+<li>Run <code>npm run lint</code> (zero warnings enforced)</li>
+<li>Run <code>npm run typecheck</code></li>
+<li>Run <code>npm run format:check</code></li>
+</ul>
+</li>
+<li><p><strong>Placeholder Scan</strong> (ubuntu-latest)</p>
+<ul>
+<li>Run <code>node scripts/audit/find-placeholders.js</code></li>
+<li>Fail if any TODO/FIXME/HACK found</li>
+</ul>
+</li>
+<li><p><strong>Environment Validation</strong> (ubuntu-latest)</p>
+<ul>
+<li>Validate Node.js version consistency</li>
+<li>Check package.json engines field</li>
+<li>Verify .nvmrc matches package.json</li>
+</ul>
+</li>
+</ol>
+<p><strong>Required for merge</strong>: All 5 jobs must pass.</p>
+<h3 id="unified-ci-ci-unifiedyml">Unified CI (<code>ci-unified.yml</code>)</h3>
+<p>Comprehensive testing pipeline:</p>
+<p><strong>Jobs:</strong></p>
+<ol>
+<li><p><strong>.NET Build &amp; Test</strong> (ubuntu-latest)</p>
+<ul>
+<li>Build all Linux-compatible projects</li>
+<li>Run unit and integration tests</li>
+<li>Collect code coverage</li>
+<li>Upload coverage artifacts</li>
+</ul>
+</li>
+<li><p><strong>Frontend Build, Lint &amp; Test</strong> (ubuntu-latest)</p>
+<ul>
+<li>Install dependencies</li>
+<li>Lint with zero warnings</li>
+<li>Type check with TypeScript strict mode</li>
+<li>Run Vitest tests with coverage</li>
+<li>Build production bundle</li>
+<li>Upload coverage and build artifacts</li>
+</ul>
+</li>
+<li><p><strong>E2E Tests</strong> (ubuntu-latest)</p>
+<ul>
+<li>Install Playwright with chromium</li>
+<li>Start backend API</li>
+<li>Run E2E test suite</li>
+<li>Generate HTML report with traces</li>
+<li>Upload test results and videos</li>
+</ul>
+</li>
+</ol>
+<p><strong>Artifacts Generated:</strong></p>
+<ul>
+<li>Test results (TRX, JUnit XML)</li>
+<li>Coverage reports (Cobertura XML, HTML)</li>
+<li>Playwright HTML report with traces</li>
+<li>Production build artifacts</li>
+</ul>
+<h3 id="no-placeholders-no-placeholdersyml">No Placeholders (<code>no-placeholders.yml</code>)</h3>
+<p>Dedicated enforcement of zero-placeholder policy:</p>
+<p><strong>Trigger</strong>: Every pull request</p>
+<p><strong>Action</strong>:</p>
+<ul>
+<li>Scans all source files for TODO/FIXME/HACK/WIP</li>
+<li>Excludes markdown documentation files</li>
+<li>Fails PR if any placeholders found</li>
+<li>Provides clear error messages with file locations</li>
+</ul>
+<p><strong>Purpose</strong>: Ensures all committed code is production-ready.</p>
+<h3 id="platform-specific-ci">Platform-Specific CI</h3>
+<p><strong>Windows CI</strong> (<code>.github/workflows/ci-windows.yml</code>)</p>
+<ul>
+<li>Build on Windows 11</li>
+<li>Test Windows-specific features (SAPI TTS, etc.)</li>
+<li>Validate Electron installer build</li>
+</ul>
+<p><strong>Linux CI</strong> (<code>.github/workflows/ci-linux.yml</code>)</p>
+<ul>
+<li>Build on Ubuntu latest</li>
+<li>Test cross-platform compatibility</li>
+<li>Validate AppImage build</li>
+</ul>
+<p><strong>macOS CI</strong> (if configured)</p>
+<ul>
+<li>Build on macOS latest</li>
+<li>Test Apple Silicon and Intel builds</li>
+<li>Validate DMG installer</li>
+</ul>
+<h2 id="pre-commit-hooks-husky">Pre-commit Hooks (Husky)</h2>
+<p>Local enforcement before code reaches CI.</p>
+<h3 id="pre-commit-hook">Pre-commit Hook</h3>
+<p><strong>File</strong>: <code>.husky/pre-commit</code></p>
+<p><strong>Actions</strong>:</p>
+<ol>
+<li>Run placeholder scanner on staged files</li>
+<li>Reject commit if placeholders found</li>
+<li>Run lint-staged for auto-formatting</li>
+</ol>
+<p><strong>Bypass</strong> (not recommended):</p>
+<pre><code class="lang-bash">git commit --no-verify -m &quot;message&quot;
+</code></pre>
+<p>Note: CI will still catch placeholders.</p>
+<h3 id="commit-message-hook">Commit Message Hook</h3>
+<p><strong>File</strong>: <code>.husky/commit-msg</code></p>
+<p><strong>Actions</strong>:</p>
+<ol>
+<li>Validate commit message format</li>
+<li>Reject if contains TODO, WIP, FIXME</li>
+<li>Ensure professional commit messages</li>
+</ol>
+<h2 id="quality-gates">Quality Gates</h2>
+<p>All PRs must pass these gates before merge:</p>
+<h3 id="1-build-success">1. Build Success</h3>
+<ul>
+<li>✅ Frontend builds without errors</li>
+<li>✅ Backend builds without errors or warnings (Release mode)</li>
+<li>✅ All projects restore dependencies successfully</li>
+</ul>
+<h3 id="2-tests-pass">2. Tests Pass</h3>
+<ul>
+<li>✅ All .NET unit tests pass</li>
+<li>✅ All .NET integration tests pass</li>
+<li>✅ All frontend unit tests pass</li>
+<li>✅ All E2E tests pass (when enabled)</li>
+</ul>
+<h3 id="3-code-quality">3. Code Quality</h3>
+<ul>
+<li>✅ ESLint passes with zero warnings (<code>--max-warnings 0</code>)</li>
+<li>✅ TypeScript type checking passes (strict mode)</li>
+<li>✅ Prettier formatting is correct</li>
+<li>✅ No placeholder markers (TODO/FIXME/HACK/WIP)</li>
+</ul>
+<h3 id="4-coverage-maintained">4. Coverage Maintained</h3>
+<ul>
+<li>✅ .NET coverage ≥ 60% (target: 80%+)</li>
+<li>✅ Frontend coverage ≥ 60% (target: 70%+)</li>
+<li>✅ No significant coverage regression</li>
+</ul>
+<h3 id="5-security">5. Security</h3>
+<ul>
+<li>✅ No high-severity npm audit vulnerabilities</li>
+<li>✅ No high-severity NuGet vulnerabilities</li>
+<li>✅ CodeQL scans pass (if configured)</li>
+</ul>
+<h2 id="local-pre-commit-checklist">Local Pre-commit Checklist</h2>
+<p>Run these before pushing:</p>
+<pre><code class="lang-bash"># 1. Scan for placeholders
+node scripts/audit/find-placeholders.js
+
+# 2. Lint frontend
+cd Aura.Web
+npm run lint
+npm run typecheck
+npm run format:check
+
+# 3. Test frontend
+npm test
+
+# 4. Build frontend
+npm run build
+
+# 5. Test backend
+cd ..
+dotnet test
+
+# 6. Build backend (Release mode)
+dotnet build -c Release Aura.sln
+</code></pre>
+<p><strong>Shortcut script</strong>:</p>
+<pre><code class="lang-bash">./scripts/check-quality-gates.sh
+</code></pre>
+<h2 id="ci-caching">CI Caching</h2>
+<h3 id="nuget-package-cache">NuGet Package Cache</h3>
+<pre><code class="lang-yaml">- uses: actions/cache@v3
+  with:
+    path: ~/.nuget/packages
+    key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+</code></pre>
+<h3 id="npm-cache">npm Cache</h3>
+<pre><code class="lang-yaml">- uses: actions/cache@v3
+  with:
+    path: ~/.npm
+    key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+</code></pre>
+<h3 id="playwright-browsers">Playwright Browsers</h3>
+<pre><code class="lang-yaml">- uses: actions/cache@v3
+  with:
+    path: ~/.cache/ms-playwright
+    key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+</code></pre>
+<h2 id="artifact-management">Artifact Management</h2>
+<h3 id="test-results">Test Results</h3>
+<p>Artifacts are retained for 30 days:</p>
+<ul>
+<li><strong>Test Results</strong>: TRX and JUnit XML formats</li>
+<li><strong>Coverage Reports</strong>: Cobertura XML and HTML</li>
+<li><strong>E2E Reports</strong>: Playwright HTML with traces and videos</li>
+<li><strong>Build Artifacts</strong>: Production bundles for download</li>
+</ul>
+<h3 id="downloading-artifacts">Downloading Artifacts</h3>
+<p>From GitHub Actions UI:</p>
+<ol>
+<li>Go to Actions tab</li>
+<li>Select workflow run</li>
+<li>Scroll to &quot;Artifacts&quot; section</li>
+<li>Download desired artifact</li>
+</ol>
+<p>Via CLI:</p>
+<pre><code class="lang-bash">gh run download &lt;run-id&gt; -n &lt;artifact-name&gt;
+</code></pre>
+<h2 id="debugging-ci-failures">Debugging CI Failures</h2>
+<h3 id="1-check-logs">1. Check Logs</h3>
+<p>View detailed logs in GitHub Actions UI:</p>
+<ul>
+<li>Click on failed job</li>
+<li>Expand failed step</li>
+<li>Review error messages and stack traces</li>
+</ul>
+<h3 id="2-download-artifacts">2. Download Artifacts</h3>
+<p>For test failures:</p>
+<ul>
+<li>Download test results XML</li>
+<li>Download Playwright traces (for E2E failures)</li>
+<li>Download screenshots and videos</li>
+</ul>
+<h3 id="3-reproduce-locally">3. Reproduce Locally</h3>
+<pre><code class="lang-bash"># Use the same Node.js version
+nvm use 20
+
+# Clean install (like CI)
+cd Aura.Web
+rm -rf node_modules package-lock.json
+npm install
+
+# Run the same commands as CI
+npm run lint
+npm run typecheck
+npm test
+npm run build
+</code></pre>
+<h3 id="4-common-issues">4. Common Issues</h3>
+<p><strong>Lint failures</strong>:</p>
+<ul>
+<li>Run <code>npm run lint:fix</code> locally</li>
+<li>Check for TypeScript errors with <code>npm run typecheck</code></li>
+<li>Verify Prettier formatting with <code>npm run format:check</code></li>
+</ul>
+<p><strong>Test failures</strong>:</p>
+<ul>
+<li>Run tests locally: <code>npm test</code></li>
+<li>Check for environment-specific issues</li>
+<li>Ensure test data is not hardcoded to specific values</li>
+</ul>
+<p><strong>Placeholder failures</strong>:</p>
+<ul>
+<li>Search for TODO/FIXME/HACK in code</li>
+<li>Remove or replace with production-ready code</li>
+<li>Create GitHub Issues for future work instead</li>
+</ul>
+<p><strong>Build failures</strong>:</p>
+<ul>
+<li>Check for missing dependencies</li>
+<li>Verify Node.js version matches .nvmrc</li>
+<li>Clear caches and retry</li>
+</ul>
+<h2 id="environment-variables">Environment Variables</h2>
+<p>CI workflows can access secrets and environment variables:</p>
+<pre><code class="lang-yaml">env:
+  NODE_ENV: production
+  CI: true
+
+steps:
+  - name: Run tests
+    env:
+      API_KEY: ${{ secrets.TEST_API_KEY }}
+    run: npm test
+</code></pre>
+<p><strong>Available in CI</strong>:</p>
+<ul>
+<li><code>CI=true</code> (always set by GitHub Actions)</li>
+<li><code>GITHUB_TOKEN</code> (automatic)</li>
+<li>Custom secrets (configured in repository settings)</li>
+</ul>
+<h2 id="deployment">Deployment</h2>
+<h3 id="electron-app-releases">Electron App Releases</h3>
+<p>When a tag is pushed:</p>
+<pre><code class="lang-bash">git tag v1.0.0
+git push origin v1.0.0
+</code></pre>
+<p><strong>Release workflow</strong>:</p>
+<ol>
+<li>Build for all platforms (Windows, macOS, Linux)</li>
+<li>Code signing (if configured)</li>
+<li>Create GitHub Release</li>
+<li>Upload installers as release assets</li>
+<li>Publish release notes</li>
+</ol>
+<h3 id="manual-release">Manual Release</h3>
+<pre><code class="lang-bash"># Create release manually
+gh release create v1.0.0 \
+  --title &quot;Release v1.0.0&quot; \
+  --notes &quot;Release notes here&quot; \
+  Aura.Desktop/dist/*.exe \
+  Aura.Desktop/dist/*.dmg \
+  Aura.Desktop/dist/*.AppImage
+</code></pre>
+<h2 id="monitoring-ci-performance">Monitoring CI Performance</h2>
+<p>Track CI metrics:</p>
+<ul>
+<li><strong>Build time trends</strong>: Are builds getting slower?</li>
+<li><strong>Flaky tests</strong>: Which tests fail intermittently?</li>
+<li><strong>Cache hit rates</strong>: Are caches effective?</li>
+<li><strong>Artifact sizes</strong>: Are builds growing?</li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-keep-ci-fast">1. Keep CI Fast</h3>
+<ul>
+<li>Use caching effectively</li>
+<li>Run tests in parallel when possible</li>
+<li>Optimize build steps</li>
+<li>Target: &lt;10 minutes for most workflows</li>
+</ul>
+<h3 id="2-fail-fast">2. Fail Fast</h3>
+<ul>
+<li>Run quick checks first (lint, type check)</li>
+<li>Run expensive operations last (E2E tests)</li>
+<li>Cancel in-progress workflows for outdated commits</li>
+</ul>
+<h3 id="3-clear-error-messages">3. Clear Error Messages</h3>
+<ul>
+<li>Provide context in failure messages</li>
+<li>Link to documentation for common issues</li>
+<li>Include relevant logs and traces</li>
+</ul>
+<h3 id="4-minimize-flaky-tests">4. Minimize Flaky Tests</h3>
+<ul>
+<li>Make tests deterministic</li>
+<li>Avoid hardcoded timeouts</li>
+<li>Use proper wait strategies in E2E tests</li>
+<li>Retry flaky operations with backoff</li>
+</ul>
+<h3 id="5-keep-workflows-maintainable">5. Keep Workflows Maintainable</h3>
+<ul>
+<li>Use reusable workflows</li>
+<li>Extract common steps to composite actions</li>
+<li>Document workflow purposes</li>
+<li>Keep workflow files small and focused</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="ci-passes-but-local-fails">CI Passes but Local Fails</h3>
+<pre><code class="lang-bash"># Ensure same Node.js version
+nvm use 20
+
+# Clean install
+rm -rf node_modules package-lock.json
+npm ci
+
+# Run with CI env variable
+CI=true npm test
+</code></pre>
+<h3 id="local-passes-but-ci-fails">Local Passes but CI Fails</h3>
+<ul>
+<li>Check for environment-specific code</li>
+<li>Verify all dependencies are in package.json (not global)</li>
+<li>Check for hardcoded paths (use path.join)</li>
+<li>Review CI logs for specific error</li>
+</ul>
+<h3 id="tests-pass-in-ui-but-fail-in-ci">Tests Pass in UI but Fail in CI</h3>
+<ul>
+<li>E2E tests may need different timeouts</li>
+<li>Check viewport sizes and responsive behavior</li>
+<li>Verify SSE connections work in CI environment</li>
+</ul>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="https://docs.github.com/en/actions">GitHub Actions Documentation</a></li>
+<li><a href="QUALITY_GATES.html">Quality Gates</a></li>
+<li><a href="testing.html">Testing Guide</a></li>
+<li><a href="ZERO_PLACEHOLDER_POLICY.html">Zero Placeholder Policy</a></li>
+</ul>
+<hr>
+<p>Last updated: 2025-11-18</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/ci-cd.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

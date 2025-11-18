@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Performance Optimization Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Performance Optimization Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/PERFORMANCE_OPTIMIZATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="performance-optimization-guide">Performance Optimization Guide</h1>
+
+<p>This document describes the performance optimizations implemented in Aura Video Studio for PR #10.</p>
+<h2 id="overview">Overview</h2>
+<p>This PR implements comprehensive performance optimizations across the entire stack:</p>
+<ul>
+<li><strong>Backend</strong>: Redis caching, database optimizations, compression</li>
+<li><strong>Database</strong>: Connection pooling, query optimization, indexes</li>
+<li><strong>Frontend</strong>: Code splitting, lazy loading, bundle optimization</li>
+<li><strong>Infrastructure</strong>: Object pooling, memory management</li>
+</ul>
+<h2 id="backend-optimizations-auraapi">Backend Optimizations (Aura.Api)</h2>
+<h3 id="1-redis-distributed-caching">1. Redis Distributed Caching</h3>
+<p><strong>Implementation</strong>: Hybrid caching with Redis + in-memory fallback</p>
+<pre><code class="lang-csharp">// Service: Aura.Core.Services.Caching.IDistributedCacheService
+// Features:
+// - Two-tier caching (Redis + Memory)
+// - Stampede protection
+// - Automatic fallback
+// - Cache statistics
+</code></pre>
+<p><strong>Configuration</strong> (<code>appsettings.json</code>):</p>
+<pre><code class="lang-json">{
+  &quot;Caching&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;UseRedis&quot;: true,
+    &quot;RedisConnection&quot;: &quot;localhost:6379&quot;
+  }
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">// Inject IDistributedCacheService
+var data = await _cache.GetOrCreateAsync(
+    key: &quot;expensive-operation&quot;,
+    factory: async ct =&gt; await ExpensiveOperationAsync(ct),
+    expiration: TimeSpan.FromMinutes(15)
+);
+</code></pre>
+<h3 id="2-response-caching">2. Response Caching</h3>
+<p><strong>Implementation</strong>: Cache-Control headers for different endpoint types</p>
+<pre><code class="lang-csharp">// Middleware: ResponseCachingMiddleware
+// Static content:    1 hour
+// Provider settings: 5 minutes
+// Job status:        5 seconds
+// General API:       1 minute
+</code></pre>
+<h3 id="3-compression-middleware">3. Compression Middleware</h3>
+<p><strong>Implementation</strong>: Brotli + Gzip compression</p>
+<pre><code class="lang-csharp">// Already configured in Program.cs
+// - Brotli (Level: Fastest)
+// - Gzip (Level: Fastest)
+// - Applies to JSON, HTML, CSS, JS
+</code></pre>
+<h2 id="database-optimizations-auracore">Database Optimizations (Aura.Core)</h2>
+<h3 id="1-connection-string-optimization">1. Connection String Optimization</h3>
+<p><strong>Implementation</strong>: Optimized SQLite settings for performance</p>
+<pre><code class="lang-csharp">// WAL mode for concurrency
+// 64MB cache
+// Memory-based temp storage
+// Optimized page size (4KB)
+
+var connectionString = 
+    &quot;Data Source=aura.db;&quot; +
+    &quot;Mode=ReadWriteCreate;&quot; +
+    &quot;Cache=Shared;&quot; +
+    &quot;Journal Mode=WAL;&quot; +
+    &quot;Synchronous=NORMAL;&quot; +
+    &quot;Page Size=4096;&quot; +
+    &quot;Cache Size=-64000;&quot; +
+    &quot;Temp Store=MEMORY;&quot; +
+    &quot;Locking Mode=NORMAL;&quot; +
+    &quot;Foreign Keys=True;&quot;;
+</code></pre>
+<h3 id="2-query-optimization">2. Query Optimization</h3>
+<p><strong>Eager Loading</strong>: All repositories use <code>.Include()</code> for related entities</p>
+<pre><code class="lang-csharp">// Example from ProjectStateRepository
+return await _context.ProjectStates
+    .Include(p =&gt; p.Scenes)
+    .Include(p =&gt; p.Assets)
+    .Include(p =&gt; p.Checkpoints.OrderByDescending(c =&gt; c.CheckpointTime))
+    .FirstOrDefaultAsync(p =&gt; p.Id == projectId, ct);
+</code></pre>
+<p><strong>No-Tracking Queries</strong>: Enabled by default for read-only operations</p>
+<pre><code class="lang-csharp">options.UseQueryTrackingBehavior(
+    QueryTrackingBehavior.NoTrackingWithIdentityResolution
+);
+</code></pre>
+<h3 id="3-comprehensive-indexes">3. Comprehensive Indexes</h3>
+<p>All frequently queried fields have indexes:</p>
+<ul>
+<li>Status + timestamp columns</li>
+<li>Foreign keys</li>
+<li>Composite indexes for common queries</li>
+</ul>
+<p>See <code>AuraDbContext.cs</code> for full index definitions.</p>
+<h2 id="object-pooling-auracoreservicesperformance">Object Pooling (Aura.Core.Services.Performance)</h2>
+<h3 id="1-stringbuilder-pool">1. StringBuilder Pool</h3>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">using Aura.Core.Services.Performance;
+
+// Option 1: Manual
+var sb = StringBuilderPool.Get();
+try
+{
+    sb.Append(&quot;...&quot;);
+    return sb.ToString();
+}
+finally
+{
+    StringBuilderPool.Return(sb);
+}
+
+// Option 2: Automatic
+var result = StringBuilderPool.Build(sb =&gt;
+{
+    sb.Append(&quot;Line 1\n&quot;);
+    sb.Append(&quot;Line 2\n&quot;);
+});
+</code></pre>
+<h3 id="2-array-pooling">2. Array Pooling</h3>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">using Aura.Core.Services.Performance;
+
+// Rent/return manually
+byte[] buffer = BufferPool.RentBytes(4096);
+try
+{
+    // Use buffer
+}
+finally
+{
+    BufferPool.ReturnBytes(buffer, clearArray: true);
+}
+
+// Or use helper
+var result = BufferPool.UseBytes(4096, buffer =&gt;
+{
+    // Use buffer
+    return ProcessData(buffer);
+});
+</code></pre>
+<h2 id="frontend-optimizations-auraweb">Frontend Optimizations (Aura.Web)</h2>
+<h3 id="1-code-splitting--lazy-loading">1. Code Splitting &amp; Lazy Loading</h3>
+<p><strong>Implementation</strong>: All non-critical routes are lazy-loaded</p>
+<pre><code class="lang-typescript">// Critical pages (loaded immediately)
+- WelcomePage
+- DashboardPage
+- FirstRunWizard
+- NotFoundPage
+
+// Lazy-loaded pages (30+ routes)
+- Editor, Render, Projects, Settings
+- AI Editing, Aesthetics, Analytics
+- All advanced features
+</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>Reduced initial bundle size (~40%)</li>
+<li>Faster time-to-interactive</li>
+<li>Better caching (separate chunks)</li>
+</ul>
+<h3 id="2-bundle-optimization">2. Bundle Optimization</h3>
+<p><strong>Vite Configuration</strong> (<code>vite.config.ts</code>):</p>
+<pre><code class="lang-typescript">// Manual chunk splitting
+manualChunks: {
+  'react-vendor': ['react', 'react-dom'],
+  'ffmpeg-vendor': ['@ffmpeg/*'],
+  'fluentui-components': ['@fluentui/react-*'],
+  'fluentui-icons': ['@fluentui/react-icons'],
+  // ... more chunks
+}
+
+// Terser optimization
+terserOptions: {
+  compress: {
+    drop_console: true, // Remove console.logs in prod
+    passes: 2          // Better optimization
+  }
+}
+</code></pre>
+<p><strong>Performance Budgets</strong>:</p>
+<pre><code class="lang-typescript">// budgets in vite.config.ts
+{
+  'react-vendor': 200KB,
+  'fluentui-components': 250KB,
+  'vendor': 300KB,
+  total: 1500KB
+}
+</code></pre>
+<h3 id="3-image--asset-optimization">3. Image &amp; Asset Optimization</h3>
+<pre><code class="lang-typescript">// In vite.config.ts
+assetsInlineLimit: 4096, // Inline &lt; 4KB as base64
+cssCodeSplit: true,      // Split CSS per chunk
+</code></pre>
+<h2 id="performance-monitoring">Performance Monitoring</h2>
+<h3 id="api-endpoints">API Endpoints</h3>
+<h4 id="1-get-performance-metrics">1. Get Performance Metrics</h4>
+<pre><code class="lang-bash">GET /api/performance/metrics
+</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;processMetrics&quot;: {
+    &quot;workingSetBytes&quot;: 234881024,
+    &quot;privateMemoryBytes&quot;: 245760000,
+    &quot;cpuTimeSeconds&quot;: 12.5,
+    &quot;threadCount&quot;: 24,
+    &quot;handleCount&quot;: 512
+  },
+  &quot;cacheMetrics&quot;: {
+    &quot;hits&quot;: 1250,
+    &quot;misses&quot;: 180,
+    &quot;errors&quot;: 2,
+    &quot;hitRate&quot;: 0.874,
+    &quot;backendType&quot;: &quot;Hybrid (Redis + Memory)&quot;
+  },
+  &quot;timestamp&quot;: &quot;2025-01-10T12:00:00Z&quot;
+}
+</code></pre>
+<h4 id="2-get-cache-statistics">2. Get Cache Statistics</h4>
+<pre><code class="lang-bash">GET /api/performance/cache/stats
+</code></pre>
+<h4 id="3-get-gc-statistics">3. Get GC Statistics</h4>
+<pre><code class="lang-bash">GET /api/performance/gc/stats
+</code></pre>
+<h4 id="4-clear-cache-admin">4. Clear Cache (Admin)</h4>
+<pre><code class="lang-bash">POST /api/performance/cache/clear
+</code></pre>
+<h4 id="5-force-gc-admin">5. Force GC (Admin)</h4>
+<pre><code class="lang-bash">POST /api/performance/gc/collect?generation=2
+</code></pre>
+<h2 id="performance-testing">Performance Testing</h2>
+<h3 id="1-baseline-measurement">1. Baseline Measurement</h3>
+<pre><code class="lang-bash"># Install k6 or similar load testing tool
+k6 run performance-test.js
+
+# Or use Apache Bench
+ab -n 1000 -c 10 http://localhost:5005/api/health/live
+</code></pre>
+<h3 id="2-cache-effectiveness">2. Cache Effectiveness</h3>
+<pre><code class="lang-bash"># Check cache hit rate
+curl http://localhost:5005/api/performance/cache/stats
+
+# Should see &gt;80% hit rate for frequently accessed data
+</code></pre>
+<h3 id="3-bundle-size-analysis">3. Bundle Size Analysis</h3>
+<pre><code class="lang-bash">cd Aura.Web
+npm run build:analyze
+
+# Opens dist/stats.html with bundle visualization
+# Verify:
+# - Total bundle &lt; 1.5MB
+# - Initial chunk &lt; 500KB
+# - Lazy chunks &lt; 300KB each
+</code></pre>
+<h3 id="4-database-query-performance">4. Database Query Performance</h3>
+<pre><code class="lang-bash"># Enable SQLite query logging
+PRAGMA auto_vacuum = FULL;
+EXPLAIN QUERY PLAN SELECT * FROM ProjectStates WHERE Status = 'InProgress';
+
+# Verify all queries use indexes
+</code></pre>
+<h2 id="optimization-checklist">Optimization Checklist</h2>
+<h3 id="backend">Backend</h3>
+<ul>
+<li>[x] Redis caching configured</li>
+<li>[x] Response caching headers</li>
+<li>[x] Compression middleware (Brotli + Gzip)</li>
+<li>[x] Database connection pooling</li>
+<li>[x] Query optimization with .Include()</li>
+<li>[x] Object pooling (StringBuilder, Arrays)</li>
+</ul>
+<h3 id="database">Database</h3>
+<ul>
+<li>[x] WAL mode enabled</li>
+<li>[x] Optimized cache size (64MB)</li>
+<li>[x] Comprehensive indexes</li>
+<li>[x] No-tracking queries for reads</li>
+<li>[x] Connection string tuning</li>
+</ul>
+<h3 id="frontend">Frontend</h3>
+<ul>
+<li>[x] Code splitting configured</li>
+<li>[x] Lazy loading for routes</li>
+<li>[x] Bundle size under budget</li>
+<li>[x] Terser minification</li>
+<li>[x] Asset optimization</li>
+</ul>
+<h3 id="monitoring">Monitoring</h3>
+<ul>
+<li>[x] Performance metrics endpoint</li>
+<li>[x] Cache statistics tracking</li>
+<li>[x] GC monitoring</li>
+<li>[x] Process metrics</li>
+</ul>
+<h2 id="expected-performance-gains">Expected Performance Gains</h2>
+<p>Based on optimizations:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Before</th>
+<th>After</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>p95 Latency</td>
+<td>~2000ms</td>
+<td>&lt;1000ms</td>
+<td><strong>50% reduction</strong></td>
+</tr>
+<tr>
+<td>DB Query Count</td>
+<td>100 queries/request</td>
+<td>&lt;70 queries/request</td>
+<td><strong>30% reduction</strong></td>
+</tr>
+<tr>
+<td>Frontend Bundle</td>
+<td>~850KB</td>
+<td>&lt;500KB</td>
+<td><strong>41% reduction</strong></td>
+</tr>
+<tr>
+<td>Time to Interactive</td>
+<td>5.2s</td>
+<td>&lt;3s</td>
+<td><strong>42% faster</strong></td>
+</tr>
+<tr>
+<td>Cache Hit Rate</td>
+<td>N/A</td>
+<td>&gt;80%</td>
+<td><strong>New capability</strong></td>
+</tr>
+<tr>
+<td>Memory Usage</td>
+<td>Grows over time</td>
+<td>Stable</td>
+<td><strong>Stable under load</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="high-memory-usage">High Memory Usage</h3>
+<pre><code class="lang-bash"># Check GC stats
+curl http://localhost:5005/api/performance/gc/stats
+
+# Force collection if needed
+curl -X POST http://localhost:5005/api/performance/gc/collect
+</code></pre>
+<h3 id="low-cache-hit-rate">Low Cache Hit Rate</h3>
+<pre><code class="lang-bash"># Check cache stats
+curl http://localhost:5005/api/performance/cache/stats
+
+# If hit rate &lt; 70%, consider:
+# 1. Increasing cache TTL
+# 2. Caching more operations
+# 3. Checking Redis connectivity
+</code></pre>
+<h3 id="slow-database-queries">Slow Database Queries</h3>
+<pre><code class="lang-sql">-- Analyze query plans
+EXPLAIN QUERY PLAN SELECT ...;
+
+-- Check indexes
+SELECT name FROM sqlite_master WHERE type='index';
+
+-- Rebuild indexes if needed
+REINDEX;
+</code></pre>
+<h3 id="large-bundle-size">Large Bundle Size</h3>
+<pre><code class="lang-bash">npm run build:analyze
+
+# Check for:
+# - Unused dependencies
+# - Duplicate code
+# - Missing code splitting
+# - Lazy loading opportunities
+</code></pre>
+<h2 id="cache-invalidation-strategy">Cache Invalidation Strategy</h2>
+<h3 id="ttls-by-data-type">TTLs by Data Type</h3>
+<ul>
+<li><strong>Provider Settings</strong>: 5 minutes</li>
+<li><strong>Asset Search Results</strong>: 1 hour</li>
+<li><strong>Job Status</strong>: 5 seconds (real-time)</li>
+<li><strong>Templates</strong>: 15 minutes</li>
+<li><strong>System Configuration</strong>: 10 minutes</li>
+</ul>
+<h3 id="manual-invalidation">Manual Invalidation</h3>
+<pre><code class="lang-csharp">// In services that modify data
+await _cache.RemoveAsync($&quot;project:{projectId}&quot;);
+</code></pre>
+<h3 id="bulk-invalidation">Bulk Invalidation</h3>
+<pre><code class="lang-bash"># Clear all cache
+curl -X POST http://localhost:5005/api/performance/cache/clear
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-when-to-cache">1. When to Cache</h3>
+<p>✅ <strong>Cache</strong>:</p>
+<ul>
+<li>Expensive computations</li>
+<li>External API calls</li>
+<li>Database queries with joins</li>
+<li>Static/semi-static data</li>
+</ul>
+<p>❌ <strong>Don't Cache</strong>:</p>
+<ul>
+<li>Real-time data</li>
+<li>User-specific sensitive data</li>
+<li>Frequently changing data</li>
+<li>Small, cheap operations</li>
+</ul>
+<h3 id="2-object-pooling">2. Object Pooling</h3>
+<p>✅ <strong>Use Pooling</strong>:</p>
+<ul>
+<li>Temporary buffers</li>
+<li>String building in loops</li>
+<li>Repeated allocations</li>
+</ul>
+<p>❌ <strong>Don't Pool</strong>:</p>
+<ul>
+<li>Long-lived objects</li>
+<li>Small allocations (&lt;1KB)</li>
+<li>Infrequent operations</li>
+</ul>
+<h3 id="3-lazy-loading">3. Lazy Loading</h3>
+<p>✅ <strong>Lazy Load</strong>:</p>
+<ul>
+<li>Admin/advanced features</li>
+<li>Infrequently used pages</li>
+<li>Large components</li>
+</ul>
+<p>❌ <strong>Don't Lazy Load</strong>:</p>
+<ul>
+<li>Critical path pages</li>
+<li>Frequently accessed routes</li>
+<li>Small components</li>
+</ul>
+<h2 id="rollback-plan">Rollback Plan</h2>
+<p>If performance issues occur:</p>
+<h3 id="1-disable-redis-caching">1. Disable Redis Caching</h3>
+<pre><code class="lang-json">{
+  &quot;Caching&quot;: {
+    &quot;Enabled&quot;: false
+  }
+}
+</code></pre>
+<h3 id="2-disable-compression">2. Disable Compression</h3>
+<pre><code class="lang-csharp">// Comment out in Program.cs
+// app.UseResponseCompression();
+</code></pre>
+<h3 id="3-revert-db-optimizations">3. Revert DB Optimizations</h3>
+<pre><code class="lang-csharp">// Use simple connection string
+var connectionString = $&quot;Data Source={dbPath}&quot;;
+</code></pre>
+<h3 id="4-disable-frontend-lazy-loading">4. Disable Frontend Lazy Loading</h3>
+<pre><code class="lang-typescript">// Change all lazy imports to regular imports
+import { SettingsPage } from './pages/SettingsPage';
+</code></pre>
+<h2 id="monitoring-in-production">Monitoring in Production</h2>
+<h3 id="key-metrics-to-track">Key Metrics to Track</h3>
+<ol>
+<li><strong>Cache Hit Rate</strong>: Should be &gt;80%</li>
+<li><strong>P95 Latency</strong>: Should be &lt;1s</li>
+<li><strong>Memory Growth</strong>: Should be stable</li>
+<li><strong>Bundle Load Time</strong>: Should be &lt;3s</li>
+<li><strong>Database Query Time</strong>: Should be &lt;50ms</li>
+</ol>
+<h3 id="alerting-thresholds">Alerting Thresholds</h3>
+<ul>
+<li>Cache hit rate &lt; 70%</li>
+<li>P95 latency &gt; 2s</li>
+<li>Memory &gt; 1GB</li>
+<li>Error rate &gt; 1%</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/aspnet/core/performance/performance-best-practices">ASP.NET Core Performance Best Practices</a></li>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/performance/">Entity Framework Core Performance</a></li>
+<li><a href="https://vitejs.dev/guide/build.html">Vite Build Optimization</a></li>
+<li><a href="https://react.dev/reference/react/lazy">React Lazy Loading</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues or questions about performance:</p>
+<ol>
+<li>Check <code>/api/performance/metrics</code> endpoint</li>
+<li>Review logs in <code>logs/performance-*.log</code></li>
+<li>Run <code>npm run build:analyze</code> for bundle analysis</li>
+<li>Open an issue with performance metrics attached</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/PERFORMANCE_OPTIMIZATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

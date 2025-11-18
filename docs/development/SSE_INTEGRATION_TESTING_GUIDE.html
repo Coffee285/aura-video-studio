@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>SSE Integration Testing Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="SSE Integration Testing Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/SSE_INTEGRATION_TESTING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="sse-integration-testing-guide">SSE Integration Testing Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide provides instructions for testing the Server-Sent Events (SSE) integration for real-time job progress updates in Aura Video Studio.</p>
+<h2 id="what-was-changed">What Was Changed</h2>
+<h3 id="backend-auraapi">Backend (Aura.Api)</h3>
+<ol>
+<li><p><strong>Enhanced SSE Endpoint</strong> (<code>JobsController.GetJobEvents</code>)</p>
+<ul>
+<li>Added keep-alive pings every 10 seconds</li>
+<li>Improved event structure with phase information</li>
+<li>Added progress message support</li>
+<li>Better error and warning event handling</li>
+<li>Helper methods for phase mapping</li>
+<li><strong>NEW</strong>: Last-Event-ID support for reconnection</li>
+<li><strong>NEW</strong>: Event IDs on all SSE events for tracking</li>
+</ul>
+</li>
+<li><p><strong>New Queue Management Endpoints</strong></p>
+<ul>
+<li><code>GET /api/queue</code> - List all jobs with optional status filtering</li>
+<li><code>GET /api/render/{id}/progress</code> - Detailed job progress information</li>
+<li><code>POST /api/render/{id}/cancel</code> - Cancel running render jobs</li>
+</ul>
+</li>
+<li><p><strong>Cleanup Infrastructure</strong></p>
+<ul>
+<li>CleanupService for managing temporary files and proxy media</li>
+<li>CleanupHostedService running hourly sweeps</li>
+<li>Automatic cleanup on job cancellation</li>
+</ul>
+</li>
+</ol>
+<h3 id="frontend-auraweb">Frontend (Aura.Web)</h3>
+<ol>
+<li><p><strong>New SSE Client</strong> (<code>src/services/api/sseClient.ts</code>)</p>
+<ul>
+<li>Auto-reconnect with exponential backoff</li>
+<li>Resilient to network interruptions</li>
+<li>Proper event handling for all job states</li>
+</ul>
+</li>
+<li><p><strong>Updated Jobs Store</strong> (<code>src/state/jobs.ts</code>)</p>
+<ul>
+<li>Replaced polling with SSE streaming</li>
+<li>Real-time progress updates</li>
+<li>Proper state management for job lifecycle</li>
+</ul>
+</li>
+<li><p><strong>Enhanced GenerationPanel</strong> (<code>src/components/Generation/GenerationPanel.tsx</code>)</p>
+<ul>
+<li>Shows current phase (plan, tts, visuals, compose, render)</li>
+<li>Displays progress messages</li>
+<li>Auto-starts SSE streaming on mount</li>
+</ul>
+</li>
+</ol>
+<h2 id="manual-testing-checklist">Manual Testing Checklist</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>Backend API running on port 5005</li>
+<li>Frontend dev server running on port 5173</li>
+<li>FFmpeg installed and accessible</li>
+<li>Browser developer tools open (Network tab)</li>
+</ul>
+<h3 id="test-1-quick-demo-end-to-end">Test 1: Quick Demo End-to-End</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Navigate to http://localhost:5173</li>
+<li>Click &quot;Quick Demo&quot; button on Welcome page</li>
+<li>Observe GenerationPanel opens on the right side</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ API POST to <code>/api/quick/demo</code> succeeds</li>
+<li>✅ Response contains <code>jobId</code></li>
+<li>✅ SSE connection established to <code>/api/jobs/{jobId}/events</code></li>
+<li>✅ Network tab shows EventSource connection type &quot;text/event-stream&quot;</li>
+<li>✅ Progress updates appear in real-time:
+<ul>
+<li>Script phase (0-15%)</li>
+<li>TTS phase (15-35%)</li>
+<li>Visuals phase (35-65%)</li>
+<li>Compose phase (65-85%)</li>
+<li>Render phase (85-100%)</li>
+</ul>
+</li>
+<li>✅ Phase name displayed in GenerationPanel</li>
+<li>✅ Progress message updates visible</li>
+<li>✅ Keep-alive comments received every 10 seconds (check Network tab)</li>
+<li>✅ On completion:
+<ul>
+<li>Status changes to &quot;Done&quot;</li>
+<li>Artifacts section appears</li>
+<li>Video file shown with size</li>
+<li>&quot;Open folder&quot; button works</li>
+<li>Success toast notification appears</li>
+</ul>
+</li>
+</ul>
+<p><strong>Console Verification:</strong></p>
+<pre><code>[SseClient] Connecting to http://localhost:5005/api/jobs/{jobId}/events
+[SseClient] Connected successfully
+[SseClient] Received job-status: {...}
+[SseClient] Received step-progress: {...}
+[JobsStore] Job status update
+[JobsStore] Step progress
+[JobsStore] Job completed
+</code></pre>
+<h3 id="test-2-full-generate-video-flow">Test 2: Full Generate Video Flow</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Click &quot;Create&quot; in sidebar</li>
+<li>Fill in wizard:
+<ul>
+<li><strong>Step 1 - Brief</strong>:
+<ul>
+<li>Topic: &quot;Test video&quot;</li>
+<li>Audience: &quot;General&quot;</li>
+<li>Goal: &quot;Demonstrate&quot;</li>
+<li>Tone: &quot;Informative&quot;</li>
+</ul>
+</li>
+<li><strong>Step 2 - Plan</strong>: Accept defaults</li>
+<li><strong>Step 3 - Voice</strong>: Accept defaults</li>
+</ul>
+</li>
+<li>Click &quot;Generate Video&quot;</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Preflight check passes</li>
+<li>✅ API POST to <code>/api/jobs</code> succeeds</li>
+<li>✅ SSE connection established</li>
+<li>✅ GenerationPanel shows progress</li>
+<li>✅ All phases complete successfully</li>
+<li>✅ Video file generated</li>
+<li>✅ Artifacts downloadable</li>
+</ul>
+<h3 id="test-3-sse-auto-reconnect-with-last-event-id">Test 3: SSE Auto-Reconnect with Last-Event-ID</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start Quick Demo</li>
+<li>During execution, simulate network interruption:
+<ul>
+<li>Open Network tab in DevTools</li>
+<li>Set throttling to &quot;Offline&quot; for 5 seconds</li>
+<li>Set back to &quot;No throttling&quot;</li>
+</ul>
+</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ SSE connection drops</li>
+<li>✅ Auto-reconnect attempts logged in console</li>
+<li>✅ Connection re-establishes automatically with Last-Event-ID header</li>
+<li>✅ Progress updates resume from last received event</li>
+<li>✅ Job completes successfully</li>
+<li>✅ Max 5 reconnect attempts before giving up</li>
+<li>✅ Backend logs reconnection with last event ID</li>
+</ul>
+<p><strong>Console Verification:</strong></p>
+<pre><code>[SseClient] Connection error
+[SseClient] Reconnecting in 1000ms (attempt 1/5)
+[SseClient] Attempting reconnect with Last-Event-ID: 1234567890-5
+[SseClient] Connected successfully
+[Backend] SSE stream requested for job abc123, reconnect=true, lastEventId=1234567890-5
+</code></pre>
+<h3 id="test-4-job-cancellation">Test 4: Job Cancellation</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start Quick Demo or Full Generate</li>
+<li>During execution (around 20-50%), click Cancel button</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ API POST to <code>/api/jobs/{jobId}/cancel</code> succeeds</li>
+<li>✅ SSE receives <code>job-cancelled</code> event</li>
+<li>✅ Progress stops updating</li>
+<li>✅ Status changes to &quot;Canceled&quot;</li>
+<li>✅ Panel shows cancellation message</li>
+<li>✅ SSE connection closes</li>
+</ul>
+<h3 id="test-5-error-handling">Test 5: Error Handling</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Stop FFmpeg or make it unavailable</li>
+<li>Try to generate video</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Job starts but fails during render phase</li>
+<li>✅ SSE receives <code>job-failed</code> event</li>
+<li>✅ Error message displayed in panel</li>
+<li>✅ &quot;View logs&quot; button available</li>
+<li>✅ Failure details accessible</li>
+<li>✅ Suggested actions provided</li>
+</ul>
+<h3 id="test-6-keep-alive-verification">Test 6: Keep-Alive Verification</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start a long-running job (if possible, or use a debug breakpoint)</li>
+<li>Monitor Network tab for SSE connection</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Keep-alive comments (<code>:keepalive:</code>) sent every 10 seconds</li>
+<li>✅ Connection stays open throughout job execution</li>
+<li>✅ No connection timeout</li>
+<li>✅ Browser doesn't close idle connection</li>
+</ul>
+<p><strong>Network Tab:</strong></p>
+<pre><code>event: job-status
+data: {&quot;status&quot;:&quot;Running&quot;,...}
+
+: keepalive: 2024-01-01T12:00:00Z
+
+event: step-progress
+data: {&quot;step&quot;:&quot;TTS&quot;,...}
+
+: keepalive: 2024-01-01T12:00:10Z
+</code></pre>
+<h3 id="test-7-multiple-jobs">Test 7: Multiple Jobs</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start Quick Demo job</li>
+<li>Before it completes, navigate away</li>
+<li>Start another job</li>
+<li>Navigate back to first job</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ First SSE connection closes when navigating away</li>
+<li>✅ Second SSE connection establishes for new job</li>
+<li>✅ No memory leaks from dangling connections</li>
+<li>✅ Each job tracked independently</li>
+</ul>
+<h3 id="test-8-queue-api-endpoints">Test 8: Queue API Endpoints</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start multiple jobs (2-3 Quick Demo jobs)</li>
+<li>Let one complete, cancel one mid-execution</li>
+<li>Test queue endpoint: <code>GET /api/queue</code></li>
+<li>Test with status filter: <code>GET /api/queue?status=running</code></li>
+<li>Test progress endpoint: <code>GET /api/render/{jobId}/progress</code></li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Queue endpoint returns all jobs with stats</li>
+<li>✅ Status filter correctly filters jobs</li>
+<li>✅ Progress endpoint returns detailed job information</li>
+<li>✅ Timestamps are accurate (createdAt, startedAt, completedAt, canceledAt)</li>
+<li>✅ Progress percentage matches current stage</li>
+<li>✅ Correlation IDs present in all responses</li>
+</ul>
+<p><strong>Example Queue Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;jobs&quot;: [
+    {
+      &quot;jobId&quot;: &quot;abc123&quot;,
+      &quot;status&quot;: &quot;running&quot;,
+      &quot;stage&quot;: &quot;Voice&quot;,
+      &quot;percent&quot;: 45,
+      &quot;createdAt&quot;: &quot;2024-01-01T12:00:00Z&quot;,
+      &quot;startedAt&quot;: &quot;2024-01-01T12:00:05Z&quot;,
+      &quot;canResume&quot;: false
+    }
+  ],
+  &quot;stats&quot;: {
+    &quot;total&quot;: 3,
+    &quot;pending&quot;: 0,
+    &quot;running&quot;: 1,
+    &quot;completed&quot;: 1,
+    &quot;failed&quot;: 0,
+    &quot;canceled&quot;: 1
+  }
+}
+</code></pre>
+<h3 id="test-9-cleanup-service">Test 9: Cleanup Service</h3>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Start a job and let it run for 10-20 seconds</li>
+<li>Cancel the job</li>
+<li>Check backend logs for cleanup messages</li>
+<li>Verify temp files are cleaned up</li>
+</ol>
+<p><strong>Expected Results:</strong></p>
+<ul>
+<li>✅ Cleanup service logs appear on cancellation</li>
+<li>✅ Temporary files removed from %LOCALAPPDATA%/Aura/temp/{jobId}</li>
+<li>✅ Proxy media removed from %LOCALAPPDATA%/Aura/proxy/{jobId}</li>
+<li>✅ Background sweep service runs periodically</li>
+<li>✅ Orphaned files older than 24 hours are cleaned</li>
+</ul>
+<h2 id="debugging-tips">Debugging Tips</h2>
+<h3 id="sse-not-connecting">SSE Not Connecting</h3>
+<ol>
+<li>Check browser console for errors</li>
+<li>Verify API is running: <code>curl http://localhost:5005/api/healthz</code></li>
+<li>Check CORS headers in Network tab</li>
+<li>Verify job was created: <code>curl http://localhost:5005/api/jobs/{jobId}</code></li>
+</ol>
+<h3 id="progress-not-updating">Progress Not Updating</h3>
+<ol>
+<li>Check SSE connection in Network tab (should show &quot;text/event-stream&quot;)</li>
+<li>Look for event messages in Network preview</li>
+<li>Verify <code>startStreaming</code> is called (check console logs)</li>
+<li>Check if JobRunner is actually executing the job</li>
+</ol>
+<h3 id="keep-alive-not-working">Keep-Alive Not Working</h3>
+<ol>
+<li>Verify 10-second interval in backend code</li>
+<li>Check Network tab for comment lines starting with <code>:</code></li>
+<li>Ensure <code>FlushAsync</code> is called after sending ping</li>
+</ol>
+<h3 id="build-issues">Build Issues</h3>
+<pre><code class="lang-bash"># Backend
+cd Aura.Api
+dotnet build
+
+# Frontend
+cd Aura.Web
+npm run typecheck
+npm run lint
+npm run build
+</code></pre>
+<h2 id="performance-verification">Performance Verification</h2>
+<h3 id="expected-metrics">Expected Metrics</h3>
+<ul>
+<li><strong>SSE Connection</strong>: &lt;100ms to establish</li>
+<li><strong>Event Latency</strong>: &lt;50ms from backend emit to frontend receive</li>
+<li><strong>Memory Usage</strong>: Stable during long jobs (no leaks)</li>
+<li><strong>Reconnect Time</strong>: &lt;2 seconds for first attempt</li>
+<li><strong>Keep-Alive Interval</strong>: Exactly 10 seconds ±100ms</li>
+</ul>
+<h3 id="monitoring">Monitoring</h3>
+<pre><code class="lang-javascript">// Browser console
+// Check memory usage
+console.memory
+
+// Monitor SSE events
+performance.getEntriesByType('resource').filter(r =&gt; r.name.includes('/events'))
+</code></pre>
+<h2 id="success-criteria">Success Criteria</h2>
+<p>All tests must pass for the feature to be considered complete:</p>
+<ul>
+<li>✅ Quick Demo produces playable MP4 in Demo Mode</li>
+<li>✅ Full Generate Video runs end-to-end with visible progress</li>
+<li>✅ SSE connection resilient to network interruptions</li>
+<li>✅ SSE reconnection with Last-Event-ID works correctly</li>
+<li>✅ Keep-alive pings prevent connection timeout</li>
+<li>✅ Error messages surface in UI with helpful guidance</li>
+<li>✅ Download links work for artifacts</li>
+<li>✅ Job cancellation works cleanly and triggers cleanup</li>
+<li>✅ Queue API returns accurate job list and statistics</li>
+<li>✅ Progress API provides detailed job information</li>
+<li>✅ Cleanup service removes temporary files on cancellation</li>
+<li>✅ Background sweep service cleans orphaned files</li>
+<li>✅ No console errors during normal operation</li>
+<li>✅ No memory leaks with multiple jobs</li>
+</ul>
+<h2 id="known-limitations">Known Limitations</h2>
+<ol>
+<li><strong>Browser Support</strong>: SSE requires modern browser (EventSource API)</li>
+<li><strong>Concurrent Jobs</strong>: Frontend tracks one active job at a time</li>
+<li><strong>Reconnect Limit</strong>: Max 5 attempts before giving up</li>
+<li><strong>Large Jobs</strong>: Very long jobs (&gt;1 hour) may need connection refresh</li>
+</ol>
+<h2 id="next-steps">Next Steps</h2>
+<p>After manual testing passes:</p>
+<ol>
+<li>Add automated E2E tests using Playwright</li>
+<li>Add unit tests for SSE client</li>
+<li>Add integration tests for JobRunner with progress events</li>
+<li>Performance testing under load</li>
+<li>Add monitoring/telemetry for production</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/SSE_INTEGRATION_TESTING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Performance Optimization - Usage Examples | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Performance Optimization - Usage Examples | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/PERFORMANCE_USAGE_EXAMPLES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="performance-optimization---usage-examples">Performance Optimization - Usage Examples</h1>
+
+<p>This document provides practical examples of how to use the new performance optimization features.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#pagination">Pagination</a></li>
+<li><a href="#caching">Caching</a></li>
+<li><a href="#cache-monitoring">Cache Monitoring</a></li>
+<li><a href="#etags">ETags</a></li>
+<li><a href="#query-performance">Query Performance</a></li>
+</ul>
+<hr>
+<h2 id="pagination">Pagination</h2>
+<h3 id="basic-pagination">Basic Pagination</h3>
+<pre><code class="lang-csharp">using Aura.Core.Extensions;
+using Aura.Core.Models.Pagination;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+[ApiController]
+[Route(&quot;api/[controller]&quot;)]
+public class ExampleController : ControllerBase
+{
+    private readonly AuraDbContext _dbContext;
+
+    public ExampleController(AuraDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    /// &lt;summary&gt;
+    /// Get paginated list of media items
+    /// &lt;/summary&gt;
+    [HttpGet]
+    public async Task&lt;ActionResult&lt;PagedResult&lt;MediaEntity&gt;&gt;&gt; GetMediaPaginated(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = &quot;CreatedAt&quot;,
+        [FromQuery] string sortDirection = &quot;desc&quot;)
+    {
+        var pagination = new PaginationParams
+        {
+            PageNumber = page,
+            PageSize = pageSize,
+            SortBy = sortBy,
+            SortDirection = sortDirection
+        };
+
+        // Apply pagination with sorting
+        var query = _dbContext.MediaItems
+            .Include(m =&gt; m.Tags)
+            .Include(m =&gt; m.Collection)
+            .AsNoTracking();
+
+        var result = await query.ToPagedResultAsync(pagination);
+        
+        return Ok(result);
+    }
+}
+</code></pre>
+<p><strong>Response Example</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;items&quot;: [
+    {
+      &quot;id&quot;: &quot;abc-123&quot;,
+      &quot;name&quot;: &quot;Image 1&quot;,
+      &quot;type&quot;: &quot;Image&quot;
+    }
+  ],
+  &quot;pageNumber&quot;: 1,
+  &quot;pageSize&quot;: 20,
+  &quot;totalCount&quot;: 150,
+  &quot;totalPages&quot;: 8,
+  &quot;hasPreviousPage&quot;: false,
+  &quot;hasNextPage&quot;: true,
+  &quot;firstItemIndex&quot;: 1,
+  &quot;lastItemIndex&quot;: 20
+}
+</code></pre>
+<h3 id="pagination-with-filtering">Pagination with Filtering</h3>
+<pre><code class="lang-csharp">[HttpGet(&quot;search&quot;)]
+public async Task&lt;ActionResult&lt;PagedResult&lt;MediaEntity&gt;&gt;&gt; SearchMedia(
+    [FromQuery] string? query,
+    [FromQuery] string? type,
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 20)
+{
+    var mediaQuery = _dbContext.MediaItems.AsQueryable();
+
+    // Apply filters
+    if (!string.IsNullOrEmpty(query))
+    {
+        mediaQuery = mediaQuery.Where(m =&gt; 
+            m.Name.Contains(query) || m.Description.Contains(query));
+    }
+
+    if (!string.IsNullOrEmpty(type))
+    {
+        mediaQuery = mediaQuery.Where(m =&gt; m.Type == type);
+    }
+
+    // Apply pagination
+    var result = await mediaQuery
+        .AsNoTracking()
+        .ToPagedResultAsync(page, pageSize, &quot;CreatedAt&quot;, descending: true);
+
+    return Ok(result);
+}
+</code></pre>
+<h3 id="frontend-usage-typescriptreact">Frontend Usage (TypeScript/React)</h3>
+<pre><code class="lang-typescript">import { useState, useEffect } from 'react';
+
+interface PagedResult&lt;T&gt; {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+function MediaList() {
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState&lt;PagedResult&lt;MediaItem&gt; | null&gt;(null);
+
+  useEffect(() =&gt; {
+    fetch(`/api/media?page=${page}&amp;pageSize=20&amp;sortBy=CreatedAt&amp;sortDirection=desc`)
+      .then(res =&gt; res.json())
+      .then(setData);
+  }, [page]);
+
+  return (
+    &lt;div&gt;
+      {data?.items.map(item =&gt; (
+        &lt;MediaCard key={item.id} item={item} /&gt;
+      ))}
+      
+      &lt;Pagination
+        currentPage={data?.pageNumber ?? 1}
+        totalPages={data?.totalPages ?? 1}
+        onPageChange={setPage}
+      /&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<hr>
+<h2 id="caching">Caching</h2>
+<h3 id="using-distributed-cache-service">Using Distributed Cache Service</h3>
+<pre><code class="lang-csharp">using Aura.Core.Services.Caching;
+
+public class TemplateService
+{
+    private readonly IDistributedCacheService _cacheService;
+    private readonly AuraDbContext _dbContext;
+
+    public TemplateService(
+        IDistributedCacheService cacheService,
+        AuraDbContext dbContext)
+    {
+        _cacheService = cacheService;
+        _dbContext = dbContext;
+    }
+
+    /// &lt;summary&gt;
+    /// Get template with caching
+    /// &lt;/summary&gt;
+    public async Task&lt;TemplateEntity?&gt; GetTemplateAsync(string id, CancellationToken ct)
+    {
+        var cacheKey = $&quot;template:{id}&quot;;
+
+        return await _cacheService.GetOrCreateAsync(
+            cacheKey,
+            async cancellationToken =&gt;
+            {
+                var template = await _dbContext.Templates
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(t =&gt; t.Id == id, cancellationToken);
+
+                return template;
+            },
+            TimeSpan.FromMinutes(30),
+            ct
+        );
+    }
+
+    /// &lt;summary&gt;
+    /// Invalidate cache when template is updated
+    /// &lt;/summary&gt;
+    public async Task UpdateTemplateAsync(string id, TemplateEntity template)
+    {
+        _dbContext.Templates.Update(template);
+        await _dbContext.SaveChangesAsync();
+
+        // Invalidate cache
+        await _cacheService.RemoveAsync($&quot;template:{id}&quot;);
+    }
+}
+</code></pre>
+<h3 id="manual-cache-operations">Manual Cache Operations</h3>
+<pre><code class="lang-csharp">public class ExampleService
+{
+    private readonly IDistributedCacheService _cacheService;
+
+    // Set cache value
+    public async Task SetCacheAsync()
+    {
+        var data = new MyData { Id = 1, Name = &quot;Test&quot; };
+        await _cacheService.SetAsync(
+            &quot;my-key&quot;,
+            data,
+            TimeSpan.FromMinutes(10)
+        );
+    }
+
+    // Get cache value
+    public async Task&lt;MyData?&gt; GetCacheAsync()
+    {
+        return await _cacheService.GetAsync&lt;MyData&gt;(&quot;my-key&quot;);
+    }
+
+    // Check if key exists
+    public async Task&lt;bool&gt; CacheExistsAsync()
+    {
+        return await _cacheService.ExistsAsync(&quot;my-key&quot;);
+    }
+
+    // Remove from cache
+    public async Task RemoveCacheAsync()
+    {
+        await _cacheService.RemoveAsync(&quot;my-key&quot;);
+    }
+}
+</code></pre>
+<h3 id="cache-key-strategies">Cache Key Strategies</h3>
+<pre><code class="lang-csharp">public class CacheKeyHelper
+{
+    // User-specific cache
+    public static string UserKey(string userId, string resource)
+        =&gt; $&quot;user:{userId}:{resource}&quot;;
+
+    // Resource cache with version
+    public static string ResourceKey(string type, string id, int version)
+        =&gt; $&quot;{type}:{id}:v{version}&quot;;
+
+    // Query cache with parameters
+    public static string QueryKey(string queryName, params object[] parameters)
+        =&gt; $&quot;query:{queryName}:{string.Join(&quot;:&quot;, parameters)}&quot;;
+
+    // Time-based cache
+    public static string TimeBasedKey(string resource, DateTime dateTime)
+        =&gt; $&quot;{resource}:{dateTime:yyyyMMdd-HHmm}&quot;;
+}
+
+// Usage
+var cacheKey = CacheKeyHelper.UserKey(&quot;user-123&quot;, &quot;preferences&quot;);
+var data = await _cacheService.GetOrCreateAsync(
+    cacheKey,
+    async ct =&gt; await LoadUserPreferences(&quot;user-123&quot;, ct),
+    TimeSpan.FromMinutes(15)
+);
+</code></pre>
+<hr>
+<h2 id="cache-monitoring">Cache Monitoring</h2>
+<h3 id="check-cache-statistics">Check Cache Statistics</h3>
+<pre><code class="lang-bash"># Get current cache stats
+curl http://localhost:5005/api/cache/monitoring/stats
+
+# Response
+{
+  &quot;distributed&quot;: {
+    &quot;hits&quot;: 8542,
+    &quot;misses&quot;: 1458,
+    &quot;errors&quot;: 12,
+    &quot;hitRate&quot;: 85.42,
+    &quot;backendType&quot;: &quot;Hybrid (Redis + Memory)&quot;,
+    &quot;totalRequests&quot;: 10000
+  },
+  &quot;memory&quot;: {
+    &quot;currentEntryCount&quot;: 256,
+    &quot;currentEstimatedSize&quot;: 12582912,
+    &quot;totalHits&quot;: 1247,
+    &quot;totalMisses&quot;: 189,
+    &quot;hitRate&quot;: 86.84
+  },
+  &quot;health&quot;: {
+    &quot;status&quot;: &quot;healthy&quot;,
+    &quot;targetHitRate&quot;: 0.80,
+    &quot;currentHitRate&quot;: 0.854,
+    &quot;recommendation&quot;: &quot;Cache performance is optimal&quot;
+  }
+}
+</code></pre>
+<h3 id="get-detailed-metrics">Get Detailed Metrics</h3>
+<pre><code class="lang-bash"># Get performance metrics
+curl http://localhost:5005/api/cache/monitoring/metrics
+
+# Response
+{
+  &quot;timestamp&quot;: &quot;2025-11-10T15:30:00Z&quot;,
+  &quot;cache&quot;: {
+    &quot;hits&quot;: 8542,
+    &quot;misses&quot;: 1458,
+    &quot;errors&quot;: 12,
+    &quot;totalRequests&quot;: 10000,
+    &quot;hitRate&quot;: 85.42,
+    &quot;missRate&quot;: 14.58,
+    &quot;errorRate&quot;: 0.12
+  },
+  &quot;performance&quot;: {
+    &quot;status&quot;: &quot;optimal&quot;,
+    &quot;backendType&quot;: &quot;Hybrid (Redis + Memory)&quot;,
+    &quot;recommendations&quot;: [
+      &quot;Cache performance is optimal. No action needed.&quot;
+    ]
+  }
+}
+</code></pre>
+<h3 id="clear-cache-admin-operation">Clear Cache (Admin Operation)</h3>
+<pre><code class="lang-bash"># Clear all cache entries
+curl -X POST http://localhost:5005/api/cache/monitoring/clear
+
+# Response
+{
+  &quot;message&quot;: &quot;Cache cleared successfully&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-10T15:30:00Z&quot;
+}
+</code></pre>
+<h3 id="monitoring-in-code">Monitoring in Code</h3>
+<pre><code class="lang-csharp">public class CacheHealthService
+{
+    private readonly IDistributedCacheService _cacheService;
+    private readonly ILogger&lt;CacheHealthService&gt; _logger;
+
+    public async Task CheckCacheHealthAsync()
+    {
+        var stats = _cacheService.GetStatistics();
+
+        if (stats.HitRate &lt; 0.70)
+        {
+            _logger.LogWarning(
+                &quot;Cache hit rate is low: {HitRate:P2}. &quot; +
+                &quot;Hits: {Hits}, Misses: {Misses}&quot;,
+                stats.HitRate, stats.Hits, stats.Misses
+            );
+        }
+
+        if (stats.Errors &gt; 100)
+        {
+            _logger.LogError(
+                &quot;High cache error count: {Errors}&quot;,
+                stats.Errors
+            );
+        }
+    }
+}
+</code></pre>
+<hr>
+<h2 id="etags">ETags</h2>
+<p>ETags are automatically handled by the <code>ETagMiddleware</code>. No code changes needed!</p>
+<h3 id="how-it-works">How It Works</h3>
+<p><strong>First Request</strong>:</p>
+<pre><code class="lang-http">GET /api/templates/popular HTTP/1.1
+Host: localhost:5005
+
+HTTP/1.1 200 OK
+ETag: &quot;abc123xyz&quot;
+Cache-Control: private, max-age=3600
+Content-Type: application/json
+
+[{ &quot;id&quot;: 1, &quot;name&quot;: &quot;Template 1&quot; }]
+</code></pre>
+<p><strong>Subsequent Request</strong> (content unchanged):</p>
+<pre><code class="lang-http">GET /api/templates/popular HTTP/1.1
+Host: localhost:5005
+If-None-Match: &quot;abc123xyz&quot;
+
+HTTP/1.1 304 Not Modified
+ETag: &quot;abc123xyz&quot;
+Cache-Control: private, max-age=3600
+</code></pre>
+<p><strong>Client-Side Usage</strong> (JavaScript):</p>
+<pre><code class="lang-javascript">// Browser automatically handles ETags
+const response = await fetch('/api/templates/popular', {
+  headers: {
+    'If-None-Match': previousETag
+  }
+});
+
+if (response.status === 304) {
+  // Use cached data
+  return cachedData;
+} else {
+  // Update cache
+  const data = await response.json();
+  const newETag = response.headers.get('ETag');
+  return data;
+}
+</code></pre>
+<h3 id="custom-cache-control">Custom Cache Control</h3>
+<pre><code class="lang-csharp">[HttpGet]
+[ResponseCache(Duration = 3600)] // 1 hour
+public async Task&lt;ActionResult&gt; GetStaticData()
+{
+    var data = await _service.GetStaticDataAsync();
+    return Ok(data);
+}
+
+[HttpGet]
+[ResponseCache(NoStore = true)] // No caching
+public async Task&lt;ActionResult&gt; GetRealtimeData()
+{
+    var data = await _service.GetRealtimeDataAsync();
+    return Ok(data);
+}
+</code></pre>
+<hr>
+<h2 id="query-performance">Query Performance</h2>
+<p>Query performance is automatically monitored by the <code>QueryPerformanceMiddleware</code>.</p>
+<h3 id="response-time-headers">Response Time Headers</h3>
+<p>Every API response includes timing information:</p>
+<pre><code class="lang-http">HTTP/1.1 200 OK
+X-Response-Time-Ms: 245
+X-Correlation-Id: 8b3f7e4d-9a2c-4f1e-8b6a-1c4d7e9f3a2b
+</code></pre>
+<h3 id="monitoring-slow-queries">Monitoring Slow Queries</h3>
+<p>Slow requests are automatically logged:</p>
+<pre><code class="lang-log">[2025-11-10 15:30:00.000 +00:00] [WRN] [abc-123] [trace-id] [span-id] 
+Very slow request detected: GET /api/projects/export took 5234ms (threshold: 5000ms). 
+StatusCode: 200, CorrelationId: abc-123
+</code></pre>
+<h3 id="query-optimization-tips">Query Optimization Tips</h3>
+<pre><code class="lang-csharp">// ❌ BAD: N+1 query problem
+public async Task&lt;List&lt;ProjectDto&gt;&gt; GetProjectsAsync()
+{
+    var projects = await _dbContext.Projects.ToListAsync();
+    
+    foreach (var project in projects)
+    {
+        // This executes a separate query for EACH project!
+        project.Scenes = await _dbContext.Scenes
+            .Where(s =&gt; s.ProjectId == project.Id)
+            .ToListAsync();
+    }
+    
+    return projects;
+}
+
+// ✅ GOOD: Eager loading with Include
+public async Task&lt;List&lt;ProjectDto&gt;&gt; GetProjectsAsync()
+{
+    var projects = await _dbContext.Projects
+        .Include(p =&gt; p.Scenes)
+        .Include(p =&gt; p.Assets)
+        .AsNoTracking() // Don't track if read-only
+        .ToListAsync();
+    
+    return projects;
+}
+
+// ✅ BETTER: With pagination
+public async Task&lt;PagedResult&lt;ProjectDto&gt;&gt; GetProjectsAsync(int page, int pageSize)
+{
+    var query = _dbContext.Projects
+        .Include(p =&gt; p.Scenes)
+        .Include(p =&gt; p.Assets)
+        .AsNoTracking();
+    
+    return await query.ToPagedResultAsync(page, pageSize, &quot;UpdatedAt&quot;);
+}
+</code></pre>
+<h3 id="performance-profiling-in-tests">Performance Profiling in Tests</h3>
+<pre><code class="lang-csharp">[Fact]
+public async Task Query_Should_Complete_Within_Threshold()
+{
+    // Arrange
+    var stopwatch = Stopwatch.StartNew();
+    
+    // Act
+    var result = await _dbContext.MediaItems
+        .Include(m =&gt; m.Tags)
+        .AsNoTracking()
+        .ToListAsync();
+    
+    stopwatch.Stop();
+    
+    // Assert
+    Assert.True(
+        stopwatch.ElapsedMilliseconds &lt; 100,
+        $&quot;Query took {stopwatch.ElapsedMilliseconds}ms, expected &lt; 100ms&quot;
+    );
+}
+</code></pre>
+<hr>
+<h2 id="configuration-best-practices">Configuration Best Practices</h2>
+<h3 id="development-environment">Development Environment</h3>
+<pre><code class="lang-json">{
+  &quot;Database&quot;: {
+    &quot;Performance&quot;: {
+      &quot;EnablePoolingStats&quot;: true,
+      &quot;SqliteCacheSizeKB&quot;: 32000
+    }
+  },
+  &quot;Caching&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;UseRedis&quot;: false,
+    &quot;EnableCacheWarming&quot;: true
+  }
+}
+</code></pre>
+<h3 id="production-environment">Production Environment</h3>
+<pre><code class="lang-json">{
+  &quot;Database&quot;: {
+    &quot;Provider&quot;: &quot;PostgreSQL&quot;,
+    &quot;ConnectionString&quot;: &quot;Host=prod-db;Database=aura;...&quot;,
+    &quot;Performance&quot;: {
+      &quot;MaxPoolSize&quot;: 100,
+      &quot;MinPoolSize&quot;: 20,
+      &quot;EnablePoolingStats&quot;: true
+    }
+  },
+  &quot;Caching&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;UseRedis&quot;: true,
+    &quot;RedisConnection&quot;: &quot;redis-cluster:6379,password=...,ssl=true&quot;,
+    &quot;EnableCacheWarming&quot;: true,
+    &quot;Strategies&quot;: {
+      &quot;QueryResultsSeconds&quot;: 120,
+      &quot;TemplatesSeconds&quot;: 3600
+    }
+  }
+}
+</code></pre>
+<hr>
+<h2 id="performance-checklist">Performance Checklist</h2>
+<h3 id="before-deployment">Before Deployment</h3>
+<ul>
+<li>[ ] Enable Redis caching in production</li>
+<li>[ ] Configure appropriate cache TTLs</li>
+<li>[ ] Set up database connection pooling</li>
+<li>[ ] Review and optimize slow queries</li>
+<li>[ ] Add pagination to large list endpoints</li>
+<li>[ ] Test with realistic data volumes</li>
+</ul>
+<h3 id="after-deployment">After Deployment</h3>
+<ul>
+<li>[ ] Monitor cache hit rates</li>
+<li>[ ] Check response time metrics</li>
+<li>[ ] Review slow request logs</li>
+<li>[ ] Validate memory usage</li>
+<li>[ ] Test under load</li>
+</ul>
+<h3 id="ongoing-maintenance">Ongoing Maintenance</h3>
+<ul>
+<li>[ ] Weekly review of slow queries</li>
+<li>[ ] Monthly cache statistics review</li>
+<li>[ ] Adjust cache TTLs based on usage</li>
+<li>[ ] Add indexes for new query patterns</li>
+<li>[ ] Update pagination as data grows</li>
+</ul>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="low-cache-hit-rate">Low Cache Hit Rate</h3>
+<p><strong>Symptoms</strong>: Cache hit rate &lt; 70%</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Increase cache TTLs</li>
+<li>Implement cache warming for frequently accessed data</li>
+<li>Review cache key generation (ensure consistency)</li>
+<li>Check Redis connection stability</li>
+</ol>
+<h3 id="slow-query-performance">Slow Query Performance</h3>
+<p><strong>Symptoms</strong>: Queries taking &gt; 100ms</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Add missing database indexes</li>
+<li>Use <code>.AsNoTracking()</code> for read-only queries</li>
+<li>Implement eager loading with <code>.Include()</code></li>
+<li>Add pagination to reduce result set size</li>
+<li>Enable query splitting for complex queries</li>
+</ol>
+<h3 id="high-memory-usage">High Memory Usage</h3>
+<p><strong>Symptoms</strong>: Memory continuously growing</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Reduce in-memory cache size</li>
+<li>Lower cache TTLs</li>
+<li>Ensure proper disposal of DbContext</li>
+<li>Check for memory leaks in long-running operations</li>
+</ol>
+<hr>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ul>
+<li>Check the main implementation doc: <code>PERFORMANCE_OPTIMIZATION_IMPLEMENTATION.md</code></li>
+<li>Review cache statistics: <code>GET /api/cache/monitoring/stats</code></li>
+<li>Check application logs for slow request warnings</li>
+<li>Contact the development team</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/PERFORMANCE_USAGE_EXAMPLES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

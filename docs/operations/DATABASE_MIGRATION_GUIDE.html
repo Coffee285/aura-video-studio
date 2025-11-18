@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Database Migration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Database Migration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/DATABASE_MIGRATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="database-migration-guide">Database Migration Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide explains how to create, apply, and manage Entity Framework Core migrations for Aura Video Studio.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>.NET 8.0 SDK installed</li>
+<li>Entity Framework Core CLI tools installed</li>
+</ul>
+<h3 id="install-ef-core-tools">Install EF Core Tools</h3>
+<pre><code class="lang-bash">dotnet tool install --global dotnet-ef
+# Or update if already installed
+dotnet tool update --global dotnet-ef
+</code></pre>
+<h2 id="migration-workflow">Migration Workflow</h2>
+<h3 id="1-create-initial-migration-already-done">1. Create Initial Migration (Already Done)</h3>
+<p>The initial migration has been created, but if you need to create a new one:</p>
+<pre><code class="lang-bash">cd /workspace
+dotnet ef migrations add InitialCreate \
+    --project Aura.Api \
+    --startup-project Aura.Api \
+    --context AuraDbContext
+</code></pre>
+<h3 id="2-view-migration-code">2. View Migration Code</h3>
+<p>Migrations are located in:</p>
+<ul>
+<li><code>Aura.Api/Migrations/</code> (Application migrations)</li>
+<li><code>Aura.Api/Data/Migrations/</code> (Some migrations may be here)</li>
+</ul>
+<p>Check the latest migration file to review the changes.</p>
+<h3 id="3-apply-migrations">3. Apply Migrations</h3>
+<h4 id="development-environment">Development Environment</h4>
+<pre><code class="lang-bash"># Apply all pending migrations
+dotnet ef database update \
+    --project Aura.Api \
+    --startup-project Aura.Api
+
+# Apply to specific migration
+dotnet ef database update MigrationName \
+    --project Aura.Api \
+    --startup-project Aura.Api
+</code></pre>
+<h4 id="production-environment">Production Environment</h4>
+<p>Generate SQL script and apply manually:</p>
+<pre><code class="lang-bash"># Generate SQL script for all migrations
+dotnet ef migrations script \
+    --project Aura.Api \
+    --startup-project Aura.Api \
+    --output migration.sql
+
+# Generate SQL script from specific migration
+dotnet ef migrations script FromMigration ToMigration \
+    --project Aura.Api \
+    --startup-project Aura.Api \
+    --output migration.sql \
+    --idempotent
+</code></pre>
+<p>The <code>--idempotent</code> flag makes the script safe to run multiple times.</p>
+<h3 id="4-verify-migration-status">4. Verify Migration Status</h3>
+<pre><code class="lang-bash"># List all migrations
+dotnet ef migrations list \
+    --project Aura.Api \
+    --startup-project Aura.Api
+
+# Check which migrations have been applied
+dotnet ef database update --list \
+    --project Aura.Api \
+    --startup-project Aura.Api
+</code></pre>
+<h3 id="5-rollback-migration">5. Rollback Migration</h3>
+<pre><code class="lang-bash"># Rollback to previous migration
+dotnet ef database update PreviousMigrationName \
+    --project Aura.Api \
+    --startup-project Aura.Api
+
+# Remove last migration (if not applied)
+dotnet ef migrations remove \
+    --project Aura.Api \
+    --startup-project Aura.Api
+</code></pre>
+<h2 id="creating-new-migrations">Creating New Migrations</h2>
+<h3 id="when-to-create-a-migration">When to Create a Migration</h3>
+<p>Create a new migration when you:</p>
+<ul>
+<li>Add new entities</li>
+<li>Modify existing entities (add/remove/change properties)</li>
+<li>Add/remove relationships</li>
+<li>Change indexes or constraints</li>
+<li>Update seed data</li>
+</ul>
+<h3 id="migration-best-practices">Migration Best Practices</h3>
+<h4 id="1-descriptive-names">1. Descriptive Names</h4>
+<p>Use clear, descriptive names that indicate what changed:</p>
+<pre><code class="lang-bash">dotnet ef migrations add AddUserProfileTable
+dotnet ef migrations add UpdateProjectStateIndexes
+dotnet ef migrations add AddContentBlobDeduplication
+</code></pre>
+<h4 id="2-review-before-applying">2. Review Before Applying</h4>
+<p>Always review the generated migration code before applying:</p>
+<ul>
+<li>Check for unintended changes</li>
+<li>Verify data type mappings</li>
+<li>Ensure indexes are correct</li>
+<li>Review cascade delete rules</li>
+</ul>
+<h4 id="3-test-locally-first">3. Test Locally First</h4>
+<pre><code class="lang-bash"># Create test database
+dotnet ef database update --connection &quot;Data Source=test.db&quot;
+
+# Verify schema
+# Test CRUD operations
+# Run integration tests
+
+# Clean up
+rm test.db
+</code></pre>
+<h4 id="4-make-migrations-idempotent">4. Make Migrations Idempotent</h4>
+<p>For production deployments, always use idempotent scripts:</p>
+<pre><code class="lang-bash">dotnet ef migrations script --idempotent --output migration.sql
+</code></pre>
+<h2 id="common-migration-scenarios">Common Migration Scenarios</h2>
+<h3 id="adding-a-new-entity">Adding a New Entity</h3>
+<ol>
+<li>Create the entity class:</li>
+</ol>
+<pre><code class="lang-csharp">public class NewEntity : IAuditableEntity
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public string? CreatedBy { get; set; }
+    public string? ModifiedBy { get; set; }
+}
+</code></pre>
+<ol start="2">
+<li>Add DbSet to AuraDbContext:</li>
+</ol>
+<pre><code class="lang-csharp">public DbSet&lt;NewEntity&gt; NewEntities { get; set; } = null!;
+</code></pre>
+<ol start="3">
+<li>Configure in OnModelCreating:</li>
+</ol>
+<pre><code class="lang-csharp">modelBuilder.Entity&lt;NewEntity&gt;(entity =&gt;
+{
+    entity.HasKey(e =&gt; e.Id);
+    entity.HasIndex(e =&gt; e.Name);
+});
+</code></pre>
+<ol start="4">
+<li>Create migration:</li>
+</ol>
+<pre><code class="lang-bash">dotnet ef migrations add AddNewEntity --project Aura.Api
+</code></pre>
+<h3 id="modifying-existing-entity">Modifying Existing Entity</h3>
+<ol>
+<li>Update entity class:</li>
+</ol>
+<pre><code class="lang-csharp">public class ExistingEntity
+{
+    // ... existing properties ...
+    
+    // Add new property
+    public string? NewProperty { get; set; }
+}
+</code></pre>
+<ol start="2">
+<li>Create migration:</li>
+</ol>
+<pre><code class="lang-bash">dotnet ef migrations add AddNewPropertyToExistingEntity --project Aura.Api
+</code></pre>
+<ol start="3">
+<li>Review migration:
+<ul>
+<li>Check if default value is needed</li>
+<li>Verify nullable/required constraints</li>
+</ul>
+</li>
+</ol>
+<h3 id="adding-relationships">Adding Relationships</h3>
+<ol>
+<li>Add navigation properties:</li>
+</ol>
+<pre><code class="lang-csharp">public class Parent
+{
+    public Guid Id { get; set; }
+    public ICollection&lt;Child&gt; Children { get; set; } = new List&lt;Child&gt;();
+}
+
+public class Child
+{
+    public Guid Id { get; set; }
+    public Guid ParentId { get; set; }
+    public Parent Parent { get; set; } = null!;
+}
+</code></pre>
+<ol start="2">
+<li>Configure relationship:</li>
+</ol>
+<pre><code class="lang-csharp">modelBuilder.Entity&lt;Child&gt;(entity =&gt;
+{
+    entity.HasOne(c =&gt; c.Parent)
+        .WithMany(p =&gt; p.Children)
+        .HasForeignKey(c =&gt; c.ParentId)
+        .OnDelete(DeleteBehavior.Cascade);
+});
+</code></pre>
+<ol start="3">
+<li>Create migration:</li>
+</ol>
+<pre><code class="lang-bash">dotnet ef migrations add AddParentChildRelationship --project Aura.Api
+</code></pre>
+<h3 id="adding-indexes">Adding Indexes</h3>
+<ol>
+<li>Configure in OnModelCreating:</li>
+</ol>
+<pre><code class="lang-csharp">modelBuilder.Entity&lt;EntityName&gt;(entity =&gt;
+{
+    entity.HasIndex(e =&gt; e.ColumnName);
+    entity.HasIndex(e =&gt; new { e.Column1, e.Column2 }); // Composite
+    entity.HasIndex(e =&gt; e.UniqueColumn).IsUnique();
+});
+</code></pre>
+<ol start="2">
+<li>Create migration:</li>
+</ol>
+<pre><code class="lang-bash">dotnet ef migrations add AddIndexesToEntity --project Aura.Api
+</code></pre>
+<h2 id="seed-data-in-migrations">Seed Data in Migrations</h2>
+<h3 id="option-1-onmodelcreating-simple">Option 1: OnModelCreating (Simple)</h3>
+<p>For static, unchanging seed data:</p>
+<pre><code class="lang-csharp">modelBuilder.Entity&lt;SystemConfigurationEntity&gt;(entity =&gt;
+{
+    entity.HasData(new SystemConfigurationEntity
+    {
+        Id = 1,
+        IsSetupComplete = false,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow
+    });
+});
+</code></pre>
+<h3 id="option-2-seeddata-service-recommended">Option 2: SeedData Service (Recommended)</h3>
+<p>For complex or development-only seed data:</p>
+<p>Location: <code>Aura.Api/Data/SeedData.cs</code></p>
+<p>Called in <code>Program.cs</code>:</p>
+<pre><code class="lang-csharp">if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService&lt;AuraDbContext&gt;();
+    var logger = scope.ServiceProvider.GetRequiredService&lt;ILogger&lt;SeedData&gt;&gt;();
+    var seeder = new SeedData(context, logger);
+    await seeder.SeedAsync();
+}
+</code></pre>
+<h3 id="option-3-migration-data-operations">Option 3: Migration Data Operations</h3>
+<p>For data migrations:</p>
+<pre><code class="lang-csharp">protected override void Up(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.Sql(
+        @&quot;INSERT INTO Templates (Id, Name, Category, TemplateData, CreatedAt, UpdatedAt) 
+          VALUES ('guid', 'Template Name', 'Category', '{}', datetime('now'), datetime('now'))&quot;);
+}
+</code></pre>
+<h2 id="database-schema-management">Database Schema Management</h2>
+<h3 id="export-current-schema">Export Current Schema</h3>
+<pre><code class="lang-bash"># Generate script for current state
+dotnet ef migrations script 0 \
+    --project Aura.Api \
+    --startup-project Aura.Api \
+    --output schema.sql
+</code></pre>
+<h3 id="compare-schemas">Compare Schemas</h3>
+<pre><code class="lang-bash"># List migrations in database
+dotnet ef migrations list --project Aura.Api
+
+# Check pending migrations
+dotnet ef migrations has-pending-model-changes --project Aura.Api
+</code></pre>
+<h3 id="reset-database-development-only">Reset Database (Development Only)</h3>
+<pre><code class="lang-bash"># Drop database
+dotnet ef database drop --project Aura.Api --force
+
+# Recreate
+dotnet ef database update --project Aura.Api
+</code></pre>
+<h2 id="continuous-integration">Continuous Integration</h2>
+<h3 id="cicd-pipeline-steps">CI/CD Pipeline Steps</h3>
+<ol>
+<li><strong>Verify Migrations</strong></li>
+</ol>
+<pre><code class="lang-bash"># Check for pending model changes
+dotnet ef migrations has-pending-model-changes --project Aura.Api
+if [ $? -ne 0 ]; then
+  echo &quot;Warning: Model changes detected but no migration created&quot;
+fi
+</code></pre>
+<ol start="2">
+<li><strong>Generate Migration Script</strong></li>
+</ol>
+<pre><code class="lang-bash"># Generate idempotent script
+dotnet ef migrations script \
+    --project Aura.Api \
+    --startup-project Aura.Api \
+    --output migrations.sql \
+    --idempotent
+
+# Store as artifact
+</code></pre>
+<ol start="3">
+<li><strong>Run Tests</strong></li>
+</ol>
+<pre><code class="lang-bash"># Run all tests including database tests
+dotnet test --filter &quot;FullyQualifiedName~Aura.Tests&quot;
+</code></pre>
+<ol start="4">
+<li><strong>Deploy to Staging</strong></li>
+</ol>
+<pre><code class="lang-bash"># Apply migrations to staging database
+dotnet ef database update --project Aura.Api --connection &quot;$STAGING_CONNECTION_STRING&quot;
+</code></pre>
+<ol start="5">
+<li><strong>Deploy to Production</strong></li>
+</ol>
+<pre><code class="lang-bash"># Apply idempotent script to production
+# Manual review recommended
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="migration-failed-to-apply">Migration Failed to Apply</h3>
+<p><strong>Problem</strong>: Migration fails with constraint error</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check foreign key relationships</li>
+<li>Ensure referenced tables exist</li>
+<li>Verify data integrity</li>
+<li>Consider adding migration steps to clean up invalid data</li>
+</ol>
+<h3 id="cannot-remove-migration">Cannot Remove Migration</h3>
+<p><strong>Problem</strong>: <code>dotnet ef migrations remove</code> fails</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># If migration was applied, rollback first
+dotnet ef database update PreviousMigration --project Aura.Api
+
+# Then remove
+dotnet ef migrations remove --project Aura.Api
+</code></pre>
+<h3 id="model-out-of-sync">Model Out of Sync</h3>
+<p><strong>Problem</strong>: Model doesn't match database</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Create migration to sync
+dotnet ef migrations add SyncModel --project Aura.Api
+
+# Review changes carefully
+# Apply migration
+dotnet ef database update --project Aura.Api
+</code></pre>
+<h3 id="connection-string-issues">Connection String Issues</h3>
+<p><strong>Problem</strong>: Cannot connect to database</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check <code>appsettings.json</code> for connection string</li>
+<li>Verify database file location (SQLite)</li>
+<li>Check permissions on database file/directory</li>
+<li>Use <code>--connection</code> parameter to override:</li>
+</ol>
+<pre><code class="lang-bash">dotnet ef database update --connection &quot;Data Source=./aura.db&quot;
+</code></pre>
+<h3 id="sqlite-limitations">SQLite Limitations</h3>
+<p><strong>Problem</strong>: SQLite doesn't support certain operations</p>
+<p><strong>Common Limitations</strong>:</p>
+<ul>
+<li>Cannot drop columns (workaround: recreate table)</li>
+<li>Limited ALTER TABLE support</li>
+<li>No rename column (use EF Core convention)</li>
+</ul>
+<p><strong>Solution</strong>:
+Use migration operations that SQLite supports:</p>
+<pre><code class="lang-csharp">protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // Instead of DropColumn, recreate table
+    migrationBuilder.RenameTable(&quot;OldTable&quot;, newName: &quot;TempTable&quot;);
+    // Create new table with desired schema
+    // Copy data from TempTable
+    // Drop TempTable
+}
+</code></pre>
+<h2 id="best-practices-summary">Best Practices Summary</h2>
+<h3 id="-do">✅ Do</h3>
+<ul>
+<li>Use descriptive migration names</li>
+<li>Review migrations before applying</li>
+<li>Test migrations locally first</li>
+<li>Use idempotent scripts for production</li>
+<li>Keep migrations small and focused</li>
+<li>Document complex migrations</li>
+<li>Version control all migrations</li>
+<li>Use transactions when possible</li>
+</ul>
+<h3 id="-dont">❌ Don't</h3>
+<ul>
+<li>Modify applied migrations</li>
+<li>Delete migration files</li>
+<li>Skip migrations</li>
+<li>Apply untested migrations to production</li>
+<li>Use non-idempotent scripts in production</li>
+<li>Mix schema and data changes unnecessarily</li>
+</ul>
+<h2 id="quick-reference">Quick Reference</h2>
+<h3 id="common-commands">Common Commands</h3>
+<pre><code class="lang-bash"># Create migration
+dotnet ef migrations add MigrationName --project Aura.Api
+
+# Apply migrations
+dotnet ef database update --project Aura.Api
+
+# Generate SQL script
+dotnet ef migrations script --idempotent --output migration.sql --project Aura.Api
+
+# List migrations
+dotnet ef migrations list --project Aura.Api
+
+# Remove last migration
+dotnet ef migrations remove --project Aura.Api
+
+# Drop database
+dotnet ef database drop --project Aura.Api --force
+</code></pre>
+<h3 id="connection-strings">Connection Strings</h3>
+<p><strong>Development (SQLite)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;ConnectionStrings&quot;: {
+    &quot;DefaultConnection&quot;: &quot;Data Source=aura.db&quot;
+  }
+}
+</code></pre>
+<p><strong>Production (PostgreSQL)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;ConnectionStrings&quot;: {
+    &quot;DefaultConnection&quot;: &quot;Host=localhost;Database=aura;Username=user;Password=pass&quot;
+  }
+}
+</code></pre>
+<p><strong>Production (SQL Server)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;ConnectionStrings&quot;: {
+    &quot;DefaultConnection&quot;: &quot;Server=localhost;Database=aura;User Id=user;Password=pass;TrustServerCertificate=true&quot;
+  }
+}
+</code></pre>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/managing-schemas/migrations/">EF Core Migrations Documentation</a></li>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/cli/dotnet">EF Core CLI Reference</a></li>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/providers/">Database Providers</a></li>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/providers/sqlite/limitations">SQLite Limitations</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ol>
+<li>Check existing migrations in <code>Aura.Api/Migrations/</code></li>
+<li>Review <code>DATABASE_VERIFICATION_GUIDE.md</code></li>
+<li>Run tests: <code>dotnet test --filter &quot;FullyQualifiedName~Aura.Tests.Data&quot;</code></li>
+<li>Check logs for EF Core warnings</li>
+<li>Consult EF Core documentation</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/DATABASE_MIGRATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

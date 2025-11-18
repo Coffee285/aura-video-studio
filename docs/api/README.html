@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>API Reference | Aura Video Studio </title>
+      <title>API Reference Overview | Aura Video Studio </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="API Reference | Aura Video Studio ">
+      <meta name="title" content="API Reference Overview | Aura Video Studio ">
       
       
       <link rel="icon" href="../../favicon.ico">
@@ -71,171 +71,84 @@
         </div>
 
         <article data-uid="">
-<h1 id="api-reference">API Reference</h1>
+<h1 id="api-reference-overview">API Reference Overview</h1>
 
-<p>This section contains the automatically generated API documentation for Aura Video Studio.</p>
-<h2 id="overview">Overview</h2>
-<p>Aura Video Studio provides several APIs for different purposes:</p>
-<h3 id="backend-api-rest">Backend API (REST)</h3>
-<p>The <strong>Aura.Api</strong> project exposes a RESTful API for the web frontend and external integrations.</p>
+<p>Aura Video Studio exposes a RESTful API for video generation and management, with Server-Sent Events (SSE) for real-time progress updates.</p>
+<h2 id="base-url">Base URL</h2>
 <ul>
-<li><a href="API_CONTRACT_V1.html">API Contract v1</a> - Complete REST API specification</li>
-<li><a href="errors.html">Error Handling</a> - Error codes and responses</li>
-<li><a href="health.html">Health Endpoints</a> - Health check and diagnostics</li>
-<li><a href="jobs.html">Job Management</a> - Background job processing</li>
-<li><a href="providers.html">Provider System</a> - Provider configuration and management</li>
+<li><strong>Development</strong>: <code>http://localhost:5005</code></li>
+<li><strong>Production (Electron)</strong>: Embedded backend on dynamic port</li>
 </ul>
-<h3 id="core-libraries">Core Libraries</h3>
-<p>The following .NET libraries provide the core functionality:</p>
-<ul>
-<li><strong>Aura.Core</strong> - Business logic and orchestration</li>
-<li><strong>Aura.Providers</strong> - Provider implementations (LLM, TTS, Image, Video)</li>
-<li><strong>Aura.Api</strong> - ASP.NET Core backend API</li>
-</ul>
-<h2 id="api-documentation-generation">API Documentation Generation</h2>
-<p>This API documentation is generated from XML documentation comments in the source code using DocFX.</p>
-<h3 id="for-c-developers">For C# Developers</h3>
-<p>To contribute to the API documentation:</p>
-<ol>
-<li>Add XML documentation comments to public classes and methods:</li>
-</ol>
-<pre><code class="lang-csharp">/// &lt;summary&gt;
-/// Represents a video generation request.
-/// &lt;/summary&gt;
-public class VideoRequest
-{
-    /// &lt;summary&gt;
-    /// Gets or sets the brief for video generation.
-    /// &lt;/summary&gt;
-    /// &lt;value&gt;The video brief with title and description.&lt;/value&gt;
-    public Brief Brief { get; set; }
-    
-    /// &lt;summary&gt;
-    /// Generates a video from the request.
-    /// &lt;/summary&gt;
-    /// &lt;returns&gt;A task representing the asynchronous operation, containing the video path.&lt;/returns&gt;
-    /// &lt;exception cref=&quot;ValidationException&quot;&gt;Thrown when the request is invalid.&lt;/exception&gt;
-    public async Task&lt;string&gt; GenerateAsync()
-    {
-        // Implementation
-    }
-}
-</code></pre>
-<ol start="2">
-<li>Build the documentation locally:</li>
-</ol>
-<pre><code class="lang-bash">dotnet tool install -g docfx
-docfx docfx.json --serve
-</code></pre>
-<ol start="3">
-<li>View the generated documentation at <code>http://localhost:8080</code></li>
-</ol>
-<h3 id="for-typescript-developers">For TypeScript Developers</h3>
-<p>For the web frontend (Aura.Web), use JSDoc comments:</p>
-<pre><code class="lang-typescript">/**
- * Represents a video generation request.
- */
-export interface VideoRequest {
-  /**
-   * The brief for video generation.
-   */
-  brief: Brief;
-  
-  /**
-   * Optional settings for generation.
-   */
-  settings?: GenerationSettings;
-}
-
-/**
- * Generates a video from the request.
- * @param request - The video generation request
- * @returns A promise that resolves to the video path
- * @throws {ValidationError} When the request is invalid
- */
-export async function generateVideo(request: VideoRequest): Promise&lt;string&gt; {
-  // Implementation
-}
-</code></pre>
-<h2 id="rest-api-endpoints">REST API Endpoints</h2>
-<h3 id="health--status">Health &amp; Status</h3>
-<pre><code>GET /healthz           - Health check
-GET /capabilities      - System capabilities
-</code></pre>
-<h3 id="video-generation">Video Generation</h3>
-<pre><code>POST /script          - Generate script from brief
-POST /plan            - Create timeline plan
-POST /tts             - Synthesize narration
-POST /render          - Render video
-</code></pre>
-<h3 id="settings--configuration">Settings &amp; Configuration</h3>
-<pre><code>GET /settings/load    - Load settings
-POST /settings/save   - Save settings
-</code></pre>
-<h3 id="asset-management">Asset Management</h3>
-<pre><code>GET /assets/search    - Search for assets
-POST /assets/upload   - Upload custom assets
-</code></pre>
-<h3 id="provider-management">Provider Management</h3>
-<pre><code>GET /providers        - List available providers
-GET /providers/{id}   - Get provider details
-POST /providers/{id}  - Configure provider
-</code></pre>
+<h2 id="api-version">API Version</h2>
+<p>Current API version: <strong>v1</strong></p>
+<p>All endpoints are prefixed with <code>/api/</code></p>
 <h2 id="authentication">Authentication</h2>
-<p>The API currently runs locally on <code>http://127.0.0.1:5005</code> and does not require authentication. For production deployments, implement appropriate authentication and authorization mechanisms.</p>
-<h2 id="rate-limiting">Rate Limiting</h2>
-<p>When using external providers (OpenAI, ElevenLabs, etc.), be aware of their rate limits:</p>
+<p>The API runs on localhost loopback by default and does not require authentication for local development. In production Electron builds, the API is embedded and accessed only by the frontend.</p>
+<h2 id="content-type">Content Type</h2>
 <ul>
-<li><strong>OpenAI</strong>: Varies by plan (typically 3-60 requests/minute)</li>
-<li><strong>ElevenLabs</strong>: Character limits per month</li>
-<li><strong>Stock APIs</strong>: Daily request limits</li>
+<li><strong>Request</strong>: <code>application/json</code></li>
+<li><strong>Response</strong>: <code>application/json</code></li>
+<li><strong>SSE</strong>: <code>text/event-stream</code></li>
 </ul>
-<p>The system automatically handles rate limiting and retries with exponential backoff.</p>
 <h2 id="error-handling">Error Handling</h2>
-<p>All API endpoints return consistent error responses:</p>
+<p>Errors follow RFC 7807 ProblemDetails format:</p>
 <pre><code class="lang-json">{
-  &quot;error&quot;: {
-    &quot;code&quot;: &quot;VALIDATION_ERROR&quot;,
-    &quot;message&quot;: &quot;Invalid request parameters&quot;,
-    &quot;details&quot;: {
-      &quot;field&quot;: &quot;brief.title&quot;,
-      &quot;issue&quot;: &quot;Title is required&quot;
-    }
-  }
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/errors/README.md#E400&quot;,
+  &quot;title&quot;: &quot;Validation Error&quot;,
+  &quot;status&quot;: 400,
+  &quot;detail&quot;: &quot;Brief topic is required&quot;,
+  &quot;correlationId&quot;: &quot;abc-123-def&quot;
 }
 </code></pre>
-<p>See <a href="errors.html">Error Handling</a> for complete error code reference.</p>
-<h2 id="versioning">Versioning</h2>
-<p>The API follows semantic versioning (SemVer):</p>
+<h2 id="core-endpoints">Core Endpoints</h2>
+<p>See individual API documentation files for detailed endpoint specifications:</p>
 <ul>
-<li>Current version: <strong>v1.0.0</strong></li>
-<li>Breaking changes will increment major version</li>
-<li>New features increment minor version</li>
-<li>Bug fixes increment patch version</li>
+<li><a href="jobs-api.md">Jobs API</a> - Video generation job management</li>
+<li><a href="settings-api.md">Settings API</a> - Application settings</li>
+<li><a href="providers-api.md">Providers API</a> - Provider configuration and validation</li>
+<li><a href="ffmpeg-api.md">FFmpeg API</a> - FFmpeg status and capabilities</li>
+<li><a href="health-api.md">Health Checks</a> - Liveness and readiness probes</li>
+<li><a href="sse-events.md">SSE Events</a> - Server-Sent Events for real-time updates</li>
 </ul>
-<p>API v1 is the current stable version. When v2 is released, v1 will be maintained for at least 6 months.</p>
-<h2 id="sdk--client-libraries">SDK &amp; Client Libraries</h2>
-<h3 id="official-sdks">Official SDKs</h3>
+<h2 id="data-transfer-objects-dtos">Data Transfer Objects (DTOs)</h2>
+<p>All DTOs are defined in <code>Aura.Api/Models/ApiModels.V1/</code>:</p>
 <ul>
-<li><strong>C# / .NET</strong>: Use Aura.Core directly</li>
-<li><strong>TypeScript / JavaScript</strong>: Aura.Web provides client utilities</li>
+<li><strong>Dtos.cs</strong> - All request/response DTOs</li>
+<li><strong>Enums.cs</strong> - All enums (JobStatus, AspectRatio, etc.)</li>
+<li><strong>ProviderSelection.cs</strong> - Provider selection models</li>
 </ul>
-<h3 id="community-sdks">Community SDKs</h3>
+<p>Frontend TypeScript types are maintained in <code>Aura.Web/src/types/api-v1.ts</code> and should match backend DTOs.</p>
+<h2 id="quick-example">Quick Example</h2>
+<pre><code class="lang-typescript">// Create a video generation job
+const response = await fetch('http://localhost:5005/api/jobs', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    brief: {
+      topic: 'AI Technology',
+      audience: 'Students',
+      goal: 'Educate',
+      tone: 'Friendly'
+    }
+  })
+});
+
+const job = await response.json();
+
+// Subscribe to progress updates
+const eventSource = new EventSource(`http://localhost:5005/api/jobs/${job.id}/events`);
+eventSource.addEventListener('step-progress', (event) =&gt; {
+  console.log('Progress:', JSON.parse(event.data));
+});
+</code></pre>
+<h2 id="additional-documentation">Additional Documentation</h2>
 <ul>
-<li>Python SDK (coming soon)</li>
-<li>Go SDK (coming soon)</li>
-</ul>
-<h2 id="support">Support</h2>
-<p>For API questions and issues:</p>
-<ul>
-<li>Check <a href="../troubleshooting/Troubleshooting.html">Troubleshooting</a></li>
-<li>Search <a href="https://github.com/Saiyan9001/aura-video-studio/issues">GitHub Issues</a></li>
-<li>Review <a href="API_CONTRACT_V1.html">API Contract</a> for specifications</li>
-<li>Join <a href="https://github.com/Saiyan9001/aura-video-studio/discussions">GitHub Discussions</a></li>
+<li><a href="../development/SSE_IMPLEMENTATION_GUIDE.md">SSE Implementation Guide</a></li>
+<li><a href="../development/FRONTEND_API_INTEGRATION_GUIDE.html">Frontend API Integration</a></li>
+<li><a href="../development/ERROR_HANDLING_GUIDE.html">Error Handling Guide</a></li>
 </ul>
 <hr>
-<p><strong>API Version</strong>: 1.0.0<br>
-<strong>Last Updated</strong>: 2025-10-23</p>
+<p>Last updated: 2025-11-18</p>
 
 </article>
 

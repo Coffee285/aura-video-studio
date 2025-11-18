@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Video Studio - Configuration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Video Studio - Configuration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONFIGURATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-video-studio---configuration-guide">Aura Video Studio - Configuration Guide</h1>
+
+<p>This guide covers the new configuration options added as part of the service registration fixes.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#database-configuration">Database Configuration</a></li>
+<li><a href="#background-jobs-hangfire">Background Jobs (Hangfire)</a></li>
+<li><a href="#caching-redis">Caching (Redis)</a></li>
+<li><a href="#real-time-updates-signalr">Real-Time Updates (SignalR)</a></li>
+<li><a href="#provider-configuration">Provider Configuration</a></li>
+</ol>
+<hr>
+<h2 id="database-configuration">Database Configuration</h2>
+<h3 id="sqlite-default">SQLite (Default)</h3>
+<p>SQLite is the default database provider, suitable for development and small-scale deployments.</p>
+<pre><code class="lang-json">{
+  &quot;Database&quot;: {
+    &quot;Provider&quot;: &quot;SQLite&quot;,
+    &quot;SQLitePath&quot;: &quot;aura.db&quot;
+  }
+}
+</code></pre>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>Provider</code>: Must be &quot;SQLite&quot;</li>
+<li><code>SQLitePath</code>: Path to the database file (relative or absolute). Defaults to <code>aura.db</code> in the application directory.</li>
+</ul>
+<h3 id="postgresql-production">PostgreSQL (Production)</h3>
+<p>PostgreSQL is recommended for production environments with multiple users or high concurrency.</p>
+<pre><code class="lang-json">{
+  &quot;Database&quot;: {
+    &quot;Provider&quot;: &quot;PostgreSQL&quot;,
+    &quot;ConnectionString&quot;: &quot;Host=localhost;Port=5432;Database=aura;Username=aura_user;Password=your_password&quot;
+  },
+  &quot;ConnectionStrings&quot;: {
+    &quot;PostgreSQL&quot;: &quot;Host=localhost;Port=5432;Database=aura;Username=aura_user;Password=your_password&quot;
+  }
+}
+</code></pre>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>Provider</code>: Must be &quot;PostgreSQL&quot;</li>
+<li><code>ConnectionString</code>: Full PostgreSQL connection string (can use either location)</li>
+<li><code>ConnectionStrings:PostgreSQL</code>: Alternative location for connection string</li>
+</ul>
+<p><strong>Connection String Format:</strong></p>
+<pre><code>Host=&lt;hostname&gt;;Port=&lt;port&gt;;Database=&lt;dbname&gt;;Username=&lt;user&gt;;Password=&lt;password&gt;;Include Error Detail=true
+</code></pre>
+<p><strong>Setup Steps:</strong></p>
+<ol>
+<li>Install PostgreSQL on your server</li>
+<li>Create a database and user:
+<pre><code class="lang-sql">CREATE DATABASE aura;
+CREATE USER aura_user WITH ENCRYPTED PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE aura TO aura_user;
+</code></pre>
+</li>
+<li>Update <code>appsettings.json</code> with the connection string</li>
+<li>Run migrations (if applicable):
+<pre><code class="lang-bash">dotnet ef database update --project Aura.Api
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2 id="background-jobs-hangfire">Background Jobs (Hangfire)</h2>
+<p>Hangfire provides background job processing for long-running tasks like video generation, exports, and cleanup operations.</p>
+<h3 id="configuration">Configuration</h3>
+<pre><code class="lang-json">{
+  &quot;ConnectionStrings&quot;: {
+    &quot;Hangfire&quot;: &quot;Host=localhost;Database=aura_hangfire;Username=aura_user;Password=your_password&quot;
+  },
+  &quot;Hangfire&quot;: {
+    &quot;SQLitePath&quot;: &quot;hangfire.db&quot;
+  }
+}
+</code></pre>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>ConnectionStrings:Hangfire</code>: Connection string for Hangfire storage
+<ul>
+<li>If using PostgreSQL: Full PostgreSQL connection string</li>
+<li>If using SQLite: Leave empty (will use SQLitePath)</li>
+<li>If empty: Hangfire is disabled (graceful degradation)</li>
+</ul>
+</li>
+<li><code>Hangfire:SQLitePath</code>: Path to SQLite database file if not using PostgreSQL</li>
+</ul>
+<h3 id="disabling-hangfire">Disabling Hangfire</h3>
+<p>To disable Hangfire (synchronous processing only):</p>
+<pre><code class="lang-json">{
+  &quot;ConnectionStrings&quot;: {
+    &quot;Hangfire&quot;: &quot;&quot;
+  }
+}
+</code></pre>
+<h3 id="accessing-the-dashboard">Accessing the Dashboard</h3>
+<p>When Hangfire is enabled, the dashboard is available at:</p>
+<pre><code>http://localhost:5005/hangfire
+</code></pre>
+<p><strong>Note:</strong> The dashboard currently has no authentication. Implement authorization in production:</p>
+<pre><code class="lang-csharp">app.UseHangfireDashboard(&quot;/hangfire&quot;, new DashboardOptions
+{
+    Authorization = new[] { new YourAuthorizationFilter() }
+});
+</code></pre>
+<h3 id="job-queues">Job Queues</h3>
+<p>Hangfire is configured with multiple queues for different job types:</p>
+<ul>
+<li><code>default</code>: General background jobs</li>
+<li><code>video-generation</code>: Video generation tasks</li>
+<li><code>exports</code>: Export operations</li>
+<li><code>cleanup</code>: Cleanup and maintenance tasks</li>
+</ul>
+<hr>
+<h2 id="caching-redis">Caching (Redis)</h2>
+<p>Redis provides distributed caching for improved performance in multi-instance deployments.</p>
+<h3 id="in-memory-cache-default">In-Memory Cache (Default)</h3>
+<pre><code class="lang-json">{
+  &quot;Caching&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;UseRedis&quot;: false
+  }
+}
+</code></pre>
+<h3 id="redis-cache-production">Redis Cache (Production)</h3>
+<pre><code class="lang-json">{
+  &quot;Caching&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;UseRedis&quot;: true,
+    &quot;RedisConnection&quot;: &quot;localhost:6379,abortConnect=false,connectTimeout=5000&quot;,
+    &quot;DefaultTtlMinutes&quot;: 60
+  }
+}
+</code></pre>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>Enabled</code>: Enable/disable caching entirely</li>
+<li><code>UseRedis</code>: Use Redis instead of in-memory cache</li>
+<li><code>RedisConnection</code>: Redis connection string</li>
+<li><code>DefaultTtlMinutes</code>: Default cache expiration time</li>
+</ul>
+<p><strong>Redis Connection String Format:</strong></p>
+<pre><code>&lt;host&gt;:&lt;port&gt;,password=&lt;password&gt;,abortConnect=false,connectTimeout=5000,ssl=true
+</code></pre>
+<p><strong>Setup Steps:</strong></p>
+<ol>
+<li><p>Install Redis:</p>
+<pre><code class="lang-bash"># Ubuntu/Debian
+sudo apt-get install redis-server
+
+# macOS
+brew install redis
+
+# Windows (via Chocolatey)
+choco install redis-64
+</code></pre>
+</li>
+<li><p>Start Redis:</p>
+<pre><code class="lang-bash">redis-server
+</code></pre>
+</li>
+<li><p>Update configuration and restart the application</p>
+</li>
+</ol>
+<h3 id="disabling-cache">Disabling Cache</h3>
+<pre><code class="lang-json">{
+  &quot;Caching&quot;: {
+    &quot;Enabled&quot;: false
+  }
+}
+</code></pre>
+<hr>
+<h2 id="real-time-updates-signalr">Real-Time Updates (SignalR)</h2>
+<p>SignalR provides real-time bidirectional communication between server and clients.</p>
+<h3 id="configuration-1">Configuration</h3>
+<p>SignalR is automatically registered and requires no additional configuration. It uses the following default settings:</p>
+<ul>
+<li><strong>Keep-Alive Interval:</strong> 15 seconds</li>
+<li><strong>Client Timeout:</strong> 30 seconds</li>
+<li><strong>Max Message Size:</strong> 100 KB</li>
+</ul>
+<h3 id="creating-signalr-hubs">Creating SignalR Hubs</h3>
+<p>To add real-time functionality, create hub classes in <code>Aura.Api/Hubs/</code>:</p>
+<p><strong>Example: GenerationProgressHub.cs</strong></p>
+<pre><code class="lang-csharp">using Microsoft.AspNetCore.SignalR;
+
+namespace Aura.Api.Hubs;
+
+public class GenerationProgressHub : Hub
+{
+    public async Task SubscribeToJob(string jobId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, jobId);
+    }
+    
+    public async Task UnsubscribeFromJob(string jobId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, jobId);
+    }
+}
+</code></pre>
+<p><strong>Map the hub in Program.cs:</strong></p>
+<pre><code class="lang-csharp">app.MapHub&lt;GenerationProgressHub&gt;(&quot;/hubs/generation-progress&quot;);
+</code></pre>
+<h3 id="client-connection">Client Connection</h3>
+<p><strong>JavaScript Example:</strong></p>
+<pre><code class="lang-javascript">import * as signalR from &quot;@microsoft/signalr&quot;;
+
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl(&quot;/hubs/generation-progress&quot;)
+    .withAutomaticReconnect()
+    .build();
+
+await connection.start();
+
+// Subscribe to job updates
+await connection.invoke(&quot;SubscribeToJob&quot;, jobId);
+
+// Listen for progress updates
+connection.on(&quot;ProgressUpdate&quot;, (data) =&gt; {
+    console.log(&quot;Progress:&quot;, data);
+});
+</code></pre>
+<p><strong>Server Broadcasting:</strong></p>
+<pre><code class="lang-csharp">private readonly IHubContext&lt;GenerationProgressHub&gt; _hubContext;
+
+public async Task NotifyProgress(string jobId, int percent)
+{
+    await _hubContext.Clients.Group(jobId).SendAsync(&quot;ProgressUpdate&quot;, new
+    {
+        JobId = jobId,
+        Percent = percent,
+        Timestamp = DateTime.UtcNow
+    });
+}
+</code></pre>
+<hr>
+<h2 id="provider-configuration">Provider Configuration</h2>
+<h3 id="image-providers">Image Providers</h3>
+<p>Image providers are automatically selected based on configured API keys:</p>
+<p><strong>Priority Order:</strong> Stability AI &gt; Runway</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Stability&quot;: {
+      &quot;ApiKey&quot;: &quot;sk-...&quot;
+    },
+    &quot;Runway&quot;: {
+      &quot;ApiKey&quot;: &quot;...&quot;
+    }
+  }
+}
+</code></pre>
+<p>If no API keys are configured, the <code>IImageProvider</code> will return null, and image generation will be skipped.</p>
+<h3 id="stock-media-providers">Stock Media Providers</h3>
+<p>Stock media providers are automatically selected based on configured API keys:</p>
+<p><strong>Priority Order:</strong> Pexels &gt; Unsplash &gt; Pixabay &gt; Local</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Pexels&quot;: {
+      &quot;ApiKey&quot;: &quot;...&quot;
+    },
+    &quot;Unsplash&quot;: {
+      &quot;AccessKey&quot;: &quot;...&quot;
+    },
+    &quot;Pixabay&quot;: {
+      &quot;ApiKey&quot;: &quot;...&quot;
+    }
+  }
+}
+</code></pre>
+<p>If no API keys are configured, the <code>LocalStockProvider</code> is used (reads from <code>{AuraDataDirectory}/Stock</code>).</p>
+<h3 id="llm-providers">LLM Providers</h3>
+<p>LLM providers are registered via the existing <code>AddAuraProviders()</code> extension method:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;ApiKey&quot;: &quot;sk-...&quot;,
+      &quot;Organization&quot;: &quot;&quot;,
+      &quot;BaseUrl&quot;: &quot;https://api.openai.com/v1&quot;
+    },
+    &quot;Anthropic&quot;: {
+      &quot;ApiKey&quot;: &quot;sk-ant-...&quot;
+    },
+    &quot;Gemini&quot;: {
+      &quot;ApiKey&quot;: &quot;...&quot;
+    },
+    &quot;Ollama&quot;: {
+      &quot;BaseUrl&quot;: &quot;http://localhost:11434&quot;
+    }
+  }
+}
+</code></pre>
+<h3 id="tts-providers">TTS Providers</h3>
+<p>TTS providers are registered via the existing <code>AddAuraProviders()</code> extension method:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;ElevenLabs&quot;: {
+      &quot;ApiKey&quot;: &quot;...&quot;
+    },
+    &quot;Azure&quot;: {
+      &quot;SpeechKey&quot;: &quot;...&quot;,
+      &quot;SpeechRegion&quot;: &quot;eastus&quot;
+    },
+    &quot;PlayHT&quot;: {
+      &quot;ApiKey&quot;: &quot;...&quot;,
+      &quot;UserId&quot;: &quot;...&quot;
+    }
+  }
+}
+</code></pre>
+<h3 id="minimum-configuration-for-basic-ai-video-generation">Minimum Configuration for Basic AI Video Generation</h3>
+<p>The following components are strictly required for core video generation functionality:</p>
+<h4 id="required-components">Required Components:</h4>
+<ol>
+<li><p><strong>LLM Provider</strong> (at least one):</p>
+<ul>
+<li>RuleBased (always available, no setup required)</li>
+<li>OR Ollama (local, free)</li>
+<li>OR OpenAI/Anthropic/Gemini (cloud, requires API key)</li>
+</ul>
+</li>
+<li><p><strong>TTS Provider</strong> (at least one):</p>
+<ul>
+<li>Windows SAPI (always available on Windows, no setup required)</li>
+<li>OR Piper (local, free, cross-platform)</li>
+<li>OR ElevenLabs/PlayHT (cloud, requires API key)</li>
+</ul>
+</li>
+<li><p><strong>FFmpeg</strong> (required for video rendering):</p>
+<ul>
+<li>Available via system PATH</li>
+<li>OR configured path in Settings</li>
+<li>OR managed install via Aura</li>
+</ul>
+</li>
+</ol>
+<h4 id="optional-components">Optional Components:</h4>
+<ul>
+<li><strong>Image Providers</strong>: When missing, videos render with placeholder visuals
+<ul>
+<li>Stable Diffusion (local GPU)</li>
+<li>Stock providers (Pexels, Unsplash, Pixabay)</li>
+<li>Stability AI (cloud)</li>
+</ul>
+</li>
+</ul>
+<p><strong>Important</strong>: Videos will always render successfully even if no image providers are configured. The pipeline gracefully degrades to use placeholder visuals when images are unavailable.</p>
+<h4 id="example-minimal-free-only-configuration">Example: Minimal Free-Only Configuration</h4>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Llm&quot;: {
+      &quot;RuleBased&quot;: {
+        &quot;Enabled&quot;: true
+      }
+    },
+    &quot;Tts&quot;: {
+      &quot;WindowsSapi&quot;: {
+        &quot;Enabled&quot;: true
+      }
+    }
+  },
+  &quot;FFmpeg&quot;: {
+    &quot;Path&quot;: &quot;ffmpeg&quot;
+  }
+}
+</code></pre>
+<hr>
+<h2 id="environment-specific-configuration">Environment-Specific Configuration</h2>
+<p>You can override settings per environment using environment-specific files:</p>
+<ul>
+<li><code>appsettings.Development.json</code></li>
+<li><code>appsettings.Production.json</code></li>
+<li><code>appsettings.Staging.json</code></li>
+</ul>
+<p><strong>Example: appsettings.Production.json</strong></p>
+<pre><code class="lang-json">{
+  &quot;Database&quot;: {
+    &quot;Provider&quot;: &quot;PostgreSQL&quot;
+  },
+  &quot;Caching&quot;: {
+    &quot;UseRedis&quot;: true,
+    &quot;RedisConnection&quot;: &quot;prod-redis.example.com:6379,password=...,ssl=true&quot;
+  },
+  &quot;Monitoring&quot;: {
+    &quot;EnableApplicationInsights&quot;: true,
+    &quot;ApplicationInsightsConnectionString&quot;: &quot;InstrumentationKey=...&quot;
+  }
+}
+</code></pre>
+<hr>
+<h2 id="environment-variables">Environment Variables</h2>
+<p>Configuration can also be set via environment variables:</p>
+<pre><code class="lang-bash">export Database__Provider=&quot;PostgreSQL&quot;
+export ConnectionStrings__PostgreSQL=&quot;Host=localhost;Database=aura;...&quot;
+export Caching__UseRedis=&quot;true&quot;
+export ConnectionStrings__Hangfire=&quot;Host=localhost;Database=aura_hangfire;...&quot;
+</code></pre>
+<p><strong>Format:</strong> Use double underscores (<code>__</code>) to represent nested configuration keys.</p>
+<hr>
+<h2 id="verification">Verification</h2>
+<h3 id="check-active-configuration">Check Active Configuration</h3>
+<p>View active configuration at startup in the logs:</p>
+<pre><code>[Information] Using PostgreSQL database at localhost
+[Information] Hangfire background job processing enabled
+[Information] Redis distributed cache configured
+[Information] SignalR hubs configured
+</code></pre>
+<h3 id="health-checks">Health Checks</h3>
+<p>Verify services via health check endpoints:</p>
+<pre><code class="lang-bash"># Full health check
+curl http://localhost:5005/health | jq
+
+# Ready check (for k8s readiness probes)
+curl http://localhost:5005/health/ready | jq
+
+# Live check (for k8s liveness probes)
+curl http://localhost:5005/health/live | jq
+</code></pre>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="database-connection-errors">Database Connection Errors</h3>
+<p><strong>PostgreSQL:</strong></p>
+<pre><code>Error: 3D000: database &quot;aura&quot; does not exist
+</code></pre>
+<p>→ Create the database: <code>CREATE DATABASE aura;</code></p>
+<p><strong>SQLite:</strong></p>
+<pre><code>Error: SQLite Error 14: 'unable to open database file'
+</code></pre>
+<p>→ Check file permissions and directory existence</p>
+<h3 id="hangfire-errors">Hangfire Errors</h3>
+<pre><code>Warning: Failed to configure Hangfire, background jobs will be disabled
+</code></pre>
+<p>→ Check Hangfire connection string and database permissions</p>
+<h3 id="redis-errors">Redis Errors</h3>
+<pre><code>Warning: Failed to configure Redis, falling back to in-memory cache
+</code></pre>
+<p>→ Verify Redis is running: <code>redis-cli ping</code> should return <code>PONG</code></p>
+<h3 id="signalr-connection-errors">SignalR Connection Errors</h3>
+<pre><code>Error: Failed to start connection: Error: WebSocket failed to connect
+</code></pre>
+<p>→ Check CORS configuration and ensure WebSocket support is enabled</p>
+<hr>
+<h2 id="production-checklist">Production Checklist</h2>
+<ul>
+<li>[ ] Switch to PostgreSQL for database</li>
+<li>[ ] Configure Redis for caching</li>
+<li>[ ] Enable Hangfire with PostgreSQL storage</li>
+<li>[ ] Configure Application Insights monitoring</li>
+<li>[ ] Set up proper Hangfire dashboard authorization</li>
+<li>[ ] Enable HTTPS for production</li>
+<li>[ ] Configure rate limiting appropriately</li>
+<li>[ ] Set up backup strategy for database</li>
+<li>[ ] Configure log retention policies</li>
+<li>[ ] Test SignalR through load balancer/reverse proxy</li>
+</ul>
+<hr>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/">ASP.NET Core Configuration</a></li>
+<li><a href="https://www.npgsql.org/efcore/">Entity Framework Core - PostgreSQL</a></li>
+<li><a href="https://docs.hangfire.io/">Hangfire Documentation</a></li>
+<li><a href="https://redis.io/documentation">Redis Documentation</a></li>
+<li><a href="https://docs.microsoft.com/en-us/aspnet/core/signalr/">SignalR Documentation</a></li>
+</ul>
+<hr>
+<p><em>Last Updated: 2025-11-10</em></p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONFIGURATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

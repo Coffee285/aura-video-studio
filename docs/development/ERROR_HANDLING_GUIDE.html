@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Comprehensive Error Handling and Recovery Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Comprehensive Error Handling and Recovery Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/ERROR_HANDLING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="comprehensive-error-handling-and-recovery-guide">Comprehensive Error Handling and Recovery Guide</h1>
+
+<p><strong>PR #7: Comprehensive Error Handling and Recovery</strong><br>
+<strong>Priority:</strong> P2 - RELIABILITY<br>
+<strong>Status:</strong> ✅ COMPLETED<br>
+<strong>Implementation Date:</strong> 2025-11-10</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#global-error-handling">Global Error Handling</a></li>
+<li><a href="#user-friendly-error-messages">User-Friendly Error Messages</a></li>
+<li><a href="#provider-error-handling">Provider Error Handling</a></li>
+<li><a href="#recovery-mechanisms">Recovery Mechanisms</a></li>
+<li><a href="#error-prevention">Error Prevention</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#best-practices">Best Practices</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+<h2 id="overview">Overview</h2>
+<p>This guide documents the comprehensive error handling and recovery system implemented in Aura Video Studio. The system ensures that:</p>
+<ul>
+<li>✅ No unhandled exceptions reach users</li>
+<li>✅ All errors have recovery options</li>
+<li>✅ Error messages are helpful and actionable</li>
+<li>✅ System recovers from crashes automatically</li>
+<li>✅ Users don't lose work</li>
+</ul>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend-error-handling-stack">Backend Error Handling Stack</h3>
+<pre><code>┌─────────────────────────────────────┐
+│   ExceptionHandlingMiddleware       │  ← Catches all exceptions
+├─────────────────────────────────────┤
+│   GlobalExceptionHandler            │  ← IExceptionHandler impl
+├─────────────────────────────────────┤
+│   ErrorMetricsCollector              │  ← Tracks error patterns
+├─────────────────────────────────────┤
+│   ErrorDocumentation                 │  ← Maps to help docs
+├─────────────────────────────────────┤
+│   AuraException Hierarchy            │  ← Typed exceptions
+└─────────────────────────────────────┘
+</code></pre>
+<h3 id="frontend-error-handling-stack">Frontend Error Handling Stack</h3>
+<pre><code>┌─────────────────────────────────────┐
+│   GlobalErrorBoundary                │  ← App-level boundary
+├─────────────────────────────────────┤
+│   RouteErrorBoundary                 │  ← Per-route boundaries
+├─────────────────────────────────────┤
+│   ComponentErrorBoundary             │  ← Component-level
+├─────────────────────────────────────┤
+│   CrashRecoveryService               │  ← Detects crashes
+├─────────────────────────────────────┤
+│   ApiErrorDisplay                    │  ← API error UI
+└─────────────────────────────────────┘
+</code></pre>
+<h2 id="global-error-handling">Global Error Handling</h2>
+<h3 id="backend-exception-handler">Backend Exception Handler</h3>
+<p><strong>Location:</strong> <code>Aura.Api/Middleware/ExceptionHandlingMiddleware.cs</code></p>
+<h4 id="features">Features:</h4>
+<ul>
+<li>Catches all unhandled exceptions</li>
+<li>Maps exceptions to appropriate HTTP status codes</li>
+<li>Adds correlation IDs for tracking</li>
+<li>Integrates with ErrorMetricsCollector</li>
+<li>Returns standardized JSON responses</li>
+</ul>
+<h4 id="example-response">Example Response:</h4>
+<pre><code class="lang-json">{
+  &quot;errorCode&quot;: &quot;E100-401&quot;,
+  &quot;errorTitle&quot;: &quot;LLM Authentication Failed&quot;,
+  &quot;message&quot;: &quot;The API key for your language model provider is invalid or expired&quot;,
+  &quot;technicalDetails&quot;: &quot;OpenAI API returned 401 Unauthorized&quot;,
+  &quot;suggestedActions&quot;: [
+    &quot;Check your API key in Settings → Providers&quot;,
+    &quot;Verify the key hasn't expired&quot;,
+    &quot;Try regenerating the key from OpenAI dashboard&quot;
+  ],
+  &quot;learnMoreUrl&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/provider-errors#authentication&quot;,
+  &quot;correlationId&quot;: &quot;a1b2c3d4-e5f6-7890&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-10T12:34:56Z&quot;,
+  &quot;isTransient&quot;: false
+}
+</code></pre>
+<h3 id="frontend-error-boundaries">Frontend Error Boundaries</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/ErrorBoundary/</code></p>
+<h4 id="component-hierarchy">Component Hierarchy:</h4>
+<ol>
+<li><p><strong>GlobalErrorBoundary</strong> - Wraps entire app</p>
+<ul>
+<li>Shows full-page error screen</li>
+<li>Offers reload, go home, report options</li>
+<li>Integrates with crash recovery</li>
+</ul>
+</li>
+<li><p><strong>RouteErrorBoundary</strong> - Wraps individual routes</p>
+<ul>
+<li>Shows route-specific error</li>
+<li>Offers retry with parent callback</li>
+<li>Doesn't crash entire app</li>
+</ul>
+</li>
+<li><p><strong>ComponentErrorBoundary</strong> - Wraps critical components</p>
+<ul>
+<li>Shows component-specific fallback</li>
+<li>Allows rest of app to function</li>
+<li>Logs error with component name</li>
+</ul>
+</li>
+</ol>
+<h4 id="usage-example">Usage Example:</h4>
+<pre><code class="lang-tsx">import { RouteErrorBoundary } from './components/ErrorBoundary';
+
+function MyPage() {
+  const fetchData = async () =&gt; {
+    // Data fetching logic
+  };
+
+  return (
+    &lt;RouteErrorBoundary onRetry={fetchData}&gt;
+      &lt;MyPageContent /&gt;
+    &lt;/RouteErrorBoundary&gt;
+  );
+}
+</code></pre>
+<h2 id="user-friendly-error-messages">User-Friendly Error Messages</h2>
+<h3 id="error-code-system">Error Code System</h3>
+<p>All errors have structured error codes for easy reference:</p>
+<table>
+<thead>
+<tr>
+<th>Code Range</th>
+<th>Category</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>E001-E099</td>
+<td>Validation Errors</td>
+<td>E001: Validation Error</td>
+</tr>
+<tr>
+<td>E100-E199</td>
+<td>LLM Provider Errors</td>
+<td>E100-401: Auth Failed</td>
+</tr>
+<tr>
+<td>E200-E299</td>
+<td>TTS Provider Errors</td>
+<td>E200-429: Rate Limited</td>
+</tr>
+<tr>
+<td>E400-E499</td>
+<td>Visual Provider Errors</td>
+<td>E400: Image Gen Failed</td>
+</tr>
+<tr>
+<td>E500-E599</td>
+<td>Rendering Errors</td>
+<td>E500: FFmpeg Failed</td>
+</tr>
+<tr>
+<td>E900-E999</td>
+<td>System Errors</td>
+<td>E999: Unexpected Error</td>
+</tr>
+</tbody>
+</table>
+<h3 id="error-documentation-links">Error Documentation Links</h3>
+<p><strong>Location:</strong> <code>Aura.Core/Errors/ErrorDocumentation.cs</code></p>
+<p>Every error code maps to a documentation URL with:</p>
+<ul>
+<li><strong>Title</strong> - Short, descriptive name</li>
+<li><strong>Description</strong> - What the error means</li>
+<li><strong>URL</strong> - Link to detailed troubleshooting guide</li>
+</ul>
+<h4 id="adding-new-error-documentation">Adding New Error Documentation:</h4>
+<pre><code class="lang-csharp">[&quot;MY_ERROR_CODE&quot;] = new(
+    &quot;User-Friendly Title&quot;,
+    &quot;Clear description of what this error means&quot;,
+    &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/my-error&quot;
+)
+</code></pre>
+<h3 id="api-error-display-component">API Error Display Component</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/ErrorBoundary/ApiErrorDisplay.tsx</code></p>
+<p>Displays API errors with:</p>
+<ul>
+<li>✅ Error code and title</li>
+<li>✅ User-friendly message</li>
+<li>✅ Suggested actions (bulleted list)</li>
+<li>✅ &quot;Learn More&quot; link to documentation</li>
+<li>✅ Optional retry button for transient errors</li>
+<li>✅ Technical details (collapsible for developers)</li>
+</ul>
+<h4 id="usage">Usage:</h4>
+<pre><code class="lang-tsx">import { ApiErrorDisplay, parseApiError } from './components/ErrorBoundary';
+
+function MyComponent() {
+  const [error, setError] = useState&lt;ApiError | null&gt;(null);
+
+  const handleSubmit = async () =&gt; {
+    try {
+      const response = await fetch('/api/generate');
+      if (!response.ok) {
+        const apiError = await parseApiError(response);
+        setError(apiError);
+      }
+    } catch (err) {
+      // Handle error
+    }
+  };
+
+  if (error) {
+    return (
+      &lt;ApiErrorDisplay
+        error={error}
+        onRetry={handleSubmit}
+        showTechnicalDetails={true}
+      /&gt;
+    );
+  }
+
+  return &lt;MyForm onSubmit={handleSubmit} /&gt;;
+}
+</code></pre>
+<h2 id="provider-error-handling">Provider Error Handling</h2>
+<h3 id="api-key-validation">API Key Validation</h3>
+<p><strong>Location:</strong> <code>Aura.Core/Validation/ApiKeyValidator.cs</code></p>
+<p>Validates API keys before making requests:</p>
+<pre><code class="lang-csharp">var result = ApiKeyValidator.ValidateKey(&quot;OPENAI_KEY&quot;, apiKey);
+
+if (!result.IsSuccess)
+{
+    throw ProviderException.MissingApiKey(&quot;OpenAI&quot;, ProviderType.LLM, &quot;OPENAI_KEY&quot;);
+}
+</code></pre>
+<h4 id="features-1">Features:</h4>
+<ul>
+<li>Format validation (e.g., OpenAI keys start with <code>sk-</code>)</li>
+<li>Whitespace detection</li>
+<li>Common mistake detection (Bearer prefix, etc.)</li>
+<li>Key masking for safe display</li>
+</ul>
+<h3 id="rate-limiting-handling">Rate Limiting Handling</h3>
+<p><strong>Location:</strong> <code>Aura.Core/Errors/ProviderException.cs</code></p>
+<p>Special handling for rate limit errors:</p>
+<pre><code class="lang-csharp">throw ProviderException.RateLimited(
+    providerName,
+    providerType,
+    retryAfterSeconds: 60,
+    correlationId
+);
+</code></pre>
+<p>Returns HTTP 429 with:</p>
+<ul>
+<li>Clear &quot;rate limit exceeded&quot; message</li>
+<li>Retry-after time if available</li>
+<li>Suggestions to upgrade plan or use different provider</li>
+</ul>
+<h3 id="automatic-fallback">Automatic Fallback</h3>
+<p><strong>Location:</strong> <code>Aura.Core/Services/Providers/ProviderFallbackService.cs</code></p>
+<p>Automatically tries alternative providers when primary fails:</p>
+<pre><code class="lang-csharp">var result = await _fallbackService.ExecuteWithLlmFallbackAsync(
+    async (provider) =&gt; await provider.GenerateTextAsync(prompt),
+    providers,
+    cancellationToken
+);
+</code></pre>
+<h4 id="fallback-chain">Fallback Chain:</h4>
+<ol>
+<li>Primary provider (e.g., OpenAI)</li>
+<li>Secondary provider (e.g., Anthropic)</li>
+<li>Tertiary provider (e.g., Google Gemini)</li>
+<li>Local provider (e.g., Ollama)</li>
+<li>Rule-based fallback (templates)</li>
+</ol>
+<h3 id="circuit-breaker-integration">Circuit Breaker Integration</h3>
+<p>Providers with repeated failures are automatically skipped via circuit breaker:</p>
+<pre><code class="lang-csharp">var status = _circuitBreakerService.GetStatus(providerName);
+if (status.State == CircuitState.Open)
+{
+    // Skip this provider, try next in chain
+    continue;
+}
+</code></pre>
+<h2 id="recovery-mechanisms">Recovery Mechanisms</h2>
+<h3 id="crash-recovery-service">Crash Recovery Service</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/services/crashRecoveryService.ts</code></p>
+<p>Detects crashes on application startup:</p>
+<pre><code class="lang-typescript">// In App.tsx
+useEffect(() =&gt; {
+  const state = crashRecoveryService.initialize();
+  
+  if (crashRecoveryService.shouldShowRecoveryScreen()) {
+    setShowRecoveryScreen(true);
+  }
+
+  // Mark clean shutdown on beforeunload
+  const handleBeforeUnload = () =&gt; {
+    crashRecoveryService.markCleanShutdown();
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  return () =&gt; {
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  };
+}, []);
+</code></pre>
+<h4 id="how-it-works">How It Works:</h4>
+<ol>
+<li>Sets <code>sessionStorage</code> flag when app starts</li>
+<li>On next startup, checks if flag is still set (indicating crash)</li>
+<li>Tracks consecutive crashes</li>
+<li>Shows recovery screen after 3+ consecutive crashes</li>
+</ol>
+<h3 id="crash-recovery-screen">Crash Recovery Screen</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/ErrorBoundary/CrashRecoveryScreen.tsx</code></p>
+<p>Displayed when multiple crashes detected:</p>
+<h4 id="recovery-options">Recovery Options:</h4>
+<ul>
+<li><strong>Continue in Safe Mode</strong> - Reset crash counter, go to home</li>
+<li><strong>Restore Auto-save</strong> - Recover last saved state</li>
+<li><strong>Clear All Data</strong> - Nuclear option for corrupted data</li>
+</ul>
+<h3 id="auto-save-integration">Auto-Save Integration</h3>
+<p>The error fallback components integrate with existing auto-save service:</p>
+<pre><code class="lang-tsx">const hasAutosave = autoSaveService.hasRecoverableData();
+
+{hasAutosave &amp;&amp; (
+  &lt;Button onClick={handleRestoreAutosave}&gt;
+    Restore Auto-save
+  &lt;/Button&gt;
+)}
+</code></pre>
+<h3 id="undoredo-system">Undo/Redo System</h3>
+<p>Already implemented (see <code>UNDO_REDO_GUIDE.md</code>):</p>
+<ul>
+<li>Global undo/redo with Ctrl+Z / Ctrl+Y</li>
+<li>Command history with 100 actions</li>
+<li>Persisted across sessions (Phase 2)</li>
+</ul>
+<h2 id="error-prevention">Error Prevention</h2>
+<h3 id="input-validation">Input Validation</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/utils/inputValidation.ts</code></p>
+<p>Validates user input before submission:</p>
+<pre><code class="lang-typescript">import { validateVideoTitle, validateApiKey } from './utils/inputValidation';
+
+const titleValidation = validateVideoTitle(title);
+if (!titleValidation.isValid) {
+  setError(titleValidation.error);
+  return;
+}
+
+if (titleValidation.warning) {
+  showWarning(titleValidation.warning);
+}
+</code></pre>
+<h4 id="available-validators">Available Validators:</h4>
+<ul>
+<li><code>validateVideoTitle</code> - Checks length, invalid characters</li>
+<li><code>validateVideoDescription</code> - Min/max length checks</li>
+<li><code>validateApiKey</code> - Format and common mistakes</li>
+<li><code>validateDuration</code> - Range and warning for long videos</li>
+<li><code>validateFileSize</code> - Max size with warnings</li>
+<li><code>validateImageResolution</code> - Dimension limits</li>
+<li><code>validateUrl</code> - Valid HTTP/HTTPS URLs</li>
+<li><code>validateEmail</code> - Email format</li>
+<li><code>validateNumber</code> - Range validation</li>
+<li><code>validateArrayLength</code> - Min/max items</li>
+</ul>
+<h3 id="confirmation-dialogs">Confirmation Dialogs</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/Common/ConfirmationDialog.tsx</code></p>
+<p>Confirms risky operations:</p>
+<pre><code class="lang-tsx">import { ConfirmationDialog } from './components/Common/ConfirmationDialog';
+
+function DangerousOperation() {
+  const [open, setOpen] = useState(false);
+
+  const handleDelete = async () =&gt; {
+    // Perform delete
+  };
+
+  return (
+    &lt;ConfirmationDialog
+      trigger={&lt;Button&gt;Delete All Projects&lt;/Button&gt;}
+      title=&quot;Delete All Projects?&quot;
+      message=&quot;This action cannot be undone.&quot;
+      consequences={[
+        &quot;All projects will be permanently deleted&quot;,
+        &quot;Project history will be lost&quot;,
+        &quot;This cannot be recovered&quot;
+      ]}
+      severity=&quot;danger&quot;
+      confirmText=&quot;Delete All&quot;
+      onConfirm={handleDelete}
+      open={open}
+      onOpenChange={setOpen}
+    /&gt;
+  );
+}
+</code></pre>
+<h4 id="severity-levels">Severity Levels:</h4>
+<ul>
+<li><strong>danger</strong> - Destructive, irreversible actions</li>
+<li><strong>warning</strong> - Risky actions with consequences</li>
+<li><strong>info</strong> - Informational confirmations</li>
+</ul>
+<h3 id="system-requirements-checker">System Requirements Checker</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/Common/SystemRequirementsChecker.tsx</code></p>
+<p>Validates system capabilities on startup:</p>
+<pre><code class="lang-tsx">import { SystemRequirementsChecker } from './components/Common/SystemRequirementsChecker';
+
+function SetupWizard() {
+  const [showChecker, setShowChecker] = useState(true);
+
+  if (showChecker) {
+    return (
+      &lt;SystemRequirementsChecker
+        onContinue={() =&gt; setShowChecker(false)}
+      /&gt;
+    );
+  }
+
+  return &lt;MainApp /&gt;;
+}
+</code></pre>
+<h4 id="checks">Checks:</h4>
+<ul>
+<li>✅ Browser support (fetch, localStorage, Promise)</li>
+<li>✅ Local storage availability</li>
+<li>✅ Memory usage (if available)</li>
+<li>✅ Network connectivity</li>
+<li>✅ WebGL support</li>
+<li>✅ Web Workers support</li>
+<li>✅ IndexedDB availability</li>
+<li>✅ Screen resolution</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<h3 id="backend-tests">Backend Tests</h3>
+<p><strong>Location:</strong> <code>Aura.Tests/Errors/</code> and <code>Aura.Tests/Validation/</code></p>
+<h4 id="test-coverage">Test Coverage:</h4>
+<ul>
+<li><code>ErrorDocumentationTests</code> - 8 tests</li>
+<li><code>ApiKeyValidatorTests</code> - 10 tests</li>
+<li>Existing resilience tests - 49 tests (from PR #8)</li>
+</ul>
+<h4 id="running-tests">Running Tests:</h4>
+<pre><code class="lang-bash"># Run all error handling tests
+dotnet test --filter &quot;FullyQualifiedName~Aura.Tests.Errors&quot;
+
+# Run validation tests
+dotnet test --filter &quot;FullyQualifiedName~Aura.Tests.Validation&quot;
+
+# Run with coverage
+dotnet test /p:CollectCoverage=true
+</code></pre>
+<h3 id="frontend-tests">Frontend Tests</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/**/__tests__/</code></p>
+<h4 id="test-coverage-1">Test Coverage:</h4>
+<ul>
+<li><code>crashRecoveryService.test.ts</code> - 9 tests</li>
+<li><code>inputValidation.test.ts</code> - 14 tests</li>
+<li>Existing error boundary tests</li>
+</ul>
+<h4 id="running-tests-1">Running Tests:</h4>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Run all tests
+npm test
+
+# Run specific test file
+npm test crashRecoveryService.test
+
+# Run with coverage
+npm test -- --coverage
+</code></pre>
+<h3 id="e2e-error-scenarios">E2E Error Scenarios</h3>
+<p>Consider adding E2E tests for:</p>
+<ul>
+<li>Invalid API key error flow</li>
+<li>Rate limit handling with retry</li>
+<li>Crash recovery after simulated crash</li>
+<li>Form validation preventing submission</li>
+<li>Confirmation dialog workflow</li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-always-use-typed-exceptions">1. Always Use Typed Exceptions</h3>
+<p>❌ Don't:</p>
+<pre><code class="lang-csharp">throw new Exception(&quot;API key not found&quot;);
+</code></pre>
+<p>✅ Do:</p>
+<pre><code class="lang-csharp">throw ProviderException.MissingApiKey(&quot;OpenAI&quot;, ProviderType.LLM, &quot;OPENAI_KEY&quot;, correlationId);
+</code></pre>
+<h3 id="2-provide-actionable-error-messages">2. Provide Actionable Error Messages</h3>
+<p>❌ Don't:</p>
+<pre><code>Error: Failed to generate video
+</code></pre>
+<p>✅ Do:</p>
+<pre><code>Failed to generate video: OpenAI API key is invalid
+
+What you can do:
+- Check your API key in Settings → Providers
+- Verify the key hasn't expired
+- Try regenerating the key from OpenAI dashboard
+
+Learn more: https://github.com/Coffee285/aura-video-studio/blob/main/docs/setup/api-keys.md
+</code></pre>
+<h3 id="3-validate-early">3. Validate Early</h3>
+<p>❌ Don't wait for API to reject:</p>
+<pre><code class="lang-typescript">// Let API validate
+await fetch('/api/generate', { body: JSON.stringify({ title }) });
+</code></pre>
+<p>✅ Do validate client-side first:</p>
+<pre><code class="lang-typescript">const validation = validateVideoTitle(title);
+if (!validation.isValid) {
+  showError(validation.error);
+  return;
+}
+
+await fetch('/api/generate', { body: JSON.stringify({ title }) });
+</code></pre>
+<h3 id="4-use-error-boundaries-strategically">4. Use Error Boundaries Strategically</h3>
+<p>❌ Don't wrap entire app in one boundary:</p>
+<pre><code class="lang-tsx">&lt;ErrorBoundary&gt;
+  &lt;EntireApp /&gt;
+&lt;/ErrorBoundary&gt;
+</code></pre>
+<p>✅ Do use hierarchical boundaries:</p>
+<pre><code class="lang-tsx">&lt;GlobalErrorBoundary&gt;
+  &lt;App&gt;
+    &lt;RouteErrorBoundary&gt;
+      &lt;VideoEditorPage /&gt;
+    &lt;/RouteErrorBoundary&gt;
+    &lt;RouteErrorBoundary&gt;
+      &lt;SettingsPage /&gt;
+    &lt;/RouteErrorBoundary&gt;
+  &lt;/App&gt;
+&lt;/GlobalErrorBoundary&gt;
+</code></pre>
+<h3 id="5-log-errors-with-context">5. Log Errors with Context</h3>
+<p>❌ Don't log bare errors:</p>
+<pre><code class="lang-typescript">console.error(error);
+</code></pre>
+<p>✅ Do log with context:</p>
+<pre><code class="lang-typescript">loggingService.error(
+  'Failed to save project',
+  error,
+  'ProjectEditor',
+  'handleSave',
+  {
+    projectId,
+    hasUnsavedChanges,
+    autoSaveEnabled
+  }
+);
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="error-not-showing-learn-more-link">Error Not Showing &quot;Learn More&quot; Link</h3>
+<p><strong>Cause:</strong> Error code not in ErrorDocumentation map</p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Add error code to <code>ErrorDocumentation.cs</code></li>
+<li>Or ensure error uses existing error code</li>
+<li>Fallback URL will be used if specific doc not found</li>
+</ol>
+<h3 id="crash-recovery-not-detecting-crashes">Crash Recovery Not Detecting Crashes</h3>
+<p><strong>Possible Causes:</strong></p>
+<ul>
+<li>User closed tab normally (beforeunload fired)</li>
+<li>Browser cleared sessionStorage</li>
+<li>Service not initialized in App.tsx</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-typescript">// Ensure crash recovery is initialized early
+useEffect(() =&gt; {
+  crashRecoveryService.initialize();
+}, []);
+</code></pre>
+<h3 id="api-errors-not-displaying-nicely">API Errors Not Displaying Nicely</h3>
+<p><strong>Cause:</strong> Error response not following standard format</p>
+<p><strong>Solution:</strong> Ensure backend returns:</p>
+<pre><code class="lang-json">{
+  &quot;errorCode&quot;: &quot;E100&quot;,
+  &quot;message&quot;: &quot;User-friendly message&quot;,
+  &quot;suggestedActions&quot;: [&quot;Action 1&quot;, &quot;Action 2&quot;],
+  &quot;learnMoreUrl&quot;: &quot;https://...&quot;,
+  &quot;isTransient&quot;: false
+}
+</code></pre>
+<h3 id="validation-not-preventing-submission">Validation Not Preventing Submission</h3>
+<p><strong>Cause:</strong> Validation not checked before submission</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-typescript">const handleSubmit = () =&gt; {
+  const validation = validateInput(input);
+  if (!validation.isValid) {
+    setError(validation.error);
+    return; // Don't proceed
+  }
+  
+  // Proceed with submission
+};
+</code></pre>
+<h2 id="acceptance-criteria-status">Acceptance Criteria Status</h2>
+<p>✅ <strong>No unhandled exceptions reach users</strong></p>
+<ul>
+<li>Global exception handler catches all backend exceptions</li>
+<li>Error boundaries catch all frontend errors</li>
+<li>Crash recovery handles app-level failures</li>
+</ul>
+<p>✅ <strong>All errors have recovery options</strong></p>
+<ul>
+<li>Transient errors have retry buttons</li>
+<li>Crash recovery provides multiple recovery paths</li>
+<li>Auto-save integration for work recovery</li>
+<li>Confirmation dialogs prevent accidental actions</li>
+</ul>
+<p>✅ <strong>Error messages are helpful</strong></p>
+<ul>
+<li>All errors have error codes for reference</li>
+<li>User-friendly messages explain what happened</li>
+<li>Suggested actions tell users what to do</li>
+<li>&quot;Learn More&quot; links provide detailed help</li>
+</ul>
+<p>✅ <strong>System recovers from crashes</strong></p>
+<ul>
+<li>Crash detection on startup</li>
+<li>Recovery screen after repeated crashes</li>
+<li>Auto-save restoration</li>
+<li>Reset crash counter on successful recovery</li>
+</ul>
+<p>✅ <strong>Users don't lose work</strong></p>
+<ul>
+<li>Auto-save service (already implemented)</li>
+<li>Undo/redo system (already implemented)</li>
+<li>Crash recovery with auto-save integration</li>
+<li>Warning dialogs before destructive actions</li>
+</ul>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="./ERROR_RECOVERY_RESILIENCE_IMPLEMENTATION.md">ERROR_RECOVERY_RESILIENCE_IMPLEMENTATION.md</a> - PR #8 Resilience patterns</li>
+<li>UNDO_REDO_GUIDE.md - Undo/redo system</li>
+<li><a href="./DEVELOPMENT.md">DEVELOPMENT.md</a> - Development guidelines</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<h3 id="phase-2-optional">Phase 2 (Optional):</h3>
+<ol>
+<li><strong>Server-Side Error Aggregation</strong> - Track error patterns across users</li>
+<li><strong>Smart Error Recovery</strong> - ML-based error recovery suggestions</li>
+<li><strong>Automated Bug Reports</strong> - One-click error reporting to GitHub</li>
+<li><strong>Error Analytics Dashboard</strong> - Admin view of error trends</li>
+<li><strong>Predictive Error Prevention</strong> - Warn before errors occur based on patterns</li>
+</ol>
+<h2 id="summary">Summary</h2>
+<p>This implementation provides comprehensive error handling and recovery:</p>
+<p>✅ Global error handling on backend and frontend<br>
+✅ User-friendly error messages with documentation links<br>
+✅ Provider-specific error handling with fallbacks<br>
+✅ Crash recovery with auto-save integration<br>
+✅ Input validation and confirmation dialogs<br>
+✅ Comprehensive test coverage<br>
+✅ Complete documentation</p>
+<p>The system ensures users have a reliable, frustration-free experience even when errors occur.</p>
+<hr>
+<p><strong>Last Updated:</strong> 2025-11-10<br>
+<strong>Implemented By:</strong> PR #7 - Comprehensive Error Handling and Recovery</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/ERROR_HANDLING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

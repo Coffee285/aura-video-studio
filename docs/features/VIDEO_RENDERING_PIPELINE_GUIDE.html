@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Video Rendering Pipeline with Hardware Detection - Usage Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Video Rendering Pipeline with Hardware Detection - Usage Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/VIDEO_RENDERING_PIPELINE_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="video-rendering-pipeline-with-hardware-detection---usage-guide">Video Rendering Pipeline with Hardware Detection - Usage Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The video rendering pipeline now supports multiple rendering backends with automatic hardware detection and fallback capabilities. This guide explains how to use the new rendering provider system.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="rendering-providers">Rendering Providers</h3>
+<p>Five rendering providers are available, each with different capabilities and priorities:</p>
+<ol>
+<li><p><strong>FFmpegProvider</strong> (Priority: 100) - Auto-detecting primary renderer</p>
+<ul>
+<li>Automatically detects and uses best available hardware acceleration</li>
+<li>Falls back to software encoding if no hardware available</li>
+</ul>
+</li>
+<li><p><strong>FFmpegNvidiaProvider</strong> (Priority: 90) - NVIDIA NVENC acceleration</p>
+<ul>
+<li>Uses NVIDIA GPU hardware encoding (h264_nvenc, hevc_nvenc)</li>
+<li>Requires NVIDIA GPU with NVENC support (GTX 10 series or newer recommended)</li>
+</ul>
+</li>
+<li><p><strong>FFmpegAmdProvider</strong> (Priority: 80) - AMD VCE acceleration</p>
+<ul>
+<li>Uses AMD GPU hardware encoding (h264_amf, hevc_amf)</li>
+<li>Requires AMD GPU with VCE support (RX 400 series or newer recommended)</li>
+</ul>
+</li>
+<li><p><strong>FFmpegIntelProvider</strong> (Priority: 70) - Intel QuickSync acceleration</p>
+<ul>
+<li>Uses Intel QuickSync hardware encoding (h264_qsv, hevc_qsv)</li>
+<li>Requires Intel CPU with integrated graphics (6th gen or newer recommended)</li>
+</ul>
+</li>
+<li><p><strong>BasicFFmpegProvider</strong> (Priority: 10) - Software-only fallback</p>
+<ul>
+<li>Pure CPU encoding (libx264, libx265)</li>
+<li>Works on any system with FFmpeg</li>
+<li>Slowest but most compatible</li>
+</ul>
+</li>
+</ol>
+<h3 id="renderingproviderselector">RenderingProviderSelector</h3>
+<p>The <code>RenderingProviderSelector</code> service manages provider selection and automatic fallback:</p>
+<ul>
+<li><strong>SelectBestProviderAsync</strong>: Selects the best available provider based on user tier and hardware</li>
+<li><strong>GetAvailableProvidersAsync</strong>: Lists all available providers with their capabilities</li>
+<li><strong>RenderWithFallbackAsync</strong>: Renders a video with automatic fallback on failure</li>
+</ul>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="basic-usage">Basic Usage</h3>
+<pre><code class="lang-csharp">// Inject the selector service
+private readonly RenderingProviderSelector _providerSelector;
+
+// Render a video with automatic provider selection
+var timeline = CreateTimeline();
+var spec = new RenderSpec(...);
+var progress = new Progress&lt;RenderProgress&gt;();
+
+// For premium users (hardware acceleration priority)
+var outputPath = await _providerSelector.RenderWithFallbackAsync(
+    timeline,
+    spec,
+    progress,
+    isPremium: true,
+    cancellationToken);
+
+// For free users (software encoding)
+var outputPath = await _providerSelector.RenderWithFallbackAsync(
+    timeline,
+    spec,
+    progress,
+    isPremium: false,
+    cancellationToken);
+</code></pre>
+<h3 id="manual-provider-selection">Manual Provider Selection</h3>
+<pre><code class="lang-csharp">// Get the best provider for a user
+var provider = await _providerSelector.SelectBestProviderAsync(
+    isPremium: true,
+    preferHardware: true);
+
+// Check provider capabilities
+var capabilities = await provider.GetHardwareCapabilitiesAsync();
+Console.WriteLine($&quot;Using {capabilities.ProviderName}&quot;);
+Console.WriteLine($&quot;Hardware: {capabilities.IsHardwareAccelerated}&quot;);
+Console.WriteLine($&quot;Type: {capabilities.AccelerationType}&quot;);
+
+// Render with the selected provider
+var outputPath = await provider.RenderVideoAsync(
+    timeline,
+    spec,
+    progress,
+    cancellationToken);
+</code></pre>
+<h3 id="list-available-providers">List Available Providers</h3>
+<pre><code class="lang-csharp">// Get all available providers
+var providers = await _providerSelector.GetAvailableProvidersAsync();
+
+foreach (var (provider, capabilities) in providers)
+{
+    Console.WriteLine($&quot;Provider: {capabilities.ProviderName}&quot;);
+    Console.WriteLine($&quot;  Priority: {provider.Priority}&quot;);
+    Console.WriteLine($&quot;  Hardware: {capabilities.IsHardwareAccelerated}&quot;);
+    Console.WriteLine($&quot;  Type: {capabilities.AccelerationType}&quot;);
+    Console.WriteLine($&quot;  Codecs: {string.Join(&quot;, &quot;, capabilities.SupportedCodecs)}&quot;);
+    Console.WriteLine($&quot;  Description: {capabilities.Description}&quot;);
+    Console.WriteLine();
+}
+</code></pre>
+<h2 id="service-registration">Service Registration</h2>
+<p>The rendering providers are automatically registered when you call <code>AddAuraProviders()</code>:</p>
+<pre><code class="lang-csharp">services.AddAuraProviders(); // Registers all providers including rendering
+</code></pre>
+<p>Or register them separately:</p>
+<pre><code class="lang-csharp">services.AddRenderingProviders(); // Registers only rendering providers
+</code></pre>
+<h2 id="hardware-detection">Hardware Detection</h2>
+<p>The system automatically detects available hardware encoders:</p>
+<ul>
+<li><strong>NVENC</strong>: Detects NVIDIA GPU with h264_nvenc/hevc_nvenc support</li>
+<li><strong>AMF</strong>: Detects AMD GPU with h264_amf/hevc_amf support</li>
+<li><strong>QuickSync</strong>: Detects Intel CPU with h264_qsv/hevc_qsv support</li>
+<li><strong>Software</strong>: Always available as fallback</li>
+</ul>
+<p>Detection is performed by querying FFmpeg for available encoders:</p>
+<pre><code class="lang-bash">ffmpeg -encoders | grep nvenc  # Check for NVENC
+ffmpeg -encoders | grep amf    # Check for AMF
+ffmpeg -encoders | grep qsv    # Check for QuickSync
+</code></pre>
+<h2 id="user-tier-support">User Tier Support</h2>
+<p>The rendering pipeline supports two user tiers:</p>
+<h3 id="premium-users-ispremium-true">Premium Users (isPremium: true)</h3>
+<ul>
+<li>Get hardware acceleration priority</li>
+<li>Providers with hardware acceleration are tried first</li>
+<li>5-10x faster rendering with GPU acceleration</li>
+<li>Better for real-time rendering and high-volume usage</li>
+</ul>
+<h3 id="free-users-ispremium-false">Free Users (isPremium: false)</h3>
+<ul>
+<li>Use software encoding</li>
+<li>More predictable resource usage</li>
+<li>Works on any system</li>
+<li>Sufficient for occasional rendering</li>
+</ul>
+<h2 id="automatic-fallback">Automatic Fallback</h2>
+<p>The <code>RenderWithFallbackAsync</code> method provides automatic fallback:</p>
+<ol>
+<li>Tries highest priority available provider</li>
+<li>If that fails, tries next available provider</li>
+<li>Continues until success or all providers exhausted</li>
+<li>Logs each attempt with reasoning</li>
+<li>Throws exception only if all providers fail</li>
+</ol>
+<p>Example fallback chain for premium user:</p>
+<ol>
+<li>FFmpegProvider (auto-detect) → tries hardware first</li>
+<li>If hardware fails → FFmpegNvidiaProvider (if available)</li>
+<li>If NVENC fails → FFmpegAmdProvider (if available)</li>
+<li>If AMF fails → FFmpegIntelProvider (if available)</li>
+<li>If QuickSync fails → BasicFFmpegProvider (software fallback)</li>
+</ol>
+<h2 id="performance-characteristics">Performance Characteristics</h2>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Speed</th>
+<th>Quality</th>
+<th>Compatibility</th>
+<th>Requirements</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NVENC</td>
+<td>5-10x</td>
+<td>High</td>
+<td>NVIDIA GPUs</td>
+<td>GTX 10+ series</td>
+</tr>
+<tr>
+<td>AMF</td>
+<td>5-10x</td>
+<td>High</td>
+<td>AMD GPUs</td>
+<td>RX 400+ series</td>
+</tr>
+<tr>
+<td>QuickSync</td>
+<td>3-5x</td>
+<td>Good</td>
+<td>Intel CPUs</td>
+<td>6th gen+</td>
+</tr>
+<tr>
+<td>Software</td>
+<td>1x</td>
+<td>High</td>
+<td>Universal</td>
+<td>Any CPU</td>
+</tr>
+</tbody>
+</table>
+<h2 id="error-handling">Error Handling</h2>
+<p>All providers properly handle errors and provide detailed logging:</p>
+<pre><code class="lang-csharp">try
+{
+    var output = await _providerSelector.RenderWithFallbackAsync(
+        timeline, spec, progress, isPremium: true);
+}
+catch (InvalidOperationException ex)
+{
+    // All providers failed
+    _logger.LogError(ex, &quot;Rendering failed with all providers&quot;);
+    
+    // Check available providers
+    var available = await _providerSelector.GetAvailableProvidersAsync();
+    if (available.Count == 0)
+    {
+        // No providers available - FFmpeg not installed?
+        throw new InvalidOperationException(
+            &quot;No rendering providers available. Please install FFmpeg.&quot;);
+    }
+    
+    // Providers available but all failed - check logs
+    throw;
+}
+</code></pre>
+<h2 id="testing">Testing</h2>
+<p>The rendering pipeline includes comprehensive tests:</p>
+<ul>
+<li>Provider priority tests</li>
+<li>Hardware capability detection tests</li>
+<li>Availability tests</li>
+<li>Automatic fallback tests</li>
+<li>User tier tests</li>
+</ul>
+<p>Run tests:</p>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~Aura.Tests.Rendering&quot;
+</code></pre>
+<h2 id="migration-from-existing-code">Migration from Existing Code</h2>
+<p>If you're using <code>FfmpegVideoComposer</code> directly, you can migrate to the new provider system:</p>
+<p><strong>Before:</strong></p>
+<pre><code class="lang-csharp">var composer = new FfmpegVideoComposer(logger, ffmpegLocator);
+var output = await composer.RenderAsync(timeline, spec, progress, ct);
+</code></pre>
+<p><strong>After:</strong></p>
+<pre><code class="lang-csharp">var provider = await _providerSelector.SelectBestProviderAsync(isPremium);
+var output = await provider.RenderVideoAsync(timeline, spec, progress, ct);
+</code></pre>
+<p>Or use automatic fallback:</p>
+<pre><code class="lang-csharp">var output = await _providerSelector.RenderWithFallbackAsync(
+    timeline, spec, progress, isPremium, ct);
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Use RenderWithFallbackAsync</strong> for production code - it provides automatic fallback</li>
+<li><strong>Check available providers</strong> at startup to inform users about hardware capabilities</li>
+<li><strong>Log provider selection</strong> to help debug rendering issues</li>
+<li><strong>Use premium flag</strong> based on actual user subscription status</li>
+<li><strong>Handle cancellation properly</strong> - all providers support CancellationToken</li>
+<li><strong>Monitor performance</strong> - hardware encoding should be 5-10x faster than software</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential future enhancements:</p>
+<ul>
+<li>VideoToolbox support for macOS (Apple Silicon acceleration)</li>
+<li>AV1 hardware encoding support (when widely available)</li>
+<li>Multi-GPU support for parallel rendering</li>
+<li>Provider preference configuration per user</li>
+<li>Cost tracking per provider type</li>
+<li>Performance analytics and recommendations</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="hardware-provider-not-available">Hardware provider not available</h3>
+<p>Check FFmpeg encoders:</p>
+<pre><code class="lang-bash">ffmpeg -encoders | grep -E &quot;nvenc|amf|qsv&quot;
+</code></pre>
+<p>Install appropriate drivers:</p>
+<ul>
+<li>NVIDIA: Latest GeForce drivers</li>
+<li>AMD: Latest Adrenalin drivers</li>
+<li>Intel: Latest graphics drivers</li>
+</ul>
+<h3 id="all-providers-failing">All providers failing</h3>
+<p>Check FFmpeg installation:</p>
+<pre><code class="lang-bash">ffmpeg -version
+</code></pre>
+<p>Verify FFmpeg path in application settings.</p>
+<h3 id="performance-not-improved">Performance not improved</h3>
+<ul>
+<li>Check GPU utilization during rendering</li>
+<li>Verify hardware encoder is actually being used (check logs)</li>
+<li>Some video codecs/settings may force software encoding</li>
+<li>Quality settings may override hardware encoding</li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ol>
+<li>Check logs for provider selection and errors</li>
+<li>Verify hardware detection: <code>GetAvailableProvidersAsync()</code></li>
+<li>Test FFmpeg directly: <code>ffmpeg -encoders</code></li>
+<li>Check GPU drivers are up to date</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/VIDEO_RENDERING_PIPELINE_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

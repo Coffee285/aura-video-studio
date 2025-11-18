@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Testing Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Testing Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/testing.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="testing-guide">Testing Guide</h1>
+
+<p>Comprehensive guide to testing Aura Video Studio across all layers.</p>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio has comprehensive test coverage:</p>
+<ul>
+<li><strong>Frontend Tests</strong>: Vitest for unit/integration tests</li>
+<li><strong>Backend Tests</strong>: xUnit for .NET tests</li>
+<li><strong>E2E Tests</strong>: Playwright for full workflow testing</li>
+<li><strong>Coverage Goals</strong>: 80%+ for core logic, 60%+ for UI components</li>
+</ul>
+<h2 id="quick-start">Quick Start</h2>
+<h3 id="run-all-tests">Run All Tests</h3>
+<pre><code class="lang-bash"># All tests with coverage (recommended)
+./scripts/test-local.sh
+
+# Frontend only
+./scripts/test-local.sh --frontend-only
+
+# Backend only
+./scripts/test-local.sh --dotnet-only
+
+# Include E2E tests
+./scripts/test-local.sh --e2e
+</code></pre>
+<h2 id="frontend-testing-vitest">Frontend Testing (Vitest)</h2>
+<h3 id="running-tests">Running Tests</h3>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Run once
+npm test
+
+# Watch mode (auto-rerun on changes)
+npm run test:watch
+
+# With coverage
+npm run test:coverage
+
+# Interactive UI
+npm run test:ui
+
+# CI mode with detailed output
+npm run test:coverage:ci
+</code></pre>
+<h3 id="test-organization">Test Organization</h3>
+<pre><code>Aura.Web/
+├── src/
+│   ├── components/
+│   │   └── MyComponent.test.tsx
+│   ├── services/
+│   │   └── apiClient.test.ts
+│   └── stores/
+│       └── useJobStore.test.ts
+└── tests/
+    ├── unit/
+    ├── integration/
+    └── smoke/
+</code></pre>
+<h3 id="writing-component-tests">Writing Component Tests</h3>
+<pre><code class="lang-typescript">import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import MyComponent from './MyComponent';
+
+describe('MyComponent', () =&gt; {
+  it('renders with title', () =&gt; {
+    render(&lt;MyComponent title=&quot;Test&quot; onSave={vi.fn()} /&gt;);
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+
+  it('calls onSave when button clicked', async () =&gt; {
+    const onSave = vi.fn();
+    render(&lt;MyComponent title=&quot;Test&quot; onSave={onSave} /&gt;);
+    
+    const button = screen.getByRole('button', { name: /save/i });
+    fireEvent.click(button);
+    
+    expect(onSave).toHaveBeenCalledWith(expect.any(String));
+  });
+});
+</code></pre>
+<h3 id="testing-zustand-stores">Testing Zustand Stores</h3>
+<pre><code class="lang-typescript">import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, act } from '@testing-library/react';
+import { useJobStore } from './jobStore';
+
+describe('useJobStore', () =&gt; {
+  beforeEach(() =&gt; {
+    useJobStore.setState({ jobs: [], selectedJobId: null });
+  });
+
+  it('adds job', () =&gt; {
+    const { result } = renderHook(() =&gt; useJobStore());
+    
+    act(() =&gt; {
+      result.current.addJob({ id: '1', status: 'queued' });
+    });
+    
+    expect(result.current.jobs).toHaveLength(1);
+    expect(result.current.jobs[0].id).toBe('1');
+  });
+});
+</code></pre>
+<h3 id="testing-api-calls">Testing API Calls</h3>
+<pre><code class="lang-typescript">import { describe, it, expect, vi } from 'vitest';
+import MockAdapter from 'axios-mock-adapter';
+import { apiClient } from './apiClient';
+import axios from 'axios';
+
+const mock = new MockAdapter(axios);
+
+describe('apiClient', () =&gt; {
+  afterEach(() =&gt; {
+    mock.reset();
+  });
+
+  it('fetches job successfully', async () =&gt; {
+    const jobData = { id: '1', status: 'completed' };
+    mock.onGet('/api/jobs/1').reply(200, jobData);
+
+    const result = await apiClient.get('/api/jobs/1');
+    
+    expect(result.data).toEqual(jobData);
+  });
+
+  it('handles errors with circuit breaker', async () =&gt; {
+    mock.onGet('/api/jobs/1').networkError();
+
+    await expect(apiClient.get('/api/jobs/1')).rejects.toThrow();
+  });
+});
+</code></pre>
+<h3 id="coverage-reports">Coverage Reports</h3>
+<pre><code class="lang-bash"># Generate coverage
+npm run test:coverage
+
+# View HTML report
+open coverage/index.html
+</code></pre>
+<p><strong>Coverage Goals</strong>:</p>
+<ul>
+<li><strong>Utilities/Services</strong>: 80%+</li>
+<li><strong>Components</strong>: 60%+</li>
+<li><strong>Stores</strong>: 80%+</li>
+</ul>
+<h2 id="backend-testing-xunit">Backend Testing (xUnit)</h2>
+<h3 id="running-tests-1">Running Tests</h3>
+<pre><code class="lang-bash"># Run all tests
+dotnet test
+
+# With coverage
+dotnet test --collect:&quot;XPlat Code Coverage&quot;
+
+# Specific project
+dotnet test Aura.Tests/Aura.Tests.csproj
+
+# Filter by name
+dotnet test --filter &quot;FullyQualifiedName~VideoService&quot;
+
+# Detailed output
+dotnet test --logger &quot;console;verbosity=detailed&quot;
+</code></pre>
+<h3 id="test-organization-1">Test Organization</h3>
+<pre><code>Aura.Tests/
+├── Unit/
+│   ├── Services/
+│   │   └── VideoServiceTests.cs
+│   └── Providers/
+│       └── OpenAIProviderTests.cs
+└── Integration/
+    └── JobOrchestrationTests.cs
+</code></pre>
+<h3 id="writing-unit-tests">Writing Unit Tests</h3>
+<pre><code class="lang-csharp">public class VideoServiceTests
+{
+    private readonly Mock&lt;ILogger&lt;VideoService&gt;&gt; _loggerMock;
+    private readonly Mock&lt;IFFmpegService&gt; _ffmpegMock;
+    private readonly VideoService _service;
+    
+    public VideoServiceTests()
+    {
+        _loggerMock = new Mock&lt;ILogger&lt;VideoService&gt;&gt;();
+        _ffmpegMock = new Mock&lt;IFFmpegService&gt;();
+        _service = new VideoService(_loggerMock.Object, _ffmpegMock.Object);
+    }
+    
+    [Fact]
+    public async Task RenderVideoAsync_ValidSpec_ReturnsOutputPath()
+    {
+        // Arrange
+        var spec = new RenderSpecification { JobId = &quot;test123&quot; };
+        _ffmpegMock
+            .Setup(x =&gt; x.RenderAsync(
+                It.IsAny&lt;RenderSpecification&gt;(),
+                It.IsAny&lt;IProgress&lt;RenderProgress&gt;&gt;(),
+                It.IsAny&lt;CancellationToken&gt;()))
+            .ReturnsAsync(&quot;/output/video.mp4&quot;);
+        
+        // Act
+        var result = await _service.RenderVideoAsync(
+            spec, 
+            null, 
+            CancellationToken.None);
+        
+        // Assert
+        result.Should().Be(&quot;/output/video.mp4&quot;);
+        _loggerMock.Verify(x =&gt; x.Log(
+            LogLevel.Information,
+            It.IsAny&lt;EventId&gt;(),
+            It.Is&lt;It.IsAnyType&gt;((o, t) =&gt; o.ToString().Contains(&quot;test123&quot;)),
+            null,
+            It.IsAny&lt;Func&lt;It.IsAnyType, Exception, string&gt;&gt;()), 
+            Times.AtLeastOnce);
+    }
+    
+    [Fact]
+    public async Task RenderVideoAsync_FFmpegFails_ThrowsException()
+    {
+        // Arrange
+        var spec = new RenderSpecification { JobId = &quot;test123&quot; };
+        _ffmpegMock
+            .Setup(x =&gt; x.RenderAsync(
+                It.IsAny&lt;RenderSpecification&gt;(),
+                It.IsAny&lt;IProgress&lt;RenderProgress&gt;&gt;(),
+                It.IsAny&lt;CancellationToken&gt;()))
+            .ThrowsAsync(new FFmpegException(&quot;Render failed&quot;));
+        
+        // Act &amp; Assert
+        await Assert.ThrowsAsync&lt;FFmpegException&gt;(
+            () =&gt; _service.RenderVideoAsync(spec, null, CancellationToken.None));
+    }
+}
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-csharp">public class JobOrchestrationIntegrationTests : IClassFixture&lt;WebApplicationFactory&lt;Program&gt;&gt;
+{
+    private readonly WebApplicationFactory&lt;Program&gt; _factory;
+    private readonly HttpClient _client;
+
+    public JobOrchestrationIntegrationTests(WebApplicationFactory&lt;Program&gt; factory)
+    {
+        _factory = factory;
+        _client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task CreateJob_ValidRequest_ReturnsJobId()
+    {
+        // Arrange
+        var request = new CreateJobRequest
+        {
+            Brief = &quot;Test video about cats&quot;,
+            Audience = &quot;General&quot;,
+            Goal = &quot;Educate&quot;,
+            Tone = &quot;Friendly&quot;
+        };
+
+        // Act
+        var response = await _client.PostAsJsonAsync(&quot;/api/jobs&quot;, request);
+
+        // Assert
+        response.Should().BeSuccessful();
+        var result = await response.Content.ReadFromJsonAsync&lt;JobResponse&gt;();
+        result.Id.Should().NotBeNullOrEmpty();
+        result.Status.Should().Be(&quot;Queued&quot;);
+    }
+}
+</code></pre>
+<h3 id="coverage-reports-1">Coverage Reports</h3>
+<pre><code class="lang-bash"># Generate coverage
+dotnet test --collect:&quot;XPlat Code Coverage&quot;
+
+# Generate HTML report
+dotnet tool install --global dotnet-reportgenerator-globaltool
+reportgenerator \
+  -reports:&quot;TestResults/**/coverage.cobertura.xml&quot; \
+  -targetdir:&quot;TestResults/CoverageReport&quot; \
+  -reporttypes:&quot;Html&quot;
+
+# View report
+open TestResults/CoverageReport/index.html
+</code></pre>
+<p><strong>Coverage Goals</strong>:</p>
+<ul>
+<li><strong>Services</strong>: 80%+</li>
+<li><strong>Orchestrators</strong>: 80%+</li>
+<li><strong>Providers</strong>: 70%+</li>
+<li><strong>Controllers</strong>: 60%+</li>
+</ul>
+<h2 id="e2e-testing-playwright">E2E Testing (Playwright)</h2>
+<h3 id="running-e2e-tests">Running E2E Tests</h3>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Install browsers (first time only)
+npx playwright install --with-deps chromium
+
+# Run tests
+npm run playwright
+
+# Interactive UI mode (debugging)
+npm run playwright:ui
+
+# Specific test
+npx playwright test tests/e2e/full-pipeline.spec.ts
+
+# With browser visible (headed mode)
+npx playwright test --headed
+
+# View report
+npx playwright show-report
+</code></pre>
+<h3 id="test-organization-2">Test Organization</h3>
+<pre><code>Aura.Web/tests/e2e/
+├── full-pipeline.spec.ts      # Complete video generation
+├── job-management.spec.ts     # Job CRUD operations
+├── provider-config.spec.ts    # Provider configuration
+└── memory-regression.spec.ts  # Performance/memory tests
+</code></pre>
+<h3 id="writing-e2e-tests">Writing E2E Tests</h3>
+<pre><code class="lang-typescript">import { test, expect } from '@playwright/test';
+
+test.describe('Video Generation Pipeline', () =&gt; {
+  test('creates video from brief', async ({ page }) =&gt; {
+    // Navigate to home
+    await page.goto('http://localhost:5173');
+
+    // Fill brief form
+    await page.fill('[name=&quot;topic&quot;]', 'Artificial Intelligence');
+    await page.fill('[name=&quot;audience&quot;]', 'Students');
+    await page.selectOption('[name=&quot;tone&quot;]', 'Educational');
+    
+    // Submit
+    await page.click('button:has-text(&quot;Generate Script&quot;)');
+
+    // Wait for script generation
+    await expect(page.locator('.script-editor')).toBeVisible({ timeout: 30000 });
+    
+    // Continue to voice selection
+    await page.click('button:has-text(&quot;Next: Voice&quot;)');
+    await page.selectOption('[name=&quot;ttsProvider&quot;]', 'windows-sapi');
+    
+    // Generate video
+    await page.click('button:has-text(&quot;Generate Video&quot;)');
+    
+    // Wait for completion
+    await expect(page.locator('.job-status'))
+      .toContainText('Completed', { timeout: 120000 });
+    
+    // Verify video download link
+    const downloadLink = page.locator('a:has-text(&quot;Download Video&quot;)');
+    await expect(downloadLink).toBeVisible();
+  });
+
+  test('handles errors gracefully', async ({ page }) =&gt; {
+    await page.goto('http://localhost:5173');
+    
+    // Submit empty form
+    await page.click('button:has-text(&quot;Generate Script&quot;)');
+    
+    // Expect validation error
+    await expect(page.locator('.error-message'))
+      .toContainText('Topic is required');
+  });
+});
+</code></pre>
+<h3 id="performance-tests">Performance Tests</h3>
+<pre><code class="lang-typescript">test.describe('Performance', () =&gt; {
+  test('timeline scrolling is smooth', async ({ page }) =&gt; {
+    await page.goto('http://localhost:5173/timeline');
+    
+    // Measure frame rate during scroll
+    const metrics = await page.evaluate(async () =&gt; {
+      let frameCount = 0;
+      const start = performance.now();
+      
+      return new Promise(resolve =&gt; {
+        const measureFrame = () =&gt; {
+          frameCount++;
+          const elapsed = performance.now() - start;
+          
+          if (elapsed &gt;= 1000) {
+            resolve(frameCount);
+          } else {
+            requestAnimationFrame(measureFrame);
+          }
+        };
+        
+        measureFrame();
+        
+        // Simulate scrolling
+        window.scrollBy(0, 10);
+      });
+    });
+    
+    expect(metrics).toBeGreaterThan(30); // At least 30 FPS
+  });
+});
+</code></pre>
+<h3 id="memory-regression-tests">Memory Regression Tests</h3>
+<pre><code class="lang-typescript">test.describe('Memory', () =&gt; {
+  test('no memory leaks in job list', async ({ page }) =&gt; {
+    await page.goto('http://localhost:5173/jobs');
+    
+    // Get initial memory
+    const initialMemory = await page.evaluate(() =&gt; 
+      (performance as any).memory.usedJSHeapSize
+    );
+    
+    // Load 1000 jobs and scroll
+    for (let i = 0; i &lt; 10; i++) {
+      await page.mouse.wheel(0, 1000);
+      await page.waitForTimeout(100);
+    }
+    
+    // Force GC if available
+    await page.evaluate(() =&gt; {
+      if ((window as any).gc) (window as any).gc();
+    });
+    
+    // Get final memory
+    const finalMemory = await page.evaluate(() =&gt; 
+      (performance as any).memory.usedJSHeapSize
+    );
+    
+    // Memory should not grow more than 50%
+    const growth = (finalMemory - initialMemory) / initialMemory;
+    expect(growth).toBeLessThan(0.5);
+  });
+});
+</code></pre>
+<h2 id="continuous-integration">Continuous Integration</h2>
+<h3 id="ci-workflows">CI Workflows</h3>
+<p>All tests run automatically on pull requests:</p>
+<pre><code class="lang-yaml"># .github/workflows/ci-unified.yml
+- .NET Build &amp; Test (Linux-compatible projects)
+- Frontend Build, Lint &amp; Test
+- E2E Tests (Playwright with chromium)
+- Coverage collection and upload
+</code></pre>
+<h3 id="local-pre-commit-checks">Local Pre-commit Checks</h3>
+<p>Run before committing:</p>
+<pre><code class="lang-bash"># 1. Scan for placeholders
+node scripts/audit/find-placeholders.js
+
+# 2. Lint and type check
+cd Aura.Web
+npm run lint
+npm run typecheck
+
+# 3. Run tests
+npm test
+
+# 4. Backend tests
+cd ..
+dotnet test
+</code></pre>
+<h3 id="quality-gates">Quality Gates</h3>
+<p>All PRs must pass:</p>
+<ol>
+<li>✅ All tests passing</li>
+<li>✅ No linting errors or warnings</li>
+<li>✅ No TypeScript errors</li>
+<li>✅ Coverage maintained or improved</li>
+<li>✅ No placeholder markers (TODO/FIXME)</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="test-naming">Test Naming</h3>
+<p><strong>Good</strong>:</p>
+<ul>
+<li><code>it('renders loading spinner when isLoading is true')</code></li>
+<li><code>it('calls onSubmit with form data')</code></li>
+<li><code>it('retries failed API call with exponential backoff')</code></li>
+</ul>
+<p><strong>Bad</strong>:</p>
+<ul>
+<li><code>it('works')</code></li>
+<li><code>it('test1')</code></li>
+<li><code>it('handles stuff')</code></li>
+</ul>
+<h3 id="test-structure">Test Structure</h3>
+<p>Use AAA pattern (Arrange, Act, Assert):</p>
+<pre><code class="lang-typescript">it('adds two numbers', () =&gt; {
+  // Arrange
+  const a = 2;
+  const b = 3;
+  const calculator = new Calculator();
+  
+  // Act
+  const result = calculator.add(a, b);
+  
+  // Assert
+  expect(result).toBe(5);
+});
+</code></pre>
+<h3 id="mocking">Mocking</h3>
+<p>Mock external dependencies, not implementation details:</p>
+<p><strong>Good</strong>:</p>
+<pre><code class="lang-typescript">// Mock HTTP client
+mock.onGet('/api/jobs').reply(200, { jobs: [] });
+</code></pre>
+<p><strong>Bad</strong>:</p>
+<pre><code class="lang-typescript">// Mock internal function
+vi.spyOn(component, 'internalHelper').mockReturnValue('test');
+</code></pre>
+<h3 id="async-testing">Async Testing</h3>
+<p>Always await async operations:</p>
+<pre><code class="lang-typescript">// ✅ Good
+it('fetches data', async () =&gt; {
+  const data = await fetchData();
+  expect(data).toBeDefined();
+});
+
+// ❌ Bad
+it('fetches data', () =&gt; {
+  fetchData().then(data =&gt; {
+    expect(data).toBeDefined(); // Assertion might not run
+  });
+});
+</code></pre>
+<h3 id="test-independence">Test Independence</h3>
+<p>Each test should be independent:</p>
+<pre><code class="lang-typescript">describe('UserStore', () =&gt; {
+  beforeEach(() =&gt; {
+    // Reset state before each test
+    useUserStore.setState({ users: [], selectedUser: null });
+  });
+  
+  it('test 1', () =&gt; { /* ... */ });
+  it('test 2', () =&gt; { /* ... */ });
+});
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="tests-failing-locally">Tests Failing Locally</h3>
+<pre><code class="lang-bash"># Clear caches
+cd Aura.Web
+rm -rf node_modules coverage dist
+npm install
+npm test
+
+# Backend
+dotnet clean
+dotnet restore
+dotnet test
+</code></pre>
+<h3 id="e2e-tests-timing-out">E2E Tests Timing Out</h3>
+<ul>
+<li>Increase timeout in playwright.config.ts</li>
+<li>Run in headed mode to debug: <code>npx playwright test --headed</code></li>
+<li>Check if backend is running: <code>curl http://localhost:5005/health/live</code></li>
+</ul>
+<h3 id="coverage-not-generated">Coverage Not Generated</h3>
+<pre><code class="lang-bash"># Frontend
+cd Aura.Web
+npm run test:coverage:ci
+
+# Backend
+dotnet test --collect:&quot;XPlat Code Coverage&quot; --results-directory ./TestResults
+</code></pre>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="https://vitest.dev/">Vitest Documentation</a></li>
+<li><a href="https://playwright.dev/">Playwright Documentation</a></li>
+<li><a href="https://xunit.net/">xUnit Documentation</a></li>
+<li><a href="E2E_TESTING_GUIDE.html">E2E Testing Guide</a></li>
+<li><a href="QUALITY_GATES.html">Quality Gates</a></li>
+</ul>
+<hr>
+<p>Last updated: 2025-11-18</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/testing.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Latency &amp; Patience Policy | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Latency &amp; Patience Policy | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/LATENCY_PATIENCE_POLICY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="latency--patience-policy">Latency &amp; Patience Policy</h1>
+
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio adopts a <strong>patience-centric</strong> approach to provider management. This policy recognizes that slow responses from providers (especially local LLMs, TTS engines, and cloud APIs under load) are <strong>normal behavior</strong>, not failures. The system prioritizes <strong>consistency</strong> and <strong>user trust</strong> over speed, ensuring the user's chosen provider remains locked for the entire job duration unless explicitly overridden.</p>
+<h2 id="core-principles">Core Principles</h2>
+<h3 id="1-provider-stickiness">1. Provider Stickiness</h3>
+<p>Once a user selects a provider for a job, that provider is <strong>locked</strong> for the entire video generation pipeline:</p>
+<ul>
+<li>Planning/Brief generation</li>
+<li>Script generation</li>
+<li>Script refinement</li>
+<li>TTS synthesis</li>
+<li>Visual prompt generation</li>
+<li>All stages use the same locked provider</li>
+</ul>
+<p><strong>No silent provider switching occurs.</strong> If the locked provider becomes unavailable, the system presents explicit fallback options to the user.</p>
+<h3 id="2-latency--failure">2. Latency ≠ Failure</h3>
+<p>Slow responses are treated as normal, expected behavior:</p>
+<ul>
+<li>Local LLM models (Ollama) can take minutes to process complex prompts</li>
+<li>Cloud APIs under load may have extended response times</li>
+<li>TTS synthesis for long scripts is inherently slow</li>
+<li>Image generation can be time-consuming</li>
+</ul>
+<p>The system <strong>never</strong> auto-fails a request based purely on elapsed time.</p>
+<h3 id="3-adaptive-patience-windows">3. Adaptive Patience Windows</h3>
+<p>Three latency tiers guide UI messaging and user expectations:</p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Duration</th>
+<th>UI State</th>
+<th>User Experience</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Normal</strong></td>
+<td>0-30s</td>
+<td><code>Active • Generating</code></td>
+<td>Standard progress indicators</td>
+</tr>
+<tr>
+<td><strong>Extended</strong></td>
+<td>30-180s</td>
+<td><code>Extended Wait • Still Working</code></td>
+<td>Contextual hints displayed</td>
+</tr>
+<tr>
+<td><strong>Deep-Wait</strong></td>
+<td>180s+</td>
+<td><code>Deep Wait • Long-Form Processing</code></td>
+<td>Detailed explanation shown</td>
+</tr>
+</tbody>
+</table>
+<p>These are <strong>informational only</strong> and do not trigger automatic actions.</p>
+<h3 id="4-heartbeat-detection">4. Heartbeat Detection</h3>
+<p>Providers report progress through heartbeat signals:</p>
+<ul>
+<li><strong>LLM</strong>: Partial token emission, chunk streaming</li>
+<li><strong>TTS</strong>: Audio chunk generation, segment completion</li>
+<li><strong>Image</strong>: Progress percentage, intermediate steps</li>
+</ul>
+<p>Heartbeat presence distinguishes:</p>
+<ul>
+<li><strong>Active Slow</strong>: Provider is working but slow (acceptable)</li>
+<li><strong>Stalled</strong>: No heartbeat beyond threshold (suspicious)</li>
+</ul>
+<h3 id="5-stall-detection-vs-auto-fallback">5. Stall Detection vs Auto-Fallback</h3>
+<p>When no heartbeat is detected for a provider-specific threshold (e.g., 3× expected interval):</p>
+<ul>
+<li>System emits <code>STALL_SUSPECTED</code> event</li>
+<li>User sees dialog: &quot;Provider appears stalled. Continue Waiting / Try Alternative / Cancel&quot;</li>
+<li><strong>No automatic provider switch occurs</strong></li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="provider-timeout-profiles">Provider Timeout Profiles</h3>
+<p>Defined in <code>providerTimeoutProfiles.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;profiles&quot;: {
+    &quot;local_llm&quot;: {
+      &quot;normalThresholdMs&quot;: 30000,
+      &quot;extendedThresholdMs&quot;: 180000,
+      &quot;deepWaitThresholdMs&quot;: 300000,
+      &quot;heartbeatIntervalMs&quot;: 15000,
+      &quot;stallSuspicionMultiplier&quot;: 3,
+      &quot;description&quot;: &quot;Local LLM models (Ollama) - expect multi-minute processing&quot;
+    },
+    &quot;cloud_llm&quot;: {
+      &quot;normalThresholdMs&quot;: 15000,
+      &quot;extendedThresholdMs&quot;: 60000,
+      &quot;deepWaitThresholdMs&quot;: 120000,
+      &quot;heartbeatIntervalMs&quot;: 5000,
+      &quot;stallSuspicionMultiplier&quot;: 4,
+      &quot;description&quot;: &quot;Cloud LLM APIs (OpenAI, Anthropic) - generally faster&quot;
+    },
+    &quot;tts&quot;: {
+      &quot;normalThresholdMs&quot;: 45000,
+      &quot;extendedThresholdMs&quot;: 180000,
+      &quot;deepWaitThresholdMs&quot;: 360000,
+      &quot;heartbeatIntervalMs&quot;: 10000,
+      &quot;stallSuspicionMultiplier&quot;: 3,
+      &quot;description&quot;: &quot;TTS synthesis - scales with text length&quot;
+    },
+    &quot;image_gen&quot;: {
+      &quot;normalThresholdMs&quot;: 60000,
+      &quot;extendedThresholdMs&quot;: 240000,
+      &quot;deepWaitThresholdMs&quot;: 480000,
+      &quot;heartbeatIntervalMs&quot;: 20000,
+      &quot;stallSuspicionMultiplier&quot;: 2,
+      &quot;description&quot;: &quot;Image generation - inherently slow, especially high-quality&quot;
+    }
+  },
+  &quot;patienceProfiles&quot;: {
+    &quot;conservative&quot;: {
+      &quot;label&quot;: &quot;Conservative (Quick Results)&quot;,
+      &quot;timeoutMultiplier&quot;: 0.7,
+      &quot;description&quot;: &quot;Prefer faster responses, earlier stall detection&quot;
+    },
+    &quot;balanced&quot;: {
+      &quot;label&quot;: &quot;Balanced (Default)&quot;,
+      &quot;timeoutMultiplier&quot;: 1.0,
+      &quot;description&quot;: &quot;Standard patience windows&quot;
+    },
+    &quot;longForm&quot;: {
+      &quot;label&quot;: &quot;Long-Form (Maximum Patience)&quot;,
+      &quot;timeoutMultiplier&quot;: 2.0,
+      &quot;description&quot;: &quot;Extended patience for complex content, local models&quot;
+    }
+  }
+}
+</code></pre>
+<h3 id="user-settings">User Settings</h3>
+<p>Users can configure:</p>
+<ul>
+<li><strong>Default Patience Profile</strong>: Conservative / Balanced / Long-Form</li>
+<li><strong>Per-Job Override</strong>: &quot;Treat all latency as acceptable unless cancelled&quot;</li>
+<li><strong>Fallback Suggestions</strong>: &quot;Offer alternatives only on hard error&quot; (enabled by default)</li>
+<li><strong>Stall Notification</strong>: Enable/disable stall detection dialog</li>
+</ul>
+<h2 id="error-classification">Error Classification</h2>
+<h3 id="hard-errors-immediate-failure">Hard Errors (Immediate Failure)</h3>
+<p>These trigger immediate error state and offer fallback suggestions:</p>
+<ul>
+<li>HTTP 4xx/5xx responses with definitive error messages</li>
+<li>Serialization/deserialization failures</li>
+<li>Authentication failures (invalid API keys)</li>
+<li>Resource exhaustion (quota exceeded, out of memory)</li>
+<li>Provider explicitly reporting fatal error</li>
+</ul>
+<h3 id="soft-latency-patient-waiting">Soft Latency (Patient Waiting)</h3>
+<p>These do NOT trigger errors:</p>
+<ul>
+<li>Request in progress, no response yet</li>
+<li>Periodic heartbeat detected (tokens/chunks emitted)</li>
+<li>Connection alive, no explicit error</li>
+</ul>
+<h3 id="stall-suspicion-user-decision-required">Stall Suspicion (User Decision Required)</h3>
+<p>Triggers dialog when:</p>
+<ul>
+<li>No heartbeat received for <code>heartbeatIntervalMs × stallSuspicionMultiplier</code></li>
+<li>Connection appears alive but no progress indicators</li>
+<li>User presented with options (continue/fallback/cancel)</li>
+</ul>
+<h2 id="user-workflows">User Workflows</h2>
+<h3 id="normal-flow-no-issues">Normal Flow (No Issues)</h3>
+<ol>
+<li>User selects provider (e.g., Ollama local model)</li>
+<li>Job starts, provider locked</li>
+<li>Progress updates via heartbeat</li>
+<li>Transitions through patience tiers as needed</li>
+<li>Completes successfully with locked provider</li>
+</ol>
+<h3 id="extended-latency-flow">Extended Latency Flow</h3>
+<ol>
+<li>Job exceeds Normal threshold (30s)</li>
+<li>UI updates: <code>Extended Wait • Still Working</code></li>
+<li>Contextual hint: &quot;Local models can take several minutes for complex content&quot;</li>
+<li>Heartbeat continues showing progress</li>
+<li>Eventually completes</li>
+</ol>
+<h3 id="stall-detection-flow">Stall Detection Flow</h3>
+<ol>
+<li>Heartbeat stops unexpectedly</li>
+<li>Stall timer expires (3× heartbeat interval)</li>
+<li>Dialog appears: &quot;Provider appears stalled. Options: Continue Waiting (30s) / Try Alternative / Cancel&quot;</li>
+<li>User chooses:
+<ul>
+<li><strong>Continue</strong>: Reset stall timer, keep waiting</li>
+<li><strong>Alternative</strong>: Show fallback panel, require confirmation</li>
+<li><strong>Cancel</strong>: Job ends, partial artifacts offered if available</li>
+</ul>
+</li>
+</ol>
+<h3 id="hard-error-flow">Hard Error Flow</h3>
+<ol>
+<li>Provider returns HTTP 500 or explicit error</li>
+<li>UI immediately shows error state</li>
+<li>Fallback panel appears: &quot;Primary provider failed. Select alternative:&quot;</li>
+<li>User explicitly chooses new provider</li>
+<li>Decision logged with reason code <code>PROVIDER_FATAL_ERROR</code></li>
+</ol>
+<h3 id="user-initiated-fallback">User-Initiated Fallback</h3>
+<ol>
+<li>User clicks &quot;Show Alternatives&quot; button (always available)</li>
+<li>Fallback panel lists available providers with trade-offs</li>
+<li>User selects alternative</li>
+<li>Confirmation dialog: &quot;Switching may alter output style/tone. Proceed?&quot;</li>
+<li>On confirmation, provider switch logged with reason <code>USER_REQUEST</code></li>
+</ol>
+<h2 id="decision-trace-model">Decision Trace Model</h2>
+<p>Every provider transition is logged in <code>FallbackDecision</code>:</p>
+<pre><code class="lang-typescript">interface FallbackDecision {
+  jobId: string;
+  timestamp: Date;
+  fromProvider: string;
+  toProvider: string;
+  reasonCode: 'USER_REQUEST' | 'PROVIDER_FATAL_ERROR' | 'USER_AFTER_STALL' | 'LEGACY_AUTO';
+  elapsedBeforeSwitch: number; // milliseconds
+  userConfirmed: boolean;
+  affectedStages: string[]; // e.g., ['script-generation', 'refinement']
+}
+</code></pre>
+<p>No fallback decision = provider remained locked throughout job.</p>
+<h2 id="monitoring--observability">Monitoring &amp; Observability</h2>
+<h3 id="log-events">Log Events</h3>
+<pre><code>[INFO] PROVIDER_REQUEST_START {providerId: &quot;Ollama&quot;, stage: &quot;script-generation&quot;, correlationId: &quot;abc-123&quot;}
+[INFO] PROVIDER_HEARTBEAT {providerId: &quot;Ollama&quot;, elapsedMs: 15234, tokensGenerated: 45}
+[INFO] PROVIDER_LATENCY_CATEGORY_CHANGE {providerId: &quot;Ollama&quot;, from: &quot;Normal&quot;, to: &quot;Extended&quot;}
+[WARN] PROVIDER_STALL_SUSPECTED {providerId: &quot;Ollama&quot;, elapsedMsSinceLastHeartbeat: 48000}
+[INFO] USER_FALLBACK_INITIATED {fromProvider: &quot;Ollama&quot;, toProvider: &quot;OpenAI&quot;, reasonCode: &quot;USER_REQUEST&quot;}
+[ERROR] PROVIDER_HARD_ERROR {providerId: &quot;OpenAI&quot;, errorCode: &quot;quota_exceeded&quot;, message: &quot;Rate limit exceeded&quot;}
+</code></pre>
+<h3 id="telemetry-metrics">Telemetry Metrics</h3>
+<p>Track (non-intrusive, analytics only):</p>
+<ul>
+<li>Count of jobs by latency category at completion (Normal/Extended/Deep-Wait)</li>
+<li>User fallback initiation rate (should be low)</li>
+<li>Stall detection events per provider type</li>
+<li>Average heartbeat intervals per provider</li>
+</ul>
+<p><strong>These metrics inform UI/UX improvements but never trigger automatic behavior.</strong></p>
+<h2 id="migration-from-legacy-fallback">Migration from Legacy Fallback</h2>
+<p>If automatic fallback logic exists:</p>
+<ol>
+<li>Wrap in user confirmation dialog</li>
+<li>Mark legacy decisions with <code>reasonCode: 'LEGACY_AUTO'</code> in trace</li>
+<li>Display warning: &quot;Automatic fallback disabled. Enable explicit control in settings.&quot;</li>
+<li>Provide migration guide for users accustomed to auto-fallback</li>
+</ol>
+<h2 id="faq">FAQ</h2>
+<p><strong>Q: Why not auto-fallback on timeout?</strong><br>
+A: Users typically have one configured provider. Silent switching breaks consistency, especially for local models where slow = normal.</p>
+<p><strong>Q: What if my provider is actually broken?</strong><br>
+A: Hard errors trigger immediate fallback suggestions. Stalls present user dialog. You remain in control.</p>
+<p><strong>Q: Can I disable patience and prefer speed?</strong><br>
+A: Select &quot;Conservative&quot; patience profile for earlier stall detection. Fallback still requires confirmation.</p>
+<p><strong>Q: What if I'm offline?</strong><br>
+A: Provider lock ensures offline-capable providers (Ollama, RuleBased) continue working. Online providers fail fast with clear error.</p>
+<p><strong>Q: How do I know my provider is working?</strong><br>
+A: Heartbeat indicators in UI, elapsed time counter, patience tier messaging. Status drawer shows real-time state.</p>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>Statistical latency prediction based on recent runs</li>
+<li>Provider performance benchmarks per hardware tier</li>
+<li>Adaptive heartbeat intervals based on provider behavior</li>
+<li>Cross-job latency analytics dashboard</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><code>PROVIDER_INTEGRATION_GUIDE.md</code> - Provider implementation details</li>
+<li><code>TROUBLESHOOTING.md</code> - Latency debugging section</li>
+<li><code>providerTimeoutProfiles.json</code> - Configuration reference</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/LATENCY_PATIENCE_POLICY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Oncall Runbook - Aura Video Studio | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Oncall Runbook - Aura Video Studio | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/OncallRunbook.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="oncall-runbook---aura-video-studio">Oncall Runbook - Aura Video Studio</h1>
+
+<p>This runbook provides procedures for diagnosing and resolving production incidents.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#incident-response-process">Incident Response Process</a></li>
+<li><a href="#common-issues">Common Issues</a></li>
+<li><a href="#diagnostic-tools">Diagnostic Tools</a></li>
+<li><a href="#using-correlation-ids">Using Correlation IDs</a></li>
+<li><a href="#escalation-procedures">Escalation Procedures</a></li>
+<li><a href="#post-incident">Post-Incident</a></li>
+</ul>
+<h2 id="getting-started">Getting Started</h2>
+<h3 id="prerequisites-for-oncall">Prerequisites for Oncall</h3>
+<p>Before your oncall shift:</p>
+<ol>
+<li><p><strong>Access verification</strong>:</p>
+<ul>
+<li>[ ] Production environment access configured</li>
+<li>[ ] Log aggregation system accessible</li>
+<li>[ ] Monitoring dashboards accessible</li>
+<li>[ ] Incident management system access</li>
+<li>[ ] PagerDuty/alerting system configured</li>
+</ul>
+</li>
+<li><p><strong>Tools installed</strong>:</p>
+<ul>
+<li>[ ] <code>kubectl</code> or deployment CLI</li>
+<li>[ ] <code>jq</code> for JSON processing</li>
+<li>[ ] Database client</li>
+<li>[ ] SSH keys configured</li>
+</ul>
+</li>
+<li><p><strong>Knowledge checklist</strong>:</p>
+<ul>
+<li>[ ] Read this runbook completely</li>
+<li>[ ] Review recent deployments</li>
+<li>[ ] Check known issues board</li>
+<li>[ ] Review architecture documentation</li>
+</ul>
+</li>
+</ol>
+<h3 id="key-system-urls">Key System URLs</h3>
+<ul>
+<li><strong>Production API</strong>: <a href="https://api.aura.studio">https://api.aura.studio</a></li>
+<li><strong>Staging API</strong>: <a href="https://staging-api.aura.studio">https://staging-api.aura.studio</a></li>
+<li><strong>Monitoring</strong>: <a href="https://metrics.aura.studio">https://metrics.aura.studio</a></li>
+<li><strong>Logs</strong>: <a href="https://logs.aura.studio">https://logs.aura.studio</a></li>
+<li><strong>Status Page</strong>: <a href="https://status.aura.studio">https://status.aura.studio</a></li>
+</ul>
+<h3 id="quick-health-check">Quick Health Check</h3>
+<pre><code class="lang-bash"># System health
+curl https://api.aura.studio/api/health/system | jq
+
+# Provider health
+curl https://api.aura.studio/api/health/providers | jq
+
+# Liveness (is app running)
+curl https://api.aura.studio/health/live
+
+# Readiness (ready to serve traffic)
+curl https://api.aura.studio/health/ready
+</code></pre>
+<h2 id="incident-response-process">Incident Response Process</h2>
+<h3 id="step-1-acknowledge-and-assess">Step 1: Acknowledge and Assess</h3>
+<ol>
+<li><p><strong>Acknowledge the alert</strong> in PagerDuty/incident system</p>
+</li>
+<li><p><strong>Check system status</strong>:</p>
+<pre><code class="lang-bash">curl https://api.aura.studio/api/health/system | jq
+</code></pre>
+</li>
+<li><p><strong>Assess severity</strong>:</p>
+<ul>
+<li><strong>SEV1</strong> (Critical): Complete system outage, data loss, security breach</li>
+<li><strong>SEV2</strong> (High): Major feature broken, significant performance degradation</li>
+<li><strong>SEV3</strong> (Medium): Minor feature broken, some users affected</li>
+<li><strong>SEV4</strong> (Low): Cosmetic issue, workaround available</li>
+</ul>
+</li>
+<li><p><strong>Update status page</strong> if user-facing issue</p>
+</li>
+</ol>
+<h3 id="step-2-gather-information">Step 2: Gather Information</h3>
+<ol>
+<li><p><strong>Recent changes</strong>:</p>
+<pre><code class="lang-bash"># Check recent deployments
+kubectl rollout history deployment/aura-api
+</code></pre>
+</li>
+<li><p><strong>Current metrics</strong>:</p>
+<ul>
+<li>Error rate</li>
+<li>Response times (P50, P95, P99)</li>
+<li>Request volume</li>
+<li>Resource utilization (CPU, memory, disk)</li>
+</ul>
+</li>
+<li><p><strong>Error logs</strong> (last 15 minutes):</p>
+<pre><code class="lang-bash"># Get recent errors
+kubectl logs -l app=aura-api --since=15m | grep ERROR
+</code></pre>
+</li>
+<li><p><strong>User reports</strong>: Check support channels for user-reported issues</p>
+</li>
+</ol>
+<h3 id="step-3-diagnose">Step 3: Diagnose</h3>
+<p>Use diagnostic tools (see <a href="#diagnostic-tools">Diagnostic Tools</a> section) to identify root cause.</p>
+<p><strong>Common diagnostic paths</strong>:</p>
+<ul>
+<li>High error rate → Check provider health, database connections</li>
+<li>Slow response times → Check resource utilization, database queries</li>
+<li>Complete outage → Check pod status, infrastructure health</li>
+<li>Intermittent issues → Check circuit breakers, rate limits</li>
+</ul>
+<h3 id="step-4-mitigate">Step 4: Mitigate</h3>
+<p><strong>Temporary mitigations</strong>:</p>
+<ol>
+<li><p><strong>Scale up</strong> if resource constrained:</p>
+<pre><code class="lang-bash">kubectl scale deployment/aura-api --replicas=20
+</code></pre>
+</li>
+<li><p><strong>Restart pods</strong> if memory leak or stale state:</p>
+<pre><code class="lang-bash">kubectl rollout restart deployment/aura-api
+</code></pre>
+</li>
+<li><p><strong>Enable offline mode</strong> if provider issues:</p>
+<pre><code class="lang-bash"># Update configuration to use only local providers
+kubectl set env deployment/aura-api OFFLINE_MODE=true
+</code></pre>
+</li>
+<li><p><strong>Rollback</strong> if caused by recent deployment:</p>
+<pre><code class="lang-bash">kubectl rollout undo deployment/aura-api
+</code></pre>
+</li>
+</ol>
+<h3 id="step-5-resolve">Step 5: Resolve</h3>
+<p>Implement permanent fix:</p>
+<ol>
+<li>For code issues: Deploy hotfix</li>
+<li>For configuration issues: Update configuration</li>
+<li>For infrastructure issues: Scale or reconfigure infrastructure</li>
+<li>For provider issues: Switch providers or wait for recovery</li>
+</ol>
+<h3 id="step-6-communicate">Step 6: Communicate</h3>
+<ol>
+<li><strong>Internal</strong>: Update incident channel with status</li>
+<li><strong>External</strong>: Update status page if customer-facing</li>
+<li><strong>Stakeholders</strong>: Notify if high-severity or prolonged</li>
+<li><strong>Documentation</strong>: Record actions taken and outcome</li>
+</ol>
+<h2 id="common-issues">Common Issues</h2>
+<h3 id="issue-high-error-rate">Issue: High Error Rate</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Error rate dashboard shows spike</li>
+<li>Logs filled with exceptions</li>
+<li>Users reporting errors</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check error types
+kubectl logs -l app=aura-api --since=5m | grep ERROR | cut -d' ' -f5- | sort | uniq -c | sort -rn | head -20
+
+# Check which endpoints failing
+kubectl logs -l app=aura-api --since=5m | grep &quot;HTTP 500&quot; | awk '{print $10}' | sort | uniq -c | sort -rn
+</code></pre>
+<p><strong>Common causes and fixes</strong>:</p>
+<ol>
+<li><p><strong>Provider failures</strong>:</p>
+<pre><code class="lang-bash">curl https://api.aura.studio/api/health/providers | jq
+# Fix: Enable fallback providers or switch to offline mode
+</code></pre>
+</li>
+<li><p><strong>Database connection issues</strong>:</p>
+<pre><code class="lang-bash"># Check database connectivity
+kubectl exec -it $(kubectl get pod -l app=aura-api -o jsonpath='{.items[0].metadata.name}') -- curl localhost:5005/health/ready
+# Fix: Restart database connection pool or scale database
+</code></pre>
+</li>
+<li><p><strong>Rate limiting</strong>:</p>
+<pre><code class="lang-bash"># Check for rate limit errors
+kubectl logs -l app=aura-api --since=5m | grep &quot;Rate limit exceeded&quot;
+# Fix: Increase rate limits or scale API instances
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-slow-performance">Issue: Slow Performance</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>P95 latency increased</li>
+<li>Users reporting slowness</li>
+<li>Request queue building up</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check resource utilization
+kubectl top pods -l app=aura-api
+
+# Check for slow queries
+# (View APM/tracing for slow transactions)
+
+# Check provider latency
+curl https://api.aura.studio/api/diagnostics/metrics | jq '.providerMetrics'
+</code></pre>
+<p><strong>Common causes and fixes</strong>:</p>
+<ol>
+<li><p><strong>High CPU usage</strong>:</p>
+<pre><code class="lang-bash"># Scale horizontally
+kubectl scale deployment/aura-api --replicas=20
+</code></pre>
+</li>
+<li><p><strong>Memory pressure</strong>:</p>
+<pre><code class="lang-bash"># Check for memory leaks
+kubectl logs -l app=aura-api | grep &quot;OutOfMemory&quot;
+# Fix: Restart pods, investigate memory leak
+</code></pre>
+</li>
+<li><p><strong>Slow database queries</strong>:</p>
+<pre><code class="lang-bash"># Identify slow queries in database logs
+# Fix: Add indexes, optimize queries, or cache results
+</code></pre>
+</li>
+<li><p><strong>Provider timeouts</strong>:</p>
+<pre><code class="lang-bash"># Check provider response times
+curl https://api.aura.studio/api/health/providers | jq '.[] | select(.averageLatency &gt; 1000)'
+# Fix: Increase timeout, switch providers, or enable caching
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-complete-system-outage">Issue: Complete System Outage</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>All health checks failing</li>
+<li>503 or 500 responses for all requests</li>
+<li>No pods running</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check pod status
+kubectl get pods -l app=aura-api
+
+# Check deployment status
+kubectl describe deployment aura-api
+
+# Check for infrastructure issues
+kubectl get nodes
+</code></pre>
+<p><strong>Common causes and fixes</strong>:</p>
+<ol>
+<li><p><strong>All pods crashed</strong>:</p>
+<pre><code class="lang-bash"># Check pod logs
+kubectl logs -l app=aura-api --previous
+# Fix: Identify crash cause, fix, redeploy
+</code></pre>
+</li>
+<li><p><strong>Kubernetes/infrastructure issue</strong>:</p>
+<pre><code class="lang-bash"># Check cluster events
+kubectl get events --sort-by='.lastTimestamp' | tail -20
+# Fix: Contact infrastructure team or cloud provider
+</code></pre>
+</li>
+<li><p><strong>Database unavailable</strong>:</p>
+<pre><code class="lang-bash"># Check database status
+# Fix: Restore database, restore from backup, or failover to replica
+</code></pre>
+</li>
+<li><p><strong>Recent bad deployment</strong>:</p>
+<pre><code class="lang-bash"># Rollback immediately
+kubectl rollout undo deployment/aura-api
+kubectl rollout status deployment/aura-api
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-memory-leak">Issue: Memory Leak</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Memory usage grows continuously</li>
+<li>Pods get OOM killed and restart</li>
+<li>Performance degrades over time</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Monitor memory over time
+watch -n 10 'kubectl top pods -l app=aura-api'
+
+# Check for OOM kills
+kubectl get events --field-selector reason=OOMKilled
+
+# Check pod restart count
+kubectl get pods -l app=aura-api -o jsonpath='{range .items[*]}{.metadata.name}{&quot;\t&quot;}{.status.containerStatuses[0].restartCount}{&quot;\n&quot;}{end}'
+</code></pre>
+<p><strong>Immediate mitigation</strong>:</p>
+<pre><code class="lang-bash"># Restart pods on rolling basis
+kubectl rollout restart deployment/aura-api
+
+# Or force immediate restart
+kubectl delete pods -l app=aura-api --grace-period=0 --force
+</code></pre>
+<p><strong>Investigation</strong>:</p>
+<ol>
+<li><p>Capture heap dump before restarting:</p>
+<pre><code class="lang-bash">kubectl exec -it $(kubectl get pod -l app=aura-api -o jsonpath='{.items[0].metadata.name}') -- dotnet-dump collect -p 1
+</code></pre>
+</li>
+<li><p>Review recent code changes for:</p>
+<ul>
+<li>Unclosed database connections</li>
+<li>Event listener leaks</li>
+<li>Cached data not expiring</li>
+<li>Large object retention</li>
+</ul>
+</li>
+</ol>
+<h3 id="issue-circuit-breakers-tripped">Issue: Circuit Breakers Tripped</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Errors mentioning &quot;circuit breaker open&quot;</li>
+<li>Fallback providers being used</li>
+<li>Provider health showing &quot;Unhealthy&quot;</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check provider health
+curl https://api.aura.studio/api/health/providers | jq
+
+# Check circuit breaker status
+curl https://api.aura.studio/api/diagnostics/circuit-breakers | jq
+</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li><p><strong>Identify failing provider</strong>:</p>
+<pre><code class="lang-bash">curl https://api.aura.studio/api/health/providers | jq '.[] | select(.status == &quot;Unhealthy&quot;)'
+</code></pre>
+</li>
+<li><p><strong>Check provider status</strong> (OpenAI, ElevenLabs, etc.)</p>
+</li>
+<li><p><strong>Options</strong>:</p>
+<ul>
+<li>Wait for provider recovery (circuit will auto-reset)</li>
+<li>Switch to different provider</li>
+<li>Enable offline mode temporarily</li>
+</ul>
+</li>
+<li><p><strong>Manual circuit reset</strong> (if provider recovered):</p>
+<pre><code class="lang-bash"># This endpoint may not exist - check API documentation
+curl -X POST https://api.aura.studio/api/circuit-breakers/{provider}/reset
+</code></pre>
+</li>
+</ol>
+<h2 id="diagnostic-tools">Diagnostic Tools</h2>
+<h3 id="1-health-endpoints">1. Health Endpoints</h3>
+<pre><code class="lang-bash"># Overall system health
+curl https://api.aura.studio/api/health/system | jq
+
+# Example response:
+# {
+#   &quot;status&quot;: &quot;Healthy&quot;,
+#   &quot;timestamp&quot;: &quot;2025-11-02T15:00:00Z&quot;,
+#   &quot;components&quot;: {
+#     &quot;llm&quot;: &quot;Healthy&quot;,
+#     &quot;tts&quot;: &quot;Degraded&quot;,
+#     &quot;storage&quot;: &quot;Healthy&quot;
+#   }
+# }
+</code></pre>
+<h3 id="2-diagnostics-report">2. Diagnostics Report</h3>
+<pre><code class="lang-bash"># Generate full diagnostics report
+curl https://api.aura.studio/api/diagnostics/report | jq
+
+# This returns:
+# - System information
+# - Provider status
+# - Recent errors
+# - Performance metrics
+# - Resource usage
+</code></pre>
+<h3 id="3-logs-with-grep-patterns">3. Logs with Grep Patterns</h3>
+<pre><code class="lang-bash"># All errors in last hour
+kubectl logs -l app=aura-api --since=1h | grep ERROR
+
+# Specific error type
+kubectl logs -l app=aura-api --since=30m | grep &quot;NullReferenceException&quot;
+
+# HTTP 500 errors
+kubectl logs -l app=aura-api --since=15m | grep &quot;HTTP 500&quot;
+
+# Slow requests (&gt;1000ms)
+kubectl logs -l app=aura-api --since=10m | grep &quot;Duration.*[1-9][0-9][0-9][0-9]ms&quot;
+</code></pre>
+<h3 id="4-metrics-queries">4. Metrics Queries</h3>
+<p>Using your monitoring system (Prometheus/Grafana):</p>
+<pre><code class="lang-promql"># Error rate
+rate(http_requests_total{status=~&quot;5..&quot;}[5m])
+
+# Request latency P95
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+
+# Memory usage
+container_memory_usage_bytes{pod=~&quot;aura-api.*&quot;}
+
+# CPU usage
+rate(container_cpu_usage_seconds_total{pod=~&quot;aura-api.*&quot;}[5m])
+</code></pre>
+<h2 id="using-correlation-ids">Using Correlation IDs</h2>
+<p>Every API request/response includes an <code>X-Correlation-ID</code> header for tracking requests across the system.</p>
+<h3 id="finding-correlation-ids">Finding Correlation IDs</h3>
+<p><strong>From user report</strong>:</p>
+<ul>
+<li>Ask user for approximate time and action taken</li>
+<li>Search logs for matching pattern</li>
+</ul>
+<p><strong>From error notification</strong>:</p>
+<ul>
+<li>Correlation ID usually included in alert details</li>
+<li>Check alert payload for <code>correlationId</code> field</li>
+</ul>
+<p><strong>From API response</strong>:</p>
+<pre><code class="lang-bash"># Make request and capture header
+curl -I https://api.aura.studio/api/health/system | grep -i correlation
+# X-Correlation-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+</code></pre>
+<h3 id="tracing-with-correlation-ids">Tracing with Correlation IDs</h3>
+<pre><code class="lang-bash"># Find all logs for a specific request
+CORRELATION_ID=&quot;a1b2c3d4-e5f6-7890-abcd-ef1234567890&quot;
+
+# In Kubernetes
+kubectl logs -l app=aura-api --since=1h | grep &quot;$CORRELATION_ID&quot;
+
+# In centralized logging (adjust for your system)
+# ElasticSearch
+curl -X GET &quot;https://logs.aura.studio/_search?q=correlationId:$CORRELATION_ID&quot;
+
+# CloudWatch Logs
+aws logs filter-log-events --log-group-name /aws/aura-api --filter-pattern &quot;$CORRELATION_ID&quot;
+
+# Splunk
+# Search: index=aura correlationId=$CORRELATION_ID
+</code></pre>
+<h3 id="example-full-request-trace">Example: Full Request Trace</h3>
+<pre><code class="lang-bash">CORRELATION_ID=&quot;abc-123&quot;
+
+# Get all logs with this correlation ID
+kubectl logs -l app=aura-api --since=2h | grep &quot;$CORRELATION_ID&quot; | less
+
+# You should see:
+# 1. Initial request received
+# 2. Provider calls made
+# 3. Database queries executed
+# 4. Response sent
+# 5. Any errors encountered
+</code></pre>
+<p>This allows you to trace the complete flow of a request and identify where failures occurred.</p>
+<h2 id="escalation-procedures">Escalation Procedures</h2>
+<h3 id="when-to-escalate">When to Escalate</h3>
+<p>Escalate if:</p>
+<ul>
+<li>Issue severity is SEV1 and not resolved within 15 minutes</li>
+<li>Issue requires specialized knowledge (database, infrastructure)</li>
+<li>Issue requires access you don't have</li>
+<li>Issue is getting worse despite mitigation attempts</li>
+<li>You've been working on issue for &gt;2 hours with no progress</li>
+</ul>
+<h3 id="escalation-contacts">Escalation Contacts</h3>
+<ol>
+<li><strong>Backend Team Lead</strong>: [Contact info from team roster]</li>
+<li><strong>DevOps Engineer</strong>: [Contact info from team roster]</li>
+<li><strong>Database Administrator</strong>: [Contact info from team roster]</li>
+<li><strong>Engineering Manager</strong>: [Contact info from team roster]</li>
+</ol>
+<h3 id="escalation-message-template">Escalation Message Template</h3>
+<pre><code>Subject: [SEV{level}] {Brief issue description}
+
+Issue: {What's broken}
+Impact: {How many users affected, what functionality impacted}
+Started: {When issue began}
+Actions Taken: 
+  - {Action 1}
+  - {Action 2}
+Current Status: {Current state}
+Correlation IDs: {Relevant correlation IDs}
+
+Request: {What help you need}
+</code></pre>
+<h3 id="external-escalations">External Escalations</h3>
+<p>If issue is with third-party service:</p>
+<ol>
+<li><strong>Check status page</strong> first (OpenAI, ElevenLabs, AWS, etc.)</li>
+<li><strong>File support ticket</strong> with:
+<ul>
+<li>Account ID</li>
+<li>Affected endpoints</li>
+<li>Error messages</li>
+<li>Correlation IDs</li>
+<li>Time range</li>
+</ul>
+</li>
+<li><strong>Implement workaround</strong> while waiting (fallback providers, caching, etc.)</li>
+</ol>
+<h2 id="post-incident">Post-Incident</h2>
+<h3 id="immediate-post-resolution">Immediate Post-Resolution</h3>
+<ol>
+<li><p><strong>Verify resolution</strong>:</p>
+<ul>
+<li>All health checks green</li>
+<li>Error rate back to normal</li>
+<li>Performance metrics normal</li>
+<li>Users reporting issue resolved</li>
+</ul>
+</li>
+<li><p><strong>Update communications</strong>:</p>
+<ul>
+<li>Update status page to &quot;Resolved&quot;</li>
+<li>Notify stakeholders of resolution</li>
+<li>Update incident ticket with resolution</li>
+</ul>
+</li>
+<li><p><strong>Monitor</strong> for 30-60 minutes after resolution</p>
+</li>
+</ol>
+<h3 id="post-incident-review-within-24-48-hours">Post-Incident Review (within 24-48 hours)</h3>
+<p>Create post-incident review document covering:</p>
+<ol>
+<li><strong>Timeline</strong>: When issue started, detected, mitigated, resolved</li>
+<li><strong>Root cause</strong>: What caused the issue</li>
+<li><strong>Impact</strong>: How many users affected, duration, business impact</li>
+<li><strong>Response effectiveness</strong>: What went well, what didn't</li>
+<li><strong>Action items</strong>: Preventive measures, monitoring improvements, documentation updates</li>
+</ol>
+<h3 id="action-items">Action Items</h3>
+<p>Common action items from incidents:</p>
+<ul>
+<li>Add monitoring/alerting for new failure mode</li>
+<li>Improve documentation based on what was unclear</li>
+<li>Add automated recovery for known failure patterns</li>
+<li>Update runbook with lessons learned</li>
+<li>Schedule team discussion of incident</li>
+</ul>
+<h2 id="useful-commands-reference">Useful Commands Reference</h2>
+<pre><code class="lang-bash"># Pod management
+kubectl get pods -l app=aura-api
+kubectl describe pod {pod-name}
+kubectl logs {pod-name} --tail=100 --follow
+kubectl exec -it {pod-name} -- /bin/bash
+
+# Deployment management
+kubectl get deployments
+kubectl describe deployment aura-api
+kubectl rollout history deployment/aura-api
+kubectl rollout undo deployment/aura-api
+kubectl scale deployment/aura-api --replicas=10
+
+# Configuration
+kubectl get configmap
+kubectl describe configmap aura-config
+kubectl get secret
+
+# Events
+kubectl get events --sort-by='.lastTimestamp' | tail -20
+
+# Resource usage
+kubectl top nodes
+kubectl top pods -l app=aura-api
+
+# Database (adjust for your database type)
+kubectl exec -it {db-pod} -- psql -U aura -d aura_production
+</code></pre>
+<h2 id="helpful-links">Helpful Links</h2>
+<ul>
+<li><strong>Architecture Docs</strong>: /docs/architecture/</li>
+<li><strong>API Documentation</strong>: <a href="https://api.aura.studio/swagger">https://api.aura.studio/swagger</a></li>
+<li><strong>Monitoring Dashboard</strong>: <a href="https://metrics.aura.studio">https://metrics.aura.studio</a></li>
+<li><strong>Log Viewer</strong>: <a href="https://logs.aura.studio">https://logs.aura.studio</a></li>
+<li><strong>Recent Deployments</strong>: <a href="https://github.com/Saiyan9001/aura-video-studio/deployments">https://github.com/Saiyan9001/aura-video-studio/deployments</a></li>
+<li><strong>Known Issues</strong>: <a href="https://github.com/Saiyan9001/aura-video-studio/issues?q=is:issue+is:open+label:production">https://github.com/Saiyan9001/aura-video-studio/issues?q=is:issue+is:open+label:production</a></li>
+</ul>
+<h2 id="document-maintenance">Document Maintenance</h2>
+<ul>
+<li><strong>Last Updated</strong>: 2025-11-02</li>
+<li><strong>Review Frequency</strong>: Monthly or after each incident</li>
+<li><strong>Owner</strong>: DevOps Team</li>
+</ul>
+<p>Update this runbook when:</p>
+<ul>
+<li>New common issues identified</li>
+<li>Procedures change</li>
+<li>New tools added</li>
+<li>Feedback from oncall engineers</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/OncallRunbook.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

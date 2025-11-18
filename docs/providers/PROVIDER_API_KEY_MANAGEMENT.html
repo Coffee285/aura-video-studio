@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Provider API Key Management and Validation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Provider API Key Management and Validation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/PROVIDER_API_KEY_MANAGEMENT.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="provider-api-key-management-and-validation">Provider API Key Management and Validation</h1>
+
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio provides secure API key storage and validation for multiple cloud service providers. This document describes the provider management system including secure storage, validation endpoints, and fallback strategies.</p>
+<h2 id="features">Features</h2>
+<h3 id="secure-key-storage">Secure Key Storage</h3>
+<ul>
+<li><strong>Windows</strong>: Uses Windows Data Protection API (DPAPI) for encryption</li>
+<li><strong>Linux/macOS</strong>: Uses AES-256 encryption with machine-specific keys</li>
+<li><strong>Storage Location</strong>: <code>%LOCALAPPDATA%\Aura\secure\apikeys.dat</code> (Windows) or <code>~/.local/share/Aura/secure/apikeys.dat</code> (Linux/macOS)</li>
+<li><strong>Permissions</strong>: Files are automatically restricted to owner-only access (600 on Unix)</li>
+</ul>
+<h3 id="supported-providers">Supported Providers</h3>
+<h4 id="llm-providers-script-generation">LLM Providers (Script Generation)</h4>
+<ul>
+<li><strong>OpenAI</strong> - GPT-4, GPT-3.5 models</li>
+<li><strong>Anthropic</strong> - Claude models</li>
+<li><strong>Google Gemini</strong> - Gemini models</li>
+<li><strong>Azure OpenAI</strong> - Microsoft Azure hosted OpenAI</li>
+<li><strong>Ollama</strong> - Local AI models (free, offline)</li>
+<li><strong>RuleBased</strong> - Template-based generation (free, always available, offline)</li>
+</ul>
+<h4 id="text-to-speech-providers">Text-to-Speech Providers</h4>
+<ul>
+<li><strong>ElevenLabs</strong> - Premium voice synthesis</li>
+<li><strong>PlayHT</strong> - Cloud voice synthesis with cloning</li>
+<li><strong>Windows SAPI</strong> - Built-in Windows TTS (free, always available)</li>
+<li><strong>Piper</strong> - Local neural TTS (free, offline)</li>
+<li><strong>Mimic3</strong> - Local neural TTS (free, offline)</li>
+</ul>
+<h4 id="image-providers">Image Providers</h4>
+<ul>
+<li><strong>Stability AI</strong> - AI image generation</li>
+<li><strong>Pexels</strong> - Free stock images</li>
+<li><strong>Pixabay</strong> - Free stock images</li>
+<li><strong>Unsplash</strong> - High-quality stock images</li>
+<li><strong>Local SD</strong> - Local Stable Diffusion (free, requires GPU)</li>
+</ul>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="validation-endpoints">Validation Endpoints</h3>
+<p>All validation endpoints perform live network checks to verify API keys work correctly.</p>
+<h4 id="post-apiprovidersopenaivalidate">POST /api/providers/openai/validate</h4>
+<p>Validates OpenAI API key with network check.</p>
+<p><strong>Request</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;apiKey&quot;: &quot;sk-...&quot;,
+  &quot;baseUrl&quot;: null,
+  &quot;organizationId&quot;: null,
+  &quot;projectId&quot;: null
+}
+</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;isValid&quot;: true,
+  &quot;status&quot;: &quot;Valid&quot;,
+  &quot;message&quot;: &quot;OpenAI API key is valid and working&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;,
+  &quot;details&quot;: {
+    &quot;provider&quot;: &quot;OpenAI&quot;,
+    &quot;keyFormat&quot;: &quot;valid&quot;,
+    &quot;formatValid&quot;: true,
+    &quot;networkCheckPassed&quot;: true,
+    &quot;httpStatusCode&quot;: 200,
+    &quot;responseTimeMs&quot;: 150
+  }
+}
+</code></pre>
+<h4 id="post-apiproviderselevenlabsvalidate">POST /api/providers/elevenlabs/validate</h4>
+<p>Validates ElevenLabs API key.</p>
+<p><strong>Request</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;apiKey&quot;: &quot;your-elevenlabs-api-key&quot;
+}
+</code></pre>
+<p><strong>Response</strong>: Same format as OpenAI validation</p>
+<h4 id="post-apiprovidersplayhtvalidate">POST /api/providers/playht/validate</h4>
+<p>Validates PlayHT API key.</p>
+<p><strong>Request</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;apiKey&quot;: &quot;your-playht-api-key&quot;
+}
+</code></pre>
+<p><strong>Response</strong>: Same format as OpenAI validation</p>
+<h3 id="status-endpoint">Status Endpoint</h3>
+<h4 id="get-apiprovidersstatus">GET /api/providers/status</h4>
+<p>Returns the configuration status of all providers.</p>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">[
+  {
+    &quot;name&quot;: &quot;OpenAI&quot;,
+    &quot;isConfigured&quot;: true,
+    &quot;isAvailable&quot;: true,
+    &quot;status&quot;: &quot;Configured&quot;,
+    &quot;lastValidated&quot;: &quot;2025-01-15T10:30:00Z&quot;
+  },
+  {
+    &quot;name&quot;: &quot;ElevenLabs&quot;,
+    &quot;isConfigured&quot;: false,
+    &quot;isAvailable&quot;: false,
+    &quot;status&quot;: &quot;Not Configured&quot;
+  },
+  {
+    &quot;name&quot;: &quot;RuleBased&quot;,
+    &quot;isConfigured&quot;: true,
+    &quot;isAvailable&quot;: true,
+    &quot;status&quot;: &quot;Always Available (Offline)&quot;
+  }
+]
+</code></pre>
+<h2 id="frontend-integration">Frontend Integration</h2>
+<h3 id="provider-status-dashboard">Provider Status Dashboard</h3>
+<p>The Provider Status Dashboard component (<code>ProviderStatusDashboard.tsx</code>) displays:</p>
+<ul>
+<li>Visual grid of all providers</li>
+<li>Configuration status (green checkmark = configured, gray dismiss icon = not configured)</li>
+<li>Last validation timestamp</li>
+<li>Refresh button to reload status</li>
+</ul>
+<p><strong>Usage in Settings</strong>:</p>
+<pre><code class="lang-tsx">import { ProviderStatusDashboard } from './ProviderStatusDashboard';
+
+// In your settings component:
+&lt;ProviderStatusDashboard /&gt;
+</code></pre>
+<h3 id="state-management">State Management</h3>
+<p>Provider state is managed using Zustand in <code>src/state/providers.ts</code>:</p>
+<pre><code class="lang-typescript">import { useProviderStore } from '@/state/providers';
+
+// In your component:
+const { providerStatuses, refreshProviderStatuses } = useProviderStore();
+
+// Refresh provider statuses:
+await refreshProviderStatuses();
+</code></pre>
+<h2 id="provider-fallback-strategy">Provider Fallback Strategy</h2>
+<p>When premium providers are unavailable, the system automatically falls back to free alternatives:</p>
+<h3 id="llm-fallback-chain">LLM Fallback Chain</h3>
+<ol>
+<li><strong>OpenAI/Anthropic/Gemini</strong> (premium, requires API key)</li>
+<li><strong>Ollama</strong> (free, local, requires installation)</li>
+<li><strong>RuleBased</strong> (free, always available, template-based)</li>
+</ol>
+<h3 id="tts-fallback-chain">TTS Fallback Chain</h3>
+<ol>
+<li><strong>ElevenLabs/PlayHT</strong> (premium, requires API key)</li>
+<li><strong>Piper/Mimic3</strong> (free, local, requires installation)</li>
+<li><strong>Windows SAPI</strong> (free, always available on Windows)</li>
+</ol>
+<h3 id="image-fallback-chain">Image Fallback Chain</h3>
+<ol>
+<li><strong>Stability AI</strong> (premium, requires API key)</li>
+<li><strong>Local SD</strong> (free, requires GPU with 6GB+ VRAM)</li>
+<li><strong>Stock Images</strong> (free, always available)</li>
+</ol>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="api-key-storage">API Key Storage</h3>
+<ul>
+<li>Keys are encrypted before storage using platform-specific encryption</li>
+<li>Windows: DPAPI with CurrentUser scope</li>
+<li>Linux/macOS: AES-256 with machine-specific key</li>
+<li>File permissions restricted to owner only</li>
+<li>Keys never logged or exposed in error messages</li>
+</ul>
+<h3 id="key-validation">Key Validation</h3>
+<ul>
+<li>Network validation uses minimal API calls</li>
+<li>Extended timeout of 90 seconds for patience-centric validation</li>
+<li>Automatic retry with exponential backoff for transient failures (up to 2 retries)</li>
+<li>Proxy support: automatically detects Windows proxy settings and HTTP_PROXY/HTTPS_PROXY environment variables</li>
+<li>Comprehensive error categorization (DNS, TLS, proxy, timeout, rate limit, etc.)</li>
+<li>Secure handling of validation errors</li>
+<li><strong>Patience Strategy</strong>: Validation failures don't block provider usage - users can &quot;Continue Anyway&quot;</li>
+</ul>
+<h2 id="patience-strategy-for-validation">Patience Strategy for Validation</h2>
+<p>Aura Video Studio implements a <strong>patience-centric validation approach</strong> that never blocks users due to network or validation issues:</p>
+<h3 id="core-principles">Core Principles</h3>
+<ol>
+<li><strong>Non-Blocking</strong>: Validation failures (timeout, network errors, etc.) never prevent saving or using a provider</li>
+<li><strong>Deferred Validation</strong>: If validation cannot complete, the key is saved and validated on first actual use</li>
+<li><strong>Continue Anyway</strong>: All transient failures show a &quot;Continue Anyway&quot; option</li>
+<li><strong>Clear Categorization</strong>: Errors are categorized clearly (DNS, TLS, proxy, timeout, etc.) with actionable guidance</li>
+</ol>
+<h3 id="validation-states">Validation States</h3>
+<ul>
+<li><strong>Valid</strong> ✓: Key verified successfully with provider</li>
+<li><strong>Invalid</strong> ✕: Key definitively invalid (401 Unauthorized) - requires correction</li>
+<li><strong>Rate Limited</strong> ⚠: Key valid but temporarily rate limited - can continue</li>
+<li><strong>Offline</strong> 🌐: No internet connection - can continue in offline mode</li>
+<li><strong>Timeout</strong> ⏱: Request timed out (90s) - can continue with deferred validation</li>
+<li><strong>Network Error</strong> 🔌: Network issue (DNS, TLS, proxy) - can continue anyway</li>
+<li><strong>Service Issue</strong> 🛠: Provider service problem (5xx) - can continue and retry later</li>
+<li><strong>Permission Denied</strong> 🚫: Valid key but insufficient permissions - check account</li>
+</ul>
+<h3 id="error-categorization">Error Categorization</h3>
+<p>The validation system categorizes errors to provide specific troubleshooting guidance:</p>
+<ul>
+<li><strong>DNS_Error</strong>: Unable to resolve hostname - check internet connection or DNS settings</li>
+<li><strong>TLS_Error</strong>: Certificate/TLS handshake failure - may be proxy or certificate issue</li>
+<li><strong>Proxy_Error</strong>: Proxy connection failed - check HTTP_PROXY environment variable or Windows proxy settings</li>
+<li><strong>Connection_Timeout</strong>: Network latency - retry or continue with deferred validation</li>
+<li><strong>Connection_Refused</strong>: Firewall or network blocking - check firewall settings</li>
+<li><strong>Network_Unreachable</strong>: No internet - can work in offline mode</li>
+<li><strong>Offline</strong>: Network connectivity check failed - offline mode available</li>
+</ul>
+<h3 id="proxy-support">Proxy Support</h3>
+<p>Automatic proxy detection and configuration:</p>
+<ul>
+<li><strong>Windows</strong>: Uses system proxy settings automatically</li>
+<li><strong>Environment Variables</strong>: Respects HTTP_PROXY and HTTPS_PROXY</li>
+<li><strong>Authentication</strong>: Uses default credentials (Windows) for authenticated proxies</li>
+<li><strong>Diagnostics</strong>: Proxy errors are detected and reported with specific guidance</li>
+</ul>
+<h3 id="retry-strategy">Retry Strategy</h3>
+<ul>
+<li><strong>Initial attempt</strong>: 90-second timeout</li>
+<li><strong>First retry</strong>: After 1 second delay</li>
+<li><strong>Second retry</strong>: After 2 second delay (exponential backoff)</li>
+<li><strong>Service errors (5xx)</strong>: Automatic retry</li>
+<li><strong>Client errors (4xx)</strong>: No retry (except rate limit which allows save)</li>
+<li><strong>Network errors</strong>: Retry if transient, fail fast if permanent (DNS, TLS)</li>
+</ul>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li>Never commit API keys to source control</li>
+<li>Store keys in secure storage service, not configuration files</li>
+<li>Test keys regularly using validation endpoints</li>
+<li>Rotate keys periodically for security</li>
+<li>Use fallback providers when possible to reduce costs</li>
+<li><strong>NEW</strong>: If validation fails, you can save and continue - the key will be validated on first use</li>
+<li><strong>NEW</strong>: Check diagnostic information in validation errors for specific troubleshooting steps</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="key-validation-fails">Key Validation Fails</h3>
+<p><strong>Symptoms</strong>: &quot;Could not validate API key&quot; or network error messages</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><strong>Timeout or Network Error</strong>: Click &quot;Continue Anyway&quot; - validation will happen on first use</li>
+<li><strong>Check internet connectivity</strong>:
+<ul>
+<li>Try accessing <a href="https://api.openai.com">https://api.openai.com</a> in your browser</li>
+<li>Check if other internet-dependent apps work</li>
+</ul>
+</li>
+<li><strong>Proxy Configuration</strong>:
+<ul>
+<li>Windows: Check Settings &gt; Network &amp; Internet &gt; Proxy</li>
+<li>Set HTTP_PROXY environment variable: <code>export HTTP_PROXY=http://proxy.example.com:8080</code></li>
+<li>For authenticated proxies, credentials are used automatically on Windows</li>
+</ul>
+</li>
+<li><strong>DNS Issues</strong>:
+<ul>
+<li>Try <code>nslookup api.openai.com</code> to verify DNS resolution</li>
+<li>Try alternate DNS servers (8.8.8.8, 1.1.1.1)</li>
+</ul>
+</li>
+<li><strong>TLS/Certificate Issues</strong>:
+<ul>
+<li>Update system root certificates</li>
+<li>Check corporate proxy doesn't intercept HTTPS</li>
+</ul>
+</li>
+<li><strong>Firewall/Security Software</strong>:
+<ul>
+<li>Check if api.openai.com is blocked</li>
+<li>Temporarily disable VPN to test</li>
+</ul>
+</li>
+<li><strong>Rate Limiting</strong>: Wait 60 seconds and retry, or save and continue anyway</li>
+<li><strong>Verify API key</strong>:
+<ul>
+<li>Check it's copied completely including prefix (sk-, sk-proj-, etc.)</li>
+<li>Generate new key if needed</li>
+</ul>
+</li>
+<li><strong>Check provider service status</strong>: Visit status pages (status.openai.com, etc.)</li>
+<li><strong>Review diagnostic information</strong>: Validation errors include specific category and guidance</li>
+</ol>
+<h3 id="offline-mode">Offline Mode</h3>
+<p>If you have no internet connection:</p>
+<ol>
+<li>Validation will detect offline state automatically</li>
+<li>Click &quot;Continue in Offline Mode&quot;</li>
+<li>Key will be saved and validated when internet is available</li>
+<li>Local providers (RuleBased LLM, Windows SAPI TTS, Stock Images) work offline</li>
+</ol>
+<h3 id="storage-errors">Storage Errors</h3>
+<ul>
+<li>Check file system permissions</li>
+<li>Verify %LOCALAPPDATA% or ~/.local exists</li>
+<li>Check disk space availability</li>
+<li>Review security software blocking file access</li>
+</ul>
+<h3 id="provider-not-available">Provider Not Available</h3>
+<ul>
+<li>Check if API key is configured</li>
+<li>Verify provider requirements (GPU, OS, etc.)</li>
+<li>Check if provider service is running (for local providers)</li>
+<li>Review error messages in provider status dashboard</li>
+</ul>
+<h2 id="implementation-notes">Implementation Notes</h2>
+<p>The provider API key management system leverages several existing services:</p>
+<ul>
+<li><code>ISecureStorageService</code> - Handles encrypted key storage (DPAPI/AES-256)</li>
+<li><code>IKeyValidationService</code> - Performs network validation tests</li>
+<li><code>KeyVaultController</code> - (deprecated in favor of ProvidersController)</li>
+<li><code>ProvidersController</code> - Main API controller for provider operations</li>
+</ul>
+<p>All services are registered in dependency injection and are available throughout the application.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/PROVIDER_API_KEY_MANAGEMENT.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

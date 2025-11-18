@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Performance Testing Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Performance Testing Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/PERFORMANCE_TESTING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="performance-testing-guide">Performance Testing Guide</h1>
+
+<p>This guide provides comprehensive instructions for testing the performance optimizations implemented in PR #10.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#backend-performance-testing">Backend Performance Testing</a></li>
+<li><a href="#database-performance-testing">Database Performance Testing</a></li>
+<li><a href="#frontend-performance-testing">Frontend Performance Testing</a></li>
+<li><a href="#cache-performance-testing">Cache Performance Testing</a></li>
+<li><a href="#load-testing">Load Testing</a></li>
+<li><a href="#acceptance-criteria-validation">Acceptance Criteria Validation</a></li>
+</ol>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required-tools">Required Tools</h3>
+<pre><code class="lang-bash"># Install k6 for load testing
+brew install k6  # macOS
+# OR
+choco install k6  # Windows
+# OR
+sudo snap install k6  # Linux
+
+# Install Apache Bench (alternative)
+sudo apt-get install apache2-utils  # Linux
+brew install httpd  # macOS
+
+# Install Lighthouse for frontend testing
+npm install -g @lhci/cli lighthouse
+
+# SQLite tools for database testing
+sudo apt-get install sqlite3  # Linux
+brew install sqlite3  # macOS
+</code></pre>
+<h3 id="setup">Setup</h3>
+<pre><code class="lang-bash"># Start the application with performance logging
+cd Aura.Api
+dotnet run --configuration Release
+
+# In another terminal, start frontend (if testing E2E)
+cd Aura.Web
+npm run build:prod
+</code></pre>
+<h2 id="backend-performance-testing">Backend Performance Testing</h2>
+<h3 id="1-api-response-time-testing">1. API Response Time Testing</h3>
+<h4 id="test-individual-endpoints">Test Individual Endpoints</h4>
+<pre><code class="lang-bash"># Test health endpoint (baseline)
+time curl http://localhost:5005/api/health/live
+
+# Test cached vs uncached endpoint
+# First request (cache miss)
+time curl http://localhost:5005/api/settings
+
+# Second request (cache hit - should be faster)
+time curl http://localhost:5005/api/settings
+</code></pre>
+<h4 id="expected-results">Expected Results</h4>
+<ul>
+<li><strong>Health endpoint</strong>: &lt;50ms</li>
+<li><strong>Settings (cached)</strong>: &lt;20ms</li>
+<li><strong>Settings (uncached)</strong>: &lt;100ms</li>
+</ul>
+<h3 id="2-compression-testing">2. Compression Testing</h3>
+<pre><code class="lang-bash"># Test with compression
+curl -H &quot;Accept-Encoding: gzip, br&quot; \
+  -w &quot;@curl-format.txt&quot; \
+  http://localhost:5005/api/settings
+
+# curl-format.txt content:
+cat &gt; curl-format.txt &lt;&lt; 'EOF'
+    time_namelookup:  %{time_namelookup}\n
+       time_connect:  %{time_connect}\n
+    time_appconnect:  %{time_appconnect}\n
+      time_redirect:  %{time_redirect}\n
+   time_starttransfer: %{time_starttransfer}\n
+                     ----------\n
+         time_total:  %{time_total}\n
+      size_download:  %{size_download}\n
+EOF
+
+# Compare with uncompressed
+curl http://localhost:5005/api/settings | wc -c  # Uncompressed
+curl -H &quot;Accept-Encoding: gzip&quot; http://localhost:5005/api/settings | wc -c  # Compressed
+</code></pre>
+<h4 id="expected-results-1">Expected Results</h4>
+<ul>
+<li><strong>Compression Ratio</strong>: 60-80% size reduction for JSON</li>
+<li><strong>Response Time</strong>: Similar or faster (due to less data transfer)</li>
+</ul>
+<h3 id="3-memory-usage-testing">3. Memory Usage Testing</h3>
+<pre><code class="lang-bash"># Monitor memory before load test
+curl http://localhost:5005/api/performance/metrics | jq '.processMetrics.workingSetBytes'
+
+# Run some operations
+# ... perform operations ...
+
+# Check memory after
+curl http://localhost:5005/api/performance/metrics | jq '.processMetrics.workingSetBytes'
+
+# Memory should be stable, not growing continuously
+</code></pre>
+<h3 id="4-cache-performance-testing">4. Cache Performance Testing</h3>
+<pre><code class="lang-bash"># Clear cache
+curl -X POST http://localhost:5005/api/performance/cache/clear
+
+# Get initial cache stats
+curl http://localhost:5005/api/performance/cache/stats
+
+# Make 100 identical requests
+for i in {1..100}; do
+  curl -s http://localhost:5005/api/settings &gt; /dev/null
+done
+
+# Check cache stats
+curl http://localhost:5005/api/performance/cache/stats | jq
+
+# Expected: hitRate &gt; 0.8 (80% hit rate)
+</code></pre>
+<h2 id="database-performance-testing">Database Performance Testing</h2>
+<h3 id="1-query-performance">1. Query Performance</h3>
+<pre><code class="lang-bash"># Connect to SQLite database
+sqlite3 Aura.Api/aura.db
+
+# Enable query timing
+.timer on
+
+# Test query with index
+EXPLAIN QUERY PLAN 
+SELECT * FROM ProjectStates 
+WHERE Status = 'InProgress' 
+ORDER BY UpdatedAt DESC;
+
+# Should show: USING INDEX idx_projectstates_status_updatedAt
+
+# Run actual query and measure time
+SELECT * FROM ProjectStates 
+WHERE Status = 'InProgress' 
+ORDER BY UpdatedAt DESC;
+</code></pre>
+<h4 id="expected-results-2">Expected Results</h4>
+<ul>
+<li><strong>Simple queries</strong>: &lt;10ms</li>
+<li><strong>Join queries</strong>: &lt;50ms</li>
+<li><strong>All queries should use indexes</strong> (verify with EXPLAIN QUERY PLAN)</li>
+</ul>
+<h3 id="2-connection-pooling-test">2. Connection Pooling Test</h3>
+<pre><code class="lang-bash"># Test concurrent connections (should not block)
+for i in {1..20}; do
+  curl -s http://localhost:5005/api/projects &amp;
+done
+wait
+
+# All requests should complete without connection errors
+</code></pre>
+<h3 id="3-wal-mode-verification">3. WAL Mode Verification</h3>
+<pre><code class="lang-sql">-- In SQLite
+PRAGMA journal_mode;
+-- Should return: wal
+
+PRAGMA synchronous;
+-- Should return: 1 (NORMAL)
+
+PRAGMA cache_size;
+-- Should return: -64000 (64MB)
+</code></pre>
+<h2 id="frontend-performance-testing">Frontend Performance Testing</h2>
+<h3 id="1-bundle-size-analysis">1. Bundle Size Analysis</h3>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Build for production
+npm run build:prod
+
+# Check bundle sizes
+du -sh dist/assets/*.js
+
+# Expected:
+# - react-vendor-*.js: &lt; 200KB
+# - ffmpeg-vendor-*.js: &lt; 500KB
+# - fluentui-components-*.js: &lt; 250KB
+# - main entry chunk: &lt; 300KB
+# - Total: &lt; 1.5MB
+</code></pre>
+<h3 id="2-lighthouse-testing">2. Lighthouse Testing</h3>
+<pre><code class="lang-bash"># Start the application
+cd Aura.Api
+dotnet run --configuration Release
+
+# In another terminal, run Lighthouse
+lighthouse http://localhost:5005 \
+  --output html \
+  --output-path ./lighthouse-report.html \
+  --preset=desktop
+
+# Check scores (should be &gt;90 for performance)
+</code></pre>
+<h4 id="expected-lighthouse-scores">Expected Lighthouse Scores</h4>
+<ul>
+<li><strong>Performance</strong>: &gt;90</li>
+<li><strong>First Contentful Paint</strong>: &lt;1.5s</li>
+<li><strong>Time to Interactive</strong>: &lt;3.0s</li>
+<li><strong>Speed Index</strong>: &lt;2.5s</li>
+<li><strong>Largest Contentful Paint</strong>: &lt;2.5s</li>
+</ul>
+<h3 id="3-lazy-loading-verification">3. Lazy Loading Verification</h3>
+<pre><code class="lang-bash"># Open browser DevTools
+# Go to Network tab
+# Navigate to http://localhost:5005
+
+# Verify:
+# 1. Initial load only loads critical chunks
+# 2. Lazy chunks load on-demand when navigating
+# 3. No duplicate chunks loaded
+
+# Chrome DevTools &gt; Coverage tab
+# Shows how much code is unused on initial load
+# Should be &gt;60% unused (loaded lazily)
+</code></pre>
+<h3 id="4-cache-testing-service-worker">4. Cache Testing (Service Worker)</h3>
+<pre><code class="lang-typescript">// In browser console
+// Check cache storage
+caches.keys().then(console.log);
+
+// Check if assets are cached
+caches.open('aura-cache-v1').then(cache =&gt; {
+  cache.keys().then(console.log);
+});
+</code></pre>
+<h2 id="cache-performance-testing">Cache Performance Testing</h2>
+<h3 id="1-redis-cache-test-if-enabled">1. Redis Cache Test (if enabled)</h3>
+<pre><code class="lang-bash"># Connect to Redis
+redis-cli
+
+# Monitor cache operations
+MONITOR
+
+# In another terminal, make API requests
+curl http://localhost:5005/api/settings
+
+# Should see SET and GET operations in MONITOR output
+</code></pre>
+<h3 id="2-cache-hit-rate-test">2. Cache Hit Rate Test</h3>
+<pre><code class="lang-bash"># Test script
+#!/bin/bash
+
+# Clear cache
+curl -X POST http://localhost:5005/api/performance/cache/clear
+
+echo &quot;Making 1000 requests...&quot;
+for i in {1..1000}; do
+  curl -s http://localhost:5005/api/settings &gt; /dev/null
+  if [ $((i % 100)) -eq 0 ]; then
+    echo &quot;Progress: $i/1000&quot;
+  fi
+done
+
+# Check final hit rate
+echo &quot;Cache Statistics:&quot;
+curl http://localhost:5005/api/performance/cache/stats | jq
+</code></pre>
+<h4 id="expected-results-3">Expected Results</h4>
+<pre><code class="lang-json">{
+  &quot;hits&quot;: 999,
+  &quot;misses&quot;: 1,
+  &quot;errors&quot;: 0,
+  &quot;hitRate&quot;: 0.999,
+  &quot;backendType&quot;: &quot;Hybrid (Redis + Memory)&quot;
+}
+</code></pre>
+<h3 id="3-cache-invalidation-test">3. Cache Invalidation Test</h3>
+<pre><code class="lang-bash"># Get data (should be cached)
+curl http://localhost:5005/api/settings &gt; before.json
+
+# Update settings
+curl -X POST http://localhost:5005/api/settings \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;key&quot;: &quot;value&quot;}'
+
+# Get data again (should be updated)
+curl http://localhost:5005/api/settings &gt; after.json
+
+# Compare
+diff before.json after.json
+# Should show differences (cache was invalidated)
+</code></pre>
+<h2 id="load-testing">Load Testing</h2>
+<h3 id="1-k6-load-test">1. k6 Load Test</h3>
+<p>Create <code>performance-test.js</code>:</p>
+<pre><code class="lang-javascript">import http from 'k6/http';
+import { check, sleep } from 'k6';
+import { Rate } from 'k6/metrics';
+
+const errorRate = new Rate('errors');
+
+export const options = {
+  stages: [
+    { duration: '30s', target: 10 },  // Ramp up to 10 users
+    { duration: '1m', target: 50 },   // Ramp up to 50 users
+    { duration: '2m', target: 50 },   // Stay at 50 users
+    { duration: '30s', target: 100 }, // Ramp up to 100 users
+    { duration: '1m', target: 100 },  // Stay at 100 users
+    { duration: '30s', target: 0 },   // Ramp down
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)&lt;1000'], // 95% of requests &lt; 1s
+    errors: ['rate&lt;0.01'],              // &lt;1% error rate
+  },
+};
+
+export default function () {
+  const endpoints = [
+    '/api/health/live',
+    '/api/settings',
+    '/api/providers',
+    '/api/templates',
+  ];
+
+  endpoints.forEach(endpoint =&gt; {
+    const res = http.get(`http://localhost:5005${endpoint}`);
+    
+    const success = check(res, {
+      'status is 200': (r) =&gt; r.status === 200,
+      'response time &lt; 1s': (r) =&gt; r.timings.duration &lt; 1000,
+    });
+    
+    errorRate.add(!success);
+    sleep(0.1);
+  });
+}
+</code></pre>
+<p>Run the test:</p>
+<pre><code class="lang-bash">k6 run performance-test.js
+</code></pre>
+<h4 id="expected-results-4">Expected Results</h4>
+<pre><code>     ✓ status is 200
+     ✓ response time &lt; 1s
+
+     checks.........................: 100.00% ✓ 12000 ✗ 0
+     data_received..................: 24 MB   200 kB/s
+     data_sent......................: 960 kB  8.0 kB/s
+     http_req_duration..............: avg=85ms  p(95)=245ms
+     http_reqs......................: 12000   100/s
+     errors.........................: 0.00%   ✓ 0 ✗ 12000
+</code></pre>
+<h3 id="2-apache-bench-test">2. Apache Bench Test</h3>
+<pre><code class="lang-bash"># Test with 1000 requests, 10 concurrent
+ab -n 1000 -c 10 http://localhost:5005/api/health/live
+
+# Test with 10000 requests, 100 concurrent (stress test)
+ab -n 10000 -c 100 http://localhost:5005/api/settings
+</code></pre>
+<h4 id="expected-results-5">Expected Results</h4>
+<pre><code>Requests per second:    500-1000 [#/sec]
+Time per request:       10-20 [ms] (mean)
+Time per request:       1-2 [ms] (mean, across all concurrent requests)
+Failed requests:        0
+</code></pre>
+<h3 id="3-endurance-test">3. Endurance Test</h3>
+<pre><code class="lang-bash"># Run continuous load for 1 hour
+k6 run --duration 1h --vus 20 performance-test.js
+
+# Monitor memory throughout
+watch -n 10 'curl -s http://localhost:5005/api/performance/metrics | jq .processMetrics'
+</code></pre>
+<h4 id="expected-behavior">Expected Behavior</h4>
+<ul>
+<li><strong>Memory</strong>: Should stabilize, not grow continuously</li>
+<li><strong>Response Time</strong>: Should remain consistent</li>
+<li><strong>Error Rate</strong>: Should stay &lt;1%</li>
+<li><strong>GC</strong>: Gen2 collections should be infrequent</li>
+</ul>
+<h2 id="acceptance-criteria-validation">Acceptance Criteria Validation</h2>
+<h3 id="criterion-1-50-reduction-in-p95-latency">Criterion 1: 50% reduction in p95 latency</h3>
+<pre><code class="lang-bash"># Baseline (before optimization)
+# Run load test and note p95 latency
+k6 run baseline-test.js | grep &quot;http_req_duration.*p(95)&quot;
+
+# After optimization
+k6 run performance-test.js | grep &quot;http_req_duration.*p(95)&quot;
+
+# Calculate: (baseline - optimized) / baseline * 100
+# Should be &gt;= 50%
+</code></pre>
+<p><strong>Target</strong>: p95 &lt; 1000ms (from ~2000ms baseline)</p>
+<h3 id="criterion-2-database-query-count-reduced-by-30">Criterion 2: Database query count reduced by 30%</h3>
+<pre><code class="lang-bash"># Enable SQLite logging
+# In appsettings.json, enable EF Core logging
+
+# Count queries for a typical operation
+# Before: ~100 queries per request
+# After: &lt; 70 queries per request
+
+# Verify with:
+grep &quot;Executed DbCommand&quot; logs/aura-api-*.log | wc -l
+</code></pre>
+<p><strong>Target</strong>: &lt;70 queries per typical request</p>
+<h3 id="criterion-3-frontend-bundle-under-500kb">Criterion 3: Frontend bundle under 500KB</h3>
+<pre><code class="lang-bash">cd Aura.Web
+npm run build:prod
+
+# Check main entry chunk
+ls -lh dist/assets/index-*.js
+
+# Should be &lt; 500KB (gzipped)
+</code></pre>
+<p><strong>Target</strong>: Main bundle &lt; 500KB</p>
+<h3 id="criterion-4-time-to-interactive-under-3s">Criterion 4: Time to interactive under 3s</h3>
+<pre><code class="lang-bash"># Use Lighthouse
+lighthouse http://localhost:5005 \
+  --only-categories=performance \
+  --preset=desktop \
+  | grep &quot;Time to Interactive&quot;
+</code></pre>
+<p><strong>Target</strong>: TTI &lt; 3000ms</p>
+<h3 id="criterion-5-memory-usage-stable-under-load">Criterion 5: Memory usage stable under load</h3>
+<pre><code class="lang-bash"># Run endurance test and monitor memory
+# Memory should not grow more than 20% over 1 hour
+
+# Script to monitor memory
+#!/bin/bash
+START_MEM=$(curl -s http://localhost:5005/api/performance/metrics | jq .processMetrics.workingSetBytes)
+echo &quot;Starting memory: $START_MEM bytes&quot;
+
+sleep 3600  # 1 hour
+
+END_MEM=$(curl -s http://localhost:5005/api/performance/metrics | jq .processMetrics.workingSetBytes)
+echo &quot;Ending memory: $END_MEM bytes&quot;
+
+GROWTH=$(echo &quot;scale=2; ($END_MEM - $START_MEM) / $START_MEM * 100&quot; | bc)
+echo &quot;Memory growth: $GROWTH%&quot;
+
+# Should be &lt; 20%
+</code></pre>
+<p><strong>Target</strong>: Memory growth &lt; 20% after 1 hour under load</p>
+<h2 id="performance-regression-testing">Performance Regression Testing</h2>
+<h3 id="automated-test-suite">Automated Test Suite</h3>
+<pre><code class="lang-bash"># Create test-performance.sh
+#!/bin/bash
+
+echo &quot;=== Performance Regression Test Suite ===&quot;
+echo &quot;&quot;
+
+# Test 1: API Response Time
+echo &quot;Test 1: API Response Time&quot;
+RESPONSE_TIME=$(curl -o /dev/null -s -w '%{time_total}\n' http://localhost:5005/api/health/live)
+if (( $(echo &quot;$RESPONSE_TIME &lt; 0.050&quot; | bc -l) )); then
+  echo &quot;✓ PASS: Response time ${RESPONSE_TIME}s &lt; 0.050s&quot;
+else
+  echo &quot;✗ FAIL: Response time ${RESPONSE_TIME}s &gt;= 0.050s&quot;
+fi
+echo &quot;&quot;
+
+# Test 2: Cache Hit Rate
+echo &quot;Test 2: Cache Hit Rate&quot;
+for i in {1..100}; do
+  curl -s http://localhost:5005/api/settings &gt; /dev/null
+done
+HIT_RATE=$(curl -s http://localhost:5005/api/performance/cache/stats | jq -r .hitRate)
+if (( $(echo &quot;$HIT_RATE &gt; 0.80&quot; | bc -l) )); then
+  echo &quot;✓ PASS: Cache hit rate $HIT_RATE &gt; 0.80&quot;
+else
+  echo &quot;✗ FAIL: Cache hit rate $HIT_RATE &lt;= 0.80&quot;
+fi
+echo &quot;&quot;
+
+# Test 3: Bundle Size
+echo &quot;Test 3: Bundle Size&quot;
+BUNDLE_SIZE=$(find Aura.Web/dist/assets -name &quot;index-*.js&quot; -exec stat -f%z {} \;)
+if [ $BUNDLE_SIZE -lt 512000 ]; then
+  echo &quot;✓ PASS: Bundle size ${BUNDLE_SIZE} bytes &lt; 500KB&quot;
+else
+  echo &quot;✗ FAIL: Bundle size ${BUNDLE_SIZE} bytes &gt;= 500KB&quot;
+fi
+echo &quot;&quot;
+
+# Test 4: Memory Stability
+echo &quot;Test 4: Memory Stability (5 minute test)&quot;
+START_MEM=$(curl -s http://localhost:5005/api/performance/metrics | jq .processMetrics.workingSetBytes)
+for i in {1..300}; do
+  curl -s http://localhost:5005/api/settings &gt; /dev/null
+  sleep 1
+done
+END_MEM=$(curl -s http://localhost:5005/api/performance/metrics | jq .processMetrics.workingSetBytes)
+GROWTH=$(echo &quot;scale=2; ($END_MEM - $START_MEM) / $START_MEM * 100&quot; | bc)
+if (( $(echo &quot;$GROWTH &lt; 20&quot; | bc -l) )); then
+  echo &quot;✓ PASS: Memory growth ${GROWTH}% &lt; 20%&quot;
+else
+  echo &quot;✗ FAIL: Memory growth ${GROWTH}% &gt;= 20%&quot;
+fi
+
+echo &quot;&quot;
+echo &quot;=== Test Suite Complete ===&quot;
+</code></pre>
+<p>Run regression tests:</p>
+<pre><code class="lang-bash">chmod +x test-performance.sh
+./test-performance.sh
+</code></pre>
+<h2 id="continuous-monitoring">Continuous Monitoring</h2>
+<h3 id="production-monitoring-setup">Production Monitoring Setup</h3>
+<pre><code class="lang-bash"># Add to docker-compose.yml (optional)
+prometheus:
+  image: prom/prometheus
+  volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  ports:
+    - &quot;9090:9090&quot;
+
+grafana:
+  image: grafana/grafana
+  ports:
+    - &quot;3001:3000&quot;
+  depends_on:
+    - prometheus
+</code></pre>
+<h3 id="key-metrics-to-monitor">Key Metrics to Monitor</h3>
+<ol>
+<li><strong>Response Time</strong>: p50, p95, p99</li>
+<li><strong>Cache Hit Rate</strong>: Should stay &gt;80%</li>
+<li><strong>Memory Usage</strong>: Working set should be stable</li>
+<li><strong>CPU Usage</strong>: Should be reasonable (&lt;70% sustained)</li>
+<li><strong>Error Rate</strong>: Should be &lt;1%</li>
+<li><strong>Database Query Time</strong>: p95 &lt;50ms</li>
+</ol>
+<h2 id="troubleshooting-performance-issues">Troubleshooting Performance Issues</h2>
+<h3 id="slow-responses">Slow Responses</h3>
+<pre><code class="lang-bash"># Check cache status
+curl http://localhost:5005/api/performance/cache/stats
+
+# Check memory
+curl http://localhost:5005/api/performance/metrics
+
+# Check GC
+curl http://localhost:5005/api/performance/gc/stats
+
+# Review logs
+tail -f logs/performance-*.log
+</code></pre>
+<h3 id="high-memory-usage">High Memory Usage</h3>
+<pre><code class="lang-bash"># Check GC stats
+curl http://localhost:5005/api/performance/gc/stats
+
+# Force GC if needed
+curl -X POST http://localhost:5005/api/performance/gc/collect
+
+# Check for memory leaks
+dotnet-dump collect -p $(pgrep dotnet)
+</code></pre>
+<h3 id="low-cache-hit-rate">Low Cache Hit Rate</h3>
+<pre><code class="lang-bash"># Clear cache and rebuild
+curl -X POST http://localhost:5005/api/performance/cache/clear
+
+# Check Redis connection (if used)
+redis-cli ping
+
+# Verify cache configuration
+grep -A 10 &quot;Caching&quot; appsettings.json
+</code></pre>
+<h2 id="reporting-results">Reporting Results</h2>
+<h3 id="generate-performance-report">Generate Performance Report</h3>
+<pre><code class="lang-bash">#!/bin/bash
+
+echo &quot;# Performance Test Report&quot; &gt; performance-report.md
+echo &quot;Date: $(date)&quot; &gt;&gt; performance-report.md
+echo &quot;&quot; &gt;&gt; performance-report.md
+
+# API Performance
+echo &quot;## API Performance&quot; &gt;&gt; performance-report.md
+k6 run performance-test.js &gt;&gt; performance-report.md
+
+# Cache Stats
+echo &quot;## Cache Statistics&quot; &gt;&gt; performance-report.md
+curl -s http://localhost:5005/api/performance/cache/stats &gt;&gt; performance-report.md
+
+# Memory Stats
+echo &quot;## Memory Statistics&quot; &gt;&gt; performance-report.md
+curl -s http://localhost:5005/api/performance/metrics &gt;&gt; performance-report.md
+
+# Bundle Size
+echo &quot;## Bundle Size&quot; &gt;&gt; performance-report.md
+du -h Aura.Web/dist/assets/*.js &gt;&gt; performance-report.md
+
+# Lighthouse
+echo &quot;## Lighthouse Scores&quot; &gt;&gt; performance-report.md
+lighthouse http://localhost:5005 --output json | jq '.categories.performance.score' &gt;&gt; performance-report.md
+</code></pre>
+<h2 id="conclusion">Conclusion</h2>
+<p>Following this guide ensures comprehensive performance testing across all optimization areas. All acceptance criteria should be validated before considering PR #10 complete.</p>
+<p>For issues or questions, consult the <a href="PERFORMANCE_OPTIMIZATION_GUIDE.html">Performance Optimization Guide</a>.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/PERFORMANCE_TESTING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

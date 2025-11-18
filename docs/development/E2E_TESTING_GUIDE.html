@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>E2E Testing Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="E2E Testing Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/E2E_TESTING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="e2e-testing-guide">E2E Testing Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide covers end-to-end testing for Aura Video Studio, including test scenarios, CI gates, flake control, and best practices.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#test-architecture">Test Architecture</a></li>
+<li><a href="#running-tests">Running Tests</a></li>
+<li><a href="#test-scenarios">Test Scenarios</a></li>
+<li><a href="#flake-control">Flake Control</a></li>
+<li><a href="#ci-gates">CI Gates</a></li>
+<li><a href="#writing-new-tests">Writing New Tests</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+<h2 id="test-architecture">Test Architecture</h2>
+<h3 id="test-types">Test Types</h3>
+<ol>
+<li><p><strong>Frontend E2E Tests</strong> (Playwright)</p>
+<ul>
+<li>Full workflow tests (Brief → Plan → Script → SSML → Assets → Render)</li>
+<li>SSE progress tracking</li>
+<li>Job management (creation, cancellation, monitoring)</li>
+<li>Error handling and recovery</li>
+</ul>
+</li>
+<li><p><strong>Backend Integration Tests</strong> (.NET)</p>
+<ul>
+<li>Complete workflow validation</li>
+<li>Provider integration</li>
+<li>Pipeline execution</li>
+<li>SSE event streams</li>
+</ul>
+</li>
+<li><p><strong>CLI Integration Tests</strong></p>
+<ul>
+<li>Cross-platform command validation</li>
+<li>Quick generation</li>
+<li>Preflight checks</li>
+</ul>
+</li>
+</ol>
+<h3 id="test-data">Test Data</h3>
+<p>Test data is organized under <code>samples/test-data/</code>:</p>
+<pre><code>samples/test-data/
+├── briefs/
+│   └── synthetic-briefs.json      # LLM-generated test scenarios with edge cases
+├── configs/
+│   └── hermetic-test-config.json  # Isolated test configuration
+└── fixtures/
+    └── mock-responses.json        # Provider mock responses, SSE events, artifacts
+</code></pre>
+<p><strong>Synthetic Briefs</strong> (<code>briefs/synthetic-briefs.json</code>):</p>
+<ul>
+<li>18 test scenarios covering various content types and edge cases</li>
+<li>Edge cases: Unicode/emoji, special characters, extreme durations, line breaks</li>
+<li>Reliability tests: Provider retry, job cancellation, SSE reconnection</li>
+<li>Each brief includes expected complexity and scene count</li>
+</ul>
+<p><strong>Mock Responses</strong> (<code>fixtures/mock-responses.json</code>):</p>
+<ul>
+<li>Provider responses (LLM, TTS, visuals) with success and fallback scenarios</li>
+<li>SSE event streams for job progress and cancellation</li>
+<li>Export manifest with licensing information</li>
+<li>Error responses for testing retry logic</li>
+</ul>
+<p><strong>Hermetic Config</strong> (<code>configs/hermetic-test-config.json</code>):</p>
+<ul>
+<li>Offline-first provider configuration</li>
+<li>Mock FFmpeg with placeholder output</li>
+<li>Accelerated time for faster tests</li>
+<li>Retry policy for transient failures</li>
+</ul>
+<h2 id="running-tests">Running Tests</h2>
+<h3 id="local-development">Local Development</h3>
+<h4 id="frontend-e2e-tests">Frontend E2E Tests</h4>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Run all E2E tests
+npm run playwright
+
+# Run specific test file
+npx playwright test tests/e2e/full-pipeline.spec.ts
+
+# Run in UI mode (interactive)
+npm run playwright:ui
+
+# Run with specific browser
+npx playwright test --project=chromium
+
+# Debug mode
+npx playwright test --debug
+</code></pre>
+<h4 id="backend-integration-tests">Backend Integration Tests</h4>
+<pre><code class="lang-bash"># Run all E2E tests
+dotnet test Aura.E2E/Aura.E2E.csproj
+
+# Run specific test class
+dotnet test Aura.E2E/Aura.E2E.csproj --filter &quot;FullyQualifiedName~CompleteWorkflow&quot;
+
+# With detailed output
+dotnet test Aura.E2E/Aura.E2E.csproj --logger &quot;console;verbosity=detailed&quot;
+</code></pre>
+<h4 id="cli-tests">CLI Tests</h4>
+<pre><code class="lang-bash"># Quick command test
+dotnet run --project Aura.Cli -- quick -t &quot;Test Video&quot; -d 0.5 --dry-run -v
+
+# Preflight check
+dotnet run --project Aura.Cli -- preflight -v
+</code></pre>
+<h3 id="cicd-execution">CI/CD Execution</h3>
+<p>E2E tests run automatically on:</p>
+<ul>
+<li>Push to <code>main</code> or <code>develop</code> branches</li>
+<li>Pull requests to <code>main</code> or <code>develop</code></li>
+<li>Scheduled nightly runs (3 AM UTC)</li>
+<li>Manual workflow dispatch</li>
+</ul>
+<h2 id="test-scenarios">Test Scenarios</h2>
+<h3 id="full-pipeline-test">Full Pipeline Test</h3>
+<p><strong>Location</strong>: <code>Aura.Web/tests/e2e/full-pipeline.spec.ts</code></p>
+<p><strong>Coverage</strong>:</p>
+<ul>
+<li>Complete video generation workflow</li>
+<li>Phase progression (Brief → Plan → Script → TTS → Visuals → Compose → Render)</li>
+<li>Artifact generation (video, subtitles, manifest)</li>
+<li>SSE progress tracking</li>
+<li>Job cancellation</li>
+<li>Error handling</li>
+</ul>
+<p><strong>Expected Duration</strong>: 60-120 seconds</p>
+<p><strong>Success Criteria</strong>:</p>
+<ul>
+<li>All phases complete in order</li>
+<li>Progress updates received via SSE</li>
+<li>Final artifacts generated</li>
+<li>Manifest includes licensing information</li>
+</ul>
+<h3 id="complete-workflow-test">Complete Workflow Test</h3>
+<p><strong>Location</strong>: <code>Aura.Web/tests/e2e/complete-workflow.spec.ts</code></p>
+<p><strong>Coverage</strong>:</p>
+<ul>
+<li>Wizard navigation</li>
+<li>Form validation</li>
+<li>Provider selection</li>
+<li>Preflight checks</li>
+<li>Generation execution</li>
+</ul>
+<p><strong>Expected Duration</strong>: 30-60 seconds</p>
+<h3 id="sse-progress-tracking-test">SSE Progress Tracking Test</h3>
+<p><strong>Location</strong>: <code>Aura.Web/tests/e2e/sse-progress-tracking.spec.ts</code></p>
+<p><strong>Coverage</strong>:</p>
+<ul>
+<li>Real-time job progress via SSE events</li>
+<li>SSE reconnection with Last-Event-ID after network interruptions</li>
+<li>Connection error handling and retry</li>
+<li>Progress percentage accuracy validation</li>
+</ul>
+<p><strong>Expected Duration</strong>: 60-90 seconds</p>
+<p><strong>Success Criteria</strong>:</p>
+<ul>
+<li>All phase transitions tracked correctly</li>
+<li>Reconnection works with Last-Event-ID header</li>
+<li>Error handling graceful with retry logic</li>
+<li>Progress updates accurate (0-100%)</li>
+</ul>
+<h3 id="job-cancellation-test">Job Cancellation Test</h3>
+<p><strong>Location</strong>: <code>Aura.Web/tests/e2e/job-cancellation.spec.ts</code></p>
+<p><strong>Coverage</strong>:</p>
+<ul>
+<li>Job cancellation during execution</li>
+<li>Resource cleanup after cancellation</li>
+<li>Prevention of actions on cancelled jobs</li>
+<li>Phase-specific cancellation handling</li>
+</ul>
+<p><strong>Expected Duration</strong>: 60-90 seconds</p>
+<p><strong>Success Criteria</strong>:</p>
+<ul>
+<li>Jobs can be cancelled at any phase</li>
+<li>Cleanup removes temporary files</li>
+<li>Cancelled jobs cannot be resumed (validation error)</li>
+<li>Status updates correctly to &quot;cancelled&quot;</li>
+</ul>
+<h3 id="export-manifest-validation-test">Export Manifest Validation Test</h3>
+<p><strong>Location</strong>: <code>Aura.Web/tests/e2e/export-manifest-validation.spec.ts</code></p>
+<p><strong>Coverage</strong>:</p>
+<ul>
+<li>Manifest generation with complete metadata</li>
+<li>Licensing information validation</li>
+<li>Pipeline timing and phase duration tracking</li>
+<li>Artifact checksum validation</li>
+<li>Manifest download functionality</li>
+</ul>
+<p><strong>Expected Duration</strong>: 60-90 seconds</p>
+<p><strong>Success Criteria</strong>:</p>
+<ul>
+<li>Manifest includes all required metadata</li>
+<li>Licensing information present (LLM, TTS, visuals providers)</li>
+<li>Pipeline phases tracked with timing</li>
+<li>Commercial use rights documented</li>
+<li>Manifest downloadable as JSON file</li>
+</ul>
+<h3 id="backend-integration-tests-1">Backend Integration Tests</h3>
+<p><strong>Location</strong>: <code>Aura.E2E/CompleteWorkflowTests.cs</code></p>
+<p><strong>Coverage</strong>:</p>
+<ul>
+<li>Offline workflow with local providers</li>
+<li>Provider fallback and selection</li>
+<li>Hardware detection</li>
+<li>Script generation</li>
+</ul>
+<p><strong>Expected Duration</strong>: 5-15 seconds per test</p>
+<h2 id="flake-control">Flake Control</h2>
+<h3 id="flake-tracking-system">Flake Tracking System</h3>
+<p>The flake tracker automatically monitors test stability and quarantines flaky tests.</p>
+<p><strong>Location</strong>: <code>Aura.Web/tests/utils/flake-tracker.ts</code></p>
+<h4 id="features">Features</h4>
+<ol>
+<li><p><strong>Automatic Detection</strong></p>
+<ul>
+<li>Tracks pass/fail rates per test</li>
+<li>Calculates flake rate</li>
+<li>Auto-quarantines tests with &gt;30% failure rate (after 5 runs)</li>
+</ul>
+</li>
+<li><p><strong>Quarantine Mechanism</strong></p>
+<ul>
+<li>Known flaky tests are marked and skipped</li>
+<li>Quarantined tests tracked separately</li>
+<li>Manual unquarantine available</li>
+</ul>
+</li>
+<li><p><strong>Reporting</strong></p>
+<ul>
+<li>Generates flake reports after each run</li>
+<li>Uploaded as CI artifacts</li>
+<li>Tracked over time for trends</li>
+</ul>
+</li>
+</ol>
+<h4 id="using-the-flake-tracker">Using the Flake Tracker</h4>
+<pre><code class="lang-typescript">import { flakeTracker } from '../utils/flake-tracker';
+
+test.afterEach(async ({}, testInfo) =&gt; {
+  flakeTracker.recordTestResult(
+    testInfo.title,
+    testInfo.file,
+    testInfo.status === 'passed'
+  );
+});
+
+test('my test', async () =&gt; {
+  // Skip if quarantined
+  if (flakeTracker.isQuarantined('my test', 'test-file.spec.ts')) {
+    test.skip();
+  }
+  
+  // Test implementation
+});
+</code></pre>
+<h3 id="retry-strategies">Retry Strategies</h3>
+<h4 id="playwright-retry-configuration">Playwright Retry Configuration</h4>
+<pre><code class="lang-typescript">// playwright.config.ts
+export default defineConfig({
+  retries: process.env.CI ? 2 : 0,  // 2 retries in CI, 0 locally
+  timeout: 60 * 1000,                // 60 seconds per test
+  expect: {
+    timeout: 10 * 1000,              // 10 seconds for assertions
+  },
+});
+</code></pre>
+<h4 id="handling-transient-failures">Handling Transient Failures</h4>
+<p>For known transient issues (provider timeouts, network glitches):</p>
+<pre><code class="lang-typescript">test('test with retry logic', async ({ page }) =&gt; {
+  // Use retry with exponential backoff
+  await test.step('with retry', async () =&gt; {
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts &lt; maxAttempts) {
+      try {
+        await page.click('button');
+        break;
+      } catch (error) {
+        attempts++;
+        if (attempts &gt;= maxAttempts) throw error;
+        await page.waitForTimeout(1000 * attempts);
+      }
+    }
+  });
+});
+</code></pre>
+<h2 id="ci-gates">CI Gates</h2>
+<h3 id="required-gates">Required Gates</h3>
+<p>All E2E tests must pass before merge:</p>
+<ol>
+<li><p><strong>Windows E2E Tests</strong> ✅</p>
+<ul>
+<li>Full pipeline with real FFmpeg</li>
+<li>Complete workflow validation</li>
+<li>SSE and job management</li>
+</ul>
+</li>
+<li><p><strong>Linux E2E Tests (Headless)</strong> ✅</p>
+<ul>
+<li>Cross-platform validation</li>
+<li>Headless browser testing</li>
+<li>CLI integration</li>
+</ul>
+</li>
+<li><p><strong>Backend Integration Tests</strong> ✅</p>
+<ul>
+<li>Provider integration</li>
+<li>Pipeline execution</li>
+<li>SSE event streams</li>
+</ul>
+</li>
+<li><p><strong>CLI Integration Tests</strong> ✅</p>
+<ul>
+<li>Windows and Linux</li>
+<li>Quick generation</li>
+<li>Preflight validation</li>
+</ul>
+</li>
+</ol>
+<h3 id="gate-configuration">Gate Configuration</h3>
+<p><strong>Location</strong>: <code>.github/workflows/e2e-pipeline.yml</code></p>
+<p><strong>Fail Criteria</strong>:</p>
+<ul>
+<li>Any critical test failure</li>
+<li>Flake rate above 50% on any test (warning, tracked but doesn't fail build)</li>
+<li>More than 10 quarantined tests (warning)</li>
+<li>Test timeout (45 minutes max for Windows, 30 minutes for Linux)</li>
+</ul>
+<p><strong>Artifact Retention</strong>:</p>
+<ul>
+<li>Test results: 30 days</li>
+<li>Screenshots/videos: 7 days (failures only)</li>
+<li>Flake reports: 90 days</li>
+<li>CLI artifacts: 7 days</li>
+</ul>
+<p><strong>Flake Rate Thresholds</strong>:</p>
+<ul>
+<li><strong>30%</strong>: Auto-quarantine test after 5 runs</li>
+<li><strong>20%</strong>: High flake warning (reported but not quarantined)</li>
+<li><strong>50%</strong>: Critical flake warning (serious reliability issue)</li>
+</ul>
+<p><strong>Test Retry Policy</strong>:</p>
+<ul>
+<li>CI: 2 retries on failure</li>
+<li>Local: 0 retries (fail fast for quick feedback)</li>
+<li>Timeout: 60 seconds per test (configurable per test)</li>
+</ul>
+<h2 id="writing-new-tests">Writing New Tests</h2>
+<h3 id="test-structure">Test Structure</h3>
+<pre><code class="lang-typescript">import { test, expect } from '@playwright/test';
+
+test.describe('Feature Name', () =&gt; {
+  test.beforeEach(async ({ page }) =&gt; {
+    // Setup: navigation, mocks, etc.
+    await page.goto('/');
+  });
+
+  test('should do something', async ({ page }) =&gt; {
+    // Set reasonable timeout
+    test.setTimeout(60000);
+
+    // Mock external dependencies
+    await page.route('**/api/endpoint', async (route) =&gt; {
+      await route.fulfill({
+        status: 200,
+        body: JSON.stringify({ data: 'mock' }),
+      });
+    });
+
+    // Test implementation
+    await page.click('button');
+    await expect(page.getByText('Success')).toBeVisible();
+  });
+});
+</code></pre>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li><p><strong>Use Hermetic Test Data</strong></p>
+<ul>
+<li>Load from <code>samples/test-data/</code></li>
+<li>Mock external dependencies</li>
+<li>Avoid real API calls</li>
+</ul>
+</li>
+<li><p><strong>Set Explicit Timeouts</strong></p>
+<ul>
+<li>Default: 60 seconds</li>
+<li>Adjust per test complexity</li>
+<li>Use <code>test.setTimeout()</code></li>
+</ul>
+</li>
+<li><p><strong>Mock Appropriately</strong></p>
+<ul>
+<li>Mock external providers</li>
+<li>Mock slow operations</li>
+<li>Use realistic mock data</li>
+</ul>
+</li>
+<li><p><strong>Handle Asynchrony</strong></p>
+<ul>
+<li>Use <code>await</code> consistently</li>
+<li>Wait for network idle when needed</li>
+<li>Use explicit waits over hardcoded delays</li>
+</ul>
+</li>
+<li><p><strong>Clean Up Resources</strong></p>
+<ul>
+<li>Use <code>test.afterEach()</code> for cleanup</li>
+<li>Remove test artifacts</li>
+<li>Reset state</li>
+</ul>
+</li>
+</ol>
+<h3 id="test-data-generation">Test Data Generation</h3>
+<p>Use synthetic briefs for comprehensive coverage:</p>
+<pre><code class="lang-typescript">import syntheticBriefs from '../../../samples/test-data/briefs/synthetic-briefs.json';
+
+test('should handle edge case brief', async ({ page }) =&gt; {
+  const edgeCaseBrief = syntheticBriefs.briefs.find(
+    b =&gt; b.tags?.includes('edge-case')
+  );
+  
+  // Use in test
+  await fillBriefForm(page, edgeCaseBrief);
+});
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="common-issues">Common Issues</h3>
+<h4 id="tests-timing-out">Tests Timing Out</h4>
+<p><strong>Symptoms</strong>: Tests fail with &quot;Timeout of 60000ms exceeded&quot;</p>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Increase test timeout: <code>test.setTimeout(120000)</code></li>
+<li>Check if backend is running and responsive</li>
+<li>Review browser console for errors</li>
+<li>Check network requests in test artifacts</li>
+</ul>
+<h4 id="flaky-tests">Flaky Tests</h4>
+<p><strong>Symptoms</strong>: Tests pass sometimes, fail other times</p>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Add explicit waits: <code>await page.waitForSelector()</code></li>
+<li>Increase assertion timeouts</li>
+<li>Mock time-sensitive operations</li>
+<li>Check flake tracker report for patterns</li>
+</ul>
+<h4 id="mock-not-working">Mock Not Working</h4>
+<p><strong>Symptoms</strong>: Real API calls happening instead of mocks</p>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Verify route pattern matches actual URL</li>
+<li>Check route is registered before navigation</li>
+<li>Use <code>route.continue()</code> for passthrough</li>
+<li>Check network tab in Playwright trace</li>
+</ul>
+<h4 id="headless-vs-headed-differences">Headless vs Headed Differences</h4>
+<p><strong>Symptoms</strong>: Tests pass locally (headed) but fail in CI (headless)</p>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Run locally in headless: <code>npx playwright test --headed=false</code></li>
+<li>Check for timing issues (headless is faster)</li>
+<li>Verify fonts and rendering differences</li>
+<li>Use <code>page.waitForLoadState('networkidle')</code></li>
+</ul>
+<h3 id="debug-tools">Debug Tools</h3>
+<h4 id="playwright-inspector">Playwright Inspector</h4>
+<pre><code class="lang-bash"># Run with inspector
+npx playwright test --debug
+
+# Pause at specific point
+await page.pause();
+</code></pre>
+<h4 id="trace-viewer">Trace Viewer</h4>
+<pre><code class="lang-bash"># Generate trace
+npx playwright test --trace on
+
+# View trace
+npx playwright show-trace trace.zip
+</code></pre>
+<h4 id="video-recording">Video Recording</h4>
+<pre><code class="lang-bash"># Enable video
+npx playwright test --video on
+
+# Videos saved to test-results/
+</code></pre>
+<h3 id="getting-help">Getting Help</h3>
+<ol>
+<li>Check test artifacts in CI</li>
+<li>Review flake tracker reports</li>
+<li>Check existing issues in GitHub</li>
+<li>Consult <a href="SSE_INTEGRATION_TESTING_GUIDE.html">SSE Integration Testing Guide</a></li>
+<li>Review <a href="PRODUCTION_READINESS_CHECKLIST.md">Production Readiness Checklist</a></li>
+</ol>
+<h2 id="continuous-improvement">Continuous Improvement</h2>
+<h3 id="monitoring-test-health">Monitoring Test Health</h3>
+<ol>
+<li><strong>Flake Rate</strong>: Track weekly in CI artifacts</li>
+<li><strong>Test Duration</strong>: Monitor for performance regression</li>
+<li><strong>Coverage</strong>: Ensure new features have E2E tests</li>
+<li><strong>Quarantine Queue</strong>: Review monthly and fix/remove</li>
+</ol>
+<h3 id="adding-new-scenarios">Adding New Scenarios</h3>
+<p>When adding new features:</p>
+<ol>
+<li>Add E2E test covering happy path</li>
+<li>Add edge case tests</li>
+<li>Update synthetic briefs if needed</li>
+<li>Document in this guide</li>
+<li>Ensure CI gates pass</li>
+</ol>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-05<br>
+<strong>Maintainer</strong>: Aura Development Team</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/E2E_TESTING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

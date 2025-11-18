@@ -74,71 +74,45 @@
 <h1 id="aura-video-studio">Aura Video Studio</h1>
 
 <blockquote>
-<p><strong>🎬 AI-Powered Video Generation Studio</strong></p>
+<p><strong>🎬 AI-Powered Video Generation Suite</strong></p>
 </blockquote>
-<p>Create high-quality videos fast with an AI-first workflow designed for everyone. Aura Video Studio combines a beginner-friendly Guided Mode with an Advanced Mode for power users—unlocking a full ML Lab, deep prompt customization, expert render controls, and more.</p>
-<h2 id="-download-desktop-app">🚀 Download Desktop App</h2>
-<p><strong>Get started in minutes with our one-click installers:</strong></p>
+<p>Desktop application for AI-powered video generation that transforms creative briefs into complete videos with script generation, text-to-speech synthesis, visual composition, and professional video rendering.</p>
+<h2 id="-quick-start">🚀 Quick Start</h2>
+<p><strong>Download Desktop App:</strong></p>
 <ul>
-<li><strong>Windows</strong>: <a href="https://github.com/coffee285/aura-video-studio/releases/latest">Download Installer</a> (.exe)</li>
+<li><strong>Windows</strong>: <a href="https://github.com/coffee285/aura-video-studio/releases/latest">Download Installer</a> (.exe) - Windows 11 (x64) primary</li>
 <li><strong>macOS</strong>: <a href="https://github.com/coffee285/aura-video-studio/releases/latest">Download DMG</a> (Intel + Apple Silicon)</li>
 <li><strong>Linux</strong>: <a href="https://github.com/coffee285/aura-video-studio/releases/latest">Download AppImage</a> (Universal)</li>
 </ul>
 <p>📦 See <a href="INSTALLATION.html">INSTALLATION.md</a> for detailed installation instructions.</p>
-<hr>
-<h2 id="what-makes-aura-different">What makes Aura different</h2>
+<h2 id="key-features">Key Features</h2>
+<p><strong>AI-Powered Video Creation:</strong></p>
 <ul>
-<li><p>Beginner-first Guided Mode</p>
+<li><strong>AI Script Generation</strong>: Transform creative briefs into structured scripts with scene timing</li>
+<li><strong>Multi-Provider TTS</strong>: ElevenLabs, PlayHT, Windows SAPI, Piper, Mimic3</li>
+<li><strong>Visual Generation</strong>: Stable Diffusion integration, stock images, Replicate cloud models</li>
+<li><strong>Timeline Composition</strong>: Transitions, effects, and professional video editing</li>
+<li><strong>Hardware-Accelerated Rendering</strong>: NVENC (NVIDIA), AMF (AMD), QuickSync (Intel)</li>
+</ul>
+<p><strong>User Experience:</strong></p>
 <ul>
-<li>Start-to-finish flow with sensible defaults</li>
-<li>“Why this choice?” hints and inline help</li>
-<li>Explain/improve buttons on every AI step</li>
+<li><strong>Guided Mode</strong>: Beginner-friendly workflow with sensible defaults and inline help</li>
+<li><strong>Advanced Mode</strong>: ML Lab, deep prompt customization, expert render controls</li>
+<li><strong>Real-time Progress</strong>: Server-Sent Events for live pipeline updates</li>
+<li><strong>Provider Profiles</strong>: Automatic fallback and retry logic</li>
 </ul>
-</li>
-<li><p>Advanced Mode (for power users)</p>
+<p><strong>Performance &amp; Reliability:</strong></p>
 <ul>
-<li>ML Lab: annotate frames and retrain “frame importance” on your own content</li>
-<li>Deep prompt customization and templates</li>
-<li>Expert render flags, motion graphics recipes, and chroma key tools</li>
-<li>Provider tuning, strict structured outputs, and reliability controls</li>
+<li>FFmpeg-based rendering pipeline with hardware acceleration</li>
+<li>Structured logging and diagnostics</li>
+<li>Preflight validation and post-export integrity checks</li>
 </ul>
-</li>
-<li><p>Reliability by design</p>
-<ul>
-<li>Provider profiles with fallback and auto-retry</li>
-<li>Strict schemas on LLM outputs to prevent bad downstream states</li>
-<li>Structured logging, diagnostics, and support bundles</li>
-</ul>
-</li>
-<li><p>Performance-focused editing</p>
-<ul>
-<li>Responsive timeline and scrubbing</li>
-<li>Proxy media and cached waveforms/thumbnails (configurable)</li>
-<li>Export presets with preflight validation and post-export integrity checks</li>
-</ul>
-</li>
-</ul>
-<h2 id="architecture-at-a-glance">Architecture at a Glance</h2>
-<p>Aura Video Studio is built as an <strong>Electron desktop application</strong> — this is the primary, user-facing runtime:</p>
-<ul>
-<li><strong>Aura.Desktop</strong> — Electron shell (primary runtime and distribution target)
-<ul>
-<li><strong>Main Process</strong>: Entry point at <code>electron/main.js</code>; orchestrates backend, manages windows, handles IPC, tray, menu, and protocol handling</li>
-<li><strong>Renderer Process</strong>: React frontend loaded from bundled files into Electron window</li>
-<li><strong>Preload Script</strong>: Secure bridge for frontend-Electron communication via IPC</li>
-</ul>
-</li>
-<li><strong>Aura.Web</strong> — React + TypeScript + Vite frontend (always bundled into Electron; not deployed as standalone SaaS SPA)</li>
-<li><strong>Aura.Api</strong> — ASP.NET Core backend (embedded as child process, REST + SSE)</li>
-<li><strong>Aura.Core</strong> — Domain logic, orchestration, models, validation, rendering</li>
-<li><strong>Aura.Providers</strong> — LLM, TTS, images, video provider integrations</li>
-<li><strong>Aura.Cli</strong> — Cross-platform CLI for headless automation</li>
-</ul>
-<p><strong>Process Model:</strong></p>
+<h2 id="high-level-architecture">High-Level Architecture</h2>
+<p>Aura Video Studio is built as an <strong>Electron desktop application</strong>:</p>
 <pre><code>┌──────────────────────────────────────┐
 │     Electron Main Process            │
 │  (Node.js, window mgmt, lifecycle)   │
-│  Main entry: electron/main.js        │
+│  Entry: electron/main.js             │
 └────┬─────────────────────┬───────────┘
      │                     │
      │ spawns              │ IPC
@@ -149,148 +123,106 @@
 │  (child)     │───►│  (React UI)     │
 └──────────────┘    └─────────────────┘
 </code></pre>
-<p><strong>Migration Status:</strong> The migration from pure web deployment to Electron desktop is <strong>complete</strong>. All new integrations should be tested in the Electron app, not just in the browser. Running Aura.Web standalone in a browser is supported only as a development aid for rapid UI iteration.</p>
-<h2 id="installation-options">Installation Options</h2>
-<h3 id="option-1-desktop-app-recommended-for-users">Option 1: Desktop App (Recommended for Users)</h3>
-<p><strong>No command-line knowledge required!</strong></p>
+<p><strong>Technology Stack:</strong></p>
+<ul>
+<li><p><strong>Frontend</strong>: React 18 + TypeScript + Vite 6.4.1 + Fluent UI</p>
+<ul>
+<li>State: Zustand 5.0.8</li>
+<li>Routing: React Router 6</li>
+<li>HTTP: Axios with circuit breaker</li>
+<li>Testing: Vitest 3.2.4, Playwright 1.56.0</li>
+</ul>
+</li>
+<li><p><strong>Backend</strong>: ASP.NET Core 8 (Minimal API + Controllers)</p>
+<ul>
+<li>.NET 8 SDK with nullable reference types</li>
+<li>Serilog structured logging</li>
+<li>RESTful API + Server-Sent Events</li>
+</ul>
+</li>
+<li><p><strong>Core Library</strong>: .NET 8 class library</p>
+<ul>
+<li>Business logic and orchestration</li>
+<li>FFmpeg command builder and pipeline</li>
+<li>Hardware detection and optimization</li>
+</ul>
+</li>
+<li><p><strong>Provider System</strong>: Modular integrations</p>
+<ul>
+<li><strong>LLM</strong>: OpenAI, Anthropic, Google Gemini, Ollama, RuleBased</li>
+<li><strong>TTS</strong>: ElevenLabs, PlayHT, Windows SAPI, Piper, Mimic3</li>
+<li><strong>Images</strong>: Stable Diffusion WebUI, stock, Replicate</li>
+<li><strong>Video</strong>: FFmpeg with hardware acceleration</li>
+</ul>
+</li>
+</ul>
+<p><strong>Primary Workflows:</strong></p>
 <ol>
-<li>Download the installer for your platform from <a href="https://github.com/coffee285/aura-video-studio/releases/latest">Releases</a></li>
-<li>Run the installer</li>
-<li>Follow the setup wizard</li>
-<li>Start creating videos!</li>
+<li><strong>Brief</strong> → User provides creative brief (topic, audience, goal, tone)</li>
+<li><strong>Plan</strong> → AI generates script with scenes and timing</li>
+<li><strong>Voice</strong> → Configure voice settings and TTS provider</li>
+<li><strong>Generate</strong> → Execute full video generation pipeline</li>
+<li><strong>Monitor</strong> → Real-time progress updates via SSE</li>
+<li><strong>Export</strong> → Download finished video with subtitles</li>
 </ol>
-<p>See <a href="INSTALLATION.html">INSTALLATION.md</a> for detailed instructions.</p>
-<h3 id="option-2-development-setup">Option 2: Development Setup</h3>
-<p>See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for comprehensive Electron development instructions.</p>
-<h2 id="quick-start-development">Quick start (Development)</h2>
+<h2 id="system-requirements">System Requirements</h2>
+<p><strong>Minimum:</strong></p>
+<ul>
+<li><strong>OS</strong>: Windows 11 (x64), macOS 10.15+, or Linux (x64)</li>
+<li><strong>CPU</strong>: Quad-core processor</li>
+<li><strong>RAM</strong>: 8GB</li>
+<li><strong>Disk</strong>: 5GB free space</li>
+<li><strong>Network</strong>: Internet connection for cloud providers</li>
+</ul>
+<p><strong>Recommended:</strong></p>
+<ul>
+<li><strong>OS</strong>: Windows 11 (x64)</li>
+<li><strong>CPU</strong>: 8+ cores</li>
+<li><strong>RAM</strong>: 16GB+</li>
+<li><strong>GPU</strong>: NVIDIA RTX 20-series+ or AMD Radeon with hardware encoding</li>
+<li><strong>Disk</strong>: 10GB+ SSD</li>
+</ul>
+<p><strong>Development Prerequisites:</strong></p>
+<ul>
+<li>Node.js 20.0.0+ (20.x recommended via .nvmrc)</li>
+<li>npm 9.0.0+</li>
+<li>.NET 8 SDK</li>
+<li>Git with long paths enabled</li>
+<li>FFmpeg 4.0+ for video rendering</li>
+</ul>
+<h2 id="development-setup">Development Setup</h2>
 <h3 id="electron-desktop-development-primary-workflow">Electron Desktop Development (Primary Workflow)</h3>
-<p><strong>The canonical, production-like development experience:</strong></p>
+<p>The canonical, production-like development experience:</p>
 <pre><code class="lang-bash"># 1. Install dependencies
-cd Aura.Web
-npm install
-cd ../Aura.Desktop
-npm install
+cd Aura.Web &amp;&amp; npm install
+cd ../Aura.Desktop &amp;&amp; npm install
 
-# 2. Build the frontend
-cd ../Aura.Web
-npm run build:prod
+# 2. Build frontend
+cd ../Aura.Web &amp;&amp; npm run build:prod
 
-# 3. Build the backend
-cd ../Aura.Api
-dotnet build
+# 3. Build backend
+cd ../Aura.Api &amp;&amp; dotnet build
 
 # 4. Run in Electron (development mode)
-cd ../Aura.Desktop
-npm run dev
+cd ../Aura.Desktop &amp;&amp; npm run dev
 </code></pre>
-<p>The Electron app will start with the embedded backend and frontend. Changes to the backend require a rebuild and restart. Frontend changes require rebuilding and reloading the Electron window.</p>
-<p><strong>This is the recommended workflow for testing the complete application stack</strong>, including Electron IPC, native dialogs, window management, tray integration, protocol handling, and backend lifecycle.</p>
-<p>For detailed Electron development workflows, debugging, and hot-reload setup, see:</p>
-<ul>
-<li><a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> — Comprehensive Electron development guide</li>
-<li><a href="Aura.Desktop/electron/README.md">Aura.Desktop/electron/README.md</a> — Electron main process architecture (IPC, window manager, backend service, tray, menu, protocol handler)</li>
-</ul>
-<h3 id="alternative-browser-only-development-mode-component-testing-only">Alternative: Browser-Only Development Mode (Component Testing Only)</h3>
-<p><strong>For rapid frontend/backend iteration without Electron (development aid only, not deployment target):</strong></p>
+<p>This runs the complete application stack including Electron IPC, native dialogs, window management, tray integration, and backend lifecycle.</p>
+<p>📖 See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for comprehensive Electron development instructions.</p>
+<h3 id="browser-only-development-mode-component-testing">Browser-Only Development Mode (Component Testing)</h3>
+<p>For rapid frontend/backend iteration without Electron (development aid only):</p>
 <pre><code class="lang-bash"># Terminal 1: Start backend API
-cd Aura.Api
-dotnet run
+cd Aura.Api &amp;&amp; dotnet run
 # API available at http://localhost:5005
 
-# Terminal 2: Start Vite dev server (standalone)
-cd Aura.Web
-npm run dev
+# Terminal 2: Start Vite dev server
+cd Aura.Web &amp;&amp; npm run dev
 # Web UI at http://localhost:5173 with hot reload
 </code></pre>
-<p><strong>⚠️ Important Limitations:</strong></p>
-<ul>
-<li>This runs the frontend standalone in a browser (not in Electron)</li>
-<li>Does <strong>not</strong> exercise Electron IPC, tray, protocol, window management, or shutdown behavior</li>
-<li>Does <strong>not</strong> test the embedded backend lifecycle (spawned by Electron main process)</li>
-<li>Use this for quick UI/API component development only</li>
-<li><strong>Always perform final testing in the Electron app</strong> before committing</li>
-</ul>
-<p><strong>When to use browser-only mode:</strong></p>
-<ul>
-<li>Rapid UI component iteration with hot-reload</li>
-<li>Backend API endpoint testing</li>
-<li>Frontend unit tests and debugging</li>
-</ul>
-<p><strong>When to use Electron mode:</strong></p>
-<ul>
-<li>Testing complete application stack</li>
-<li>Verifying IPC communication</li>
-<li>Testing native integrations (dialogs, menus, tray)</li>
-<li>Final integration and acceptance testing</li>
-</ul>
-<h3 id="next-steps">Next Steps</h3>
-<ul>
-<li><p><strong>For Users:</strong></p>
-<ul>
-<li>📥 <a href="INSTALLATION.html">INSTALLATION.md</a> - Install the desktop app</li>
-<li>🎓 <a href="FIRST_RUN_GUIDE.html">FIRST_RUN_GUIDE.md</a> - Initial configuration</li>
-<li>🎬 Start creating your first video!</li>
-</ul>
-</li>
-<li><p><strong>For Developers:</strong></p>
-<ul>
-<li>🖥️ <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> - Electron desktop app development</li>
-<li>📖 <a href="DEVELOPMENT.html">DEVELOPMENT.md</a> - Backend/frontend component development</li>
-<li>🔧 <a href="TROUBLESHOOTING.html">TROUBLESHOOTING.md</a> - Common issues</li>
-</ul>
-</li>
-</ul>
-<h2 id="quick-start-end-users">Quick start (End users)</h2>
-<p>Download and install the desktop app:</p>
-<ol>
-<li>Download the installer for your platform from <a href="https://github.com/coffee285/aura-video-studio/releases/latest">Releases</a></li>
-<li>Run the installer and follow the setup wizard</li>
-<li>Launch Aura Video Studio from your Applications folder or Start Menu</li>
-<li>Complete the first-run setup (see <a href="FIRST_RUN_GUIDE.html">FIRST_RUN_GUIDE.md</a>)</li>
-<li>Start creating videos with the Guided Mode workflow</li>
-</ol>
-<h2 id="advanced-mode">Advanced Mode</h2>
-<p>Advanced Mode reveals expert features that assume familiarity with video tooling and ML concepts.</p>
-<ul>
-<li><p>How to enable</p>
-<ul>
-<li>Settings → “Advanced Mode” toggle</li>
-<li>Changes are reversible anytime</li>
-</ul>
-</li>
-<li><p>What it unlocks</p>
-<ul>
-<li>ML Lab (frame importance retraining): annotate frames, train, deploy, and rollback</li>
-<li>Deep prompt controls and templates</li>
-<li>Expert render flags and motion/chroma tools</li>
-<li>Provider tuning and health views</li>
-</ul>
-</li>
-<li><p>Safety &amp; resource notes</p>
-<ul>
-<li>Preflight checks run before training</li>
-<li>Model swaps are atomic with backups and an easy “Revert to default”</li>
-</ul>
-</li>
-</ul>
-<h2 id="provider-profiles">Provider profiles</h2>
-<p>Use built-in profiles to balance cost, quality, and offline use:</p>
-<ul>
-<li>Free-Only: no API keys required; deterministic/scripted path</li>
-<li>Balanced Mix: use pro providers when available with free fallbacks</li>
-<li>Pro-Max: premium providers end-to-end (API keys required)</li>
-</ul>
-<h2 id="security--privacy">Security &amp; privacy</h2>
-<ul>
-<li>Local loopback API by default, restrictive CORS, and key redaction in logs</li>
-<li>Keys encrypted at rest (platform-appropriate)</li>
-<li>Privacy Mode to redact PII in diagnostics/support bundles</li>
-</ul>
-<h2 id="testing--ci">Testing &amp; CI</h2>
-<p>Aura Video Studio has comprehensive test coverage across all layers:</p>
-<h3 id="running-tests-locally">Running Tests Locally</h3>
+<p>⚠️ <strong>Limitations</strong>: Does not exercise Electron IPC, tray, protocol, window management, or shutdown behavior. Use only for quick UI/API component development. Always perform final testing in the Electron app.</p>
+<p>📖 See <a href="DEVELOPMENT.html">DEVELOPMENT.md</a> for backend/frontend component development.</p>
+<h2 id="testing">Testing</h2>
 <p><strong>Quick Start - All Tests:</strong></p>
-<pre><code class="lang-bash"># Run all tests with coverage (recommended)
+<pre><code class="lang-bash"># Run all tests with coverage
 ./scripts/test-local.sh
 
 # Run only .NET tests
@@ -303,118 +235,76 @@ npm run dev
 ./scripts/test-local.sh --e2e
 </code></pre>
 <p><strong>Individual Test Suites:</strong></p>
-<p><strong>.NET Tests (Unit &amp; Integration):</strong></p>
-<pre><code class="lang-bash"># Run all .NET tests with coverage
-dotnet test Aura.Tests/Aura.Tests.csproj --collect:&quot;XPlat Code Coverage&quot;
+<pre><code class="lang-bash"># .NET Tests (Unit &amp; Integration)
+dotnet test --collect:&quot;XPlat Code Coverage&quot;
 
-# Generate HTML coverage report
-dotnet tool install --global dotnet-reportgenerator-globaltool
-reportgenerator -reports:&quot;TestResults/**/coverage.cobertura.xml&quot; \
-  -targetdir:&quot;TestResults/CoverageReport&quot; \
-  -reporttypes:&quot;Html&quot;
-# Open TestResults/CoverageReport/index.html
+# Frontend Tests (Vitest)
+cd Aura.Web &amp;&amp; npm test
+
+# E2E Tests (Playwright)
+cd Aura.Web &amp;&amp; npm run playwright
 </code></pre>
-<p><strong>Frontend Tests (Vitest):</strong></p>
-<pre><code class="lang-bash">cd Aura.Web
-
-# Run once
-npm test
-
-# Watch mode (auto-rerun on changes)
-npm run test:watch
-
-# With coverage
-npm run test:coverage
-# Open coverage/index.html
-</code></pre>
-<p><strong>E2E Tests (Playwright):</strong></p>
-<pre><code class="lang-bash">cd Aura.Web
-
-# Install browsers (first time only)
-npx playwright install --with-deps chromium
-
-# Run tests
-npm run playwright
-
-# Interactive mode (debug tests)
-npm run playwright:ui
-
-# View report
-npx playwright show-report
-</code></pre>
-<h3 id="continuous-integration">Continuous Integration</h3>
-<p>CI runs automatically on every pull request and push to main/develop branches:</p>
+<p>📖 See <a href="docs/development/testing.html">docs/development/testing.md</a> for comprehensive testing guide.</p>
+<h2 id="documentation">Documentation</h2>
+<p><strong>Essential:</strong></p>
 <ul>
-<li><strong><code>.github/workflows/ci-unified.yml</code></strong> - Main CI pipeline
-<ul>
-<li>.NET Build &amp; Test (Linux-compatible projects)</li>
-<li>Frontend Build, Lint &amp; Test</li>
-<li>E2E Tests (Playwright with full browser automation)</li>
-<li>Coverage collection and artifact upload</li>
+<li><a href="README.html">README</a> - This file</li>
+<li><a href="INSTALLATION.html">INSTALLATION.md</a> - Install the desktop app</li>
+<li><a href="FIRST_RUN_GUIDE.html">FIRST_RUN_GUIDE.md</a> - Initial configuration</li>
+<li><a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> - Electron desktop development</li>
+<li><a href="BUILD_GUIDE.html">BUILD_GUIDE.md</a> - Build from source</li>
+<li><a href="TROUBLESHOOTING.html">TROUBLESHOOTING.md</a> - Common issues</li>
 </ul>
-</li>
-</ul>
-<p><strong>CI Artifacts:</strong></p>
+<p><strong>Complete Documentation:</strong></p>
 <ul>
-<li>Test results (TRX, JUnit formats)</li>
-<li>Coverage reports (Cobertura XML + HTML)</li>
-<li>Playwright HTML report with traces and videos</li>
-<li>Built frontend assets</li>
-</ul>
-<p><strong>CI Features:</strong></p>
-<ul>
-<li>NuGet package caching for faster builds</li>
-<li>Parallel test execution where safe</li>
-<li>Continue-on-error for non-critical failures</li>
-<li>Comprehensive summary in GitHub Actions UI</li>
-</ul>
-<p>See the <a href="CI_PLATFORM_REQUIREMENTS.html">CI Platform Requirements</a> for details on cross-platform builds.</p>
-<h2 id="roadmap-highlights">Roadmap highlights</h2>
-<ul>
-<li>Advanced Mode gating</li>
-<li>ML Lab: annotation + training + rollback UX</li>
-<li>Provider health + circuit breakers + strict schema validation</li>
-<li>Proxy media, waveform/thumbnail caching for smooth editing</li>
-<li>Export presets, preflight validation, and post-export integrity</li>
-<li>Observability: correlation IDs, diagnostics, and support bundles</li>
+<li><a href="docs/DocsIndex.html">Documentation Index</a> - Complete map of all documentation</li>
+<li><a href="docs/user-guide/">User Guides</a> - Feature-specific end-user docs</li>
+<li><a href="docs/development/">Developer Docs</a> - Contributor setup, testing, CI/CD</li>
+<li><a href="docs/architecture/">Architecture</a> - System design and component diagrams</li>
+<li><a href="docs/api/">API Reference</a> - REST API and SSE event documentation</li>
+<li><a href="docs/providers/">Providers</a> - LLM, TTS, image, and video provider configuration</li>
+<li><a href="docs/operations/">Operations</a> - Deployment, configuration, logging, monitoring</li>
 </ul>
 <h2 id="contributing">Contributing</h2>
 <p>We welcome contributions! Please:</p>
 <ul>
+<li>Read <a href="CONTRIBUTING.html">CONTRIBUTING.md</a> for development workflow and standards</li>
 <li>Discuss significant features via issues first</li>
-<li>Follow code style and docs standards</li>
+<li>Follow code style and the <strong>zero-placeholder policy</strong> (no TODO/FIXME comments)</li>
 <li>Include tests where practical</li>
+<li>Run quality checks before submitting PRs</li>
 </ul>
-<p>See <a href="CONTRIBUTING.html">CONTRIBUTING.md</a> for details.</p>
-<h2 id="documentation">Documentation</h2>
-<p>Comprehensive documentation is available to help you get started and make the most of Aura Video Studio:</p>
-<ul>
-<li><strong><a href="docs/DocsIndex.html">Documentation Index</a></strong> - Complete map of all documentation</li>
-<li><strong><a href="docs/getting-started/QUICK_START.html">Getting Started Guide</a></strong> - Quick setup and first video</li>
-<li><strong><a href="FIRST_RUN_GUIDE.html">First Run Guide</a></strong> - Initial configuration walkthrough</li>
-<li><strong><a href="BUILD_GUIDE.html">Build Guide</a></strong> - Build from source</li>
-<li><strong><a href="QUALITY_GATES.html">Quality Gates Reference</a></strong> - Code quality enforcement and CI gates</li>
-<li><strong>User Guides</strong> - Feature-specific end-user documentation</li>
-<li><strong>API Reference</strong> - REST API and SSE event documentation</li>
-<li><strong>Architecture</strong> - System design and technical details</li>
-<li><strong><a href="docs/style/DocsStyleGuide.html">Style Guide</a></strong> - Documentation standards</li>
-</ul>
-<p>For a complete list of guides organized by audience (end users, developers, operations) and topic, see <a href="docs/DocsIndex.html">docs/DocsIndex.md</a>.</p>
-<h3 id="for-contributors">For Contributors</h3>
-<ul>
-<li><strong><a href="CONTRIBUTING.html">CONTRIBUTING.md</a></strong> - How to contribute to the project</li>
-<li><strong><a href="BUILD_GUIDE.html">BUILD_GUIDE.md</a></strong> - Build instructions and quality gates</li>
-<li><strong><a href="QUALITY_GATES.html">QUALITY_GATES.md</a></strong> - Quick reference for code quality checks</li>
-<li><strong><a href="./scripts/check-quality-gates.sh">Run Quality Checks</a></strong> - Local testing script</li>
-</ul>
+<p><strong>Zero-Placeholder Policy:</strong>
+All committed code must be production-ready with no TODO, FIXME, HACK, or WIP comments. This is enforced by Husky pre-commit hooks and CI. Create GitHub Issues for future work instead of code comments.</p>
+<p>📖 See <a href="CONTRIBUTING.html">CONTRIBUTING.md</a> for detailed guidelines.</p>
+<h2 id="code-quality">Code Quality</h2>
+<p><strong>Quality Gates:</strong></p>
 <pre><code class="lang-bash"># Check all quality gates before committing
 ./scripts/check-quality-gates.sh
 
 # See status of all gates
-cat QUALITY_GATES.md
+cat docs/development/QUALITY_GATES.md
 </code></pre>
+<p><strong>Enforced Standards:</strong></p>
+<ul>
+<li>TypeScript strict mode (no <code>any</code> types)</li>
+<li>ESLint with zero warnings (<code>--max-warnings 0</code>)</li>
+<li>.NET 8 with warnings as errors in Release mode</li>
+<li>Pre-commit hooks for placeholder scanning</li>
+<li>CI checks on all pull requests</li>
+</ul>
+<h2 id="security--privacy">Security &amp; Privacy</h2>
+<ul>
+<li>Local loopback API by default with restrictive CORS</li>
+<li>API keys encrypted at rest (platform-appropriate)</li>
+<li>Key redaction in logs</li>
+<li>Privacy Mode to redact PII in diagnostics/support bundles</li>
+</ul>
+<p>📖 See <a href="SECURITY.html">SECURITY.md</a> for vulnerability reporting.</p>
 <h2 id="license">License</h2>
-<p>See LICENSE.</p>
+<p>See <a href="LICENSE">LICENSE</a> for details.</p>
+<hr>
+<p><strong>Questions?</strong> Check the <a href="docs/DocsIndex.html">Documentation Index</a> or file an issue.</p>
 
 </article>
 

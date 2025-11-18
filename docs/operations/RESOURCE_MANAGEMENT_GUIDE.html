@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>System Resource Management Implementation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="System Resource Management Implementation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/RESOURCE_MANAGEMENT_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="system-resource-management-implementation-guide">System Resource Management Implementation Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This implementation adds comprehensive system resource management and optimization to Aura Video Studio, enabling stable operation under load with intelligent resource allocation, monitoring, and cleanup.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="components">Components</h3>
+<h4 id="1-systemresourcemonitor-auracoreservicesresourcessystemresourcemonitorcs">1. SystemResourceMonitor (<code>Aura.Core/Services/Resources/SystemResourceMonitor.cs</code>)</h4>
+<p><strong>Purpose</strong>: Collects comprehensive system and process metrics</p>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li><strong>System Metrics</strong>: CPU (per-core and overall), RAM, GPU (NVIDIA via nvidia-smi), disk I/O, network bandwidth</li>
+<li><strong>Process Metrics</strong>: Thread pool usage, GC statistics, memory allocation by component</li>
+<li><strong>Cross-platform</strong>: Works on Windows (with WMI) and Linux (via /proc and nvidia-smi)</li>
+<li><strong>Caching</strong>: Stores last collected metrics to avoid redundant sampling</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">var monitor = serviceProvider.GetRequiredService&lt;SystemResourceMonitor&gt;();
+
+// Collect current system metrics
+var systemMetrics = await monitor.CollectSystemMetricsAsync(cancellationToken);
+Console.WriteLine($&quot;CPU: {systemMetrics.Cpu.OverallUsagePercent:F1}%&quot;);
+Console.WriteLine($&quot;RAM: {systemMetrics.Memory.UsagePercent:F1}%&quot;);
+
+// Collect process metrics
+var processMetrics = monitor.CollectProcessMetrics();
+Console.WriteLine($&quot;Active threads: {processMetrics.ThreadPool.BusyWorkerThreads}&quot;);
+
+// Get cached metrics (fast, no new sampling)
+var lastMetrics = monitor.GetLastSystemMetrics();
+</code></pre>
+<h4 id="2-resourcethrottler-auracoreservicesresourcesresourcethrottlercs">2. ResourceThrottler (<code>Aura.Core/Services/Resources/ResourceThrottler.cs</code>)</h4>
+<p><strong>Purpose</strong>: Dynamically throttles resource allocation based on system capacity</p>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li><strong>Job Throttling</strong>: Limits concurrent jobs based on available RAM (2GB per video job)</li>
+<li><strong>Provider Throttling</strong>: Rate limits API calls per provider with configurable max concurrent</li>
+<li><strong>Thread Pool Management</strong>: Adjusts thread pool size based on CPU load</li>
+<li><strong>Resource Reservation</strong>: Acquire/release pattern prevents overcommit</li>
+<li><strong>GPU Awareness</strong>: Prefers GPU jobs when GPU is available and not overloaded</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">var throttler = serviceProvider.GetRequiredService&lt;ResourceThrottler&gt;();
+
+// Acquire resources for a job
+var reservation = await throttler.TryAcquireJobResourcesAsync(
+    jobId: &quot;video-123&quot;,
+    estimatedMemoryBytes: 2L * 1024 * 1024 * 1024, // 2 GB
+    requiresGpu: true,
+    cancellationToken);
+
+if (reservation != null)
+{
+    try
+    {
+        // Execute job
+        await ExecuteVideoJobAsync(jobId, cancellationToken);
+    }
+    finally
+    {
+        // Always release when done
+        throttler.ReleaseJobResources(jobId);
+    }
+}
+else
+{
+    // Resources not available, queue or retry later
+    await QueueJobForLaterAsync(jobId);
+}
+
+// Provider throttling
+var acquired = await throttler.TryAcquireProviderSlotAsync(&quot;OpenAI&quot;, maxConcurrent: 5);
+if (acquired)
+{
+    try
+    {
+        await CallOpenAIAsync();
+    }
+    finally
+    {
+        throttler.ReleaseProviderSlot(&quot;OpenAI&quot;);
+    }
+}
+
+// Adjust thread pool dynamically
+throttler.AdjustThreadPool();
+
+// Get current utilization
+var stats = throttler.GetUtilizationStats();
+Console.WriteLine($&quot;Active jobs: {stats.ActiveJobs}/{stats.MaxConcurrentJobs}&quot;);
+Console.WriteLine($&quot;Available slots: {stats.AvailableJobSlots}&quot;);
+</code></pre>
+<h4 id="3-enhancedcleanuphostedservice-auraapihostedservicesenhancedcleanuphostedservicecs">3. EnhancedCleanupHostedService (<code>Aura.Api/HostedServices/EnhancedCleanupHostedService.cs</code>)</h4>
+<p><strong>Purpose</strong>: Automated cleanup with scheduled maintenance tasks</p>
+<p><strong>Schedules</strong>:</p>
+<p><strong>Hourly</strong> (runs every hour):</p>
+<ul>
+<li>Temporary files older than 24 hours</li>
+<li>Orphaned upload files older than 48 hours</li>
+<li>Expired cache entries older than 24 hours</li>
+</ul>
+<p><strong>Daily</strong> (runs every 24 hours):</p>
+<ul>
+<li>Archive completed projects older than 7 days</li>
+<li>Delete failed projects older than 3 days</li>
+<li>Compress log files older than 7 days (gzip)</li>
+<li>Clean expired cache entries</li>
+</ul>
+<p><strong>Weekly</strong> (runs every 7 days):</p>
+<ul>
+<li>SQLite database vacuum (defragmentation)</li>
+<li>Clean old export history (30 days)</li>
+<li>Archive action logs (90 days)</li>
+<li>Delete old archived projects (30 days)</li>
+</ul>
+<p><strong>Registration</strong>:</p>
+<pre><code class="lang-csharp">// In Program.cs
+builder.Services.AddHostedService&lt;EnhancedCleanupHostedService&gt;();
+</code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="get-apimetricssystem">GET /api/metrics/system</h3>
+<p>Returns current system resource metrics in JSON format.</p>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;timestamp&quot;: &quot;2025-11-07T22:00:00Z&quot;,
+  &quot;cpu&quot;: {
+    &quot;overallUsagePercent&quot;: 45.2,
+    &quot;perCoreUsagePercent&quot;: [42.1, 48.3, 43.7, 47.2],
+    &quot;logicalCores&quot;: 8,
+    &quot;physicalCores&quot;: 4,
+    &quot;processUsagePercent&quot;: 12.5
+  },
+  &quot;memory&quot;: {
+    &quot;totalBytes&quot;: 17179869184,
+    &quot;availableBytes&quot;: 8589934592,
+    &quot;usedBytes&quot;: 8589934592,
+    &quot;usagePercent&quot;: 50.0,
+    &quot;processUsageBytes&quot;: 536870912
+  },
+  &quot;gpu&quot;: {
+    &quot;name&quot;: &quot;NVIDIA GeForce RTX 3080&quot;,
+    &quot;vendor&quot;: &quot;NVIDIA&quot;,
+    &quot;usagePercent&quot;: 75.0,
+    &quot;totalMemoryBytes&quot;: 10737418240,
+    &quot;usedMemoryBytes&quot;: 8053063680,
+    &quot;temperatureCelsius&quot;: 68.0
+  }
+}
+</code></pre>
+<h3 id="get-apimetricsprocess">GET /api/metrics/process</h3>
+<p>Returns process-specific metrics.</p>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;timestamp&quot;: &quot;2025-11-07T22:00:00Z&quot;,
+  &quot;threadPool&quot;: {
+    &quot;availableWorkerThreads&quot;: 28,
+    &quot;maxWorkerThreads&quot;: 32,
+    &quot;busyWorkerThreads&quot;: 4
+  },
+  &quot;cacheMemoryBytes&quot;: 104857600
+}
+</code></pre>
+<h3 id="get-apimetricsutilization">GET /api/metrics/utilization</h3>
+<p>Returns current resource utilization and throttling status.</p>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;maxConcurrentJobs&quot;: 4,
+  &quot;activeJobs&quot;: 2,
+  &quot;availableJobSlots&quot;: 2,
+  &quot;totalReservedMemoryBytes&quot;: 4294967296,
+  &quot;activeProviders&quot;: [&quot;OpenAI&quot;, &quot;ElevenLabs&quot;],
+  &quot;cpuUsagePercent&quot;: 45.2,
+  &quot;memoryUsagePercent&quot;: 50.0,
+  &quot;gpuUsagePercent&quot;: 75.0
+}
+</code></pre>
+<h3 id="get-apimetricsprometheus">GET /api/metrics/prometheus</h3>
+<p>Returns metrics in Prometheus text format for monitoring integration.</p>
+<p><strong>Response</strong> (excerpt):</p>
+<pre><code># HELP aura_cpu_usage_percent CPU usage percentage
+# TYPE aura_cpu_usage_percent gauge
+aura_cpu_usage_percent{type=&quot;overall&quot;} 45.20
+aura_cpu_usage_percent{type=&quot;process&quot;} 12.50
+
+# HELP aura_memory_bytes Memory usage in bytes
+# TYPE aura_memory_bytes gauge
+aura_memory_bytes{type=&quot;total&quot;} 17179869184
+aura_memory_bytes{type=&quot;available&quot;} 8589934592
+aura_memory_bytes{type=&quot;used&quot;} 8589934592
+aura_memory_bytes{type=&quot;process&quot;} 536870912
+
+# HELP aura_gpu_usage_percent GPU usage percentage
+# TYPE aura_gpu_usage_percent gauge
+aura_gpu_usage_percent{vendor=&quot;NVIDIA&quot;} 75.00
+</code></pre>
+<h2 id="integration-examples">Integration Examples</h2>
+<h3 id="job-execution-with-resource-throttling">Job Execution with Resource Throttling</h3>
+<pre><code class="lang-csharp">public class VideoJobRunner
+{
+    private readonly ResourceThrottler _throttler;
+    private readonly ILogger&lt;VideoJobRunner&gt; _logger;
+
+    public VideoJobRunner(ResourceThrottler throttler, ILogger&lt;VideoJobRunner&gt; logger)
+    {
+        _throttler = throttler;
+        _logger = logger;
+    }
+
+    public async Task&lt;JobResult&gt; RunVideoJobAsync(VideoJob job, CancellationToken ct)
+    {
+        // Estimate memory requirement (2GB base + video size)
+        var estimatedMemory = 2L * 1024 * 1024 * 1024 + job.EstimatedOutputSize;
+        
+        // Try to acquire resources
+        var reservation = await _throttler.TryAcquireJobResourcesAsync(
+            job.Id,
+            estimatedMemory,
+            requiresGpu: job.RequiresHardwareAcceleration,
+            ct);
+
+        if (reservation == null)
+        {
+            _logger.LogWarning(&quot;Cannot start job {JobId}: insufficient resources&quot;, job.Id);
+            return JobResult.Queued;
+        }
+
+        try
+        {
+            _logger.LogInformation(&quot;Starting job {JobId} with {MemoryMB} MB reserved&quot;,
+                job.Id, estimatedMemory / (1024 * 1024));
+
+            // Execute the actual video generation
+            await job.ExecuteAsync(ct);
+
+            return JobResult.Success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, &quot;Job {JobId} failed&quot;, job.Id);
+            return JobResult.Failed;
+        }
+        finally
+        {
+            // Always release resources
+            _throttler.ReleaseJobResources(job.Id);
+            _logger.LogInformation(&quot;Released resources for job {JobId}&quot;, job.Id);
+        }
+    }
+}
+</code></pre>
+<h3 id="monitoring-dashboard-integration">Monitoring Dashboard Integration</h3>
+<pre><code class="lang-csharp">public class MonitoringService : BackgroundService
+{
+    private readonly SystemResourceMonitor _monitor;
+    private readonly ILogger&lt;MonitoringService&gt; _logger;
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                var metrics = await _monitor.CollectSystemMetricsAsync(stoppingToken);
+                
+                // Check for resource pressure
+                if (metrics.Cpu.OverallUsagePercent &gt; 90)
+                {
+                    _logger.LogWarning(&quot;High CPU usage: {Usage:F1}%&quot;, 
+                        metrics.Cpu.OverallUsagePercent);
+                }
+
+                if (metrics.Memory.UsagePercent &gt; 85)
+                {
+                    _logger.LogWarning(&quot;High memory usage: {Usage:F1}%&quot;, 
+                        metrics.Memory.UsagePercent);
+                }
+
+                if (metrics.Gpu != null &amp;&amp; metrics.Gpu.TemperatureCelsius &gt; 85)
+                {
+                    _logger.LogWarning(&quot;High GPU temperature: {Temp:F1}°C&quot;,
+                        metrics.Gpu.TemperatureCelsius);
+                }
+
+                // Send to monitoring system (Prometheus, Grafana, etc.)
+                await SendToMonitoringAsync(metrics, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, &quot;Error collecting metrics&quot;);
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+        }
+    }
+}
+</code></pre>
+<h2 id="configuration">Configuration</h2>
+<h3 id="resource-throttler-configuration">Resource Throttler Configuration</h3>
+<p>The <code>ResourceThrottler</code> can be configured by adjusting constants in the class:</p>
+<pre><code class="lang-csharp">// In ResourceThrottler.cs
+private const long BytesPerVideoJob = 2L * 1024 * 1024 * 1024; // 2 GB per job
+private const double CpuThresholdPercent = 85.0; // CPU limit
+private const double MemoryThresholdPercent = 80.0; // Memory limit
+private int _reservedMemoryForUiMb = 500; // Reserved for UI
+</code></pre>
+<h3 id="cleanup-schedule-configuration">Cleanup Schedule Configuration</h3>
+<p>The <code>EnhancedCleanupHostedService</code> schedules can be adjusted:</p>
+<pre><code class="lang-csharp">// In EnhancedCleanupHostedService.cs
+private readonly TimeSpan _hourlyInterval = TimeSpan.FromHours(1);
+private readonly TimeSpan _dailyInterval = TimeSpan.FromDays(1);
+private readonly TimeSpan _weeklyInterval = TimeSpan.FromDays(7);
+</code></pre>
+<p>Retention periods in cleanup methods:</p>
+<ul>
+<li>Temp files: 24 hours</li>
+<li>Upload files: 48 hours</li>
+<li>Completed projects: 7 days</li>
+<li>Failed projects: 3 days</li>
+<li>Log compression: 7 days</li>
+<li>Export history: 30 days</li>
+<li>Action logs: 90 days</li>
+<li>Archived projects: 30 days</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<h3 id="running-tests">Running Tests</h3>
+<pre><code class="lang-bash"># Run all resource management tests
+dotnet test --filter &quot;FullyQualifiedName~SystemResourceMonitorTests|FullyQualifiedName~ResourceThrottlerTests&quot;
+
+# Run specific test
+dotnet test --filter &quot;FullyQualifiedName~SystemResourceMonitorTests.CollectSystemMetricsAsync_ReturnsMetrics&quot;
+</code></pre>
+<h3 id="test-coverage">Test Coverage</h3>
+<ul>
+<li><p><strong>SystemResourceMonitorTests</strong>: 10 tests</p>
+<ul>
+<li>System metrics collection validation</li>
+<li>CPU, memory, disk, network metrics</li>
+<li>Process metrics and thread pool</li>
+<li>Metric caching</li>
+</ul>
+</li>
+<li><p><strong>ResourceThrottlerTests</strong>: 12 tests</p>
+<ul>
+<li>Resource acquisition and release</li>
+<li>Memory-based throttling</li>
+<li>Provider slot management</li>
+<li>Utilization statistics</li>
+<li>Thread pool adjustment</li>
+</ul>
+</li>
+</ul>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="systemresourcemonitor">SystemResourceMonitor</h3>
+<ul>
+<li><strong>CPU Impact</strong>: Minimal (~0.1% CPU per collection)</li>
+<li><strong>Collection Time</strong>: ~100-200ms per full collection</li>
+<li><strong>Recommendation</strong>: Collect every 5-15 seconds for dashboards</li>
+<li><strong>Caching</strong>: Use <code>GetLastSystemMetrics()</code> for frequent reads</li>
+</ul>
+<h3 id="resourcethrottler">ResourceThrottler</h3>
+<ul>
+<li><strong>Overhead</strong>: Negligible (semaphore-based, microsecond operations)</li>
+<li><strong>Scalability</strong>: Handles hundreds of concurrent job requests efficiently</li>
+<li><strong>Memory</strong>: ~1KB per active reservation</li>
+</ul>
+<h3 id="enhancedcleanuphostedservice">EnhancedCleanupHostedService</h3>
+<ul>
+<li><strong>Impact</strong>: Runs in background, low priority</li>
+<li><strong>Schedule</strong>: Staggers operations to avoid resource spikes</li>
+<li><strong>Safety</strong>: Checks for file locks and active usage before deletion</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="issue-high-cpu-usage-reported">Issue: High CPU usage reported</h3>
+<p><strong>Possible causes</strong>:</p>
+<ul>
+<li>PerformanceCounter initialization on Windows may briefly spike CPU</li>
+<li>Multiple concurrent collections</li>
+</ul>
+<p><strong>Solution</strong>:</p>
+<ul>
+<li>Increase collection interval</li>
+<li>Use cached metrics more frequently</li>
+</ul>
+<h3 id="issue-gpu-metrics-not-available">Issue: GPU metrics not available</h3>
+<p><strong>Possible causes</strong>:</p>
+<ul>
+<li>nvidia-smi not in PATH</li>
+<li>Non-NVIDIA GPU</li>
+<li>Running on Linux without nvidia-utils</li>
+</ul>
+<p><strong>Solution</strong>:</p>
+<ul>
+<li>Install nvidia-utils: <code>apt-get install nvidia-utils</code></li>
+<li>Check nvidia-smi availability: <code>which nvidia-smi</code></li>
+<li>GPU metrics will be null if unavailable</li>
+</ul>
+<h3 id="issue-resource-reservations-not-released">Issue: Resource reservations not released</h3>
+<p><strong>Possible causes</strong>:</p>
+<ul>
+<li>Exception during job execution without finally block</li>
+<li>Job cancellation without cleanup</li>
+</ul>
+<p><strong>Solution</strong>:</p>
+<ul>
+<li>Always use try-finally pattern</li>
+<li>Ensure ReleaseJobResources is called in all code paths</li>
+</ul>
+<h3 id="issue-cleanup-service-deleting-active-files">Issue: Cleanup service deleting active files</h3>
+<p><strong>Possible causes</strong>:</p>
+<ul>
+<li>File age check not accounting for active jobs</li>
+<li>Clock skew</li>
+</ul>
+<p><strong>Solution</strong>:</p>
+<ul>
+<li>Increase retention periods</li>
+<li>Check file last access time in addition to creation time</li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Always release resources</strong>: Use try-finally or using patterns</li>
+<li><strong>Check before acquiring</strong>: Verify resource availability before starting expensive operations</li>
+<li><strong>Monitor regularly</strong>: Set up dashboard with Prometheus metrics</li>
+<li><strong>Adjust thresholds</strong>: Tune for your specific hardware and workload</li>
+<li><strong>Test under load</strong>: Simulate peak usage to validate throttling</li>
+<li><strong>Log resource decisions</strong>: Include resource checks in operation logs</li>
+<li><strong>Graceful degradation</strong>: Queue jobs when resources unavailable rather than failing</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements for follow-up work:</p>
+<ol>
+<li><strong>Intelligent Caching</strong>: Multi-tier cache with LRU eviction</li>
+<li><strong>Preflight Checks</strong>: Validate resources before accepting jobs</li>
+<li><strong>Usage Analytics</strong>: Per-user resource consumption tracking</li>
+<li><strong>Cost Tracking</strong>: Provider API usage and cost estimation</li>
+<li><strong>Auto-scaling</strong>: Adjust limits based on historical usage patterns</li>
+<li><strong>Alerting</strong>: Integration with notification systems for critical thresholds</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://github.com/Coffee285/aura-video-studio/pull/9">PR #9: System Resource Management and Optimization</a></li>
+<li><a href="https://prometheus.io/docs/instrumenting/exposition_formats/">Prometheus Metrics Format</a></li>
+<li><a href="https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.performancecounter">.NET Performance Counters</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/RESOURCE_MANAGEMENT_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

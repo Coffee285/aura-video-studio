@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>LLM Output Validation and Provider Health Checks | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="LLM Output Validation and Provider Health Checks | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/LLM_OUTPUT_VALIDATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="llm-output-validation-and-provider-health-checks">LLM Output Validation and Provider Health Checks</h1>
+
+<p>This guide explains how to use the new JSON schema validation and provider health check features to improve reliability of LLM-dependent operations.</p>
+<h2 id="overview">Overview</h2>
+<p>The system now includes:</p>
+<ol>
+<li><strong>JSON Schema Validation</strong> - Strict validation of all structured LLM outputs</li>
+<li><strong>Provider Health Checks</strong> - Fast health probes for each LLM provider</li>
+<li><strong>Circuit Breakers</strong> - Automatic failover when providers become unhealthy</li>
+<li><strong>Validation Repair</strong> - Targeted retry with modified prompts on validation failures</li>
+</ol>
+<h2 id="json-schema-validation">JSON Schema Validation</h2>
+<h3 id="available-schemas">Available Schemas</h3>
+<p>The following schema types are available for validation:</p>
+<ul>
+<li><code>SceneAnalysisSchema</code> - Scene importance, complexity, and timing analysis</li>
+<li><code>VisualPromptSchema</code> - Visual generation prompts with composition guidelines</li>
+<li><code>ContentComplexitySchema</code> - Content difficulty and cognitive load analysis</li>
+<li><code>SceneCoherenceSchema</code> - Scene-to-scene coherence validation</li>
+<li><code>NarrativeArcSchema</code> - Overall narrative structure validation</li>
+</ul>
+<h3 id="basic-usage">Basic Usage</h3>
+<pre><code class="lang-csharp">using Aura.Core.AI.Validation;
+using Microsoft.Extensions.Logging;
+
+// Create validator
+var validator = new SchemaValidator(logger);
+
+// Validate LLM JSON output
+var llmOutput = await CallLlmProvider();
+var (result, data) = validator.ValidateAndDeserialize&lt;SceneAnalysisSchema&gt;(llmOutput);
+
+if (result.IsValid)
+{
+    // Use validated data
+    Console.WriteLine($&quot;Scene importance: {data.Importance}&quot;);
+    Console.WriteLine($&quot;Optimal duration: {data.OptimalDurationSeconds}s&quot;);
+}
+else
+{
+    // Handle validation errors
+    logger.LogWarning(&quot;Validation failed: {ErrorMessage}&quot;, result.ErrorMessage);
+    foreach (var error in result.ValidationErrors)
+    {
+        logger.LogWarning(&quot;  - {Error}&quot;, error);
+    }
+}
+</code></pre>
+<h3 id="validation-with-retry">Validation with Retry</h3>
+<pre><code class="lang-csharp">var maxRetries = 1;
+var attempt = 0;
+
+while (attempt &lt;= maxRetries)
+{
+    var llmOutput = await CallLlmProvider(prompt);
+    var (result, data) = validator.ValidateAndDeserialize&lt;SceneAnalysisSchema&gt;(llmOutput);
+    
+    if (result.IsValid)
+    {
+        return data;
+    }
+    
+    // Generate repair prompt
+    if (attempt &lt; maxRetries)
+    {
+        var schema = new SceneAnalysisSchema();
+        var repairPrompt = validator.GenerateRepairPrompt(
+            originalPrompt: prompt,
+            failedOutput: llmOutput,
+            validationErrors: result.ValidationErrors,
+            schemaDefinition: schema.GetSchemaDefinition()
+        );
+        
+        logger.LogInformation(
+            &quot;Validation failed on attempt {Attempt}, retrying with repair prompt&quot;,
+            attempt + 1);
+        
+        prompt = repairPrompt;
+        attempt++;
+    }
+    else
+    {
+        throw new ValidationException($&quot;Validation failed after {maxRetries + 1} attempts&quot;);
+    }
+}
+</code></pre>
+<h2 id="provider-health-checks">Provider Health Checks</h2>
+<h3 id="adapter-health-checks">Adapter Health Checks</h3>
+<p>Each LLM adapter now implements fast health checks:</p>
+<pre><code class="lang-csharp">using Aura.Core.AI.Adapters;
+
+// Create adapter
+var adapter = new OpenAiAdapter(logger, model: &quot;gpt-4o-mini&quot;);
+
+// Perform health check
+var healthResult = await adapter.HealthCheckAsync(cancellationToken);
+
+if (healthResult.IsHealthy)
+{
+    logger.LogInformation(
+        &quot;Provider {Provider} is healthy. Response time: {ResponseTimeMs}ms. {Details}&quot;,
+        adapter.ProviderName,
+        healthResult.ResponseTimeMs,
+        healthResult.Details);
+}
+else
+{
+    logger.LogWarning(
+        &quot;Provider {Provider} is unhealthy: {ErrorMessage}&quot;,
+        adapter.ProviderName,
+        healthResult.ErrorMessage);
+}
+</code></pre>
+<h3 id="circuit-breaker-integration">Circuit Breaker Integration</h3>
+<p>Attach circuit breakers to adapters for automatic failover:</p>
+<pre><code class="lang-csharp">using Aura.Core.Configuration;
+using Aura.Core.Services.Health;
+
+// Configure circuit breaker
+var settings = new CircuitBreakerSettings
+{
+    FailureThreshold = 3,              // Open after 3 consecutive failures
+    FailureRateThreshold = 0.5,        // Or 50% failure rate
+    OpenDurationSeconds = 60,          // Stay open for 60 seconds
+    TimeoutSeconds = 30,               // Request timeout
+    HealthCheckTimeoutSeconds = 5,     // Health check timeout
+    RollingWindowSize = 10,            // Track last 10 requests
+    RollingWindowMinutes = 5           // Within 5 minute window
+};
+
+var circuitBreaker = new CircuitBreaker(&quot;OpenAI&quot;, settings, logger);
+
+// Attach to adapter
+adapter.CircuitBreaker = circuitBreaker;
+
+// Execute through circuit breaker
+try
+{
+    var result = await circuitBreaker.ExecuteAsync(async ct =&gt;
+    {
+        // Call provider
+        return await CallLlmProvider(ct);
+    }, cancellationToken);
+}
+catch (CircuitBreakerOpenException)
+{
+    logger.LogWarning(&quot;Circuit breaker is open for {Provider}, falling back&quot;, adapter.ProviderName);
+    // Try fallback provider
+}
+</code></pre>
+<h3 id="using-existing-health-endpoint">Using Existing Health Endpoint</h3>
+<p>The API already exposes provider health at <code>/api/providers/health</code>:</p>
+<pre><code class="lang-bash">curl http://localhost:5005/api/providers/health
+</code></pre>
+<p>Response:</p>
+<pre><code class="lang-json">[
+  {
+    &quot;providerName&quot;: &quot;OpenAI&quot;,
+    &quot;successRatePercent&quot;: 98.5,
+    &quot;averageLatencySeconds&quot;: 1.2,
+    &quot;totalRequests&quot;: 450,
+    &quot;consecutiveFailures&quot;: 0,
+    &quot;status&quot;: &quot;Healthy&quot;
+  },
+  {
+    &quot;providerName&quot;: &quot;Anthropic&quot;,
+    &quot;successRatePercent&quot;: 97.8,
+    &quot;averageLatencySeconds&quot;: 1.5,
+    &quot;totalRequests&quot;: 230,
+    &quot;consecutiveFailures&quot;: 0,
+    &quot;status&quot;: &quot;Healthy&quot;
+  }
+]
+</code></pre>
+<h2 id="error-recovery-strategies">Error Recovery Strategies</h2>
+<h3 id="validation-specific-recovery">Validation-Specific Recovery</h3>
+<p>The <code>ErrorRecoveryStrategy</code> now supports validation failures:</p>
+<pre><code class="lang-csharp">// Handle validation failure
+if (validationFailed)
+{
+    var strategy = new ErrorRecoveryStrategy
+    {
+        ShouldRetry = true,
+        RetryDelay = TimeSpan.FromSeconds(1),
+        IsValidationFailure = true,  // Flag for validation failures
+        ModifiedPrompt = validator.GenerateRepairPrompt(/* ... */),
+        UserMessage = &quot;LLM output validation failed, retrying with stricter instructions&quot;
+    };
+    
+    return strategy;
+}
+</code></pre>
+<h3 id="provider-error-handling">Provider Error Handling</h3>
+<p>Adapters return recovery strategies based on error type:</p>
+<pre><code class="lang-csharp">var strategy = adapter.HandleError(exception, attemptNumber);
+
+if (strategy.ShouldRetry &amp;&amp; !strategy.IsPermanentFailure)
+{
+    await Task.Delay(strategy.RetryDelay ?? TimeSpan.Zero);
+    
+    if (strategy.ModifiedPrompt != null)
+    {
+        // Use modified prompt
+        prompt = strategy.ModifiedPrompt;
+    }
+    
+    // Retry operation
+}
+else if (strategy.ShouldFallback)
+{
+    // Switch to fallback provider
+    currentProvider = fallbackProvider;
+}
+</code></pre>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="validation-overhead">Validation Overhead</h3>
+<p>Schema validation is designed to be fast:</p>
+<ul>
+<li><strong>Target</strong>: &lt; 5ms overhead (adapter operations)</li>
+<li><strong>Actual</strong>: &lt; 100ms for full validation (acceptable for LLM workflows)</li>
+<li><strong>Optimization</strong>: Validation happens once per LLM response</li>
+</ul>
+<h3 id="health-check-performance">Health Check Performance</h3>
+<p>Health checks are lightweight:</p>
+<ul>
+<li><strong>Target</strong>: &lt; 100ms per check</li>
+<li><strong>Actual</strong>: &lt; 10ms for registry-based checks</li>
+<li><strong>Frequency</strong>: On-demand or periodic (configurable)</li>
+</ul>
+<h3 id="logging">Logging</h3>
+<p>Structured logging includes:</p>
+<pre><code class="lang-csharp">logger.LogInformation(
+    &quot;Schema validation completed for {SchemaType}. &quot; +
+    &quot;IsValid: {IsValid}, &quot; +
+    &quot;Duration: {DurationMs}ms, &quot; +
+    &quot;Errors: {ErrorCount}&quot;,
+    typeof(T).Name,
+    result.IsValid,
+    result.ValidationDuration.TotalMilliseconds,
+    result.ValidationErrors.Count);
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-always-validate-structured-outputs">1. Always Validate Structured Outputs</h3>
+<pre><code class="lang-csharp">// ✅ GOOD: Validate before using
+var (result, data) = validator.ValidateAndDeserialize&lt;SceneAnalysisSchema&gt;(llmOutput);
+if (result.IsValid)
+{
+    ProcessSceneAnalysis(data);
+}
+
+// ❌ BAD: Use raw LLM output without validation
+var data = JsonSerializer.Deserialize&lt;SceneAnalysisSchema&gt;(llmOutput);
+ProcessSceneAnalysis(data);  // May have invalid values!
+</code></pre>
+<h3 id="2-use-repair-prompts-for-validation-failures">2. Use Repair Prompts for Validation Failures</h3>
+<pre><code class="lang-csharp">// ✅ GOOD: Give LLM a chance to fix the output
+if (!result.IsValid &amp;&amp; attempt &lt; maxRetries)
+{
+    var repairPrompt = validator.GenerateRepairPrompt(/* ... */);
+    return await RetryWithPrompt(repairPrompt);
+}
+
+// ❌ BAD: Fail immediately
+if (!result.IsValid)
+{
+    throw new Exception(&quot;Validation failed&quot;);
+}
+</code></pre>
+<h3 id="3-monitor-circuit-breaker-state">3. Monitor Circuit Breaker State</h3>
+<pre><code class="lang-csharp">// ✅ GOOD: Log circuit breaker state changes
+logger.LogWarning(
+    &quot;Circuit breaker for {Provider} is {State}. &quot; +
+    &quot;Consecutive failures: {Failures}&quot;,
+    adapter.ProviderName,
+    adapter.CircuitBreaker?.State,
+    adapter.CircuitBreaker?.ConsecutiveFailures);
+
+// Include in health monitoring
+if (adapter.CircuitBreaker?.State == CircuitBreakerState.Open)
+{
+    AlertOps(&quot;Provider circuit breaker open&quot;);
+}
+</code></pre>
+<h3 id="4-configure-appropriate-thresholds">4. Configure Appropriate Thresholds</h3>
+<pre><code class="lang-csharp">// ✅ GOOD: Conservative settings for critical operations
+var criticalSettings = new CircuitBreakerSettings
+{
+    FailureThreshold = 5,              // More tolerance
+    OpenDurationSeconds = 120,         // Longer recovery time
+    HealthCheckTimeoutSeconds = 10     // Generous timeout
+};
+
+// For non-critical operations, can be more aggressive
+var nonCriticalSettings = new CircuitBreakerSettings
+{
+    FailureThreshold = 2,
+    OpenDurationSeconds = 30,
+    HealthCheckTimeoutSeconds = 3
+};
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p>See <code>Aura.Tests/SchemaValidationTests.cs</code> and <code>Aura.Tests/AdapterHealthCheckTests.cs</code> for examples:</p>
+<pre><code class="lang-csharp">[Fact]
+public void ValidateSceneAnalysis_ValidJson_ReturnsSuccess()
+{
+    var validJson = @&quot;{ /* valid JSON */ }&quot;;
+    var (result, data) = validator.ValidateAndDeserialize&lt;SceneAnalysisSchema&gt;(validJson);
+    
+    Assert.True(result.IsValid);
+    Assert.NotNull(data);
+}
+
+[Fact]
+public async Task OpenAiAdapter_HealthCheck_ReturnsHealthy()
+{
+    var adapter = new OpenAiAdapter(logger, &quot;gpt-4o-mini&quot;);
+    var result = await adapter.HealthCheckAsync(CancellationToken.None);
+    
+    Assert.True(result.IsHealthy);
+    Assert.True(result.ResponseTimeMs &lt; 100);
+}
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<p>Simulate provider failures to test circuit breaker behavior:</p>
+<pre><code class="lang-csharp">// Simulate failures
+for (int i = 0; i &lt; settings.FailureThreshold; i++)
+{
+    await circuitBreaker.RecordFailureAsync(new Exception(&quot;Test&quot;), ct);
+}
+
+// Verify circuit opened
+Assert.Equal(CircuitBreakerState.Open, circuitBreaker.State);
+
+// Verify requests blocked
+await Assert.ThrowsAsync&lt;CircuitBreakerOpenException&gt;(async () =&gt;
+{
+    await circuitBreaker.ExecuteAsync(_ =&gt; Task.FromResult(&quot;test&quot;), ct);
+});
+</code></pre>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Planned improvements (not in this PR):</p>
+<ol>
+<li><strong>Dynamic Model Registry</strong> - Automatic discovery of available models</li>
+<li><strong>ML-Based Validation</strong> - Learn from validation patterns to improve prompts</li>
+<li><strong>Adaptive Circuit Breaker</strong> - Auto-tune thresholds based on observed behavior</li>
+<li><strong>Validation Metrics</strong> - Detailed analytics on validation failure patterns</li>
+<li><strong>Schema Versioning</strong> - Support for evolving schemas without breaking changes</li>
+</ol>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ol>
+<li>Check existing tests in <code>Aura.Tests/SchemaValidationTests.cs</code></li>
+<li>Review adapter implementations in <code>Aura.Core/AI/Adapters/</code></li>
+<li>See circuit breaker implementation in <code>Aura.Core/Services/Health/CircuitBreaker.cs</code></li>
+<li>Consult <code>PROVIDER_INTEGRATION_GUIDE.md</code> for provider-specific details</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/LLM_OUTPUT_VALIDATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
