@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>EditorLayout Refactor - Premiere-Style Workspace | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="EditorLayout Refactor - Premiere-Style Workspace | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/EDITOR_LAYOUT_REFACTOR_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="editorlayout-refactor---premiere-style-workspace">EditorLayout Refactor - Premiere-Style Workspace</h1>
+
+<h2 id="summary">Summary</h2>
+<p>This refactor transforms the <code>EditorLayout</code> component from a hardcoded child-based layout to a modular, config-driven Premiere Pro-style workspace with explicit panel regions.</p>
+<h2 id="changes-overview">Changes Overview</h2>
+<h3 id="1-editorlayout-component-aurawebsrccomponentseditorlayouteditorlayouttsx">1. EditorLayout Component (<code>Aura.Web/src/components/EditorLayout/EditorLayout.tsx</code>)</h3>
+<h4 id="new-api">New API</h4>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-typescript">&lt;EditorLayout
+  preview={&lt;VideoPreviewPanel /&gt;}
+  timeline={&lt;TimelinePanel /&gt;}
+  properties={&lt;PropertiesPanel /&gt;}
+  mediaLibrary={&lt;MediaLibraryPanel /&gt;}
+  effects={&lt;EffectsLibraryPanel /&gt;}
+  history={&lt;HistoryPanel /&gt;}
+/&gt;
+</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-typescript">&lt;EditorLayout
+  panels={panelConfig}
+  renderPanel={renderPanel}
+/&gt;
+</code></pre>
+<h4 id="new-interfaces">New Interfaces</h4>
+<pre><code class="lang-typescript">export type PanelRegion = 'top' | 'bottom' | 'right';
+
+export interface EditorLayoutPanelConfig {
+  id: string;
+  title: string;
+  icon?: ReactNode;
+  defaultSize?: number; // width in pixels for right panels, percentage for top/bottom
+  minSize?: number;
+  maxSize?: number;
+  region: PanelRegion;
+  visibleByDefault?: boolean;
+}
+
+export interface EditorLayoutProps {
+  panels: EditorLayoutPanelConfig[];
+  renderPanel: (id: string) =&gt; React.ReactNode;
+  onImportMedia?: () =&gt; void;
+  onExportVideo?: () =&gt; void;
+  onShowKeyboardShortcuts?: () =&gt; void;
+  onSaveProject?: () =&gt; void;
+  projectName?: string | null;
+  isDirty?: boolean;
+  autosaveStatus?: 'idle' | 'saving' | 'saved' | 'error';
+  lastSaved?: Date | null;
+  useTopMenuBar?: boolean;
+}
+</code></pre>
+<h4 id="architecture-changes">Architecture Changes</h4>
+<p><strong>Three Primary Regions</strong>:</p>
+<ol>
+<li><p><strong>Top Region</strong> - Preview panel</p>
+<ul>
+<li>60% vertical space by default (configurable)</li>
+<li>Full width of center area</li>
+<li>Resizable vertically via horizontal divider</li>
+</ul>
+</li>
+<li><p><strong>Bottom Region</strong> - Timeline panel</p>
+<ul>
+<li>40% vertical space by default (100 - preview height)</li>
+<li>Full width of center area</li>
+<li>Automatically adjusts when preview is resized</li>
+</ul>
+</li>
+<li><p><strong>Right Region</strong> - Sidebar panels</p>
+<ul>
+<li>Split into left sidebar (Media, Effects) and right sidebar (Properties, History)</li>
+<li>Each panel independently resizable</li>
+<li>Collapsible with headers</li>
+<li>Width in pixels (280-400px typical)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Key Implementation Details</strong>:</p>
+<ul>
+<li><strong>Dynamic Panel Sizing</strong>: Panel sizes stored in state by panel ID</li>
+<li><strong>localStorage Persistence</strong>: Each panel size saved with key <code>aura-editor-panel-{panelId}</code></li>
+<li><strong>Smart Panel Sorting</strong>: Left sidebar panels (media, effects) separated from right sidebar panels (properties, history)</li>
+<li><strong>Theme Integration</strong>: Uses CSS classes from <code>video-editor-theme.css</code>:
+<ul>
+<li><code>editorShell</code> - Main container</li>
+<li><code>centerRegion</code> - Preview + Timeline stack</li>
+<li><code>leftSidebar</code> / <code>rightSidebar</code> - Side panel containers</li>
+<li><code>dividerVertical</code> / <code>dividerHorizontal</code> - Resizers with hover states</li>
+</ul>
+</li>
+</ul>
+<h3 id="2-videoeditorpage-aurawebsrcpagesvideoeditorpagetsx">2. VideoEditorPage (<code>Aura.Web/src/pages/VideoEditorPage.tsx</code>)</h3>
+<h4 id="panel-configuration">Panel Configuration</h4>
+<pre><code class="lang-typescript">const panelConfig: EditorLayoutPanelConfig[] = useMemo(() =&gt; [
+  {
+    id: 'preview',
+    title: 'Preview',
+    region: 'top',
+    defaultSize: 60, // 60% of vertical space
+    minSize: 40,
+    maxSize: 80,
+    visibleByDefault: true,
+  },
+  {
+    id: 'timeline',
+    title: 'Timeline',
+    region: 'bottom',
+    defaultSize: 40, // 40% of vertical space (100 - preview)
+    visibleByDefault: true,
+  },
+  {
+    id: 'mediaLibrary',
+    title: 'Media Library',
+    region: 'right', // Treated as left sidebar in layout logic
+    defaultSize: 280,
+    minSize: 240,
+    maxSize: 350,
+    visibleByDefault: false,
+  },
+  {
+    id: 'effects',
+    title: 'Effects',
+    region: 'right', // Treated as left sidebar in layout logic
+    defaultSize: 280,
+    minSize: 240,
+    maxSize: 350,
+    visibleByDefault: false,
+  },
+  {
+    id: 'properties',
+    title: 'Properties',
+    region: 'right',
+    defaultSize: 320,
+    minSize: 280,
+    maxSize: 400,
+    visibleByDefault: false,
+  },
+  {
+    id: 'history',
+    title: 'History',
+    region: 'right',
+    defaultSize: 320,
+    minSize: 280,
+    maxSize: 400,
+    visibleByDefault: false,
+  },
+], []);
+</code></pre>
+<h4 id="render-function">Render Function</h4>
+<pre><code class="lang-typescript">const renderPanel = useCallback((panelId: string) =&gt; {
+  switch (panelId) {
+    case 'preview':
+      return &lt;VideoPreviewPanel ref={videoPreviewRef} ... /&gt;;
+    case 'timeline':
+      return &lt;TimelinePanel ... /&gt;;
+    case 'properties':
+      return &lt;PropertiesPanel ... /&gt;;
+    case 'mediaLibrary':
+      return &lt;MediaLibraryPanel ref={mediaLibraryRef} /&gt;;
+    case 'effects':
+      return &lt;EffectsLibraryPanel ... /&gt;;
+    case 'history':
+      return &lt;HistoryPanel ... /&gt;;
+    default:
+      return null;
+  }
+}, [/* dependencies */]);
+</code></pre>
+<h4 id="performance-improvements">Performance Improvements</h4>
+<ul>
+<li>All event handlers wrapped in <code>useCallback</code> to prevent unnecessary re-renders</li>
+<li>Panel config memoized with <code>useMemo</code></li>
+<li>Render function properly memoized with all dependencies</li>
+</ul>
+<h3 id="3-workspace-layout-service-aurawebsrcservicesworkspacelayoutservicets">3. Workspace Layout Service (<code>Aura.Web/src/services/workspaceLayoutService.ts</code>)</h3>
+<h4 id="updated-default-proportions">Updated Default Proportions</h4>
+<p><strong>Editing Layout</strong> (60/30/10 alignment):</p>
+<pre><code class="lang-typescript">editing: {
+  id: 'editing',
+  name: 'Editing',
+  description: 'Focus on timeline with large preview (60/30/10 proportions)',
+  panelSizes: {
+    propertiesWidth: 320,
+    mediaLibraryWidth: 280,
+    effectsLibraryWidth: 280,
+    historyWidth: 320,
+    previewHeight: 60, // 60% for preview (60/40 split with timeline)
+  },
+  visiblePanels: {
+    properties: false,
+    mediaLibrary: false,
+    effects: false,
+    history: false,
+  },
+}
+</code></pre>
+<h2 id="benefits">Benefits</h2>
+<h3 id="1-modular-and-extensible">1. Modular and Extensible</h3>
+<p><strong>Adding a new panel</strong>:</p>
+<pre><code class="lang-typescript">// Just add to config array - no JSX changes needed
+{
+  id: 'colorGrading',
+  title: 'Color',
+  region: 'right',
+  defaultSize: 320,
+  visibleByDefault: false,
+}
+
+// Add to render function
+case 'colorGrading':
+  return &lt;ColorGradingPanel /&gt;;
+</code></pre>
+<h3 id="2-clear-visual-hierarchy">2. Clear Visual Hierarchy</h3>
+<ul>
+<li>Premiere Pro-style layout with familiar panel positions</li>
+<li>Proper use of CSS theme tokens for consistent styling</li>
+<li>Clear separation between regions (top/bottom/sidebar)</li>
+</ul>
+<h3 id="3-flexible-and-maintainable">3. Flexible and Maintainable</h3>
+<ul>
+<li>Panel configuration separate from rendering logic</li>
+<li>Easy to reorder panels within regions</li>
+<li>Panel sizes managed by ID (not hardcoded state variables)</li>
+<li>Theme integration makes visual updates easy</li>
+</ul>
+<h3 id="4-professional-nle-standards">4. Professional NLE Standards</h3>
+<ul>
+<li>Aligns with 60/30/10 proportions (Preview 60%, Timeline 30%, Properties 10%)</li>
+<li>Matches industry-standard video editor layouts</li>
+<li>Resizable dividers with smooth feedback</li>
+<li>Persistent layout preferences</li>
+</ul>
+<h3 id="5-better-code-organization">5. Better Code Organization</h3>
+<p><strong>Before</strong>: 350+ lines of redundant resize handlers</p>
+<p><strong>After</strong>: Generic resize handlers that work for any panel</p>
+<pre><code class="lang-typescript">// Single handler for all vertical dividers
+const handleVerticalDividerResize = (
+  panelId: string, 
+  minSize: number, 
+  maxSize: number, 
+  direction: 'left' | 'right'
+) =&gt; (e: React.MouseEvent) =&gt; { ... }
+</code></pre>
+<h2 id="testing-guide">Testing Guide</h2>
+<h3 id="manual-testing-checklist">Manual Testing Checklist</h3>
+<ol>
+<li><p><strong>Panel Rendering</strong></p>
+<ul>
+<li>[ ] Preview panel renders at top</li>
+<li>[ ] Timeline panel renders at bottom</li>
+<li>[ ] Sidebar panels render correctly (left: media/effects, right: properties/history)</li>
+<li>[ ] All panels display correct content</li>
+</ul>
+</li>
+<li><p><strong>Panel Resizing</strong></p>
+<ul>
+<li>[ ] Vertical divider between preview and timeline resizes smoothly</li>
+<li>[ ] Horizontal dividers between sidebar panels resize correctly</li>
+<li>[ ] Resize limits (min/max) are enforced</li>
+<li>[ ] Hover state shows accent color on dividers</li>
+<li>[ ] Keyboard resize works (Arrow keys with focus on divider)</li>
+</ul>
+</li>
+<li><p><strong>Panel Collapse/Expand</strong></p>
+<ul>
+<li>[ ] Clicking header collapse button toggles panel</li>
+<li>[ ] Collapsed panels show icon-only state (48px width)</li>
+<li>[ ] Expanding panels restores previous width</li>
+<li>[ ] Collapse state persists after refresh</li>
+</ul>
+</li>
+<li><p><strong>Layout Persistence</strong></p>
+<ul>
+<li>[ ] Panel sizes persist after page refresh</li>
+<li>[ ] Switching workspaces applies correct layout</li>
+<li>[ ] Resetting layout restores defaults</li>
+<li>[ ] localStorage keys follow pattern: <code>aura-editor-panel-{panelId}</code></li>
+</ul>
+</li>
+<li><p><strong>Keyboard Shortcuts</strong></p>
+<ul>
+<li>[ ] All existing shortcuts still work (Space, J/K/L, Ctrl+Z, etc.)</li>
+<li>[ ] Preview panel ref properly connected</li>
+<li>[ ] Media library ref properly connected</li>
+<li>[ ] No console errors</li>
+</ul>
+</li>
+<li><p><strong>Visual Quality</strong></p>
+<ul>
+<li>[ ] Consistent spacing using theme tokens</li>
+<li>[ ] Proper border colors and styles</li>
+<li>[ ] Smooth transitions on panel resize</li>
+<li>[ ] Dividers show visual feedback on hover/active</li>
+<li>[ ] No visual regressions from previous layout</li>
+</ul>
+</li>
+<li><p><strong>Workspace Switching</strong></p>
+<ul>
+<li>[ ] Editing workspace (Alt+1) - default 60/40 split</li>
+<li>[ ] Color workspace (Alt+2) - properties visible</li>
+<li>[ ] Effects workspace (Alt+3) - effects visible</li>
+<li>[ ] Audio workspace (Alt+4) - media + properties visible</li>
+<li>[ ] Assembly workspace (Alt+5) - media library visible</li>
+</ul>
+</li>
+</ol>
+<h3 id="automated-tests">Automated Tests</h3>
+<p>Run the following commands to verify build and linting:</p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Type checking
+npm run typecheck
+
+# Linting
+npm run lint
+
+# Build
+npm run build
+
+# Unit tests (if available)
+npm test
+</code></pre>
+<h3 id="performance-testing">Performance Testing</h3>
+<ol>
+<li><p><strong>Panel Resize Performance</strong></p>
+<ul>
+<li>Resize should be smooth at 60fps</li>
+<li>No visual jank during drag</li>
+<li>Transitions use GPU-accelerated properties</li>
+</ul>
+</li>
+<li><p><strong>Memory Leaks</strong></p>
+<ul>
+<li>Check for event listener cleanup</li>
+<li>Verify useEffect cleanup functions</li>
+<li>Monitor memory usage during extended editing sessions</li>
+</ul>
+</li>
+</ol>
+<h2 id="migration-guide">Migration Guide</h2>
+<p>For any components currently using the old EditorLayout API:</p>
+<h3 id="step-1-define-panel-configuration">Step 1: Define Panel Configuration</h3>
+<pre><code class="lang-typescript">const panelConfig: EditorLayoutPanelConfig[] = [
+  {
+    id: 'myPanel',
+    title: 'My Panel',
+    region: 'right', // or 'top' or 'bottom'
+    defaultSize: 320,
+    minSize: 280,
+    maxSize: 400,
+    visibleByDefault: true,
+  },
+  // ... other panels
+];
+</code></pre>
+<h3 id="step-2-create-render-function">Step 2: Create Render Function</h3>
+<pre><code class="lang-typescript">const renderPanel = useCallback((panelId: string) =&gt; {
+  switch (panelId) {
+    case 'myPanel':
+      return &lt;MyPanelComponent /&gt;;
+    // ... other panels
+    default:
+      return null;
+  }
+}, [/* dependencies */]);
+</code></pre>
+<h3 id="step-3-update-editorlayout-usage">Step 3: Update EditorLayout Usage</h3>
+<pre><code class="lang-typescript">&lt;EditorLayout
+  panels={panelConfig}
+  renderPanel={renderPanel}
+  // ... other props remain the same
+/&gt;
+</code></pre>
+<h2 id="known-limitations">Known Limitations</h2>
+<ol>
+<li><p><strong>Panel Region Flexibility</strong>: Currently, sidebar panels are hardcoded to be either left (media, effects) or right (properties, history). Future enhancement could make this configurable.</p>
+</li>
+<li><p><strong>Vertical Stacking</strong>: Right region panels stack horizontally, not vertically. A future enhancement could support vertical stacking within a region.</p>
+</li>
+<li><p><strong>Custom Divider Styles</strong>: Divider styling is currently global. Panel-specific divider styles would require additional configuration.</p>
+</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><strong>Tab Groups</strong>: Support for tabbed panels within regions</li>
+<li><strong>Drag-and-Drop</strong>: Reorder panels via drag-and-drop</li>
+<li><strong>Saved Layouts</strong>: Export/import layout configurations</li>
+<li><strong>Panel Zoom</strong>: Maximize/minimize individual panels</li>
+<li><strong>Custom Regions</strong>: Allow defining custom region layouts beyond top/bottom/right</li>
+<li><strong>Vertical Stacking</strong>: Support vertical panel stacking in sidebars</li>
+<li><strong>Panel Animations</strong>: Smooth expand/collapse animations</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><strong>Design Inspiration</strong>: Adobe Premiere Pro, DaVinci Resolve, Final Cut Pro</li>
+<li><strong>Theme System</strong>: <code>VIDEO_EDITOR_UI_MODERNIZATION.md</code></li>
+<li><strong>Layout Service</strong>: <code>Aura.Web/src/services/workspaceLayoutService.ts</code></li>
+<li><strong>Original Issue</strong>: Refine EditorLayout to modular Premiere-style workspace layout</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>This refactor significantly improves the maintainability, extensibility, and professional appearance of the video editor layout. The new panel configuration API makes it easy to add, remove, or reorder panels without touching the layout logic, and the consistent use of theme tokens ensures a polished, cohesive visual design that matches industry standards.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/EDITOR_LAYOUT_REFACTOR_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

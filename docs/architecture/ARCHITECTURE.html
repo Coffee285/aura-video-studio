@@ -111,13 +111,15 @@
 <p><strong>Key Components</strong>:</p>
 <ul>
 <li><code>electron/main.js</code> - Main process entry point, orchestration</li>
+<li><code>electron/network-contract.js</code> - Network contract resolution and validation</li>
 <li><code>electron/window-manager.js</code> - Window lifecycle and state persistence</li>
-<li><code>electron/backend-service.js</code> - Backend process spawning and management</li>
+<li><code>electron/backend-service.js</code> - Backend process spawning and management (enforces network contract)</li>
+<li><code>electron/external-backend-service.js</code> - External backend connection (enforces network contract)</li>
 <li><code>electron/menu-builder.js</code> - Application menu system</li>
 <li><code>electron/tray-manager.js</code> - System tray integration</li>
 <li><code>electron/protocol-handler.js</code> - Custom protocol (aura://) support</li>
 <li><code>electron/ipc-handlers/</code> - IPC handlers (config, system, video, diagnostics)</li>
-<li><code>electron/preload.js</code> - Security bridge for renderer ↔ main IPC</li>
+<li><code>electron/preload.js</code> - Security bridge for renderer ↔ main IPC (exposes contract URL)</li>
 </ul>
 <p><strong>Features</strong>:</p>
 <ul>
@@ -138,9 +140,19 @@
 <li>Input validation and sanitization</li>
 <li>Content Security Policy (CSP)</li>
 </ul>
+<p><strong>Network Contract:</strong></p>
+<p>Aura.Desktop enforces a strict network contract to ensure all components (Electron, backend, frontend) share a single source of truth for the API endpoint:</p>
+<ul>
+<li><strong>Contract Resolution</strong> (<code>network-contract.js</code>): Resolves and validates the backend URL from environment variables on startup, ensuring <code>baseUrl</code>, <code>port</code>, and health endpoints are valid before proceeding</li>
+<li><strong>Contract Enforcement</strong>: Both <code>BackendService</code> and <code>ExternalBackendService</code> require a valid <code>networkContract</code> in their constructors and throw descriptive errors if the contract is missing or invalid</li>
+<li><strong>Contract Exposure</strong> (<code>preload.js</code>): The validated contract URL is exposed to the renderer via <code>window.desktopBridge.backend.getUrl()</code> and <code>window.AURA_BACKEND_URL</code> for consistent API resolution</li>
+<li><strong>Fail-Fast Design</strong>: Invalid configurations are caught at startup with clear error messages, preventing silent failures or hardcoded fallbacks</li>
+</ul>
+<p>This architecture guarantees that Electron never spawns a backend with an invalid URL, and the frontend always uses the same URL that Electron validated.</p>
 <p><strong>References:</strong></p>
 <ul>
 <li><a href="../../DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> - Complete Electron development guide</li>
+<li><a href="../../DEVELOPMENT.html#backend-url-contract">DEVELOPMENT.md</a> - Network contract usage and configuration</li>
 <li><a href="../../Aura.Desktop/electron/README.md">Aura.Desktop/electron/README.md</a> - Electron main process architecture (IPC, window manager, backend service, tray, menu, protocol handler)</li>
 </ul>
 <h3 id="2-auracore-business-logic">2. Aura.Core (Business Logic)</h3>
@@ -216,6 +228,22 @@
 <li>SQLite database for persistence</li>
 <li>Server-Sent Events (SSE) for real-time progress</li>
 </ul>
+<p><strong>Network Contract:</strong></p>
+<p>The backend API's URL and port are determined by a validated <code>NetworkContract</code> that enforces a single source of truth:</p>
+<ul>
+<li><strong>Contract Resolution</strong>: Electron main process resolves the network contract on startup via <code>resolveBackendContract()</code>, which reads environment variables (<code>AURA_BACKEND_URL</code> or <code>ASPNETCORE_URLS</code>) and validates the URL format, port range, and required endpoints</li>
+<li><strong>Contract Validation</strong>: The contract validates:
+<ul>
+<li><code>baseUrl</code> must be a non-empty string with valid URL format</li>
+<li><code>port</code> must be a valid integer between 1 and 65535</li>
+<li><code>healthEndpoint</code> and <code>readinessEndpoint</code> must be non-empty strings</li>
+<li>Throws descriptive errors if validation fails, preventing silent failures</li>
+</ul>
+</li>
+<li><strong>Contract Enforcement</strong>: Both <code>BackendService</code> (managed) and <code>ExternalBackendService</code> (external) require a valid <code>networkContract</code> in their constructors and will refuse to start without one</li>
+<li><strong>Contract Exposure</strong>: The validated contract is exposed to the frontend via the preload bridge at <code>window.desktopBridge.backend.getUrl()</code> for consistent API resolution</li>
+</ul>
+<p>This architecture ensures no hardcoded ports, fail-fast validation for invalid configurations, and a single canonical URL shared across Electron, backend, and frontend layers.</p>
 <p><strong>Platforms</strong>: Cross-platform (ASP.NET Core 8)</p>
 <h3 id="5-auraweb-frontend-ui">5. Aura.Web (Frontend UI)</h3>
 <p><strong>Technology</strong>: React 18.2 + TypeScript + Vite 6.4 + Fluent UI 9.47<br>
