@@ -7,6 +7,8 @@ using Aura.Core.Errors;
 using Aura.Core.Models;
 using Aura.Core.Models.Audio;
 using Aura.Core.Models.Generation;
+using Aura.Core.Models.RAG;
+using Aura.Core.Models.Settings;
 using Aura.Core.Providers;
 using Aura.Core.Services;
 using Aura.Core.Services.Audio;
@@ -386,7 +388,7 @@ public class VideoOrchestrator
                 : null;
 
             Brief enhancedBrief = brief;
-            Models.RAG.RagContext? ragContext = null;
+            RagContext? ragContext = null;
 
             if (_ragScriptEnhancer != null && brief.RagConfiguration?.Enabled == true)
             {
@@ -511,7 +513,7 @@ public class VideoOrchestrator
                         elapsed, pacingResult.ConfidenceScore, pacingResult.PredictedRetentionRate);
 
                     // Validate suggestions
-                    var optimizationLevel = Enum.Parse<Models.Settings.OptimizationLevel>(
+                    var optimizationLevel = Enum.Parse<OptimizationLevel>(
                         _providerSettings.GetPacingOptimizationLevel(), ignoreCase: true);
                     var minConfidence = _providerSettings.GetMinimumConfidenceThreshold();
 
@@ -1116,7 +1118,7 @@ public class VideoOrchestrator
                                 elapsed, pacingResult.ConfidenceScore);
 
                             // Validate and apply
-                            var optimizationLevel = Enum.Parse<Models.Settings.OptimizationLevel>(
+                            var optimizationLevel = Enum.Parse<OptimizationLevel>(
                                 _providerSettings.GetPacingOptimizationLevel(), ignoreCase: true);
                             var minConfidence = _providerSettings.GetMinimumConfidenceThreshold();
 
