@@ -501,6 +501,109 @@ The specified path is not writable or does not exist.
 <li><strong>Import settings</strong>: Load configuration from file</li>
 <li><strong>Skip for developers</strong>: Environment variable to bypass for dev/test</li>
 </ol>
+<h2 id="resetting-the-wizard-for-testing--development">Resetting the Wizard (For Testing &amp; Development)</h2>
+<p>While the wizard is designed to run only once per installation, developers and testers may need to reset it to verify the first-run experience. There are multiple ways to reset the wizard state:</p>
+<h3 id="method-1-using-clean-desktopps1-script-recommended">Method 1: Using <code>clean-desktop.ps1</code> Script (Recommended)</h3>
+<p>The most comprehensive way to reset the wizard is to use the <code>clean-desktop.ps1</code> script located in the <code>Aura.Desktop</code> folder:</p>
+<pre><code class="lang-powershell"># Preview what will be cleaned (dry run)
+.\Aura.Desktop\clean-desktop.ps1 -DryRun
+
+# Clean everything including wizard state
+.\Aura.Desktop\clean-desktop.ps1
+</code></pre>
+<p><strong>What this script resets:</strong></p>
+<ul>
+<li>✅ SQLite database (<code>%LOCALAPPDATA%\Aura\aura.db</code>) - removes all wizard progress</li>
+<li>✅ Database WAL/journal files</li>
+<li>✅ Backend wizard state (via API call if server is running)</li>
+<li>✅ AppData configuration and cache</li>
+<li>✅ Downloaded tools and temporary files</li>
+<li>✅ Build artifacts</li>
+</ul>
+<p><strong>Note:</strong> LocalStorage is cleared automatically when the app restarts and detects no backend state.</p>
+<h3 id="method-2-backend-api-call">Method 2: Backend API Call</h3>
+<p>If the backend server is running, you can call the reset endpoint directly:</p>
+<pre><code class="lang-bash"># Using curl (Windows/Linux/macOS)
+curl -X POST http://localhost:5005/api/setup/wizard/reset \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;userId&quot;:&quot;default&quot;,&quot;preserveData&quot;:false}'
+
+# Using PowerShell
+$body = @{userId=&quot;default&quot;; preserveData=$false} | ConvertTo-Json
+Invoke-WebRequest -Uri &quot;http://localhost:5005/api/setup/wizard/reset&quot; `
+  -Method POST -Body $body -ContentType &quot;application/json&quot;
+</code></pre>
+<h3 id="method-3-manual-database-deletion">Method 3: Manual Database Deletion</h3>
+<p>If you only want to reset the wizard without cleaning everything:</p>
+<ol>
+<li><strong>Stop the application</strong> (both frontend and backend)</li>
+<li><strong>Delete the database file:</strong>
+<ul>
+<li>Windows: <code>%LOCALAPPDATA%\Aura\aura.db</code></li>
+<li>Also delete: <code>aura.db-shm</code>, <code>aura.db-wal</code>, <code>aura.db-journal</code> (if present)</li>
+</ul>
+</li>
+<li><strong>Clear browser localStorage</strong> (if testing web version):
+<ul>
+<li>Open Developer Tools (F12)</li>
+<li>Go to Application tab → Local Storage</li>
+<li>Delete keys: <code>hasCompletedFirstRun</code>, <code>hasSeenOnboarding</code>, <code>wizardProgress</code></li>
+</ul>
+</li>
+<li><strong>Restart the application</strong></li>
+</ol>
+<h3 id="method-4-programmatic-reset-from-frontend">Method 4: Programmatic Reset (From Frontend)</h3>
+<p>For automated testing or development tools, use the exported functions:</p>
+<pre><code class="lang-typescript">import { resetFirstRunStatus } from './services/firstRunService';
+import { clearWizardStateFromStorage, resetWizardInBackend } from './state/onboarding';
+
+// Full reset (localStorage + backend)
+await resetFirstRunStatus();
+
+// Individual resets
+clearWizardStateFromStorage(); // Clear localStorage only
+await resetWizardInBackend(false); // Clear backend only (preserveData=false)
+</code></pre>
+<h3 id="verification-after-reset">Verification After Reset</h3>
+<p>After resetting, verify the wizard appears correctly:</p>
+<ol>
+<li>Start the application</li>
+<li>Should see the welcome screen (Step 1 of 5)</li>
+<li>No &quot;Continue where you left off?&quot; dialog</li>
+<li>Empty configuration (except smart defaults)</li>
+</ol>
+<h3 id="database-location-reference">Database Location Reference</h3>
+<p>The wizard state is stored in the SQLite database at:</p>
+<pre><code>Windows:  %LOCALAPPDATA%\Aura\aura.db
+          (typically: C:\Users\&lt;YourName&gt;\AppData\Local\Aura\aura.db)
+
+macOS:    ~/Library/Application Support/Aura/aura.db
+
+Linux:    ~/.local/share/Aura/aura.db
+</code></pre>
+<p>The database contains the <code>UserSetups</code> table which tracks:</p>
+<ul>
+<li>Wizard completion status (<code>Completed</code> boolean)</li>
+<li>Current step (<code>LastStep</code> integer)</li>
+<li>Wizard state JSON (<code>WizardState</code> text)</li>
+<li>Timestamps (<code>CreatedAt</code>, <code>UpdatedAt</code>, <code>CompletedAt</code>)</li>
+</ul>
+<h3 id="troubleshooting-reset-issues">Troubleshooting Reset Issues</h3>
+<p><strong>Issue:</strong> Wizard still shows &quot;completed&quot; after reset</p>
+<ul>
+<li><strong>Cause:</strong> Backend database not deleted or still running</li>
+<li><strong>Solution:</strong> Stop backend, delete database, restart</li>
+</ul>
+<p><strong>Issue:</strong> &quot;Continue where you left off?&quot; appears after clean reset</p>
+<ul>
+<li><strong>Cause:</strong> Old wizard progress saved in backend</li>
+<li><strong>Solution:</strong> Use <code>clean-desktop.ps1</code> to ensure backend reset</li>
+</ul>
+<p><strong>Issue:</strong> App bypasses wizard even after reset</p>
+<ul>
+<li><strong>Cause:</strong> localStorage still has completion flag</li>
+<li><strong>Solution:</strong> Clear browser cache/localStorage or use incognito mode</li>
+</ul>
 <h2 id="conclusion">Conclusion</h2>
 <p>The mandatory first-run setup wizard ensures every user has a working configuration before creating their first video. By simplifying to 5 essential steps and adding clear validation, the setup experience is both thorough and user-friendly.</p>
 <p>Key achievements:</p>
@@ -513,6 +616,7 @@ The specified path is not writable or does not exist.
 <li>✅ Smart defaults for workspace</li>
 <li>✅ Validation at every step</li>
 <li>✅ Persistence to prevent re-runs</li>
+<li>✅ Comprehensive reset mechanism for testing</li>
 </ul>
 <p>This implementation resolves the critical usability issue where new users could bypass setup and encounter errors when trying to generate videos.</p>
 
