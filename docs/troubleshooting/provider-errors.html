@@ -95,6 +95,129 @@
 <li><strong>ValidationError</strong>: Unexpected error occurred during validation</li>
 </ul>
 <hr>
+<h2 id="api-key-validation-during-setup">API Key Validation During Setup</h2>
+<p>When validating API keys in the First-Run Wizard or Settings, the system distinguishes between different types of errors:</p>
+<h3 id="error-types-and-what-they-mean">Error Types and What They Mean</h3>
+<h4 id="-valid---key-verified-successfully">✅ &quot;Valid&quot; - Key Verified Successfully</h4>
+<ul>
+<li>The API key format is correct</li>
+<li>Network connection to the provider was successful</li>
+<li>The provider accepted the key and returned a successful response</li>
+<li>You can proceed with using this provider</li>
+</ul>
+<h4 id="-invalid---key-rejected-by-provider">❌ &quot;Invalid&quot; - Key Rejected by Provider</h4>
+<ul>
+<li>The API key was rejected by the provider (HTTP 401 Unauthorized)</li>
+<li>Common causes:
+<ul>
+<li>Key was typed incorrectly</li>
+<li>Key was revoked or expired</li>
+<li>Key doesn't have proper permissions</li>
+</ul>
+</li>
+<li><strong>Action</strong>: Double-check your API key and regenerate if needed</li>
+</ul>
+<h4 id="-unable-to-reach-backend---network-error">🌐 &quot;Unable to reach backend&quot; - Network Error</h4>
+<ul>
+<li>The frontend cannot connect to the Aura backend server</li>
+<li>This is <strong>not</strong> an invalid API key - it's a connectivity issue</li>
+<li>Common causes:
+<ul>
+<li>Backend API is not running</li>
+<li>Firewall is blocking the connection</li>
+<li>Incorrect backend URL configured</li>
+</ul>
+</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Ensure <code>dotnet run --project Aura.Api</code> is running</li>
+<li>Check firewall settings</li>
+<li>Verify <code>VITE_API_BASE_URL</code> in <code>.env.local</code></li>
+</ul>
+</li>
+</ul>
+<h4 id="-request-timed-out---timeout-error">⏱️ &quot;Request timed out&quot; - Timeout Error</h4>
+<ul>
+<li>The request took too long to complete (&gt;90 seconds)</li>
+<li>Network may be slow or provider is experiencing high latency</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Check your internet connection speed</li>
+<li>Try again when network conditions improve</li>
+<li>You can continue setup and the key will be validated on first use</li>
+</ul>
+</li>
+</ul>
+<h4 id="-openai-service-issue---provider-server-error">🔒 &quot;OpenAI service issue&quot; - Provider Server Error</h4>
+<ul>
+<li>The provider's API returned a server error (5xx)</li>
+<li>The key may be valid, but the service is having issues</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Check the provider's status page</li>
+<li>Wait and try again later</li>
+<li>You can continue setup anyway</li>
+</ul>
+</li>
+</ul>
+<h4 id="-access-denied---permission-error-http-403">🚫 &quot;Access denied&quot; - Permission Error (HTTP 403)</h4>
+<ul>
+<li>The API key is valid but lacks necessary permissions</li>
+<li>Common causes:
+<ul>
+<li>Organization/project restrictions</li>
+<li>Billing account not set up</li>
+<li>Rate limits or quotas exceeded</li>
+</ul>
+</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Check your account settings at the provider's dashboard</li>
+<li>Ensure billing is set up</li>
+<li>Verify organization/project access</li>
+</ul>
+</li>
+</ul>
+<h3 id="validation-flow">Validation Flow</h3>
+<ol>
+<li><strong>Format Check</strong>: Validates the key format locally (e.g., OpenAI keys start with <code>sk-</code>)</li>
+<li><strong>Backend Connection</strong>: Attempts to connect to Aura backend</li>
+<li><strong>Provider Verification</strong>: Backend contacts the provider's API to verify the key</li>
+<li><strong>Result Interpretation</strong>: Parses the response and shows appropriate message</li>
+</ol>
+<h3 id="troubleshooting-validation-errors">Troubleshooting Validation Errors</h3>
+<h4 id="problem-valid-key-shows-as-invalid">Problem: Valid key shows as &quot;Invalid&quot;</h4>
+<p><strong>This should now be fixed!</strong> If you still see this:</p>
+<ol>
+<li>Check the exact error message shown</li>
+<li>If it mentions &quot;Unable to reach backend&quot; or &quot;Network error&quot;, this is not about your key</li>
+<li>Ensure the backend is running: <code>dotnet run --project Aura.Api</code></li>
+<li>Check backend logs for detailed error information</li>
+<li>Try resetting the circuit breaker by restarting the frontend</li>
+</ol>
+<h4 id="problem-validation-takes-too-long">Problem: Validation takes too long</h4>
+<p>The validation has extended timeouts (90 seconds) with retry logic:</p>
+<ol>
+<li>First attempt: Immediate validation</li>
+<li>Retry attempts: Up to 2 retries with exponential backoff</li>
+<li>Each attempt has a 90-second timeout</li>
+</ol>
+<p>If validation consistently times out:</p>
+<ul>
+<li>Check your network connection</li>
+<li>Try using a wired connection instead of WiFi</li>
+<li>Check if a proxy or firewall is interfering</li>
+<li>Contact your network administrator if on a corporate network</li>
+</ul>
+<h4 id="problem-circuit-breaker-is-open-error">Problem: &quot;Circuit breaker is open&quot; error</h4>
+<p>The circuit breaker protects against cascading failures:</p>
+<ol>
+<li>It opens after 10 consecutive failures</li>
+<li>It stays open for 60 seconds before retrying</li>
+<li><strong>Solution</strong>: The validation flow now resets the circuit breaker before each attempt</li>
+<li>If you still see this, restart the frontend application</li>
+</ol>
+<hr>
 <h2 id="llm-errors">LLM Errors</h2>
 <p>Language Model (LLM) provider errors occur when there are issues communicating with OpenAI, Anthropic, or other LLM services.</p>
 <h3 id="common-llm-error-codes">Common LLM Error Codes</h3>
