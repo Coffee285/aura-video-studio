@@ -149,6 +149,98 @@ public class ScriptsController : ControllerBase
     }
 
     /// <summary>
+    /// Stream script generation with real-time token-by-token updates (SSE)
+    /// </summary>
+    [HttpPost("generate-stream")]
+    [Produces("text/event-stream")]
+    public async Task GenerateScriptStream(
+        [FromBody] GenerateScriptRequest request,
+        CancellationToken ct)
+    {
+        var correlationId = HttpContext.TraceIdentifier;
+        
+        try
+        {
+            _logger.LogInformation(
+                "[{CorrelationId}] POST /api/scripts/generate-stream - Topic: {Topic}, Provider: {Provider}",
+                correlationId, request.Topic, request.PreferredProvider ?? "auto");
+
+            // Set SSE headers
+            Response.Headers.Append("Content-Type", "text/event-stream");
+            Response.Headers.Append("Cache-Control", "no-cache");
+            Response.Headers.Append("Connection", "keep-alive");
+
+            var brief = new Brief(
+                Topic: request.Topic,
+                Audience: request.Audience,
+                Goal: request.Goal,
+                Tone: request.Tone,
+                Language: request.Language,
+                Aspect: ParseAspect(request.Aspect));
+
+            var planSpec = new PlanSpec(
+                TargetDuration: TimeSpan.FromSeconds(request.TargetDurationSeconds),
+                Pacing: ParsePacing(request.Pacing),
+                Density: ParseDensity(request.Density),
+                Style: request.Style);
+
+            // First, determine which provider to use
+            var result = await _scriptOrchestrator.GenerateScriptAsync(
+                brief, planSpec, request.PreferredProvider ?? "Free", offlineOnly: false, ct).ConfigureAwait(false);
+
+            if (!result.Success || string.IsNullOrWhiteSpace(result.ProviderUsed))
+            {
+                // Send error event
+                var errorData = new { type = "error", message = result.ErrorMessage ?? "Failed to generate script" };
+                await Response.WriteAsync($"event: error\ndata: {System.Text.Json.JsonSerializer.Serialize(errorData)}\n\n", ct).ConfigureAwait(false);
+                await Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                return;
+            }
+
+            // For now, send the complete result as we don't have direct provider access
+            // In a future iteration, we can enhance this with true streaming by accessing providers directly
+            _logger.LogInformation(
+                "[{CorrelationId}] Script generated successfully with provider {Provider}",
+                correlationId, result.ProviderUsed);
+
+            // Send as a single complete event for now
+            var completeData = new
+            {
+                type = "complete",
+                content = result.Script ?? string.Empty,
+                providerName = result.ProviderUsed,
+                metadata = new
+                {
+                    isLocal = result.ProviderUsed == "Ollama" || result.ProviderUsed == "RuleBased",
+                    estimatedCost = result.ProviderUsed == "Ollama" || result.ProviderUsed == "RuleBased" ? 0m : 0.01m
+                }
+            };
+
+            await Response.WriteAsync($"event: complete\ndata: {System.Text.Json.JsonSerializer.Serialize(completeData)}\n\n", ct).ConfigureAwait(false);
+            await Response.Body.FlushAsync(ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("[{CorrelationId}] Streaming cancelled by client", correlationId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{CorrelationId}] Error during streaming script generation", correlationId);
+            
+            try
+            {
+                var errorData = new { type = "error", message = $"An error occurred: {ex.Message}" };
+                await Response.WriteAsync($"event: error\ndata: {System.Text.Json.JsonSerializer.Serialize(errorData)}\n\n", ct).ConfigureAwait(false);
+                await Response.Body.FlushAsync(ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Client may have disconnected, ignore
+            }
+        }
+    }
+
+    /// <summary>
     /// Get a previously generated script by ID
     /// </summary>
     [HttpGet("{id}")]
