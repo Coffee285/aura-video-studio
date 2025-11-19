@@ -1136,7 +1136,7 @@ Return ONLY the transition text, no explanations or additional commentary:";
     /// <summary>
     /// Whether this provider supports streaming
     /// </summary>
-    public bool SupportsStreaming => false;
+    public bool SupportsStreaming => true;
 
     /// <summary>
     /// Get provider characteristics for adaptive UI
@@ -1148,35 +1148,85 @@ Return ONLY the transition text, no explanations or additional commentary:";
             IsLocal = false,
             ExpectedFirstTokenMs = 400,
             ExpectedTokensPerSec = 25,
-            SupportsStreaming = false,
+            SupportsStreaming = true,
             ProviderTier = "Pro",
             CostPer1KTokens = 0.008m
         };
     }
 
     /// <summary>
-    /// Anthropic streaming not yet implemented. Falls back to non-streaming DraftScriptAsync.
+    /// Stream script generation with real-time token-by-token updates (Anthropic Claude)
     /// </summary>
     public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
         Brief brief, 
         PlanSpec spec, 
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        _logger.LogWarning("Anthropic streaming not yet implemented, using non-streaming fallback");
-        
-        string result;
-        Exception? error = null;
+        _logger.LogInformation("Starting streaming script generation with Anthropic (model: {Model}) for topic: {Topic}", 
+            _model, brief.Topic);
+
+        var startTime = DateTime.UtcNow;
+        DateTime? firstTokenTime = null;
+
+        // Build enhanced prompts
+        string systemPrompt = EnhancedPromptTemplates.GetSystemPromptForScriptGeneration();
+        string userPrompt = _promptCustomizationService.BuildCustomizedPrompt(brief, spec, brief.PromptModifiers);
+
+        // Create streaming request (Anthropic uses "stream": true)
+        var requestBody = new
+        {
+            model = _model,
+            max_tokens = 4096,
+            temperature = 0.8,
+            top_p = 0.95,
+            system = systemPrompt,
+            messages = new[]
+            {
+                new { role = "user", content = userPrompt }
+            },
+            stop_sequences = new[] { "\n\nHuman:", "\n\nAssistant:" },
+            stream = true
+        };
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("x-api-key", _apiKey);
+        _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(_timeout);
+
+        HttpResponseMessage? response = null;
+        Exception? initError = null;
         try
         {
-            result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.anthropic.com/v1/messages")
+            {
+                Content = content
+            };
+            response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"Anthropic API error: HTTP {response.StatusCode} - {errorContent}");
+            }
+        }
+        catch (TaskCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("Streaming cancelled by user");
+            throw;
         }
         catch (Exception ex)
         {
-            error = ex;
-            result = string.Empty;
+            _logger.LogError(ex, "Error initiating streaming script generation");
+            initError = ex;
         }
 
-        if (error != null)
+        if (initError != null)
         {
             yield return new LlmStreamChunk
             {
@@ -1184,26 +1234,138 @@ Return ONLY the transition text, no explanations or additional commentary:";
                 Content = string.Empty,
                 TokenIndex = 0,
                 IsFinal = true,
-                ErrorMessage = $"Error: {error.Message}"
+                ErrorMessage = $"Streaming error: {initError.Message}"
             };
             yield break;
         }
 
-        yield return new LlmStreamChunk
+        using (response!)
         {
-            ProviderName = "Anthropic",
-            Content = result,
-            AccumulatedContent = result,
-            TokenIndex = result.Length / 4,
-            IsFinal = true,
-            Metadata = new LlmStreamMetadata
+            var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            using var reader = new System.IO.StreamReader(stream);
+
+            var accumulated = new StringBuilder();
+            var tokenIndex = 0;
+            var stopReason = "stop";
+
+            while (!reader.EndOfStream && !ct.IsCancellationRequested)
             {
-                TotalTokens = result.Length / 4,
-                EstimatedCost = (result.Length / 4000m) * 0.008m,
-                IsLocalModel = false,
-                ModelName = _model,
-                FinishReason = "stop"
+                var line = await reader.ReadLineAsync().ConfigureAwait(false);
+                
+                if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: "))
+                {
+                    continue;
+                }
+
+                var data = line.Substring(6); // Remove "data: " prefix
+
+                // Anthropic streaming format uses different event types
+                // event: message_start, content_block_start, content_block_delta, content_block_stop, message_delta, message_stop
+                
+                JsonDocument? doc = null;
+                try
+                {
+                    doc = JsonDocument.Parse(data);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse streaming JSON line: {Line}", data);
+                    continue;
+                }
+
+                using (doc)
+                {
+                    // Check event type
+                    if (doc.RootElement.TryGetProperty("type", out var eventType))
+                    {
+                        var type = eventType.GetString();
+                        
+                        if (type == "content_block_delta")
+                        {
+                            // Extract delta content
+                            if (doc.RootElement.TryGetProperty("delta", out var delta) &&
+                                delta.TryGetProperty("type", out var deltaType) &&
+                                deltaType.GetString() == "text_delta" &&
+                                delta.TryGetProperty("text", out var textDelta))
+                            {
+                                var chunk = textDelta.GetString() ?? string.Empty;
+                                
+                                if (!string.IsNullOrEmpty(chunk))
+                                {
+                                    if (!firstTokenTime.HasValue)
+                                    {
+                                        firstTokenTime = DateTime.UtcNow;
+                                    }
+
+                                    accumulated.Append(chunk);
+                                    tokenIndex++;
+
+                                    yield return new LlmStreamChunk
+                                    {
+                                        ProviderName = "Anthropic",
+                                        Content = chunk,
+                                        AccumulatedContent = accumulated.ToString(),
+                                        TokenIndex = tokenIndex,
+                                        IsFinal = false
+                                    };
+                                }
+                            }
+                        }
+                        else if (type == "message_delta")
+                        {
+                            // Capture stop reason
+                            if (doc.RootElement.TryGetProperty("delta", out var delta) &&
+                                delta.TryGetProperty("stop_reason", out var stopReasonProp))
+                            {
+                                stopReason = stopReasonProp.GetString() ?? "stop";
+                            }
+                        }
+                        else if (type == "message_stop")
+                        {
+                            // Final chunk
+                            var duration = DateTime.UtcNow - startTime;
+                            var timeToFirstToken = firstTokenTime.HasValue 
+                                ? (firstTokenTime.Value - startTime).TotalMilliseconds 
+                                : 0;
+                            var tokensPerSec = tokenIndex > 0 && duration.TotalSeconds > 0
+                                ? tokenIndex / duration.TotalSeconds
+                                : 0;
+
+                            yield return new LlmStreamChunk
+                            {
+                                ProviderName = "Anthropic",
+                                Content = string.Empty,
+                                AccumulatedContent = accumulated.ToString(),
+                                TokenIndex = tokenIndex,
+                                IsFinal = true,
+                                Metadata = new LlmStreamMetadata
+                                {
+                                    TotalTokens = tokenIndex,
+                                    EstimatedCost = CalculateCost(tokenIndex),
+                                    TokensPerSecond = tokensPerSec,
+                                    IsLocalModel = false,
+                                    ModelName = _model,
+                                    TimeToFirstTokenMs = timeToFirstToken,
+                                    TotalDurationMs = duration.TotalMilliseconds,
+                                    FinishReason = stopReason
+                                }
+                            };
+                            break;
+                        }
+                    }
+                }
             }
-        };
+        }
+    }
+
+    /// <summary>
+    /// Calculate estimated cost for Anthropic Claude API usage
+    /// </summary>
+    private decimal CalculateCost(int tokenCount)
+    {
+        // Anthropic Claude costs vary by model:
+        // Claude 3.5 Sonnet: $0.003/1K input, $0.015/1K output
+        // Using average of $0.009/1K for simplification
+        return (decimal)tokenCount / 1000 * 0.009m;
     }
 }

@@ -1222,7 +1222,7 @@ Return ONLY the transition text, no explanations or additional commentary:";
     /// <summary>
     /// Whether this provider supports streaming
     /// </summary>
-    public bool SupportsStreaming => false;
+    public bool SupportsStreaming => true;
 
     /// <summary>
     /// Get provider characteristics for adaptive UI
@@ -1234,35 +1234,90 @@ Return ONLY the transition text, no explanations or additional commentary:";
             IsLocal = false,
             ExpectedFirstTokenMs = 600,
             ExpectedTokensPerSec = 25,
-            SupportsStreaming = false,
+            SupportsStreaming = true,
             ProviderTier = "Pro",
             CostPer1KTokens = 0.0005m
         };
     }
 
     /// <summary>
-    /// Gemini streaming not yet implemented. Falls back to non-streaming DraftScriptAsync.
+    /// Stream script generation with real-time token-by-token updates (Google Gemini)
     /// </summary>
     public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
         Brief brief, 
         PlanSpec spec, 
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        _logger.LogWarning("Gemini streaming not yet implemented, using non-streaming fallback");
-        
-        string result;
-        Exception? error = null;
+        _logger.LogInformation("Starting streaming script generation with Gemini for topic: {Topic}", brief.Topic);
+
+        var startTime = DateTime.UtcNow;
+        DateTime? firstTokenTime = null;
+
+        // Build enhanced prompts
+        string systemPrompt = EnhancedPromptTemplates.GetSystemPromptForScriptGeneration();
+        string userPrompt = _promptCustomizationService.BuildCustomizedPrompt(brief, spec, brief.PromptModifiers);
+        string combinedPrompt = $"{systemPrompt}\n\n{userPrompt}";
+
+        // Create streaming request (Gemini uses alt=sse for streaming)
+        var requestBody = new
+        {
+            contents = new[]
+            {
+                new
+                {
+                    parts = new[]
+                    {
+                        new { text = combinedPrompt }
+                    }
+                }
+            },
+            generationConfig = new
+            {
+                temperature = 0.7,
+                topP = 0.95,
+                topK = 40,
+                maxOutputTokens = 2048
+            }
+        };
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(_timeout);
+
+        // Gemini streaming endpoint includes alt=sse parameter
+        var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:streamGenerateContent?alt=sse&key={_apiKey}";
+
+        HttpResponseMessage? response = null;
+        Exception? initError = null;
         try
         {
-            result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = content
+            };
+            response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"Gemini API error: HTTP {response.StatusCode} - {errorContent}");
+            }
+        }
+        catch (TaskCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("Streaming cancelled by user");
+            throw;
         }
         catch (Exception ex)
         {
-            error = ex;
-            result = string.Empty;
+            _logger.LogError(ex, "Error initiating streaming script generation");
+            initError = ex;
         }
 
-        if (error != null)
+        if (initError != null)
         {
             yield return new LlmStreamChunk
             {
@@ -1270,26 +1325,133 @@ Return ONLY the transition text, no explanations or additional commentary:";
                 Content = string.Empty,
                 TokenIndex = 0,
                 IsFinal = true,
-                ErrorMessage = $"Error: {error.Message}"
+                ErrorMessage = $"Streaming error: {initError.Message}"
             };
             yield break;
         }
 
-        yield return new LlmStreamChunk
+        using (response!)
         {
-            ProviderName = "Gemini",
-            Content = result,
-            AccumulatedContent = result,
-            TokenIndex = result.Length / 4,
-            IsFinal = true,
-            Metadata = new LlmStreamMetadata
+            var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            using var reader = new System.IO.StreamReader(stream);
+
+            var accumulated = new StringBuilder();
+            var tokenIndex = 0;
+            var finishReason = "STOP";
+
+            while (!reader.EndOfStream && !ct.IsCancellationRequested)
             {
-                TotalTokens = result.Length / 4,
-                EstimatedCost = (result.Length / 4000m) * 0.0005m,
-                IsLocalModel = false,
-                ModelName = "gemini-pro",
-                FinishReason = "stop"
+                var line = await reader.ReadLineAsync().ConfigureAwait(false);
+                
+                if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: "))
+                {
+                    continue;
+                }
+
+                var data = line.Substring(6); // Remove "data: " prefix
+
+                JsonDocument? doc = null;
+                try
+                {
+                    doc = JsonDocument.Parse(data);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse streaming JSON line: {Line}", data);
+                    continue;
+                }
+
+                using (doc)
+                {
+                    // Gemini streaming format: candidates[0].content.parts[0].text
+                    if (doc.RootElement.TryGetProperty("candidates", out var candidates) &&
+                        candidates.GetArrayLength() > 0)
+                    {
+                        var candidate = candidates[0];
+                        
+                        // Check for finish reason
+                        if (candidate.TryGetProperty("finishReason", out var finishReasonProp))
+                        {
+                            finishReason = finishReasonProp.GetString() ?? "STOP";
+                        }
+
+                        // Extract content
+                        if (candidate.TryGetProperty("content", out var contentObj) &&
+                            contentObj.TryGetProperty("parts", out var parts) &&
+                            parts.GetArrayLength() > 0)
+                        {
+                            var part = parts[0];
+                            if (part.TryGetProperty("text", out var textProp))
+                            {
+                                var chunk = textProp.GetString() ?? string.Empty;
+                                
+                                if (!string.IsNullOrEmpty(chunk))
+                                {
+                                    if (!firstTokenTime.HasValue)
+                                    {
+                                        firstTokenTime = DateTime.UtcNow;
+                                    }
+
+                                    accumulated.Append(chunk);
+                                    tokenIndex++;
+
+                                    yield return new LlmStreamChunk
+                                    {
+                                        ProviderName = "Gemini",
+                                        Content = chunk,
+                                        AccumulatedContent = accumulated.ToString(),
+                                        TokenIndex = tokenIndex,
+                                        IsFinal = false
+                                    };
+                                }
+                            }
+                        }
+
+                        // Check if this is the final chunk
+                        if (finishReason != null && finishReason != "UNSPECIFIED")
+                        {
+                            var duration = DateTime.UtcNow - startTime;
+                            var timeToFirstToken = firstTokenTime.HasValue 
+                                ? (firstTokenTime.Value - startTime).TotalMilliseconds 
+                                : 0;
+                            var tokensPerSec = tokenIndex > 0 && duration.TotalSeconds > 0
+                                ? tokenIndex / duration.TotalSeconds
+                                : 0;
+
+                            yield return new LlmStreamChunk
+                            {
+                                ProviderName = "Gemini",
+                                Content = string.Empty,
+                                AccumulatedContent = accumulated.ToString(),
+                                TokenIndex = tokenIndex,
+                                IsFinal = true,
+                                Metadata = new LlmStreamMetadata
+                                {
+                                    TotalTokens = tokenIndex,
+                                    EstimatedCost = CalculateCost(tokenIndex),
+                                    TokensPerSecond = tokensPerSec,
+                                    IsLocalModel = false,
+                                    ModelName = _model,
+                                    TimeToFirstTokenMs = timeToFirstToken,
+                                    TotalDurationMs = duration.TotalMilliseconds,
+                                    FinishReason = finishReason
+                                }
+                            };
+                            break;
+                        }
+                    }
+                }
             }
-        };
+        }
+    }
+
+    /// <summary>
+    /// Calculate estimated cost for Gemini API usage
+    /// </summary>
+    private decimal CalculateCost(int tokenCount)
+    {
+        // Gemini Pro: $0.00025/1K input, $0.0005/1K output
+        // Using average of $0.000375/1K for simplification
+        return (decimal)tokenCount / 1000 * 0.000375m;
     }
 }

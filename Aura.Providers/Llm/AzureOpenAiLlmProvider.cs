@@ -32,6 +32,7 @@ public class AzureOpenAiLlmProvider : ILlmProvider
     private readonly int _maxRetries;
     private readonly TimeSpan _timeout;
     private readonly PromptCustomizationService _promptCustomizationService;
+    private const string ApiVersion = "2024-02-15-preview";
 
     public AzureOpenAiLlmProvider(
         ILogger<AzureOpenAiLlmProvider> logger,
@@ -1136,7 +1137,7 @@ Return ONLY the transition text, no explanations or additional commentary:";
     /// <summary>
     /// Whether this provider supports streaming
     /// </summary>
-    public bool SupportsStreaming => false;
+    public bool SupportsStreaming => true;
 
     /// <summary>
     /// Get provider characteristics for adaptive UI
@@ -1148,35 +1149,85 @@ Return ONLY the transition text, no explanations or additional commentary:";
             IsLocal = false,
             ExpectedFirstTokenMs = 500,
             ExpectedTokensPerSec = 30,
-            SupportsStreaming = false,
+            SupportsStreaming = true,
             ProviderTier = "Pro",
             CostPer1KTokens = 0.01m
         };
     }
 
     /// <summary>
-    /// Azure OpenAI streaming not yet implemented. Falls back to non-streaming DraftScriptAsync.
+    /// Stream script generation with real-time token-by-token updates (Azure OpenAI)
+    /// Uses same format as OpenAI with [DONE] finish signal
     /// </summary>
     public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
         Brief brief, 
         PlanSpec spec, 
         [EnumeratorCancellation] CancellationToken ct = default)
     {
-        _logger.LogWarning("Azure OpenAI streaming not yet implemented, using non-streaming fallback");
-        
-        string result;
-        Exception? error = null;
+        _logger.LogInformation("Starting streaming script generation with Azure OpenAI (deployment: {Deployment}) for topic: {Topic}", 
+            _deploymentName, brief.Topic);
+
+        var startTime = DateTime.UtcNow;
+        DateTime? firstTokenTime = null;
+
+        // Build enhanced prompts
+        string systemPrompt = EnhancedPromptTemplates.GetSystemPromptForScriptGeneration();
+        string userPrompt = _promptCustomizationService.BuildCustomizedPrompt(brief, spec, brief.PromptModifiers);
+
+        // Create streaming request (Azure uses same format as OpenAI)
+        var requestBody = new
+        {
+            messages = new[]
+            {
+                new { role = "system", content = systemPrompt },
+                new { role = "user", content = userPrompt }
+            },
+            temperature = 0.7,
+            max_tokens = 2048,
+            stream = true
+        };
+
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("api-key", _apiKey);
+
+        var json = JsonSerializer.Serialize(requestBody);
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(_timeout);
+
+        // Azure endpoint: https://{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions?api-version={apiVersion}
+        var endpoint = $"{_endpoint}/openai/deployments/{_deploymentName}/chat/completions?api-version={ApiVersion}";
+
+        HttpResponseMessage? response = null;
+        Exception? initError = null;
         try
         {
-            result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = content
+            };
+            response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"Azure OpenAI API error: HTTP {response.StatusCode} - {errorContent}");
+            }
+        }
+        catch (TaskCanceledException) when (ct.IsCancellationRequested)
+        {
+            _logger.LogInformation("Streaming cancelled by user");
+            throw;
         }
         catch (Exception ex)
         {
-            error = ex;
-            result = string.Empty;
+            _logger.LogError(ex, "Error initiating streaming script generation");
+            initError = ex;
         }
 
-        if (error != null)
+        if (initError != null)
         {
             yield return new LlmStreamChunk
             {
@@ -1184,26 +1235,121 @@ Return ONLY the transition text, no explanations or additional commentary:";
                 Content = string.Empty,
                 TokenIndex = 0,
                 IsFinal = true,
-                ErrorMessage = $"Error: {error.Message}"
+                ErrorMessage = $"Streaming error: {initError.Message}"
             };
             yield break;
         }
 
-        yield return new LlmStreamChunk
+        using (response!)
         {
-            ProviderName = "Azure",
-            Content = result,
-            AccumulatedContent = result,
-            TokenIndex = result.Length / 4,
-            IsFinal = true,
-            Metadata = new LlmStreamMetadata
+            var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+            using var reader = new System.IO.StreamReader(stream);
+
+            var accumulated = new StringBuilder();
+            var tokenIndex = 0;
+
+            while (!reader.EndOfStream && !ct.IsCancellationRequested)
             {
-                TotalTokens = result.Length / 4,
-                EstimatedCost = (result.Length / 4000m) * 0.01m,
-                IsLocalModel = false,
-                ModelName = _deploymentName,
-                FinishReason = "stop"
+                var line = await reader.ReadLineAsync().ConfigureAwait(false);
+                
+                if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: "))
+                {
+                    continue;
+                }
+
+                var data = line.Substring(6); // Remove "data: " prefix
+                
+                if (data == "[DONE]")
+                {
+                    // Final chunk (Azure uses same format as OpenAI)
+                    var duration = DateTime.UtcNow - startTime;
+                    var timeToFirstToken = firstTokenTime.HasValue 
+                        ? (firstTokenTime.Value - startTime).TotalMilliseconds 
+                        : 0;
+                    var tokensPerSec = tokenIndex > 0 && duration.TotalSeconds > 0
+                        ? tokenIndex / duration.TotalSeconds
+                        : 0;
+
+                    yield return new LlmStreamChunk
+                    {
+                        ProviderName = "Azure",
+                        Content = string.Empty,
+                        AccumulatedContent = accumulated.ToString(),
+                        TokenIndex = tokenIndex,
+                        IsFinal = true,
+                        Metadata = new LlmStreamMetadata
+                        {
+                            TotalTokens = tokenIndex,
+                            EstimatedCost = CalculateCost(tokenIndex),
+                            TokensPerSecond = tokensPerSec,
+                            IsLocalModel = false,
+                            ModelName = _deploymentName,
+                            TimeToFirstTokenMs = timeToFirstToken,
+                            TotalDurationMs = duration.TotalMilliseconds,
+                            FinishReason = "stop"
+                        }
+                    };
+                    break;
+                }
+
+                // Parse JSON
+                JsonDocument? doc = null;
+                try
+                {
+                    doc = JsonDocument.Parse(data);
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse streaming JSON line: {Line}", data);
+                    continue;
+                }
+
+                using (doc)
+                {
+                    // Same format as OpenAI: choices[0].delta.content
+                    if (doc.RootElement.TryGetProperty("choices", out var choices) &&
+                        choices.GetArrayLength() > 0)
+                    {
+                        var choice = choices[0];
+                        
+                        if (choice.TryGetProperty("delta", out var delta) &&
+                            delta.TryGetProperty("content", out var contentProp))
+                        {
+                            var chunk = contentProp.GetString() ?? string.Empty;
+                            
+                            if (!string.IsNullOrEmpty(chunk))
+                            {
+                                if (!firstTokenTime.HasValue)
+                                {
+                                    firstTokenTime = DateTime.UtcNow;
+                                }
+
+                                accumulated.Append(chunk);
+                                tokenIndex++;
+
+                                yield return new LlmStreamChunk
+                                {
+                                    ProviderName = "Azure",
+                                    Content = chunk,
+                                    AccumulatedContent = accumulated.ToString(),
+                                    TokenIndex = tokenIndex,
+                                    IsFinal = false
+                                };
+                            }
+                        }
+                    }
+                }
             }
-        };
+        }
+    }
+
+    /// <summary>
+    /// Calculate estimated cost for Azure OpenAI usage
+    /// </summary>
+    private decimal CalculateCost(int tokenCount)
+    {
+        // Azure OpenAI costs vary by deployment and model
+        // Using average of $0.01/1K for simplification
+        return (decimal)tokenCount / 1000 * 0.01m;
     }
 }
