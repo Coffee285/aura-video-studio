@@ -1,6 +1,25 @@
 /**
- * Desktop Setup Wizard
+ * Desktop Setup Wizard (LEGACY/UNUSED)
  *
+ * ⚠️ DEPRECATION NOTICE ⚠️
+ * This component is NOT used by the main desktop application.
+ * The desktop app loads FirstRunWizard directly via the #/setup route.
+ *
+ * This was an experimental implementation that included Electron-specific
+ * features like auto-detection and separate dependency checking screens.
+ *
+ * **Current Desktop Flow**:
+ * 1. Electron main.js navigates to #/setup
+ * 2. Route maps to FirstRunWizard component
+ * 3. FirstRunWizard handles all setup steps
+ *
+ * **DO NOT USE THIS COMPONENT** - It is kept for reference only.
+ *
+ * See: WIZARD_SETUP_GUIDE.md for details on the active wizard implementation.
+ *
+ * ---
+ *
+ * Original Description:
  * Enhanced first-run wizard for Electron desktop app with:
  * - FFmpeg auto-installation
  * - Ollama detection and installation guidance
@@ -22,21 +41,17 @@ import {
   ProgressBar,
   Link,
   Badge,
-  Tooltip,
 } from '@fluentui/react-components';
 import {
-  Checkmark24Regular,
   CheckmarkCircle24Filled,
   Warning24Regular,
   ErrorCircle24Regular,
   ArrowDownload24Regular,
-  Folder24Regular,
-  Settings24Regular,
   Info24Regular,
   ChevronRight24Regular,
   ChevronLeft24Regular,
 } from '@fluentui/react-icons';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../../components/Notifications/Toasts';
 import { FirstRunWizard } from '../Onboarding/FirstRunWizard';
@@ -98,7 +113,7 @@ interface DependencyStatus {
 
 export function DesktopSetupWizard() {
   const styles = useStyles();
-  const navigate = useNavigate();
+  const _navigate = useNavigate(); // Prefix unused variables with underscore
   const { showSuccess, showError, showInfo } = useNotifications();
 
   const [mode, setMode] = useState<SetupMode>('welcome');
@@ -108,7 +123,7 @@ export function DesktopSetupWizard() {
     ollama: 'checking',
     dotnet: 'checking',
   });
-  const [installProgress, setInstallProgress] = useState(0);
+  const [installProgress, _setInstallProgress] = useState(0); // Prefix unused
   const [systemInfo, setSystemInfo] = useState<{
     platform: string;
     arch: string;
@@ -117,7 +132,9 @@ export function DesktopSetupWizard() {
 
   // Check if running in Electron
   const isElectron =
-    typeof window !== 'undefined' && (window as any).electron?.platform?.isElectron;
+    typeof window !== 'undefined' &&
+    (window as { electron?: { platform?: { isElectron?: boolean } } }).electron?.platform
+      ?.isElectron;
 
   useEffect(() => {
     if (isElectron) {
@@ -128,14 +145,24 @@ export function DesktopSetupWizard() {
 
   const loadSystemInfo = async () => {
     try {
-      const electron = (window as any).electron;
-      const paths = await electron.app.getPaths();
-      const platform = electron.platform.os;
-      const arch = electron.platform.arch;
+      const electron = (
+        window as {
+          electron?: {
+            app?: { getPaths: () => Promise<Record<string, string>> };
+            platform?: { os: string; arch: string };
+          };
+        }
+      ).electron;
+      if (!electron) {
+        return;
+      }
+      const paths = electron.app ? await electron.app.getPaths() : {};
+      const platform = electron.platform?.os || 'unknown';
+      const arch = electron.platform?.arch || 'unknown';
 
       setSystemInfo({ platform, arch, paths });
-    } catch (error) {
-      console.error('Failed to load system info:', error);
+    } catch (_error) {
+      console.error('Failed to load system info:', _error);
     }
   };
 
@@ -200,13 +227,19 @@ export function DesktopSetupWizard() {
         setDependencies((prev) => ({ ...prev, ffmpeg: 'installed' }));
       } else {
         // macOS/Linux: Guide user to use package manager
-        const electron = (window as any).electron;
+        const electron = (
+          window as { electron?: { shell?: { openExternal: (url: string) => Promise<void> } } }
+        ).electron;
         if (platform === 'darwin' || platform === 'macOS') {
           showInfo('Opening Homebrew installation guide...');
-          await electron.shell.openExternal('https://formulae.brew.sh/formula/ffmpeg');
+          if (electron?.shell) {
+            await electron.shell.openExternal('https://formulae.brew.sh/formula/ffmpeg');
+          }
         } else {
           showInfo('Opening FFmpeg installation guide...');
-          await electron.shell.openExternal('https://ffmpeg.org/download.html');
+          if (electron?.shell) {
+            await electron.shell.openExternal('https://ffmpeg.org/download.html');
+          }
         }
         setDependencies((prev) => ({ ...prev, ffmpeg: 'not-found' }));
       }
@@ -214,7 +247,7 @@ export function DesktopSetupWizard() {
       const errorObj = error instanceof Error ? error : new Error(String(error));
       console.error('FFmpeg installation error:', errorObj);
       setDependencies((prev) => ({ ...prev, ffmpeg: 'error' }));
-      
+
       // Show detailed error message if available
       const errorMessage = errorObj.message || 'Failed to install FFmpeg. Please install manually.';
       showError(errorMessage);
@@ -223,10 +256,15 @@ export function DesktopSetupWizard() {
 
   const openOllamaDownload = async () => {
     try {
-      const electron = (window as any).electron;
-      await electron.shell.openExternal('https://ollama.ai/download');
+      const electron = (
+        window as { electron?: { shell?: { openExternal: (url: string) => Promise<void> } } }
+      ).electron;
+      if (electron?.shell) {
+        await electron.shell.openExternal('https://ollama.ai/download');
+      }
       showInfo('Opening Ollama download page. After installing, click "Recheck" below.');
-    } catch (error) {
+    } catch {
+      // Silently ignore errors when opening external links
       showError('Failed to open Ollama download page');
     }
   };
@@ -241,7 +279,7 @@ export function DesktopSetupWizard() {
       <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
         <Title1>Welcome to Aura Video Studio</Title1>
         <Text as="p" size={500} style={{ marginTop: tokens.spacingVerticalL }}>
-          Let's get you set up to create amazing AI-powered videos!
+          Let&apos;s get you set up to create amazing AI-powered videos!
         </Text>
 
         <div
@@ -293,7 +331,7 @@ export function DesktopSetupWizard() {
           >
             <Warning24Regular className={styles.statusIcon} />
             <Text>
-              You're running the web version. Some features (like auto-installation) are only
+              You&apos;re running the web version. Some features (like auto-installation) are only
               available in the desktop app.
             </Text>
           </div>

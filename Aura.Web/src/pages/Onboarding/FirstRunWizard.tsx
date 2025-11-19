@@ -54,24 +54,24 @@ import { ApiKeySetupStep } from './ApiKeySetupStep';
 
 /**
  * FirstRunWizard - The primary onboarding wizard for new users
- * 
+ *
  * This is the ONLY setup wizard that should be used. It provides a streamlined
  * 6-step mandatory setup process:
- * 
+ *
  * Step 0: Welcome - Introduction to Aura Video Studio
  * Step 1: FFmpeg Check - Quick detection of existing FFmpeg installation
  * Step 2: FFmpeg Install - Guided installation or manual configuration
  * Step 3: Provider Configuration - Set up at least one LLM provider (or use offline mode)
  * Step 4: Workspace Setup - Configure default save locations
  * Step 5: Complete - Summary and transition to main app
- * 
+ *
  * Key Features:
  * - Circuit breaker state is cleared on mount to prevent false "backend not running" errors
  * - Auto-save progress to backend and localStorage for resume capability
  * - Resume dialog shows if user has incomplete setup from previous session
  * - Backend status banner shows only when backend is actually unreachable
  * - Graceful shutdown with proper FFmpeg process cleanup
- * 
+ *
  * NOTE: SetupWizard.tsx has been removed as it was an old/unused implementation
  * that caused confusion. FirstRunWizard is the canonical implementation.
  */
@@ -320,12 +320,40 @@ export function FirstRunWizard({ onComplete }: FirstRunWizardProps = {}) {
             setTimeout(() => setAutoSaveStatus('idle'), 3000);
           } else {
             setAutoSaveStatus('error');
-            setAutoSaveError('Failed to save progress');
+            setAutoSaveError('Failed to save progress to backend. Progress is saved locally.');
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[Auto-save] Failed:', error);
           setAutoSaveStatus('error');
-          setAutoSaveError(error instanceof Error ? error.message : 'Unknown error');
+
+          // Parse error for user-friendly message
+          let errorMessage = 'Failed to save progress to backend';
+
+          if (error && typeof error === 'object') {
+            const axiosError = error as {
+              code?: string;
+              response?: { data?: { message?: string; detail?: string } };
+              message?: string;
+              request?: unknown;
+            };
+
+            if (axiosError.code === 'ERR_NETWORK' || axiosError.code === 'ECONNREFUSED') {
+              errorMessage = 'Backend unreachable - progress saved locally only';
+            } else if (axiosError.code === 'ECONNABORTED' || axiosError.code === 'ETIMEDOUT') {
+              errorMessage = 'Save timed out - progress saved locally only';
+            } else if (axiosError.request && !axiosError.response) {
+              errorMessage = 'No backend response - progress saved locally only';
+            } else if (axiosError.response?.data) {
+              const data = axiosError.response.data;
+              errorMessage = data.message || data.detail || errorMessage;
+            } else if (axiosError.message) {
+              errorMessage = axiosError.message;
+            }
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          }
+
+          setAutoSaveError(errorMessage);
         }
       };
 
