@@ -6,10 +6,12 @@ using Aura.Core.AI.Orchestration;
 using Aura.Core.AI.Validation;
 using Aura.Core.Models;
 using Aura.Core.Models.Narrative;
+using Aura.Core.Models.Streaming;
 using Aura.Core.Models.Visual;
 using Aura.Core.Providers;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using System.Runtime.CompilerServices;
 
 namespace Aura.Tests;
 
@@ -226,6 +228,37 @@ public class OrchestratorMiddlewareTests
 
 internal sealed class TestMockLlmProvider : ILlmProvider
 {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
     private readonly string _response;
     
     public TestMockLlmProvider(string response)
@@ -264,6 +297,37 @@ internal sealed class TestMockLlmProvider : ILlmProvider
 
 internal sealed class CountingMockLlmProvider : ILlmProvider
 {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
     private readonly string _response;
     public int CallCount { get; private set; }
     
@@ -305,6 +369,37 @@ internal sealed class CountingMockLlmProvider : ILlmProvider
 
 internal sealed class MockRetryableLlmProvider : ILlmProvider
 {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
     private int _callCount;
     private readonly int _failCount;
     private readonly string _successResponse;
@@ -351,6 +446,37 @@ internal sealed class MockRetryableLlmProvider : ILlmProvider
 
 internal sealed class MockFailingLlmProvider : ILlmProvider
 {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
     private readonly string _errorMessage;
     
     public MockFailingLlmProvider(string errorMessage)

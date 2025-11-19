@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Aura.Core.Models;
 using Aura.Core.Models.Narrative;
 using Aura.Core.Models.PacingModels;
+using Aura.Core.Models.Streaming;
 using Aura.Core.Models.Visual;
 using Aura.Core.Providers;
 using Aura.Core.Services.PacingServices;
@@ -232,6 +234,37 @@ public class SceneImportanceAnalyzerTests
             _shouldSucceed = shouldSucceed;
         }
 
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
+        }
+
         public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)
         {
             return Task.FromResult("Mock script");
@@ -300,6 +333,37 @@ public class SceneImportanceAnalyzerTests
     private sealed class MockPartiallyFailingLlmProvider : ILlmProvider
     {
         private int _callCount;
+
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
+        }
 
         public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)
         {
@@ -379,6 +443,37 @@ public class SceneImportanceAnalyzerTests
         public MockRetryingLlmProvider(int failuresBeforeSuccess)
         {
             _failuresBeforeSuccess = failuresBeforeSuccess;
+        }
+
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
         }
 
         public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)

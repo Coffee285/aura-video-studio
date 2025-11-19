@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using Aura.Core.Models.Streaming;
 
 namespace Aura.E2E;
 
@@ -503,6 +505,37 @@ public class PipelineValidationTests
 /// </summary>
 internal sealed class PipelineValidationFailingLlmProvider : ILlmProvider
 {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
     private readonly ILogger<PipelineValidationFailingLlmProvider> _logger;
 
     public PipelineValidationFailingLlmProvider(ILogger<PipelineValidationFailingLlmProvider> logger)

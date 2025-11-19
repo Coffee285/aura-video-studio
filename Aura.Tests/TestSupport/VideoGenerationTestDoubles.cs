@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -10,6 +11,7 @@ using Aura.Core.Models;
 using Aura.Core.Models.Audio;
 using Aura.Core.Models.Generation;
 using Aura.Core.Models.Narrative;
+using Aura.Core.Models.Streaming;
 using Aura.Core.Models.Visual;
 using Aura.Core.Providers;
 using Aura.Core.Services.Audio;
@@ -98,6 +100,37 @@ internal sealed class MockFfmpegLocator : IFfmpegLocator
 
 internal sealed class MockLlmProvider : ILlmProvider
 {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
     public bool DraftScriptCalled { get; private set; }
 
     public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)

@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Aura.Core.Models;
 using Aura.Core.Models.Visual;
 using Aura.Core.Providers;
+using Aura.Core.Models.Streaming;
 
 namespace Aura.E2E;
 
@@ -35,6 +37,37 @@ internal sealed class MockTtsProvider : ITtsProvider
 /// </summary>
 internal sealed class FailingLlmProvider : ILlmProvider
 {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
     private readonly string _name;
 
     public FailingLlmProvider(string name)

@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aura.Core.AI;
 using Aura.Core.Models;
 using Aura.Core.Models.Narrative;
+using Aura.Core.Models.Streaming;
 using Aura.Core.Models.Visual;
 using Aura.Core.Providers;
 using Aura.Core.Services.Orchestration;
@@ -197,6 +199,37 @@ public class PipelineOrchestrationEngineTests
 
     private sealed class MockLlmProvider : ILlmProvider
     {
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
+        }
+
         public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)
         {
             return Task.FromResult($"## Scene 1\nTest script content for {brief.Topic}\n\n## Scene 2\nMore content");

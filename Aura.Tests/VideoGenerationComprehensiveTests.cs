@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -8,6 +9,7 @@ using Aura.Core.Configuration;
 using Aura.Core.Dependencies;
 using Aura.Core.Models;
 using Aura.Core.Models.Narrative;
+using Aura.Core.Models.Streaming;
 using Aura.Core.Models.Visual;
 using Aura.Core.Models.Generation;
 using Aura.Core.Orchestrator;
@@ -362,6 +364,37 @@ public class VideoGenerationComprehensiveTests
     // Test helper classes
     private sealed class TestLlmProvider : ILlmProvider
     {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
         public bool DraftScriptCalled { get; private set; }
 
         public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)
@@ -427,6 +460,37 @@ More test content here to ensure we have adequate word count for the duration. M
 
     private sealed class TestSlowLlmProvider : ILlmProvider
     {
+    public bool SupportsStreaming => false;
+
+    public LlmProviderCharacteristics GetCharacteristics()
+    {
+        return new LlmProviderCharacteristics
+        {
+            IsLocal = false,
+            ExpectedFirstTokenMs = 100,
+            ExpectedTokensPerSec = 50,
+            SupportsStreaming = false,
+            ProviderTier = "Test",
+            CostPer1KTokens = 0m
+        };
+    }
+
+    public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+        Brief brief, 
+        PlanSpec spec, 
+        [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+        yield return new LlmStreamChunk
+        {
+            ProviderName = "Mock",
+            Content = result,
+            AccumulatedContent = result,
+            TokenIndex = 1,
+            IsFinal = true
+        };
+    }
+
         public async Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)
         {
             await Task.Delay(5000, ct); // Slow operation to allow cancellation

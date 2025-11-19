@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Aura.Core.Models;
+using Aura.Core.Models.Streaming;
 using Aura.Core.Orchestrator;
 using Aura.Core.Providers;
 using Microsoft.Extensions.Logging;
@@ -127,6 +129,37 @@ public class ProviderPipelineArchitectureTests
     // Mock provider implementations for testing
     private sealed class MockLlmProvider : ILlmProvider
     {
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
+        }
+
         private readonly List<string> _executionOrder;
 
         public MockLlmProvider(List<string> executionOrder)
@@ -221,6 +254,37 @@ public class ProviderPipelineArchitectureTests
 
     private sealed class FailingMockLlmProvider : ILlmProvider
     {
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
+        }
+
         public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)
         {
             throw new InvalidOperationException("Provider unavailable");

@@ -1,8 +1,10 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Aura.Core.Models;
 using Aura.Core.Models.Narrative;
+using Aura.Core.Models.Streaming;
 using Aura.Core.Models.Visual;
 using Aura.Core.Providers;
 using Aura.Core.Services.Content;
@@ -116,6 +118,37 @@ SUGGESTIONS:
 
     private sealed class MockLlmProvider : ILlmProvider
     {
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
+        }
+
         private string _response = "";
         public bool ShouldThrowError { get; set; }
 

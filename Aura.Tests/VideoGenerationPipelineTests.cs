@@ -1,6 +1,7 @@
 using System;
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -312,6 +313,37 @@ public class VideoGenerationPipelineTests
 
     private sealed class MockLlmProvider : ILlmProvider
     {
+        public bool SupportsStreaming => false;
+
+        public LlmProviderCharacteristics GetCharacteristics()
+        {
+            return new LlmProviderCharacteristics
+            {
+                IsLocal = false,
+                ExpectedFirstTokenMs = 100,
+                ExpectedTokensPerSec = 50,
+                SupportsStreaming = false,
+                ProviderTier = "Test",
+                CostPer1KTokens = 0m
+            };
+        }
+
+        public async IAsyncEnumerable<LlmStreamChunk> DraftScriptStreamAsync(
+            Brief brief, 
+            PlanSpec spec, 
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var result = await DraftScriptAsync(brief, spec, ct).ConfigureAwait(false);
+            yield return new LlmStreamChunk
+            {
+                ProviderName = "Mock",
+                Content = result,
+                AccumulatedContent = result,
+                TokenIndex = 1,
+                IsFinal = true
+            };
+        }
+
         public Task<string> DraftScriptAsync(Brief brief, PlanSpec spec, CancellationToken ct)
         {
             return Task.FromResult($"Script for {brief.Topic}");

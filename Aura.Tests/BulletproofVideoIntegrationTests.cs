@@ -10,6 +10,8 @@ using Aura.Core.Models;
 using Aura.Core.Providers;
 using Microsoft.Extensions.Logging;
 using Xunit;
+using Aura.Core.Models.Streaming;
+using System.Runtime.CompilerServices;
 
 namespace Aura.Tests;
 
