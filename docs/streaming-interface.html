@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Unified Streaming Interface for LLM Providers | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Unified Streaming Interface for LLM Providers | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/streaming-interface.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="unified-streaming-interface-for-llm-providers">Unified Streaming Interface for LLM Providers</h1>
+
+<p>This document describes the unified streaming interface implementation for real-time script generation across all LLM providers (OpenAI, Anthropic, Gemini, Azure OpenAI, Ollama, RuleBased).</p>
+<h2 id="overview">Overview</h2>
+<p>The unified streaming interface provides token-by-token script generation with real-time metrics, cost tracking, and automatic provider fallback. This feature was implemented in PR #416 (backend) and this PR (frontend integration).</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend-auraapi-auraproviders">Backend (<code>Aura.Api</code>, <code>Aura.Providers</code>)</h3>
+<p><strong>Endpoint</strong>: <code>POST /api/scripts/generate/stream</code></p>
+<p><strong>Request Format</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;topic&quot;: &quot;AI video creation&quot;,
+  &quot;audience&quot;: &quot;Content creators&quot;,
+  &quot;targetDurationSeconds&quot;: 60,
+  &quot;preferredProvider&quot;: &quot;Anthropic&quot;
+}
+</code></pre>
+<p><strong>SSE Event Types</strong>:</p>
+<ol>
+<li><strong><code>init</code></strong> - Provider characteristics (sent first)</li>
+</ol>
+<pre><code class="lang-json">{
+  &quot;eventType&quot;: &quot;init&quot;,
+  &quot;providerName&quot;: &quot;Anthropic&quot;,
+  &quot;isLocal&quot;: false,
+  &quot;expectedFirstTokenMs&quot;: 400,
+  &quot;expectedTokensPerSec&quot;: 15,
+  &quot;costPer1KTokens&quot;: 0.015,
+  &quot;supportsStreaming&quot;: true
+}
+</code></pre>
+<ol start="2">
+<li><strong><code>chunk</code></strong> - Token-by-token content (sent during generation)</li>
+</ol>
+<pre><code class="lang-json">{
+  &quot;eventType&quot;: &quot;chunk&quot;,
+  &quot;content&quot;: &quot;Hello &quot;,
+  &quot;accumulatedContent&quot;: &quot;Hello &quot;,
+  &quot;tokenIndex&quot;: 1
+}
+</code></pre>
+<ol start="3">
+<li><strong><code>complete</code></strong> - Final metrics (sent on completion)</li>
+</ol>
+<pre><code class="lang-json">{
+  &quot;eventType&quot;: &quot;complete&quot;,
+  &quot;content&quot;: &quot;&quot;,
+  &quot;accumulatedContent&quot;: &quot;Complete script text...&quot;,
+  &quot;tokenCount&quot;: 150,
+  &quot;metadata&quot;: {
+    &quot;totalTokens&quot;: 150,
+    &quot;estimatedCost&quot;: 0.00225,
+    &quot;tokensPerSecond&quot;: 12.5,
+    &quot;isLocalModel&quot;: false,
+    &quot;modelName&quot;: &quot;claude-3-opus&quot;,
+    &quot;timeToFirstTokenMs&quot;: 385,
+    &quot;totalDurationMs&quot;: 12000,
+    &quot;finishReason&quot;: &quot;stop&quot;
+  }
+}
+</code></pre>
+<ol start="4">
+<li><strong><code>error</code></strong> - Error information (sent on failure)</li>
+</ol>
+<pre><code class="lang-json">{
+  &quot;eventType&quot;: &quot;error&quot;,
+  &quot;errorMessage&quot;: &quot;API key not configured&quot;,
+  &quot;correlationId&quot;: &quot;xyz789&quot;
+}
+</code></pre>
+<p><strong>Provider Fallback Chain</strong>:</p>
+<ol>
+<li>Requested provider (if specified)</li>
+<li>Ollama (local, free)</li>
+<li>RuleBased (always available, template-based)</li>
+</ol>
+<h3 id="frontend-auraweb">Frontend (<code>Aura.Web</code>)</h3>
+<p><strong>Service Layer</strong>: <code>src/services/api/ollamaService.ts</code></p>
+<p><strong>Key Functions</strong>:</p>
+<ul>
+<li><code>streamGeneration()</code> - Main streaming function using fetch API</li>
+<li><code>streamGenerationWithEventSource()</code> - Alternative using EventSource API (deprecated)</li>
+</ul>
+<p><strong>Components</strong>:</p>
+<ol>
+<li><p><strong><code>LlmProviderSelector</code></strong> - Provider selection with characteristics</p>
+<ul>
+<li>Shows cost per 1K tokens</li>
+<li>Shows expected latency</li>
+<li>Shows local/cloud indicator</li>
+<li>Supports &quot;Auto&quot; mode with fallback</li>
+</ul>
+</li>
+<li><p><strong><code>StreamingMetrics</code></strong> - Real-time and final metrics display</p>
+<ul>
+<li>Real-time: Progress bar, token count, provider info</li>
+<li>Final: Cost, tokens/sec, latency, duration, model name</li>
+</ul>
+</li>
+<li><p><strong><code>StreamingScriptDemo</code></strong> - Complete demo page (dev tools only)</p>
+<ul>
+<li>Full integration showcase</li>
+<li>Available at <code>/streaming-demo</code></li>
+</ul>
+</li>
+</ol>
+<h2 id="provider-support">Provider Support</h2>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Cost/1K</th>
+<th>Latency</th>
+<th>Local</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RuleBased</td>
+<td>Free</td>
+<td>~100ms</td>
+<td>✅</td>
+<td>✅ Always Available</td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>Free</td>
+<td>~2s</td>
+<td>✅</td>
+<td>✅ Requires Installation</td>
+</tr>
+<tr>
+<td>OpenAI GPT-4</td>
+<td>$0.001</td>
+<td>~300ms</td>
+<td>❌</td>
+<td>✅ Requires API Key</td>
+</tr>
+<tr>
+<td>Anthropic Claude</td>
+<td>$0.015</td>
+<td>~400ms</td>
+<td>❌</td>
+<td>✅ Requires API Key</td>
+</tr>
+<tr>
+<td>Google Gemini</td>
+<td>$0.0005</td>
+<td>~500ms</td>
+<td>❌</td>
+<td>✅ Requires API Key</td>
+</tr>
+<tr>
+<td>Azure OpenAI</td>
+<td>$0.01</td>
+<td>~300ms</td>
+<td>❌</td>
+<td>✅ Requires Credentials</td>
+</tr>
+</tbody>
+</table>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="basic-streaming-with-auto-provider">Basic Streaming with Auto Provider</h3>
+<pre><code class="lang-typescript">import { streamGeneration } from '@/services/api/ollamaService';
+
+await streamGeneration(
+  {
+    topic: 'AI in video production',
+    targetDurationSeconds: 60,
+  },
+  (event) =&gt; {
+    switch (event.eventType) {
+      case 'init':
+        console.log('Using provider:', event.providerName);
+        break;
+      case 'chunk':
+        console.log('Token:', event.content);
+        break;
+      case 'complete':
+        console.log('Done! Cost:', event.metadata.estimatedCost);
+        break;
+      case 'error':
+        console.error('Error:', event.errorMessage);
+        break;
+    }
+  },
+  abortSignal
+);
+</code></pre>
+<h3 id="with-specific-provider">With Specific Provider</h3>
+<pre><code class="lang-typescript">await streamGeneration(
+  {
+    topic: 'AI in video production',
+    targetDurationSeconds: 60,
+    preferredProvider: 'Anthropic',  // Request specific provider
+  },
+  handleEvent,
+  abortSignal
+);
+</code></pre>
+<h3 id="using-components">Using Components</h3>
+<pre><code class="lang-tsx">import { LlmProviderSelector } from '@/components/Streaming/LlmProviderSelector';
+import { StreamingMetrics } from '@/components/Streaming/StreamingMetrics';
+
+function MyComponent() {
+  const [provider, setProvider] = useState&lt;string | undefined&gt;();
+  const [initEvent, setInitEvent] = useState&lt;StreamInitEvent&gt;();
+  const [completeEvent, setCompleteEvent] = useState&lt;StreamCompleteEvent&gt;();
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  return (
+    &lt;&gt;
+      &lt;LlmProviderSelector
+        value={provider}
+        onChange={setProvider}
+        showAutoOption={true}
+      /&gt;
+      
+      &lt;StreamingMetrics
+        initEvent={initEvent}
+        completeEvent={completeEvent}
+        isStreaming={isStreaming}
+      /&gt;
+    &lt;/&gt;
+  );
+}
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="manual-testing">Manual Testing</h3>
+<ol>
+<li>Start the application with dev tools enabled</li>
+<li>Navigate to <code>/streaming-demo</code></li>
+<li>Test scenarios:
+<ul>
+<li>Auto mode (fallback chain)</li>
+<li>Each individual provider</li>
+<li>Cancellation</li>
+<li>Error handling</li>
+<li>Cost calculation accuracy</li>
+</ul>
+</li>
+</ol>
+<h3 id="automated-testing">Automated Testing</h3>
+<p><strong>Unit Tests</strong> (To be added):</p>
+<ul>
+<li><code>LlmProviderSelector.test.tsx</code> - Component behavior</li>
+<li><code>StreamingMetrics.test.tsx</code> - Metrics display</li>
+<li><code>ollamaService.test.ts</code> - SSE parsing</li>
+</ul>
+<p><strong>Integration Tests</strong> (To be added):</p>
+<ul>
+<li>Streaming with mock providers</li>
+<li>Fallback chain behavior</li>
+<li>Error handling scenarios</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="backend-provider-registration">Backend Provider Registration</h3>
+<p>Providers are registered as keyed services in <code>Program.cs</code>:</p>
+<pre><code class="lang-csharp">builder.Services.AddKeyedScoped&lt;ILlmProvider, AnthropicLlmProvider&gt;(&quot;Anthropic&quot;);
+builder.Services.AddKeyedScoped&lt;ILlmProvider, GeminiLlmProvider&gt;(&quot;Gemini&quot;);
+builder.Services.AddKeyedScoped&lt;ILlmProvider, AzureOpenAiLlmProvider&gt;(&quot;Azure&quot;);
+builder.Services.AddKeyedScoped&lt;ILlmProvider, OpenAiLlmProvider&gt;(&quot;OpenAI&quot;);
+builder.Services.AddKeyedScoped&lt;ILlmProvider, OllamaLlmProvider&gt;(&quot;Ollama&quot;);
+builder.Services.AddKeyedScoped&lt;ILlmProvider, RuleBasedLlmProvider&gt;(&quot;RuleBased&quot;);
+</code></pre>
+<h3 id="frontend-provider-configuration">Frontend Provider Configuration</h3>
+<p>Provider metadata in <code>src/state/providers.ts</code>:</p>
+<pre><code class="lang-typescript">export const ScriptProviders = [
+  {
+    value: 'Anthropic',
+    label: 'Anthropic Claude (Pro)',
+    description: 'Cloud AI (Claude), high quality, requires API key',
+    cost: 0.015,
+    expectedLatency: 400,
+    isLocal: false,
+  },
+  // ... other providers
+];
+</code></pre>
+<h2 id="cost-tracking">Cost Tracking</h2>
+<p>Cost is calculated per provider based on token count:</p>
+<ul>
+<li><strong>OpenAI</strong>: $0.001 per 1K tokens</li>
+<li><strong>Anthropic</strong>: $0.015 per 1K tokens</li>
+<li><strong>Gemini</strong>: $0.0005 per 1K tokens</li>
+<li><strong>Azure</strong>: $0.01 per 1K tokens (variable by deployment)</li>
+<li><strong>Ollama</strong>: Free (local)</li>
+<li><strong>RuleBased</strong>: Free (template-based)</li>
+</ul>
+<p>Cost is displayed in real-time during generation and as a final metric.</p>
+<h2 id="performance-metrics">Performance Metrics</h2>
+<p>All providers report:</p>
+<ul>
+<li><strong>Time to First Token</strong>: Latency until first token arrives</li>
+<li><strong>Tokens per Second</strong>: Generation speed</li>
+<li><strong>Total Duration</strong>: Complete generation time</li>
+<li><strong>Finish Reason</strong>: Why generation stopped (stop, length, error)</li>
+</ul>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="client-side-errors">Client-Side Errors</h3>
+<ul>
+<li>Network failures: Automatic retry with exponential backoff (circuit breaker)</li>
+<li>Abort/cancellation: Graceful cleanup</li>
+<li>Parsing errors: Logged to console, streaming continues</li>
+</ul>
+<h3 id="server-side-errors">Server-Side Errors</h3>
+<ul>
+<li>Provider unavailable: Automatic fallback to next provider</li>
+<li>API errors: Returned in <code>error</code> event with correlation ID</li>
+<li>Timeout: Configurable per provider</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<h3 id="planned-features">Planned Features</h3>
+<ul>
+<li>[ ] Cost tracking history view</li>
+<li>[ ] Provider health monitoring dashboard</li>
+<li>[ ] Integration into CreateWizard main workflow</li>
+<li>[ ] Streaming for other operations (image prompts, refinement)</li>
+<li>[ ] Batch streaming for multiple scripts</li>
+<li>[ ] Real-time collaboration with shared streams</li>
+</ul>
+<h3 id="potential-optimizations">Potential Optimizations</h3>
+<ul>
+<li>[ ] Connection pooling for SSE</li>
+<li>[ ] Compression for large scripts</li>
+<li>[ ] Client-side caching of partial results</li>
+<li>[ ] WebSocket alternative for bidirectional communication</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="stream-not-starting">Stream Not Starting</h3>
+<ol>
+<li>Check provider API key configuration</li>
+<li>Verify provider is running (Ollama, Stable Diffusion)</li>
+<li>Check network connectivity</li>
+<li>Review browser console for errors</li>
+<li>Check backend logs for detailed errors</li>
+</ol>
+<h3 id="incorrect-cost-calculation">Incorrect Cost Calculation</h3>
+<ol>
+<li>Verify provider cost rates in <code>providers.ts</code></li>
+<li>Check token counting accuracy</li>
+<li>Compare with provider's official pricing</li>
+</ol>
+<h3 id="performance-issues">Performance Issues</h3>
+<ol>
+<li>Check network latency</li>
+<li>Verify provider API rate limits</li>
+<li>Monitor system resources (CPU, RAM)</li>
+<li>Consider using local provider (Ollama)</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><strong>PR #416</strong>: Backend unified streaming implementation</li>
+<li><strong>SSE Specification</strong>: <a href="https://html.spec.whatwg.org/multipage/server-sent-events.html">Server-Sent Events Spec</a></li>
+<li><strong>Provider APIs</strong>:
+<ul>
+<li><a href="https://platform.openai.com/docs/api-reference/streaming">OpenAI Streaming</a></li>
+<li><a href="https://docs.anthropic.com/claude/reference/streaming">Anthropic Streaming</a></li>
+<li><a href="https://ai.google.dev/tutorials/streaming">Google Gemini Streaming</a></li>
+<li><a href="https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/streaming">Azure OpenAI Streaming</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="contributing">Contributing</h2>
+<p>When adding new providers:</p>
+<ol>
+<li>Implement <code>ILlmProvider</code> interface</li>
+<li>Add streaming support via <code>DraftScriptStreamAsync</code></li>
+<li>Register as keyed service in <code>Program.cs</code></li>
+<li>Add provider metadata to <code>ScriptProviders</code> in frontend</li>
+<li>Update this documentation</li>
+<li>Add tests for new provider</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/streaming-interface.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
