@@ -125,7 +125,7 @@ The file <code>Aura.Desktop/preload.js</code> at the root is a <strong>legacy ar
 <p>Do not wire <code>electron.js</code> (if present) or root <code>preload.js</code> into new Electron configurations. Always use the modular structure under <code>Aura.Desktop/electron/</code>.</p>
 <h3 id="process-model">Process Model</h3>
 <blockquote>
-<p><strong>📘 Complete Documentation</strong>: See <a href="./PROCESS_MODEL.md">PROCESS_MODEL.md</a> for comprehensive process architecture, shutdown behavior, and troubleshooting guide.</p>
+<p><strong>📘 Complete Documentation</strong>: See <a href="./docs/internal/docs/internal/PROCESS_MODEL.md">docs/internal/PROCESS_MODEL.md</a> for comprehensive process architecture, shutdown behavior, and troubleshooting guide.</p>
 </blockquote>
 <p><strong>Quick Overview</strong>:</p>
 <ol>
@@ -173,7 +173,7 @@ The file <code>Aura.Desktop/preload.js</code> at the root is a <strong>legacy ar
 <li><strong>Graceful</strong>: Active render jobs prompt user before exit</li>
 <li><strong>Timeout</strong>: Force-kill after 10 seconds if graceful shutdown fails</li>
 </ul>
-<p>See <a href="./PROCESS_MODEL.md">PROCESS_MODEL.md</a> for detailed shutdown sequence, troubleshooting, and diagnostics.</p>
+<p>See <a href="docs/internal/PROCESS_MODEL.html">docs/internal/PROCESS_MODEL.md</a> for detailed shutdown sequence, troubleshooting, and diagnostics.</p>
 <h3 id="security-model">Security Model</h3>
 <ul>
 <li><strong>Context Isolation:</strong> Enabled (renderer can't access Node.js directly)</li>
@@ -181,6 +181,36 @@ The file <code>Aura.Desktop/preload.js</code> at the root is a <strong>legacy ar
 <li><strong>Preload Script:</strong> Exposes safe IPC API via <code>contextBridge</code></li>
 <li><strong>Web Security:</strong> Enabled (prevents loading arbitrary remote content)</li>
 </ul>
+<h3 id="clean-shutdown">Clean Shutdown</h3>
+<blockquote>
+<p><strong>✅ All processes terminate cleanly</strong>: Closing the desktop app properly terminates all Aura and FFmpeg processes.</p>
+</blockquote>
+<p>The desktop app implements a comprehensive shutdown sequence:</p>
+<ol>
+<li><p><strong>Graceful Shutdown</strong> (2-3 seconds):</p>
+<ul>
+<li>Notifies active connections</li>
+<li>Signals backend to shutdown via API</li>
+<li>Waits for backend to exit gracefully</li>
+</ul>
+</li>
+<li><p><strong>Force Termination</strong> (if needed):</p>
+<ul>
+<li>Kills backend process tree using OS tools</li>
+<li>On Windows: <code>taskkill /F /T</code> for process tree</li>
+<li>On Unix: <code>SIGKILL</code> to process group</li>
+</ul>
+</li>
+<li><p><strong>Orphan Detection</strong> (on startup):</p>
+<ul>
+<li>Checks if port is already in use</li>
+<li>Detects and cleans up orphaned backend processes</li>
+<li>Prevents &quot;backend unreachable&quot; errors</li>
+</ul>
+</li>
+</ol>
+<p><strong>Result</strong>: No Aura or FFmpeg processes remain in Task Manager after exit.</p>
+<p><strong>Verification</strong>: See <a href="docs/PROCESS_SHUTDOWN_VERIFICATION.html">PROCESS_SHUTDOWN_VERIFICATION.md</a> for manual test scenarios.</p>
 <hr>
 <h2 id="development-setup">Development Setup</h2>
 <h3 id="prerequisites">Prerequisites</h3>
