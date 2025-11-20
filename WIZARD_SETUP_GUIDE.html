@@ -81,11 +81,11 @@
 <h3 id="6-step-flow">6-Step Flow</h3>
 <ol>
 <li><strong>Welcome</strong> - Introduction to Aura Video Studio</li>
-<li><strong>FFmpeg Check</strong> - Quick detection of existing FFmpeg installation</li>
-<li><strong>FFmpeg Install</strong> - Guided installation or manual configuration</li>
+<li><strong>FFmpeg Check</strong> - Quick status check showing if FFmpeg is already installed</li>
+<li><strong>FFmpeg Install</strong> - Guided installation with managed FFmpeg or manual path configuration</li>
 <li><strong>Provider Configuration</strong> - Set up at least one LLM provider (or use offline mode)</li>
 <li><strong>Workspace Setup</strong> - Configure default save locations</li>
-<li><strong>Complete</strong> - Summary and transition to main app</li>
+<li><strong>Complete</strong> - Summary and &quot;Start Creating Videos&quot; button to finish setup</li>
 </ol>
 <h3 id="key-features">Key Features</h3>
 <ul>
@@ -93,16 +93,98 @@
 <li><strong>Auto-Save Progress</strong>: Your progress is saved automatically to both backend and localStorage</li>
 <li><strong>Resume Capability</strong>: If you exit mid-setup, you'll see a dialog asking if you want to resume or start fresh</li>
 <li><strong>Backend Status Check</strong>: Shows warnings only when backend is actually unreachable (not on initial load)</li>
-<li><strong>Process Cleanup</strong>: All FFmpeg processes are properly terminated when the app exits</li>
+<li><strong>Automatic Status Check</strong>: Step 2 automatically checks FFmpeg status when you enter the step</li>
+<li><strong>Clear Error Messages</strong>: Network errors now include step-by-step instructions for starting the backend</li>
+<li><strong>Simplified UI</strong>: Clean, focused interface with no duplicate buttons or redundant actions</li>
+<li><strong>Clear Loading States</strong>: All actions show progress indicators and prevent double-clicks</li>
+</ul>
+<h3 id="ui-design-principles-latest-update---this-pr">UI Design Principles (Latest Update - This PR)</h3>
+<ul>
+<li><strong>Step 2 (FFmpeg Check)</strong>: Shows simple status with single &quot;Check Again&quot; button</li>
+<li><strong>Step 3 (FFmpeg Install)</strong>:
+<ul>
+<li>Automatically checks FFmpeg status when you enter the step</li>
+<li>One section for managed install (FFmpegDependencyCard)</li>
+<li>One section for manual configuration</li>
+<li>No duplicate Re-scan buttons</li>
+<li>Clear error messages with backend startup instructions</li>
+</ul>
+</li>
+<li><strong>Step 6 (Complete)</strong>: Single &quot;Start Creating Videos&quot; button with loading spinner to prevent double-clicks</li>
+<li><strong>Backend Banner</strong>: Shows once per step, dismissible, and automatically hides when backend is reachable</li>
+</ul>
+<h2 id="backend-requirement">Backend Requirement</h2>
+<p><strong>CRITICAL</strong>: The Aura backend server MUST be running for Step 2 (FFmpeg Install) to work properly.</p>
+<h3 id="how-to-start-the-backend">How to Start the Backend</h3>
+<ol>
+<li>Open a terminal in the project root directory</li>
+<li>Run: <code>dotnet run --project Aura.Api</code></li>
+<li>Wait for the message: <strong>&quot;Application started. Press Ctrl+C to shut down.&quot;</strong></li>
+<li>Keep this terminal window open while using the wizard</li>
+</ol>
+<p>The backend typically starts on <code>http://localhost:5005</code> (configurable in <code>appsettings.json</code>).</p>
+<h3 id="what-happens-without-backend">What Happens Without Backend</h3>
+<p>If the backend is not running when you reach Step 2:</p>
+<ul>
+<li>Status check will fail with clear error message</li>
+<li>Error message includes step-by-step instructions to start backend</li>
+<li>&quot;Re-scan&quot; and &quot;Install Managed FFmpeg&quot; buttons will not work</li>
+<li>You must start the backend and then click &quot;Check Again&quot; or refresh</li>
 </ul>
 <h2 id="common-issues">Common Issues</h2>
-<h3 id="issue-1-you-have-incomplete-setup-would-you-like-to-resume-where-you-left-off">Issue 1: &quot;You have incomplete setup. Would you like to resume where you left off?&quot;</h3>
+<h3 id="issue-1-step-2-shows-ffmpeg-not-ready-or-backend-unreachable-new---fixed-in-this-pr">Issue 1: Step 2 shows &quot;FFmpeg Not Ready&quot; or &quot;Backend unreachable&quot; (NEW - Fixed in This PR)</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Step 2 shows &quot;FFmpeg (Video Encoding) – Not Ready&quot;</li>
+<li>Error message: &quot;Backend server is not running&quot;</li>
+<li>&quot;Re-scan&quot; button doesn't work</li>
+<li>&quot;Install Managed FFmpeg&quot; button is disabled or doesn't work</li>
+</ul>
+<p><strong>Root Cause</strong> (Now Fixed):</p>
+<ul>
+<li>Previous versions didn't automatically check FFmpeg status when entering Step 2</li>
+<li>Users saw &quot;Not Ready&quot; because no check was performed</li>
+<li>Network errors didn't provide clear guidance on starting the backend</li>
+</ul>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li><strong>Ensure backend is running</strong> (see &quot;Backend Requirement&quot; section above)</li>
+<li><strong>Current version automatically checks</strong> when you enter Step 2</li>
+<li><strong>If you see an error</strong>:
+<ul>
+<li>Read the error message carefully - it now includes step-by-step instructions</li>
+<li>Follow the instructions to start the backend (if not running)</li>
+<li>Click &quot;Check Again&quot; after starting the backend</li>
+<li>If problem persists, check backend logs for errors</li>
+</ul>
+</li>
+</ol>
+<p><strong>What This PR Fixed</strong>:</p>
+<ul>
+<li>✅ Step 2 now automatically checks FFmpeg status on entry</li>
+<li>✅ Error messages now include backend startup instructions</li>
+<li>✅ Clear distinction between &quot;backend not running&quot; vs &quot;FFmpeg not found&quot;</li>
+<li>✅ &quot;Re-scan&quot; and &quot;Install&quot; buttons work properly when backend is running</li>
+</ul>
+<h3 id="issue-2-you-have-incomplete-setup-would-you-like-to-resume-where-you-left-off">Issue 2: &quot;You have incomplete setup. Would you like to resume where you left off?&quot;</h3>
 <p><strong>Cause</strong>: You started the wizard but didn't complete it in a previous session.</p>
 <p><strong>Solution</strong>:</p>
 <ul>
-<li>Click <strong>&quot;Resume Setup&quot;</strong> to continue from where you left off</li>
-<li>Click <strong>&quot;Start Fresh&quot;</strong> to begin the wizard from the beginning</li>
+<li>Click <strong>&quot;Resume Setup&quot;</strong> to continue from where you left off (restores state from backend)</li>
+<li>Click <strong>&quot;Start Fresh&quot;</strong> to begin the wizard from the beginning (clears both backend and localStorage state)</li>
 <li>This is normal behavior and helps you avoid losing progress</li>
+</ul>
+<p><strong>What &quot;Start Fresh&quot; Does</strong>:</p>
+<ol>
+<li>Clears wizard progress from localStorage (<code>wizardProgress</code> key)</li>
+<li>Calls backend API to reset wizard state in database (<code>/api/setup/wizard/reset</code>)</li>
+<li>Resets to Step 0 (Welcome screen)</li>
+<li>Preserves other app settings (API keys, workspace preferences are NOT deleted)</li>
+</ol>
+<p><strong>Note</strong>: If you need to completely reset the app including all settings, use the cleanup scripts instead:</p>
+<ul>
+<li>Windows: <code>Scripts/clean-desktop.ps1</code></li>
+<li>Linux/Mac: See <code>DESKTOP_APP_GUIDE.md</code> for cleanup instructions</li>
 </ul>
 <h3 id="issue-2-backend-server-not-running-error">Issue 2: &quot;Backend Server Not Running&quot; Error</h3>
 <p><strong>Cause</strong>: The Aura backend API is not running or not reachable.</p>
@@ -195,8 +277,12 @@ resetCircuitBreaker();
 <li>[ ] Fresh install shows wizard on first launch</li>
 <li>[ ] Can complete all 6 steps successfully</li>
 <li>[ ] Progress is saved and resumable</li>
-<li>[ ] &quot;Start Fresh&quot; clears all saved state</li>
+<li>[ ] &quot;Start Fresh&quot; clears all saved state (both localStorage and backend)</li>
 <li>[ ] Backend status banner only shows when backend is actually down</li>
+<li>[ ] Backend status banner is dismissible and doesn't reappear after dismissal</li>
+<li>[ ] Step 2 (FFmpeg Check) has single &quot;Check Again&quot; button (no Install button)</li>
+<li>[ ] Step 3 (FFmpeg Install) has no duplicate Re-scan buttons</li>
+<li>[ ] Step 6 (Complete) button shows loading spinner and is disabled during completion</li>
 <li>[ ] FFmpeg processes are cleaned up on app exit</li>
 <li>[ ] No orphaned processes remain in Task Manager after exit</li>
 </ul>
