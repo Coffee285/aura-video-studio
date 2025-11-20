@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Database Configuration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Database Configuration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/DATABASE_CONFIGURATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="database-configuration-guide">Database Configuration Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio uses SQLite with Microsoft.Data.Sqlite provider. This guide explains how to properly configure database connection strings and avoid common configuration errors.</p>
+<h2 id="sqlite-connection-string-format">SQLite Connection String Format</h2>
+<p>The connection string must use only parameters supported by Microsoft.Data.Sqlite. Using unsupported parameters will cause startup failures.</p>
+<h3 id="supported-parameters">Supported Parameters</h3>
+<p>The following connection string parameters are supported:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Aliases</th>
+<th>Description</th>
+<th>Valid Values</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Data Source</code></td>
+<td><code>Filename</code></td>
+<td>Path to database file</td>
+<td>File path or <code>:memory:</code></td>
+<td><code>Data Source=C:\Users\YourUser\AppData\Local\Aura\aura.db</code></td>
+</tr>
+<tr>
+<td><code>Mode</code></td>
+<td></td>
+<td>Database access mode</td>
+<td><code>ReadWriteCreate</code>, <code>ReadWrite</code>, <code>ReadOnly</code>, <code>Memory</code></td>
+<td><code>Mode=ReadWriteCreate</code></td>
+</tr>
+<tr>
+<td><code>Cache</code></td>
+<td></td>
+<td>Connection cache mode</td>
+<td><code>Shared</code>, <code>Private</code></td>
+<td><code>Cache=Shared</code></td>
+</tr>
+<tr>
+<td><code>Foreign Keys</code></td>
+<td></td>
+<td>Enable foreign key constraints</td>
+<td><code>True</code>, <code>False</code></td>
+<td><code>Foreign Keys=True</code></td>
+</tr>
+<tr>
+<td><code>Recursive Triggers</code></td>
+<td></td>
+<td>Enable recursive triggers</td>
+<td><code>True</code>, <code>False</code></td>
+<td><code>Recursive Triggers=True</code></td>
+</tr>
+<tr>
+<td><code>Password</code></td>
+<td></td>
+<td>Database encryption password</td>
+<td>String</td>
+<td><code>Password=MySecretKey</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-connection-strings">Example Connection Strings</h3>
+<h4 id="basic-connection">Basic Connection</h4>
+<pre><code>Data Source=C:\Users\YourUser\AppData\Local\Aura\aura.db;Mode=ReadWriteCreate
+</code></pre>
+<h4 id="with-foreign-keys-and-shared-cache">With Foreign Keys and Shared Cache</h4>
+<pre><code>Data Source=C:\Users\YourUser\AppData\Local\Aura\aura.db;Mode=ReadWriteCreate;Cache=Shared;Foreign Keys=True
+</code></pre>
+<h4 id="in-memory-database">In-Memory Database</h4>
+<pre><code>Data Source=:memory:;Mode=Memory
+</code></pre>
+<h4 id="unixlinux-path">Unix/Linux Path</h4>
+<pre><code>Data Source=/home/user/.local/share/aura/aura.db;Mode=ReadWriteCreate;Foreign Keys=True
+</code></pre>
+<h2 id="wal-mode-configuration">WAL Mode Configuration</h2>
+<p>⚠️ <strong>CRITICAL: Do NOT include <code>Journal Mode=WAL</code> in the connection string.</strong></p>
+<p>The <code>Journal Mode</code> parameter is <strong>not supported</strong> by Microsoft.Data.Sqlite and will cause the application to fail at startup.</p>
+<h3 id="incorrect-configuration-will-fail">Incorrect Configuration (Will Fail)</h3>
+<pre><code class="lang-csharp">// ❌ WRONG - This will cause startup failure
+var connectionString = &quot;Data Source=aura.db;Journal Mode=WAL;Mode=ReadWriteCreate&quot;;
+</code></pre>
+<h3 id="correct-configuration">Correct Configuration</h3>
+<p>Instead, set WAL (Write-Ahead Logging) mode programmatically after connection using PRAGMA commands:</p>
+<pre><code class="lang-csharp">// ✅ CORRECT - Configure WAL via PRAGMA after connection
+using var connection = new SqliteConnection(connectionString);
+await connection.OpenAsync();
+
+using var command = connection.CreateCommand();
+command.CommandText = &quot;PRAGMA journal_mode=WAL;&quot;;
+await command.ExecuteNonQueryAsync();
+</code></pre>
+<p>Or with Entity Framework Core:</p>
+<pre><code class="lang-csharp">// ✅ CORRECT - Configure WAL via ExecuteSqlRaw
+await context.Database.ExecuteSqlRawAsync(&quot;PRAGMA journal_mode=WAL;&quot;);
+await context.Database.ExecuteSqlRawAsync(&quot;PRAGMA synchronous=NORMAL;&quot;);
+</code></pre>
+<h3 id="benefits-of-wal-mode">Benefits of WAL Mode</h3>
+<p>WAL (Write-Ahead Logging) mode provides:</p>
+<ul>
+<li><strong>Better concurrency</strong>: Readers don't block writers</li>
+<li><strong>Improved performance</strong>: Faster write operations</li>
+<li><strong>Atomic commits</strong>: Better crash recovery</li>
+</ul>
+<p>Aura automatically configures WAL mode during database initialization via <code>DatabaseInitializationService</code>.</p>
+<h2 id="common-configuration-errors">Common Configuration Errors</h2>
+<h3 id="error-connection-string-keyword-journal-mode-is-not-supported">Error: &quot;Connection string keyword 'journal mode' is not supported&quot;</h3>
+<p><strong>Cause</strong>: Connection string contains <code>Journal Mode=WAL</code> or similar parameter.</p>
+<p><strong>Solution</strong>: Remove the journal mode parameter from the connection string. WAL mode is configured programmatically via PRAGMA commands after the connection is established.</p>
+<p><strong>Example Fix</strong>:</p>
+<pre><code class="lang-csharp">// Before (incorrect):
+var connectionString = &quot;Data Source=aura.db;Journal Mode=WAL;Mode=ReadWriteCreate&quot;;
+
+// After (correct):
+var connectionString = &quot;Data Source=aura.db;Mode=ReadWriteCreate;Foreign Keys=True&quot;;
+// WAL mode is set by DatabaseInitializationService after connection
+</code></pre>
+<h3 id="error-connection-string-keyword-cache-size-is-not-supported">Error: &quot;Connection string keyword 'cache size' is not supported&quot;</h3>
+<p><strong>Cause</strong>: Connection string contains <code>Cache Size=-64000</code> or similar parameter.</p>
+<p><strong>Solution</strong>: Remove the cache size parameter from the connection string. Cache size should be configured via PRAGMA commands if needed.</p>
+<p><strong>Example Fix</strong>:</p>
+<pre><code class="lang-csharp">// Before (incorrect):
+var connectionString = &quot;Data Source=aura.db;Cache Size=-64000&quot;;
+
+// After (correct):
+var connectionString = &quot;Data Source=aura.db;Mode=ReadWriteCreate&quot;;
+
+// Optional: Configure cache size via PRAGMA if needed
+await context.Database.ExecuteSqlRawAsync(&quot;PRAGMA cache_size=-64000;&quot;);
+</code></pre>
+<h3 id="error-connection-string-must-specify-a-data-source">Error: &quot;Connection string must specify a Data Source&quot;</h3>
+<p><strong>Cause</strong>: Connection string is missing the required <code>Data Source</code> or <code>Filename</code> parameter.</p>
+<p><strong>Solution</strong>: Add a valid data source to the connection string.</p>
+<p><strong>Example Fix</strong>:</p>
+<pre><code class="lang-csharp">// Before (incorrect):
+var connectionString = &quot;Mode=ReadWriteCreate;Foreign Keys=True&quot;;
+
+// After (correct):
+var connectionString = &quot;Data Source=aura.db;Mode=ReadWriteCreate;Foreign Keys=True&quot;;
+</code></pre>
+<h2 id="database-performance-configuration">Database Performance Configuration</h2>
+<h3 id="recommended-pragma-settings">Recommended PRAGMA Settings</h3>
+<p>For optimal performance with Aura, the following PRAGMA settings are automatically applied during initialization:</p>
+<pre><code class="lang-sql">PRAGMA journal_mode=WAL;        -- Write-Ahead Logging for better concurrency
+PRAGMA synchronous=NORMAL;      -- Balanced durability and performance
+PRAGMA temp_store=MEMORY;       -- Store temporary tables in memory
+PRAGMA locking_mode=NORMAL;     -- Allow multiple connections
+</code></pre>
+<h3 id="additional-performance-options">Additional Performance Options</h3>
+<p>For specific use cases, you may want to configure additional PRAGMA settings:</p>
+<pre><code class="lang-sql">-- For large databases
+PRAGMA cache_size=-64000;       -- 64MB cache (negative value = KB)
+
+-- For heavy write workloads
+PRAGMA wal_autocheckpoint=1000; -- Checkpoint every 1000 pages
+
+-- For read-heavy workloads
+PRAGMA mmap_size=268435456;     -- 256MB memory-mapped I/O
+</code></pre>
+<p>Apply these after the connection is established:</p>
+<pre><code class="lang-csharp">await context.Database.ExecuteSqlRawAsync(&quot;PRAGMA cache_size=-64000;&quot;);
+</code></pre>
+<h2 id="configuration-validation">Configuration Validation</h2>
+<p>Aura includes built-in connection string validation via <code>DatabaseConfigurationValidator</code>:</p>
+<ul>
+<li>Validates connection string format</li>
+<li>Detects unsupported keywords</li>
+<li>Provides clear error messages with solutions</li>
+<li>Runs automatically at application startup</li>
+</ul>
+<p>If your connection string contains errors, the application will fail fast at startup with a descriptive error message, preventing runtime failures.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="database-locked-errors">Database Locked Errors</h3>
+<p>If you encounter &quot;database is locked&quot; errors:</p>
+<ol>
+<li>Ensure WAL mode is enabled (default in Aura)</li>
+<li>Check for long-running transactions</li>
+<li>Verify no other processes are accessing the database</li>
+<li>Consider increasing busy timeout:
+<pre><code class="lang-sql">PRAGMA busy_timeout=5000;  -- 5 seconds
+</code></pre>
+</li>
+</ol>
+<h3 id="slow-database-performance">Slow Database Performance</h3>
+<ol>
+<li><p>Verify WAL mode is active:</p>
+<pre><code class="lang-sql">PRAGMA journal_mode;  -- Should return &quot;wal&quot;
+</code></pre>
+</li>
+<li><p>Check cache size:</p>
+<pre><code class="lang-sql">PRAGMA cache_size;
+</code></pre>
+</li>
+<li><p>Ensure indexes are present on frequently queried columns</p>
+</li>
+<li><p>Review query patterns for N+1 query issues</p>
+</li>
+</ol>
+<h3 id="database-corruption">Database Corruption</h3>
+<p>If you suspect database corruption:</p>
+<ol>
+<li><p>Run integrity check:</p>
+<pre><code class="lang-sql">PRAGMA integrity_check;
+</code></pre>
+</li>
+<li><p>If issues are found, restore from backup</p>
+</li>
+<li><p>Consider using <code>vacuum</code> to rebuild database:</p>
+<pre><code class="lang-sql">VACUUM;
+</code></pre>
+</li>
+</ol>
+<h2 id="environment-variables">Environment Variables</h2>
+<p>You can override the database path using environment variables:</p>
+<pre><code class="lang-bash"># Set custom database path
+export AURA_DATABASE_PATH=&quot;/custom/path/to/aura.db&quot;
+
+# Or on Windows
+set AURA_DATABASE_PATH=C:\custom\path\to\aura.db
+</code></pre>
+<h2 id="configuration-files">Configuration Files</h2>
+<h3 id="appsettingsjson">appsettings.json</h3>
+<pre><code class="lang-json">{
+  &quot;Database&quot;: {
+    &quot;Provider&quot;: &quot;SQLite&quot;,
+    &quot;SQLitePath&quot;: &quot;&quot;,
+    &quot;ConnectionString&quot;: &quot;&quot;,
+    &quot;Performance&quot;: {
+      &quot;MaxPoolSize&quot;: 100,
+      &quot;MinPoolSize&quot;: 10,
+      &quot;SqliteEnableWAL&quot;: true
+    }
+  }
+}
+</code></pre>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li><strong>Never include unsupported parameters</strong> in connection strings</li>
+<li><strong>Always use <code>Foreign Keys=True</code></strong> to maintain referential integrity</li>
+<li><strong>Enable WAL mode</strong> for production deployments (done automatically)</li>
+<li><strong>Use absolute paths</strong> for database files</li>
+<li><strong>Keep backups</strong> before running migrations</li>
+<li><strong>Test connection strings</strong> in development before deploying</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite/">Microsoft.Data.Sqlite Documentation</a></li>
+<li><a href="https://www.sqlite.org/pragma.html">SQLite PRAGMA Statements</a></li>
+<li><a href="https://www.sqlite.org/wal.html">SQLite WAL Mode</a></li>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/providers/sqlite/">Entity Framework Core with SQLite</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For additional help:</p>
+<ol>
+<li>Check <a href="../TROUBLESHOOTING.html">TROUBLESHOOTING.md</a> for common issues</li>
+<li>Review <a href="database/README.html">Database Documentation</a> for schema details</li>
+<li>Open an issue on GitHub with connection string details (redact sensitive paths)</li>
+</ol>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-20<br>
+<strong>Version</strong>: 1.0.0</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/DATABASE_CONFIGURATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

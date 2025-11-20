@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Manual Testing Guide for PR #2: Setup Wizard Completion | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Manual Testing Guide for PR #2: Setup Wizard Completion | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/MANUAL_TESTING_GUIDE_PR002.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="manual-testing-guide-for-pr-2-setup-wizard-completion">Manual Testing Guide for PR #2: Setup Wizard Completion</h1>
+
+<h2 id="prerequisites">Prerequisites</h2>
+<ol>
+<li>Fresh Aura Video Studio installation OR reset wizard state</li>
+<li>Backend API running on <code>http://localhost:5005</code></li>
+<li>Frontend running on <code>http://localhost:5173</code></li>
+</ol>
+<h2 id="test-case-1-exit-wizard-button">Test Case 1: Exit Wizard Button</h2>
+<h3 id="steps">Steps:</h3>
+<ol>
+<li>Navigate to <code>http://localhost:5173</code> (should show FirstRunWizard)</li>
+<li>Observe the wizard header - look for &quot;Save and Exit&quot; button</li>
+<li>Click anywhere on Step 1 (FFmpeg Check) to navigate there</li>
+<li>Click the &quot;Save and Exit&quot; button</li>
+</ol>
+<h3 id="expected-results">Expected Results:</h3>
+<ul>
+<li>✅ &quot;Save and Exit&quot; button is visible in the wizard header (top right area)</li>
+<li>✅ Confirmation dialog appears with text:
+<pre><code>Are you sure you want to exit the setup wizard?
+
+You can complete setup later from the Settings page.
+</code></pre>
+</li>
+<li>✅ Clicking &quot;Cancel&quot; closes dialog and stays in wizard</li>
+<li>✅ Clicking &quot;OK&quot; navigates to main application (dashboard/home)</li>
+<li>✅ Progress is saved (check localStorage: <code>aura-setup-aborted</code> = &quot;true&quot;)</li>
+</ul>
+<h3 id="verification">Verification:</h3>
+<pre><code class="lang-javascript">// Open browser console and check:
+localStorage.getItem('aura-setup-aborted') // Should be &quot;true&quot;
+localStorage.getItem('aura-setup-aborted-step') // Should be &quot;1&quot; or current step
+</code></pre>
+<hr>
+<h2 id="test-case-2-validation-warnings-before-completion">Test Case 2: Validation Warnings Before Completion</h2>
+<h3 id="steps-1">Steps:</h3>
+<ol>
+<li>Start FirstRunWizard (reset if needed)</li>
+<li>Navigate through all steps but skip optional items:
+<ul>
+<li>Step 0: Click &quot;Get Started&quot; (Welcome)</li>
+<li>Step 1: Click &quot;Next&quot; (FFmpeg check - don't install if missing)</li>
+<li>Step 2: Click &quot;Skip&quot; or &quot;Next&quot; (FFmpeg install)</li>
+<li>Step 3: Click &quot;Skip All&quot; (Provider setup - don't configure any)</li>
+<li>Step 4: Set workspace path, click &quot;Next&quot;</li>
+<li>Step 5: Click &quot;Start Creating Videos&quot; (Completion)</li>
+</ul>
+</li>
+</ol>
+<h3 id="expected-results-1">Expected Results:</h3>
+<ul>
+<li>✅ Confirmation dialog appears with warnings list:
+<pre><code>Setup has some warnings:
+
+1. FFmpeg not detected - video rendering will not work until you install it
+2. No LLM provider configured - script generation will use basic rule-based fallback
+
+Do you want to complete setup anyway?
+</code></pre>
+</li>
+<li>✅ Clicking &quot;Cancel&quot; stays on completion step</li>
+<li>✅ Clicking &quot;OK&quot; completes setup and navigates to main app</li>
+<li>✅ Setup marked as complete in backend</li>
+</ul>
+<h3 id="verification-1">Verification:</h3>
+<pre><code class="lang-bash"># Check backend API:
+curl http://localhost:5005/api/setup/status
+
+# Should return:
+{
+  &quot;completed&quot;: true,
+  &quot;currentStep&quot;: 5,
+  ...
+}
+</code></pre>
+<hr>
+<h2 id="test-case-3-completion-without-warnings">Test Case 3: Completion Without Warnings</h2>
+<h3 id="steps-2">Steps:</h3>
+<ol>
+<li>Start FirstRunWizard (reset if needed)</li>
+<li>Complete all steps with everything configured:
+<ul>
+<li>Step 0: Click &quot;Get Started&quot;</li>
+<li>Step 1: Detect or configure FFmpeg</li>
+<li>Step 2: Install FFmpeg (if needed)</li>
+<li>Step 3: Configure at least one LLM provider (OpenAI/Anthropic/Ollama)</li>
+<li>Step 4: Set workspace path</li>
+<li>Step 5: Click &quot;Start Creating Videos&quot;</li>
+</ul>
+</li>
+</ol>
+<h3 id="expected-results-2">Expected Results:</h3>
+<ul>
+<li>✅ NO warning dialog appears (everything configured)</li>
+<li>✅ Button shows &quot;Finishing Setup...&quot; briefly with spinner</li>
+<li>✅ Success toast appears: &quot;Setup Complete - Welcome to Aura Video Studio!&quot;</li>
+<li>✅ Navigates directly to main application</li>
+<li>✅ Setup persisted to backend</li>
+</ul>
+<h3 id="verification-2">Verification:</h3>
+<pre><code class="lang-javascript">// Check localStorage:
+localStorage.getItem('hasCompletedFirstRun') // Should be &quot;true&quot;
+</code></pre>
+<pre><code class="lang-bash"># Check backend:
+curl http://localhost:5005/api/setup/status
+
+# Should return completed: true
+</code></pre>
+<hr>
+<h2 id="test-case-4-backend-status-endpoint-alias">Test Case 4: Backend Status Endpoint Alias</h2>
+<h3 id="steps-3">Steps:</h3>
+<ol>
+<li>Use curl or Postman to test both endpoints:
+<pre><code class="lang-bash"># New alias endpoint:
+curl http://localhost:5005/api/setup/status
+
+# Original endpoint:
+curl http://localhost:5005/api/setup/wizard/status
+</code></pre>
+</li>
+</ol>
+<h3 id="expected-results-3">Expected Results:</h3>
+<ul>
+<li>✅ Both endpoints return identical responses</li>
+<li>✅ Response structure matches:
+<pre><code class="lang-json">{
+  &quot;completed&quot;: boolean,
+  &quot;currentStep&quot;: number,
+  &quot;state&quot;: object | null,
+  &quot;canResume&quot;: boolean,
+  &quot;lastUpdated&quot;: string | null,
+  &quot;completedAt&quot;: string | null,
+  &quot;version&quot;: string | null
+}
+</code></pre>
+</li>
+</ul>
+<hr>
+<h2 id="test-case-5-resume-after-exit">Test Case 5: Resume After Exit</h2>
+<h3 id="steps-4">Steps:</h3>
+<ol>
+<li>Start FirstRunWizard</li>
+<li>Complete Step 1 (FFmpeg check)</li>
+<li>Click &quot;Save and Exit&quot; → Confirm</li>
+<li>Refresh page or restart application</li>
+<li>Navigate to <code>/setup</code> route</li>
+</ol>
+<h3 id="expected-results-4">Expected Results:</h3>
+<ul>
+<li>✅ Wizard shows resume dialog (if implemented)</li>
+<li>✅ Can continue from Step 1 (last saved step)</li>
+<li>✅ Progress is preserved</li>
+</ul>
+<hr>
+<h2 id="test-case-6-spinner-during-completion">Test Case 6: Spinner During Completion</h2>
+<h3 id="steps-5">Steps:</h3>
+<ol>
+<li>Complete wizard normally</li>
+<li>Click &quot;Start Creating Videos&quot; on final step</li>
+<li>Observe button state during completion</li>
+</ol>
+<h3 id="expected-results-5">Expected Results:</h3>
+<ul>
+<li>✅ Button text changes to &quot;Finishing Setup...&quot;</li>
+<li>✅ Spinner icon appears in button</li>
+<li>✅ Button is disabled (can't double-click)</li>
+<li>✅ Spinner stops after 1-2 seconds</li>
+<li>✅ Navigation occurs after completion</li>
+</ul>
+<h3 id="what-not-to-see">What NOT to see:</h3>
+<ul>
+<li>❌ Spinner spinning indefinitely (bug from problem statement)</li>
+<li>❌ Button getting stuck in loading state</li>
+</ul>
+<hr>
+<h2 id="regression-testing">Regression Testing</h2>
+<h3 id="test-existing-functionality-still-works">Test: Existing Functionality Still Works</h3>
+<ol>
+<li><strong>Complete wizard normally</strong> (without exit) → Should work as before</li>
+<li><strong>Navigate steps backward</strong> → Should work</li>
+<li><strong>Auto-save progress</strong> → Should work (check localStorage)</li>
+<li><strong>Backend persistence</strong> → Should save to database</li>
+<li><strong>Validation errors</strong> → Should still show for invalid inputs</li>
+</ol>
+<hr>
+<h2 id="browser-console-checks">Browser Console Checks</h2>
+<h3 id="useful-console-logs">Useful Console Logs:</h3>
+<pre><code class="lang-javascript">// Check if exit was triggered:
+console.log('Setup aborted:', localStorage.getItem('aura-setup-aborted'))
+
+// Check completion status:
+console.log('First run complete:', localStorage.getItem('hasCompletedFirstRun'))
+
+// Check wizard state:
+console.log('Wizard state:', JSON.parse(localStorage.getItem('onboarding-state')))
+</code></pre>
+<h3 id="expected-console-output">Expected Console Output:</h3>
+<pre><code>[FirstRunWizard] Circuit breaker state cleared on mount
+[FirstRunWizard] Starting onboarding completion { ffmpegPath: &quot;...&quot;, workspaceLocation: &quot;...&quot; }
+[FirstRunWizard] Setup API response: { success: true, errors: [] }
+[FirstRunWizard] First run marked as completed
+</code></pre>
+<hr>
+<h2 id="edge-cases-to-test">Edge Cases to Test</h2>
+<ol>
+<li><strong>Exit during Step 0 (Welcome)</strong> → Should allow exit</li>
+<li><strong>Exit during Step 5 (Completion)</strong> → Should allow exit</li>
+<li><strong>Click exit twice rapidly</strong> → Should only show one dialog</li>
+<li><strong>Click complete twice rapidly</strong> → Should only execute once (isCompletingSetup guard)</li>
+<li><strong>Backend offline during completion</strong> → Should show error, allow retry</li>
+</ol>
+<hr>
+<h2 id="accessibility-testing">Accessibility Testing</h2>
+<ol>
+<li><p><strong>Keyboard navigation</strong>:</p>
+<ul>
+<li>Tab to &quot;Save and Exit&quot; button → Should be reachable</li>
+<li>Enter/Space to trigger → Should work</li>
+<li>Esc to close dialog → Should close confirmation</li>
+</ul>
+</li>
+<li><p><strong>Screen reader</strong>:</p>
+<ul>
+<li>&quot;Save and Exit&quot; button → Should announce correctly</li>
+<li>Confirmation dialog → Should announce title and message</li>
+<li>Warning list → Should read all warnings</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="performance-testing">Performance Testing</h2>
+<ol>
+<li><strong>Large wizard state</strong> → Exit should save quickly (&lt;1s)</li>
+<li><strong>Slow network</strong> → Should show loading state appropriately</li>
+<li><strong>Multiple tabs</strong> → Exit in one tab should sync to others (via localStorage events)</li>
+</ol>
+<hr>
+<h2 id="cleanup-after-testing">Cleanup After Testing</h2>
+<p>To reset the wizard for re-testing:</p>
+<pre><code class="lang-javascript">// In browser console:
+localStorage.clear();
+
+// Or specifically:
+localStorage.removeItem('hasCompletedFirstRun');
+localStorage.removeItem('aura-setup-aborted');
+localStorage.removeItem('aura-setup-aborted-step');
+localStorage.removeItem('onboarding-state');
+</code></pre>
+<pre><code class="lang-bash"># Reset backend database (if needed):
+curl -X POST http://localhost:5005/api/setup/wizard/reset \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;userId&quot;: &quot;default&quot;, &quot;preserveData&quot;: false}'
+</code></pre>
+<hr>
+<h2 id="expected-test-results-summary">Expected Test Results Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Test Case</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Exit button visible</td>
+<td>✅</td>
+<td>Top right of wizard</td>
+</tr>
+<tr>
+<td>Exit confirmation</td>
+<td>✅</td>
+<td>Shows dialog</td>
+</tr>
+<tr>
+<td>Exit saves progress</td>
+<td>✅</td>
+<td>localStorage + backend</td>
+</tr>
+<tr>
+<td>Validation warnings</td>
+<td>✅</td>
+<td>Shows numbered list</td>
+</tr>
+<tr>
+<td>Completion without warnings</td>
+<td>✅</td>
+<td>Direct navigation</td>
+</tr>
+<tr>
+<td>Backend endpoint alias</td>
+<td>✅</td>
+<td>Both URLs work</td>
+</tr>
+<tr>
+<td>Resume after exit</td>
+<td>⏭️</td>
+<td>UI TBD</td>
+</tr>
+<tr>
+<td>Spinner behavior</td>
+<td>✅</td>
+<td>Shows briefly, not infinite</td>
+</tr>
+<tr>
+<td>Accessibility</td>
+<td>✅</td>
+<td>Keyboard + screen reader</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="bug-reporting">Bug Reporting</h2>
+<p>If you find issues during testing, please report:</p>
+<ol>
+<li><strong>Steps to reproduce</strong></li>
+<li><strong>Expected behavior</strong></li>
+<li><strong>Actual behavior</strong></li>
+<li><strong>Browser console errors</strong> (if any)</li>
+<li><strong>Network requests</strong> (check DevTools Network tab)</li>
+<li><strong>Screenshot or video</strong> (if applicable)</li>
+</ol>
+<hr>
+<h2 id="success-criteria">Success Criteria</h2>
+<p>All tests should pass without errors. The wizard should:</p>
+<ul>
+<li>✅ Allow exiting at any step with confirmation</li>
+<li>✅ Show validation warnings when needed</li>
+<li>✅ Complete setup smoothly with proper navigation</li>
+<li>✅ Persist state to backend correctly</li>
+<li>✅ Maintain accessibility standards</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/MANUAL_TESTING_GUIDE_PR002.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
