@@ -1,4 +1,13 @@
-import { FluentProvider, Spinner, webDarkTheme, webLightTheme } from '@fluentui/react-components';
+import {
+  Button,
+  Card,
+  FluentProvider,
+  Spinner,
+  Title1,
+  Body1,
+  webDarkTheme,
+  webLightTheme,
+} from '@fluentui/react-components';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -99,6 +108,7 @@ function App() {
 
   const [isInitializing, setIsInitializing] = useState(true);
   const [initializationError, setInitializationError] = useState<InitializationError | null>(null);
+  const [initializationTimeout, setInitializationTimeout] = useState(false);
   const [showCrashRecovery, setShowCrashRecovery] = useState(false);
 
   const [showSplash, setShowSplash] = useState(() => {
@@ -151,6 +161,14 @@ function App() {
 
   // Check first-run status on app mount
   useEffect(() => {
+    // Set timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.error('[App] First-run check timed out after 30s');
+      setInitializationTimeout(true);
+      setIsCheckingFirstRun(false);
+      setIsInitializing(false);
+    }, 30000); // 30 second timeout
+
     async function checkFirstRun() {
       try {
         // CRITICAL: Clear circuit breaker state BEFORE checking first run
@@ -211,6 +229,7 @@ function App() {
           localStorage.getItem('hasSeenOnboarding') === 'true';
         setShouldShowOnboarding(!localStatus);
       } finally {
+        clearTimeout(timeoutId); // Clear timeout on success
         setIsCheckingFirstRun(false);
         // CRITICAL FIX: Set isInitializing to false after first-run check completes
         // This prevents the app from getting stuck on InitializationScreen
@@ -220,6 +239,8 @@ function App() {
     }
 
     checkFirstRun();
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   // Global error handlers for uncaught errors and promise rejections
@@ -619,6 +640,51 @@ function App() {
             onError={(error) => setInitializationError(error)}
             enableSafeMode={true}
           />
+        </FluentProvider>
+      </ThemeContext.Provider>
+    );
+  }
+
+  if (initializationTimeout) {
+    return (
+      <ThemeContext.Provider value={{ isDarkMode, toggleTheme }}>
+        <FluentProvider theme={currentTheme}>
+          <div
+            style={{
+              height: '100vh',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              backgroundColor: 'var(--colorNeutralBackground1)',
+            }}
+          >
+            <Card style={{ maxWidth: '600px', width: '100%', padding: '32px' }}>
+              <Title1 style={{ marginBottom: '16px' }}>Initialization Timeout</Title1>
+              <Body1 style={{ marginBottom: '20px' }}>
+                The application took too long to initialize. This may be caused by:
+                <ul style={{ marginTop: '12px' }}>
+                  <li>Backend server not responding</li>
+                  <li>Network connectivity issues</li>
+                  <li>Firewall blocking local connections</li>
+                </ul>
+              </Body1>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <Button appearance="primary" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
+                <Button
+                  onClick={() => {
+                    setInitializationTimeout(false);
+                    setIsInitializing(false);
+                    setShouldShowOnboarding(false);
+                  }}
+                >
+                  Continue Anyway
+                </Button>
+              </div>
+            </Card>
+          </div>
         </FluentProvider>
       </ThemeContext.Provider>
     );
