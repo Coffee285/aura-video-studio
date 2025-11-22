@@ -796,6 +796,7 @@ The frontend now uses a modern, type-safe data layer:
 
 ### Documentation
 
+- **[Asset Loading Guide](./docs/ASSET_LOADING_GUIDE.md)** - Asset path resolution and image preloading utilities
 - **[API Client Guide](./docs/API_CLIENT_GUIDE.md)** - Comprehensive guide to TypedApiClient, React Query, and SSE hook
 - **[Type Generation](./docs/TYPE_GENERATION.md)** - How to generate TypeScript types from OpenAPI specs
 
