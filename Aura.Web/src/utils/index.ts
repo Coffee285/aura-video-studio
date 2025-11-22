@@ -25,3 +25,25 @@ export {
   formatShortcutForDisplay,
   getCategoryDescription,
 } from './keybinding-utils';
+
+// Asset Path Resolution
+export {
+  resolveAssetPath,
+  resolveAssetPaths,
+  checkAssetExists,
+  getAssetMetadata,
+} from './assetPath';
+
+// Image Preloading
+export {
+  preloadImage,
+  preloadImages,
+  preloadCriticalImages,
+  getPreloadStatus,
+  isImagePreloaded,
+  clearPreloadCache,
+  getPreloadStats,
+  PreloadStatus,
+  type PreloadedImage,
+  type PreloadOptions,
+} from './imagePreloader';
