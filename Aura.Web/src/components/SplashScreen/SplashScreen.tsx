@@ -29,7 +29,7 @@ export const SplashScreen: FC<SplashScreenProps> = ({
   const particlesRef = useRef<Particle[]>([]);
   const animationFrameRef = useRef<number>();
   const prefersReducedMotion = useRef(
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
   );
 
   // Initialize particles
@@ -40,8 +40,8 @@ export const SplashScreen: FC<SplashScreenProps> = ({
 
     const particleCount = 300;
     const particles: Particle[] = [];
-    // Cosmic colors: blues, purples, and oranges for the ethereal effect
-    const colors = ['#6366F1', '#818CF8', '#3B82F6', '#60A5FA', '#A855F7', '#C084FC', '#FF6B35', '#FF8960'];
+    // Orange/blue cosmic colors matching the app icon theme
+    const colors = ['#00D4FF', '#0EA5E9', '#3B82F6', '#60A5FA', '#FF6B35', '#FF8960', '#FFA07A'];
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
@@ -179,18 +179,43 @@ export const SplashScreen: FC<SplashScreenProps> = ({
           <div className="splash-logo-icon">
             <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
               <defs>
-                <linearGradient id="flameGradientBlue" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#6366F1" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="#818CF8" stopOpacity="0.3" />
+                {/* Cyan/blue gradient for the clapperboard glow */}
+                <linearGradient id="cyanGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#00D4FF" stopOpacity="1" />
+                  <stop offset="50%" stopColor="#0EA5E9" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.6" />
                 </linearGradient>
-                <linearGradient id="flameGradientOrange" x1="0%" y1="0%" x2="0%" y2="100%">
+                {/* Orange flame gradient */}
+                <linearGradient id="flameGradientOrange" x1="0%" y1="100%" x2="0%" y2="0%">
                   <stop offset="0%" stopColor="#FF6B35" stopOpacity="0.9" />
-                  <stop offset="50%" stopColor="#FF8960" stopOpacity="0.6" />
-                  <stop offset="100%" stopColor="#FFA07A" stopOpacity="0.3" />
+                  <stop offset="40%" stopColor="#FF8960" stopOpacity="0.7" />
+                  <stop offset="100%" stopColor="#FFA500" stopOpacity="0.4" />
+                </linearGradient>
+                {/* Blue flame gradient */}
+                <linearGradient id="flameGradientCyan" x1="0%" y1="100%" x2="0%" y2="0%">
+                  <stop offset="0%" stopColor="#00D4FF" stopOpacity="0.9" />
+                  <stop offset="40%" stopColor="#0EA5E9" stopOpacity="0.7" />
+                  <stop offset="100%" stopColor="#60A5FA" stopOpacity="0.3" />
+                </linearGradient>
+                {/* Clapperboard body gradient */}
+                <linearGradient id="boardGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#1E3A5F" />
+                  <stop offset="100%" stopColor="#0F2744" />
+                </linearGradient>
+                {/* Cyan edge glow */}
+                <linearGradient id="edgeGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#00D4FF" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#0EA5E9" stopOpacity="0.3" />
                 </linearGradient>
                 <filter id="glow">
-                  <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+                  <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <filter id="flameGlow">
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur" />
                   <feMerge>
                     <feMergeNode in="coloredBlur" />
                     <feMergeNode in="SourceGraphic" />
@@ -198,90 +223,80 @@ export const SplashScreen: FC<SplashScreenProps> = ({
                 </filter>
               </defs>
 
-              {/* Flames from top - Blue flames */}
-              <g className="splash-flames-blue">
+              {/* Orange flames on the right side */}
+              <g className="splash-flames-orange">
                 <path
-                  d="M 30 20 Q 25 10, 20 15 Q 25 5, 30 10 Q 35 5, 40 15 Q 35 10, 30 20 Z"
-                  fill="url(#flameGradientBlue)"
-                  filter="url(#glow)"
-                  opacity="0.8"
-                />
-                <path
-                  d="M 60 20 Q 55 10, 50 15 Q 55 5, 60 10 Q 65 5, 70 15 Q 65 10, 60 20 Z"
-                  fill="url(#flameGradientBlue)"
-                  filter="url(#glow)"
+                  d="M 85 35 Q 90 20, 95 28 Q 92 15, 88 22 Q 85 12, 82 25 Q 80 18, 85 35 Z"
+                  fill="url(#flameGradientOrange)"
+                  filter="url(#flameGlow)"
                   opacity="0.9"
                 />
                 <path
-                  d="M 90 20 Q 85 10, 80 15 Q 85 5, 90 10 Q 95 5, 100 15 Q 95 10, 90 20 Z"
-                  fill="url(#flameGradientBlue)"
-                  filter="url(#glow)"
+                  d="M 78 40 Q 82 28, 86 34 Q 84 22, 80 30 Q 78 20, 75 32 Q 73 26, 78 40 Z"
+                  fill="url(#flameGradientOrange)"
+                  filter="url(#flameGlow)"
                   opacity="0.8"
                 />
               </g>
 
-              {/* Flames from top - Orange flames */}
-              <g className="splash-flames-orange">
+              {/* Cyan/blue flames on the left side */}
+              <g className="splash-flames-blue">
                 <path
-                  d="M 35 22 Q 30 12, 25 17 Q 30 7, 35 12 Q 40 7, 45 17 Q 40 12, 35 22 Z"
-                  fill="url(#flameGradientOrange)"
-                  filter="url(#glow)"
-                  opacity="0.7"
+                  d="M 25 50 Q 18 35, 22 42 Q 15 30, 20 40 Q 12 28, 18 45 Q 10 38, 25 50 Z"
+                  fill="url(#flameGradientCyan)"
+                  filter="url(#flameGlow)"
+                  opacity="0.9"
                 />
                 <path
-                  d="M 65 22 Q 60 12, 55 17 Q 60 7, 65 12 Q 70 7, 75 17 Q 70 12, 65 22 Z"
-                  fill="url(#flameGradientOrange)"
-                  filter="url(#glow)"
-                  opacity="0.8"
-                />
-                <path
-                  d="M 95 22 Q 90 12, 85 17 Q 90 7, 95 12 Q 100 7, 105 17 Q 100 12, 95 22 Z"
-                  fill="url(#flameGradientOrange)"
-                  filter="url(#glow)"
-                  opacity="0.7"
+                  d="M 30 55 Q 24 42, 28 48 Q 22 35, 26 45 Q 20 32, 24 50 Q 18 42, 30 55 Z"
+                  fill="url(#flameGradientCyan)"
+                  filter="url(#flameGlow)"
+                  opacity="0.75"
                 />
               </g>
 
-              {/* Film Clapperboard */}
+              {/* Film Clapperboard - Main board with cyan glow edge */}
               <g className="splash-clapperboard">
-                {/* Main board */}
+                {/* Outer glow/border */}
                 <rect
-                  x="20"
-                  y="30"
-                  width="80"
-                  height="70"
-                  rx="4"
-                  fill="#4A5568"
-                  stroke="#2D3748"
+                  x="24"
+                  y="38"
+                  width="72"
+                  height="58"
+                  rx="6"
+                  fill="none"
+                  stroke="url(#edgeGlow)"
                   strokeWidth="2"
+                  filter="url(#glow)"
                 />
-                {/* Top bar */}
-                <rect
-                  x="20"
-                  y="30"
-                  width="80"
-                  height="20"
-                  rx="4"
-                  fill="#2D3748"
-                />
-                {/* White stripes */}
-                <rect x="25" y="35" width="70" height="3" fill="#E2E8F0" />
-                <rect x="25" y="42" width="70" height="3" fill="#E2E8F0" />
-                {/* Hinge circles */}
-                <circle cx="30" cy="40" r="3" fill="#1A202C" />
-                <circle cx="90" cy="40" r="3" fill="#1A202C" />
-                {/* Slate text area */}
-                <rect
-                  x="30"
-                  y="55"
-                  width="60"
-                  height="40"
-                  rx="2"
-                  fill="#1A202C"
-                />
-                {/* Slate lines */}
-                <line x1="35" y1="70" x2="85" y2="70" stroke="#4A5568" strokeWidth="1" />
-                <line x1="35" y1="80" x2="85" y2="80" stroke="#4A5568" strokeWidth="1" />
+                {/* Main board body */}
+                <rect x="25" y="39" width="70" height="56" rx="5" fill="url(#boardGradient)" />
+
+                {/* Clapper top part with stripes */}
+                <g transform="rotate(-15, 60, 35)">
+                  <rect
+                    x="20"
+                    y="25"
+                    width="75"
+                    height="16"
+                    rx="3"
+                    fill="#1A2F4A"
+                    stroke="url(#cyanGlowGradient)"
+                    strokeWidth="1"
+                  />
+                  {/* White/cyan stripes on clapper */}
+                  <rect x="25" y="28" width="8" height="10" fill="#E8F4FC" rx="1" />
+                  <rect x="38" y="28" width="8" height="10" fill="#1A2F4A" rx="1" />
+                  <rect x="51" y="28" width="8" height="10" fill="#E8F4FC" rx="1" />
+                  <rect x="64" y="28" width="8" height="10" fill="#1A2F4A" rx="1" />
+                  <rect x="77" y="28" width="8" height="10" fill="#E8F4FC" rx="1" />
+                </g>
+
+                {/* Slate text area with lines */}
+                <rect x="32" y="50" width="56" height="36" rx="3" fill="#0D1B2A" />
+                {/* Slate horizontal lines */}
+                <line x1="38" y1="62" x2="82" y2="62" stroke="#1E3A5F" strokeWidth="1.5" />
+                <line x1="38" y1="74" x2="82" y2="74" stroke="#1E3A5F" strokeWidth="1.5" />
               </g>
             </svg>
           </div>
