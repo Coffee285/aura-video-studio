@@ -66,6 +66,24 @@ public class CompositeLlmProvider : ILlmProvider
             result => string.IsNullOrWhiteSpace(result) || result.Trim() == "{}" || result.Trim() == "[]" || result.Trim().Length < 10);
     }
 
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// Executes with automatic fallback across configured providers.
+    /// </summary>
+    public Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default)
+    {
+        return ExecuteWithFallbackAsync(
+            provider => provider.GenerateChatCompletionAsync(systemPrompt, userPrompt, parameters, ct),
+            "chat completion for ideation",
+            ct,
+            DefaultPreferredTier,
+            result => string.IsNullOrWhiteSpace(result) || result.Trim() == "{}" || result.Trim() == "[]" || result.Trim().Length < 10);
+    }
+
     public Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,

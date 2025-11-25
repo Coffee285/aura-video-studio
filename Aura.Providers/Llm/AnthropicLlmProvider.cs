@@ -422,6 +422,171 @@ public class AnthropicLlmProvider : ILlmProvider
             $"Failed to complete prompt with Anthropic after {_maxRetries + 1} attempts. Please try again later.", lastException);
     }
 
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// Uses Anthropic Claude's messages API with system/user pattern for reliable JSON output.
+    /// </summary>
+    public async Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default)
+    {
+        var modelToUse = !string.IsNullOrWhiteSpace(parameters?.ModelOverride)
+            ? parameters.ModelOverride
+            : _model;
+
+        _logger.LogInformation(
+            "Generating chat completion with Anthropic Claude (model: {Model})",
+            modelToUse);
+
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt <= _maxRetries; attempt++)
+        {
+            try
+            {
+                if (attempt > 0)
+                {
+                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    _logger.LogInformation("Retrying chat completion (attempt {Attempt}/{MaxRetries}) after {Delay}s",
+                        attempt + 1, _maxRetries + 1, backoffDelay.TotalSeconds);
+                    await Task.Delay(backoffDelay, ct).ConfigureAwait(false);
+                }
+
+                // Build request with LLM parameters
+                var temperature = parameters?.Temperature ?? 0.7;
+                var maxTokens = parameters?.MaxTokens ?? 2048;
+                var topP = parameters?.TopP;
+                var topK = parameters?.TopK;
+
+                var requestBody = new Dictionary<string, object>
+                {
+                    { "model", modelToUse },
+                    { "max_tokens", maxTokens },
+                    { "temperature", temperature },
+                    { "system", systemPrompt },
+                    { "messages", new[]
+                        {
+                            new { role = "user", content = userPrompt }
+                        }
+                    }
+                };
+
+                // Add optional parameters only if provided
+                if (topP.HasValue)
+                {
+                    requestBody["top_p"] = topP.Value;
+                }
+                if (topK.HasValue)
+                {
+                    requestBody["top_k"] = topK.Value;
+                }
+
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("x-api-key", _apiKey);
+                _httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(_timeout);
+
+                var response = await _httpClient.PostAsync("https://api.anthropic.com/v1/messages", content, cts.Token).ConfigureAwait(false);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        throw new InvalidOperationException(
+                            "Anthropic API key is invalid or has been revoked. Please check your API key in Settings → Providers → Anthropic");
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        if (attempt >= _maxRetries)
+                        {
+                            throw new InvalidOperationException("Anthropic rate limit exceeded. Please wait a moment and try again.");
+                        }
+                        lastException = new Exception($"Rate limit exceeded: {errorContent}");
+                        continue;
+                    }
+                    else if ((int)response.StatusCode >= 500)
+                    {
+                        if (attempt >= _maxRetries)
+                        {
+                            throw new InvalidOperationException($"Anthropic service is experiencing issues (HTTP {response.StatusCode}). Please try again later.");
+                        }
+                        lastException = new Exception($"Server error: {errorContent}");
+                        continue;
+                    }
+
+                    response.EnsureSuccessStatusCode();
+                }
+
+                var responseJson = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                var responseDoc = JsonDocument.Parse(responseJson);
+
+                if (responseDoc.RootElement.TryGetProperty("content", out var contentArr) && contentArr.GetArrayLength() > 0)
+                {
+                    var firstContent = contentArr[0];
+                    if (firstContent.TryGetProperty("text", out var textProp))
+                    {
+                        string result = textProp.GetString() ?? string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(result))
+                        {
+                            throw new InvalidOperationException("Anthropic returned an empty response");
+                        }
+
+                        _logger.LogInformation("Chat completion succeeded ({Length} characters)", result.Length);
+                        return result;
+                    }
+                }
+
+                throw new InvalidOperationException("Invalid response structure from Anthropic API");
+            }
+            catch (TaskCanceledException ex)
+            {
+                lastException = ex;
+                if (attempt >= _maxRetries)
+                {
+                    throw new InvalidOperationException(
+                        $"Anthropic request timed out after {_timeout.TotalSeconds}s. Please check your internet connection or try again later.", ex);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                lastException = ex;
+                if (attempt >= _maxRetries)
+                {
+                    throw new InvalidOperationException(
+                        "Cannot connect to Anthropic API. Please check your internet connection and try again.", ex);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Error during chat completion with Anthropic (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during chat completion with Anthropic after all retries");
+                throw;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to generate chat completion with Anthropic after {_maxRetries + 1} attempts. Please try again later.",
+            lastException);
+    }
+
     public async Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,

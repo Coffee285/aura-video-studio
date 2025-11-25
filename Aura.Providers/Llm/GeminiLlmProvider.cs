@@ -409,6 +409,143 @@ public class GeminiLlmProvider : ILlmProvider
         throw new InvalidOperationException($"Failed to complete prompt with Gemini after {_maxRetries + 1} attempts.");
     }
 
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// Uses Gemini's generateContent API with combined system/user prompts for reliable JSON output.
+    /// </summary>
+    public async Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default)
+    {
+        var modelToUse = !string.IsNullOrWhiteSpace(parameters?.ModelOverride)
+            ? parameters.ModelOverride
+            : _model;
+
+        _logger.LogInformation(
+            "Generating chat completion with Gemini (model: {Model})",
+            modelToUse);
+
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt <= _maxRetries; attempt++)
+        {
+            try
+            {
+                if (attempt > 0)
+                {
+                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    _logger.LogInformation("Retrying chat completion (attempt {Attempt}/{MaxRetries}) after {Delay}s",
+                        attempt + 1, _maxRetries + 1, backoffDelay.TotalSeconds);
+                    await Task.Delay(backoffDelay, ct).ConfigureAwait(false);
+                }
+
+                // Build request with LLM parameters
+                var temperature = parameters?.Temperature ?? 0.7;
+                var maxTokens = parameters?.MaxTokens ?? 2048;
+                var topP = parameters?.TopP;
+                var topK = parameters?.TopK;
+
+                // Combine system and user prompts for Gemini
+                var combinedPrompt = $"{systemPrompt}\n\n{userPrompt}";
+
+                var generationConfig = new Dictionary<string, object>
+                {
+                    { "temperature", temperature },
+                    { "maxOutputTokens", maxTokens }
+                };
+
+                if (topP.HasValue)
+                {
+                    generationConfig["topP"] = topP.Value;
+                }
+                if (topK.HasValue)
+                {
+                    generationConfig["topK"] = topK.Value;
+                }
+
+                var requestBody = new
+                {
+                    contents = new[]
+                    {
+                        new
+                        {
+                            parts = new[]
+                            {
+                                new { text = combinedPrompt }
+                            }
+                        }
+                    },
+                    generationConfig = generationConfig
+                };
+
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(_timeout);
+
+                var url = $"https://generativelanguage.googleapis.com/v1beta/models/{modelToUse}:generateContent?key={_apiKey}";
+                var response = await _httpClient.PostAsync(url, content, cts.Token).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                var responseJson = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+                var responseDoc = JsonDocument.Parse(responseJson);
+
+                if (responseDoc.RootElement.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+                {
+                    var firstCandidate = candidates[0];
+                    if (firstCandidate.TryGetProperty("content", out var contentObj) &&
+                        contentObj.TryGetProperty("parts", out var parts) && parts.GetArrayLength() > 0)
+                    {
+                        var firstPart = parts[0];
+                        if (firstPart.TryGetProperty("text", out var textProp))
+                        {
+                            var result = textProp.GetString() ?? string.Empty;
+
+                            if (string.IsNullOrWhiteSpace(result))
+                            {
+                                throw new InvalidOperationException("Gemini returned an empty response");
+                            }
+
+                            _logger.LogInformation("Chat completion succeeded ({Length} characters)", result.Length);
+                            return result;
+                        }
+                    }
+                }
+
+                throw new InvalidOperationException("Invalid response structure from Gemini API");
+            }
+            catch (TaskCanceledException ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Gemini chat completion timed out (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (HttpRequestException ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Gemini chat completion connection failed (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Error during chat completion with Gemini (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to generate chat completion with Gemini after {_maxRetries + 1} attempts.",
+            lastException);
+    }
+
     public async Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,

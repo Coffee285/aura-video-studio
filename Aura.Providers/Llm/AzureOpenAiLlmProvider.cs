@@ -381,6 +381,111 @@ public class AzureOpenAiLlmProvider : ILlmProvider
         throw new InvalidOperationException($"Failed to complete prompt with Azure OpenAI after {_maxRetries + 1} attempts.");
     }
 
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// Uses Azure OpenAI's chat API with system/user pattern for reliable JSON output.
+    /// </summary>
+    public async Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default)
+    {
+        _logger.LogInformation("Generating chat completion with Azure OpenAI");
+
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt <= _maxRetries; attempt++)
+        {
+            try
+            {
+                if (attempt > 0)
+                {
+                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    _logger.LogInformation("Retrying chat completion (attempt {Attempt}/{MaxRetries}) after {Delay}s",
+                        attempt + 1, _maxRetries + 1, backoffDelay.TotalSeconds);
+                    await Task.Delay(backoffDelay, ct).ConfigureAwait(false);
+                }
+
+                // Build request with LLM parameters
+                var temperature = parameters?.Temperature ?? 0.7;
+                var maxTokens = parameters?.MaxTokens ?? 2048;
+
+                var requestBody = new
+                {
+                    messages = new[]
+                    {
+                        new { role = "system", content = systemPrompt },
+                        new { role = "user", content = userPrompt }
+                    },
+                    temperature = temperature,
+                    max_tokens = maxTokens
+                };
+
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("api-key", _apiKey);
+
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(_timeout);
+
+                var response = await _httpClient.PostAsync(_endpoint, content, cts.Token).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                var responseJson = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                var responseDoc = JsonDocument.Parse(responseJson);
+
+                if (responseDoc.RootElement.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+                {
+                    var firstChoice = choices[0];
+                    if (firstChoice.TryGetProperty("message", out var message) &&
+                        message.TryGetProperty("content", out var contentProp))
+                    {
+                        var result = contentProp.GetString() ?? string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(result))
+                        {
+                            throw new InvalidOperationException("Azure OpenAI returned an empty response");
+                        }
+
+                        _logger.LogInformation("Chat completion succeeded ({Length} characters)", result.Length);
+                        return result;
+                    }
+                }
+
+                throw new InvalidOperationException("Invalid response structure from Azure OpenAI API");
+            }
+            catch (TaskCanceledException ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Azure OpenAI chat completion timed out (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (HttpRequestException ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Azure OpenAI chat completion connection failed (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Error during chat completion with Azure OpenAI (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to generate chat completion with Azure OpenAI after {_maxRetries + 1} attempts.",
+            lastException);
+    }
+
     public async Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,

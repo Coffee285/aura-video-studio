@@ -33,6 +33,21 @@ public interface ILlmProvider
     /// </summary>
     Task<string> CompleteAsync(string prompt, CancellationToken ct);
     
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// Uses system/user prompt pattern for more reliable JSON output.
+    /// </summary>
+    /// <param name="systemPrompt">System prompt defining the AI's role and output format</param>
+    /// <param name="userPrompt">User prompt with the actual request</param>
+    /// <param name="parameters">Optional LLM parameters (temperature, maxTokens, etc.)</param>
+    /// <param name="ct">Cancellation token</param>
+    /// <returns>The LLM response text</returns>
+    Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default);
+    
     Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,

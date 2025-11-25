@@ -83,6 +83,60 @@ public partial class MockLlmProvider : ILlmProvider
         };
     }
 
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// </summary>
+    public async Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default)
+    {
+        RecordCall(nameof(GenerateChatCompletionAsync));
+        _logger.LogInformation("Mock LLM generating chat completion (system: {SystemLength}, user: {UserLength})",
+            systemPrompt.Length, userPrompt.Length);
+
+        if (SimulatedLatency > TimeSpan.Zero)
+        {
+            await Task.Delay(SimulatedLatency, ct).ConfigureAwait(false);
+        }
+
+        return _behavior switch
+        {
+            MockBehavior.Failure => throw new InvalidOperationException("Mock LLM provider configured to fail"),
+            MockBehavior.Timeout => throw new TaskCanceledException("Mock LLM provider timed out"),
+            MockBehavior.EmptyResponse => string.Empty,
+            _ => GenerateMockChatCompletion(systemPrompt, userPrompt)
+        };
+    }
+
+    private string GenerateMockChatCompletion(string systemPrompt, string userPrompt)
+    {
+        // Generate mock JSON response for ideation requests
+        if (userPrompt.Contains("video concept", StringComparison.OrdinalIgnoreCase) ||
+            userPrompt.Contains("brainstorm", StringComparison.OrdinalIgnoreCase) ||
+            systemPrompt.Contains("concepts", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"{
+  ""concepts"": [
+    {
+      ""title"": ""Mock Concept 1"",
+      ""description"": ""This is a mock concept for testing purposes."",
+      ""angle"": ""Tutorial"",
+      ""targetAudience"": ""Developers"",
+      ""pros"": [""Easy to test"", ""Predictable""],
+      ""cons"": [""Not real""],
+      ""appealScore"": 85,
+      ""hook"": ""Mock hook for testing"",
+      ""talkingPoints"": [""Point 1"", ""Point 2"", ""Point 3""]
+    }
+  ]
+}";
+        }
+
+        return GenerateMockCompletion($"{systemPrompt}\n{userPrompt}");
+    }
+
     public async Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,

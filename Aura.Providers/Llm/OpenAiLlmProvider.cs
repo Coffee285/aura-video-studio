@@ -671,6 +671,201 @@ public class OpenAiLlmProvider : ILlmProvider
             $"Failed to complete prompt with OpenAI after {_maxRetries + 1} attempts. Please try again later.", lastException);
     }
 
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// Uses OpenAI's chat API with system/user message pattern for reliable JSON output.
+    /// </summary>
+    public async Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default)
+    {
+        var modelToUse = !string.IsNullOrWhiteSpace(parameters?.ModelOverride)
+            ? parameters.ModelOverride
+            : _model;
+
+        _logger.LogInformation(
+            "Generating chat completion with OpenAI (model: {Model})",
+            modelToUse);
+
+        var startTime = DateTime.UtcNow;
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt <= _maxRetries; attempt++)
+        {
+            try
+            {
+                if (attempt > 0)
+                {
+                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    _logger.LogInformation("Retrying chat completion (attempt {Attempt}/{MaxRetries}) after {Delay}s",
+                        attempt + 1, _maxRetries + 1, backoffDelay.TotalSeconds);
+                    await Task.Delay(backoffDelay, ct).ConfigureAwait(false);
+                }
+
+                // Build request with LLM parameters
+                var temperature = parameters?.Temperature ?? 0.7;
+                var maxTokens = parameters?.MaxTokens ?? 2048;
+                var topP = parameters?.TopP;
+                var frequencyPenalty = parameters?.FrequencyPenalty;
+                var presencePenalty = parameters?.PresencePenalty;
+
+                var requestBody = new Dictionary<string, object>
+                {
+                    { "model", modelToUse },
+                    { "messages", new[]
+                        {
+                            new { role = "system", content = systemPrompt },
+                            new { role = "user", content = userPrompt }
+                        }
+                    },
+                    { "temperature", temperature },
+                    { "max_tokens", maxTokens },
+                    // Request JSON output format for reliable structured responses
+                    { "response_format", new { type = "json_object" } }
+                };
+
+                // Add optional parameters only if provided
+                if (topP.HasValue)
+                {
+                    requestBody["top_p"] = topP.Value;
+                }
+                if (frequencyPenalty.HasValue)
+                {
+                    requestBody["frequency_penalty"] = frequencyPenalty.Value;
+                }
+                if (presencePenalty.HasValue)
+                {
+                    requestBody["presence_penalty"] = presencePenalty.Value;
+                }
+
+                _httpClient.DefaultRequestHeaders.Clear();
+                _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_apiKey}");
+
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(_timeout);
+
+                var response = await _httpClient.PostAsync("https://api.openai.com/v1/chat/completions", content, cts.Token).ConfigureAwait(false);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        throw new InvalidOperationException(
+                            "OpenAI API key is invalid or has been revoked. Please check your API key in Settings → Providers → OpenAI");
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                    {
+                        _logger.LogWarning("OpenAI rate limit exceeded (attempt {Attempt}/{MaxRetries})", attempt + 1, _maxRetries + 1);
+                        if (attempt >= _maxRetries)
+                        {
+                            throw new InvalidOperationException(
+                                "OpenAI rate limit exceeded. Please wait a moment and try again, or upgrade your OpenAI plan.");
+                        }
+                        lastException = new Exception($"Rate limit exceeded: {errorContent}");
+                        continue;
+                    }
+                    else if ((int)response.StatusCode >= 500)
+                    {
+                        _logger.LogWarning("OpenAI server error (attempt {Attempt}/{MaxRetries}): {StatusCode}",
+                            attempt + 1, _maxRetries + 1, response.StatusCode);
+                        if (attempt >= _maxRetries)
+                        {
+                            throw new InvalidOperationException(
+                                $"OpenAI service is experiencing issues (HTTP {response.StatusCode}). Please try again later.");
+                        }
+                        lastException = new Exception($"Server error: {errorContent}");
+                        continue;
+                    }
+
+                    response.EnsureSuccessStatusCode();
+                }
+
+                var responseJson = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                var responseDoc = JsonDocument.Parse(responseJson);
+
+                // Check for API errors in response
+                if (responseDoc.RootElement.TryGetProperty("error", out var errorElement))
+                {
+                    var errorMessage = errorElement.TryGetProperty("message", out var msg)
+                        ? msg.GetString() ?? "Unknown error"
+                        : "API error";
+                    throw new InvalidOperationException($"OpenAI API error: {errorMessage}");
+                }
+
+                if (responseDoc.RootElement.TryGetProperty("choices", out var choices) &&
+                    choices.GetArrayLength() > 0)
+                {
+                    var firstChoice = choices[0];
+                    if (firstChoice.TryGetProperty("message", out var message) &&
+                        message.TryGetProperty("content", out var contentProp))
+                    {
+                        string result = contentProp.GetString() ?? string.Empty;
+
+                        if (string.IsNullOrWhiteSpace(result))
+                        {
+                            throw new InvalidOperationException("OpenAI returned an empty response");
+                        }
+
+                        var duration = DateTime.UtcNow - startTime;
+                        _logger.LogInformation("Chat completion succeeded ({Length} characters) in {Duration}s",
+                            result.Length, duration.TotalSeconds);
+
+                        return result;
+                    }
+                }
+
+                throw new InvalidOperationException("Invalid response structure from OpenAI API");
+            }
+            catch (TaskCanceledException ex)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "OpenAI chat completion timed out (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+                if (attempt >= _maxRetries)
+                {
+                    throw new InvalidOperationException(
+                        $"OpenAI request timed out after {_timeout.TotalSeconds}s. Please check your internet connection or try again later.", ex);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Failed to connect to OpenAI API (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+                if (attempt >= _maxRetries)
+                {
+                    throw new InvalidOperationException(
+                        "Cannot connect to OpenAI API. Please check your internet connection and try again.", ex);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Error during chat completion with OpenAI (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during chat completion with OpenAI after all retries");
+                throw;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to generate chat completion with OpenAI after {_maxRetries + 1} attempts. Please try again later.",
+            lastException);
+    }
+
     public async Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,

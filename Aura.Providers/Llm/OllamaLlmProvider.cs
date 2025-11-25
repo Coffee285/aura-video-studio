@@ -397,6 +397,159 @@ public class OllamaLlmProvider : ILlmProvider
         throw new InvalidOperationException($"Failed to complete prompt with Ollama after {_maxRetries + 1} attempts.");
     }
 
+    /// <summary>
+    /// Generate a chat completion response for ideation, brainstorming, and other conversational tasks.
+    /// Uses Ollama's chat API with system/user message pattern for more reliable JSON output.
+    /// </summary>
+    public async Task<string> GenerateChatCompletionAsync(
+        string systemPrompt,
+        string userPrompt,
+        LlmParameters? parameters = null,
+        CancellationToken ct = default)
+    {
+        var modelToUse = !string.IsNullOrWhiteSpace(parameters?.ModelOverride)
+            ? parameters.ModelOverride
+            : _model;
+
+        _logger.LogInformation(
+            "Generating chat completion with Ollama (model: {Model}) at {BaseUrl}",
+            modelToUse, _baseUrl);
+
+        // Pre-check: Validate Ollama is available before attempting generation
+        var isAvailable = await IsServiceAvailableAsync(ct).ConfigureAwait(false);
+        if (!isAvailable)
+        {
+            var diagnosticMessage = await GetConnectionDiagnosticsAsync(ct).ConfigureAwait(false);
+            var errorMessage = $"Cannot connect to Ollama at {_baseUrl}. {diagnosticMessage}";
+            _logger.LogError("Ollama availability check failed. {ErrorMessage}", errorMessage);
+            throw new InvalidOperationException(errorMessage);
+        }
+
+        Exception? lastException = null;
+
+        for (int attempt = 0; attempt <= _maxRetries; attempt++)
+        {
+            try
+            {
+                if (attempt > 0)
+                {
+                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    _logger.LogInformation("Retrying chat completion (attempt {Attempt}/{MaxRetries}) after {Delay}s",
+                        attempt + 1, _maxRetries + 1, backoffDelay.TotalSeconds);
+                    await Task.Delay(backoffDelay, ct).ConfigureAwait(false);
+                }
+
+                // Build options with LLM parameters
+                var temperature = parameters?.Temperature ?? 0.7;
+                var maxTokens = parameters?.MaxTokens ?? 2048;
+                var topP = parameters?.TopP ?? 0.9;
+                var topK = parameters?.TopK;
+
+                var options = new Dictionary<string, object>
+                {
+                    { "temperature", temperature },
+                    { "top_p", topP },
+                    { "num_predict", maxTokens }
+                };
+
+                if (topK.HasValue)
+                {
+                    options["top_k"] = topK.Value;
+                }
+
+                // Use Ollama chat API with messages format for better JSON handling
+                var messages = new[]
+                {
+                    new { role = "system", content = systemPrompt },
+                    new { role = "user", content = userPrompt }
+                };
+
+                var requestBody = new
+                {
+                    model = modelToUse,
+                    messages = messages,
+                    stream = false,
+                    format = "json", // Request JSON format from Ollama
+                    options = options
+                };
+
+                var json = JsonSerializer.Serialize(requestBody);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                cts.CancelAfter(_timeout);
+
+                var response = await _httpClient.PostAsync($"{_baseUrl}/api/chat", content, cts.Token).ConfigureAwait(false);
+                response.EnsureSuccessStatusCode();
+
+                var responseJson = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
+
+                if (string.IsNullOrWhiteSpace(responseJson))
+                {
+                    _logger.LogError("Ollama chat API returned empty JSON response");
+                    throw new InvalidOperationException("Ollama returned an empty JSON response");
+                }
+
+                var responseDoc = JsonDocument.Parse(responseJson);
+
+                // Check for error field first
+                if (responseDoc.RootElement.TryGetProperty("error", out var errorProp))
+                {
+                    var errorMessage = errorProp.GetString() ?? "Unknown error";
+                    _logger.LogError("Ollama chat API returned error: {Error}", errorMessage);
+                    throw new InvalidOperationException($"Ollama API error: {errorMessage}");
+                }
+
+                // Extract message content from chat response
+                if (responseDoc.RootElement.TryGetProperty("message", out var messageProp) &&
+                    messageProp.TryGetProperty("content", out var contentProp))
+                {
+                    var result = contentProp.GetString() ?? string.Empty;
+
+                    if (string.IsNullOrWhiteSpace(result))
+                    {
+                        _logger.LogWarning("Ollama chat API returned empty message content. Response: {Response}",
+                            responseJson.Substring(0, Math.Min(500, responseJson.Length)));
+                        throw new InvalidOperationException("Ollama returned an empty message content");
+                    }
+
+                    _logger.LogInformation("Chat completion succeeded with {Length} characters", result.Length);
+                    return result;
+                }
+
+                // Log available fields for debugging
+                var availableFields = string.Join(", ", responseDoc.RootElement.EnumerateObject().Select(p => p.Name));
+                _logger.LogError(
+                    "Ollama chat response did not contain expected 'message.content' field. Available fields: {Fields}",
+                    availableFields);
+                throw new InvalidOperationException($"Invalid response structure from Ollama chat API. Available fields: {availableFields}");
+            }
+            catch (TaskCanceledException ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Ollama chat completion timed out (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (HttpRequestException ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Ollama chat completion connection failed (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+            catch (Exception ex) when (attempt < _maxRetries)
+            {
+                lastException = ex;
+                _logger.LogWarning(ex, "Error during chat completion with Ollama (attempt {Attempt}/{MaxRetries})",
+                    attempt + 1, _maxRetries + 1);
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Failed to generate chat completion with Ollama after {_maxRetries + 1} attempts. " +
+            $"Please ensure Ollama is running and model '{modelToUse}' is available.",
+            lastException);
+    }
+
     public async Task<SceneAnalysisResult?> AnalyzeSceneImportanceAsync(
         string sceneText,
         string? previousSceneText,
