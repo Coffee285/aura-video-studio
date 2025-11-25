@@ -30,6 +30,16 @@ export interface GenerateScriptRequest {
   frequencyPenalty?: number;
   presencePenalty?: number;
   stopSequences?: string[];
+
+  // RAG (Retrieval-Augmented Generation) configuration
+  ragConfiguration?: {
+    enabled: boolean;
+    topK?: number;
+    minimumScore?: number;
+    maxContextTokens?: number;
+    includeCitations?: boolean;
+    tightenClaims?: boolean;
+  };
 }
 
 /**
@@ -122,12 +132,12 @@ export async function generateScript(
   // to allow for network overhead and response processing
   const extendedConfig = {
     ...config,
-    timeout: (config as any)?.timeout ?? 390000, // 6.5 minutes - exceeds backend 6-minute timeout to allow for network overhead
+    timeout: (config as unknown as { timeout?: number })?.timeout ?? 390000, // 6.5 minutes - exceeds backend 6-minute timeout to allow for network overhead
   } as ExtendedAxiosRequestConfig;
-  
+
   // Safe logging - wrapped to prevent any logging errors from breaking the application
   try {
-    console.log('[scriptApi] Calling generateScript', {
+    console.info('[scriptApi] Calling generateScript', {
       topic: request.topic,
       provider: request.preferredProvider,
       model: request.modelOverride,
@@ -137,13 +147,17 @@ export async function generateScript(
   } catch {
     // Ignore logging errors - they should never happen but we don't want them to break the app
   }
-  
+
   try {
-    const response = await post<GenerateScriptResponse>('/api/scripts/generate', request, extendedConfig);
-    
+    const response = await post<GenerateScriptResponse>(
+      '/api/scripts/generate',
+      request,
+      extendedConfig
+    );
+
     // Safe logging
     try {
-      console.log('[scriptApi] generateScript response received', {
+      console.info('[scriptApi] generateScript response received', {
         hasResponse: !!response,
         scriptId: response?.scriptId,
         sceneCount: response?.scenes?.length ?? 0,
@@ -153,7 +167,7 @@ export async function generateScript(
     } catch {
       // Ignore logging errors
     }
-    
+
     // Validate response before returning
     if (!response) {
       try {
@@ -163,7 +177,7 @@ export async function generateScript(
       }
       throw new Error('Server returned an empty response. Please try again.');
     }
-    
+
     if (!response.scenes || !Array.isArray(response.scenes) || response.scenes.length === 0) {
       try {
         console.error('[scriptApi] generateScript returned invalid response', {
@@ -177,14 +191,17 @@ export async function generateScript(
       }
       throw new Error('Server returned a response with no scenes. Please try again.');
     }
-    
+
     return response;
   } catch (error) {
     // Safe error logging
     try {
       console.error('[scriptApi] generateScript error', {
         error,
-        errorType: error && typeof error === 'object' && 'constructor' in error ? (error as { constructor?: { name?: string } }).constructor?.name : undefined,
+        errorType:
+          error && typeof error === 'object' && 'constructor' in error
+            ? (error as { constructor?: { name?: string } }).constructor?.name
+            : undefined,
         errorMessage: error instanceof Error ? error.message : String(error),
         isAxiosError: error && typeof error === 'object' && 'isAxiosError' in error,
         timestamp: new Date().toISOString(),

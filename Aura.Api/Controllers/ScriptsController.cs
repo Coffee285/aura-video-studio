@@ -133,10 +133,26 @@ public class ScriptsController : ControllerBase
                 "[{CorrelationId}] POST /api/scripts/generate - Topic: {Topic}, Provider: {Provider}, Duration: {Duration}s",
                 correlationId, request.Topic, request.PreferredProvider ?? "auto", request.TargetDurationSeconds);
 
-            // Enable RAG automatically if documents are available in the index
+            // Check if RAG configuration is explicitly provided in the request
             Aura.Core.Models.RagConfiguration? ragConfig = null;
-            if (_vectorIndex != null)
+            if (request.RagConfiguration != null)
             {
+                // Use explicit RAG configuration from request
+                ragConfig = new Aura.Core.Models.RagConfiguration(
+                    Enabled: request.RagConfiguration.Enabled,
+                    TopK: request.RagConfiguration.TopK,
+                    MinimumScore: request.RagConfiguration.MinimumScore,
+                    MaxContextTokens: request.RagConfiguration.MaxContextTokens,
+                    IncludeCitations: request.RagConfiguration.IncludeCitations,
+                    TightenClaims: request.RagConfiguration.TightenClaims);
+                
+                _logger.LogInformation(
+                    "[{CorrelationId}] Using explicit RAG configuration: Enabled={Enabled}, TopK={TopK}",
+                    correlationId, ragConfig.Enabled, ragConfig.TopK);
+            }
+            else if (_vectorIndex != null)
+            {
+                // Enable RAG automatically if documents are available in the index
                 try
                 {
                     var stats = await _vectorIndex.GetStatisticsAsync(ct).ConfigureAwait(false);

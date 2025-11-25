@@ -107,6 +107,13 @@ public record GenerateScriptRequest
     /// Advanced LLM parameters - Stop sequences (provider-specific)
     /// </summary>
     public List<string>? StopSequences { get; init; }
+
+    /// <summary>
+    /// RAG (Retrieval-Augmented Generation) configuration for grounding script generation
+    /// with ingested documents. When enabled, relevant content from uploaded documents
+    /// will be used to enhance the generated script.
+    /// </summary>
+    public RagConfigurationDto? RagConfiguration { get; init; }
 }
 
 /// <summary>
