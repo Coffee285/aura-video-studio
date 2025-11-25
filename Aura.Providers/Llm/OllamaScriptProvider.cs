@@ -105,42 +105,7 @@ public class OllamaScriptProvider : BaseLlmScriptProvider
         }
 
         // RAG Context Retrieval - retrieve relevant context from ingested documents
-        string ragContext = string.Empty;
-        if (_ragContextBuilder != null && request.Brief.RagConfiguration?.Enabled == true)
-        {
-            try
-            {
-                var ragConfig = new RagConfig
-                {
-                    Enabled = true,
-                    TopK = request.Brief.RagConfiguration.TopK,
-                    MinimumScore = request.Brief.RagConfiguration.MinimumScore,
-                    MaxContextTokens = request.Brief.RagConfiguration.MaxContextTokens,
-                    IncludeCitations = request.Brief.RagConfiguration.IncludeCitations
-                };
-
-                var ragResult = await _ragContextBuilder.BuildContextAsync(
-                    request.Brief.Topic,
-                    ragConfig,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (ragResult.Chunks.Count > 0)
-                {
-                    ragContext = ragResult.FormattedContext;
-                    _logger.LogInformation("RAG context retrieved: {ChunkCount} chunks, {TokenCount} tokens",
-                        ragResult.Chunks.Count, ragResult.TotalTokens);
-                }
-                else
-                {
-                    _logger.LogInformation("No relevant RAG context found for topic: {Topic}", request.Brief.Topic);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to retrieve RAG context, continuing without it");
-                // Continue without RAG - don't fail generation
-            }
-        }
+        string ragContext = await RetrieveRagContextAsync(request, cancellationToken).ConfigureAwait(false);
 
         var startTime = DateTime.UtcNow;
         var prompt = BuildPrompt(request, ragContext);
@@ -412,37 +377,7 @@ public class OllamaScriptProvider : BaseLlmScriptProvider
         }
 
         // RAG Context Retrieval for streaming
-        string ragContext = string.Empty;
-        if (_ragContextBuilder != null && request.Brief.RagConfiguration?.Enabled == true)
-        {
-            try
-            {
-                var ragConfig = new RagConfig
-                {
-                    Enabled = true,
-                    TopK = request.Brief.RagConfiguration.TopK,
-                    MinimumScore = request.Brief.RagConfiguration.MinimumScore,
-                    MaxContextTokens = request.Brief.RagConfiguration.MaxContextTokens,
-                    IncludeCitations = request.Brief.RagConfiguration.IncludeCitations
-                };
-
-                var ragResult = await _ragContextBuilder.BuildContextAsync(
-                    request.Brief.Topic,
-                    ragConfig,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (ragResult.Chunks.Count > 0)
-                {
-                    ragContext = ragResult.FormattedContext;
-                    _logger.LogInformation("RAG context retrieved for streaming: {ChunkCount} chunks, {TokenCount} tokens",
-                        ragResult.Chunks.Count, ragResult.TotalTokens);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to retrieve RAG context for streaming, continuing without it");
-            }
-        }
+        string ragContext = await RetrieveRagContextAsync(request, cancellationToken).ConfigureAwait(false);
 
         var prompt = BuildPrompt(request, ragContext);
         var model = request.ModelOverride ?? _model;
@@ -896,5 +831,50 @@ Please provide a well-structured script with clear narration for each scene.";
         promptBuilder.AppendLine(userPrompt);
 
         return promptBuilder.ToString();
+    }
+
+    /// <summary>
+    /// Retrieve RAG context for the given topic if RAG is enabled
+    /// </summary>
+    private async Task<string> RetrieveRagContextAsync(
+        ScriptGenerationRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (_ragContextBuilder == null || request.Brief.RagConfiguration?.Enabled != true)
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            var ragConfig = new RagConfig
+            {
+                Enabled = true,
+                TopK = request.Brief.RagConfiguration.TopK,
+                MinimumScore = request.Brief.RagConfiguration.MinimumScore,
+                MaxContextTokens = request.Brief.RagConfiguration.MaxContextTokens,
+                IncludeCitations = request.Brief.RagConfiguration.IncludeCitations
+            };
+
+            var ragResult = await _ragContextBuilder.BuildContextAsync(
+                request.Brief.Topic,
+                ragConfig,
+                cancellationToken).ConfigureAwait(false);
+
+            if (ragResult.Chunks.Count > 0)
+            {
+                _logger.LogInformation("RAG context retrieved: {ChunkCount} chunks, {TokenCount} tokens",
+                    ragResult.Chunks.Count, ragResult.TotalTokens);
+                return ragResult.FormattedContext;
+            }
+
+            _logger.LogInformation("No relevant RAG context found for topic: {Topic}", request.Brief.Topic);
+            return string.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to retrieve RAG context, continuing without it");
+            return string.Empty;
+        }
     }
 }
