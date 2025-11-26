@@ -2426,33 +2426,56 @@ catch (Exception ex)
 }
 Log.Information("========================================");
 
-// Add correlation ID middleware early in the pipeline
+// ============================================================================
+// Middleware Pipeline Configuration
+// Order is CRITICAL - follows ASP.NET Core recommended middleware order:
+// 1. Exception Handler (catches all exceptions)
+// 2. HSTS (in production)
+// 3. HTTPS Redirection (optional, disabled for desktop app)
+// 4. Response Compression
+// 5. Static Files
+// 6. Routing
+// 7. CORS
+// 8. Authentication -> Authorization
+// 9. Custom Middleware
+// 10. Endpoints
+// See: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/
+// ============================================================================
+
+// 1. Global exception handler MUST be first to catch ALL exceptions
+// This ensures unhandled exceptions return standardized ProblemDetails JSON responses
+// instead of crashing the stack or exposing stack traces
+app.UseExceptionHandler();
+
+// 2. Add correlation ID early for request tracking in logs and error responses
 app.UseCorrelationId();
 
-// Add response compression (before most other middleware)
+// 3. HSTS for production environments (instructs browsers to use HTTPS)
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
+// 4. Response compression (before most other middleware for efficiency)
 app.UseResponseCompression();
 
-// Add response caching headers middleware
+// 5. Add response caching headers middleware
 app.UseMiddleware<Aura.Api.Middleware.ResponseCachingMiddleware>();
 
-// Add ETag middleware for conditional requests
+// 6. Add ETag middleware for conditional requests
 app.UseMiddleware<Aura.Api.Middleware.ETagMiddleware>();
 
-// Add query performance monitoring middleware
+// 7. Add query performance monitoring middleware
 app.UseMiddleware<Aura.Api.Middleware.QueryPerformanceMiddleware>();
 
-// Add performance tracking middleware (after correlation ID)
+// 8. Add performance tracking middleware (after correlation ID)
 app.UsePerformanceTracking();
 
-// Add request validation middleware (after correlation ID)
+// 9. Add request validation middleware (after correlation ID)
 app.UseRequestValidation();
 
-// Add request logging middleware (after correlation ID)
+// 10. Add request logging middleware (after correlation ID)
 app.UseRequestLogging();
-
-// Add new global exception handler (ASP.NET Core IExceptionHandler pattern)
-// This replaces the legacy ExceptionHandlingMiddleware
-app.UseExceptionHandler();
 
 // Configure request timeouts
 // Default timeout for all requests is 2 minutes
@@ -2487,14 +2510,21 @@ if (!string.IsNullOrEmpty(hangfireConnectionString))
 }
 */
 
-// CRITICAL FIX: In ASP.NET Core 6+, routing must come BEFORE CORS
+// ============================================================================
+// Routing, CORS, and Authentication Pipeline
+// Order: Routing -> CORS -> Authentication -> Authorization -> Custom -> Endpoints
+// ============================================================================
+
+// 11. Routing must come before CORS, Authentication, and endpoint mapping
 // See: https://learn.microsoft.com/en-us/aspnet/core/fundamentals/middleware/
 app.UseRouting();
 
-// CORS middleware MUST be after UseRouting() and before UseAuthentication()
-// This ensures CORS policies are applied to endpoints correctly
+// 12. CORS middleware MUST be after UseRouting() and before UseAuthentication()
+// This ensures CORS preflight requests are handled correctly
+// Configured origins include localhost, 127.0.0.1, and file:// for Electron
 app.UseCors(AuraCorsPolicy);
 
+// CORS rejection logging for debugging
 app.Use(async (context, next) =>
 {
     await next();
@@ -2509,10 +2539,10 @@ app.Use(async (context, next) =>
     }
 });
 
-// Authentication middleware (after CORS)
+// 13. Authentication middleware (after CORS)
 app.UseApiAuthentication();
 
-// Add first-run wizard check middleware (checks if setup is completed)
+// 14. First-run wizard check middleware (checks if setup is completed)
 app.UseFirstRunCheck();
 
 // Add AspNetCoreRateLimit middleware after routing and before authorization
