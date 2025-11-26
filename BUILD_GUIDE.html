@@ -1003,6 +1003,38 @@ sudo apt-get install ffmpeg
 <p>Verify installation:</p>
 <pre><code class="lang-bash">ffmpeg -version
 </code></pre>
+<h3 id="dotnet-ef-tool-installation-fails">dotnet-ef Tool Installation Fails</h3>
+<p><strong>Error:</strong></p>
+<pre><code>[WARNING] Could not install dotnet-ef tools. Database migration check skipped.
+Installation error: Tool 'dotnet-ef' failed to update due to the following: 
+The settings file in the tool's NuGet package is invalid: Settings file 
+'DotnetToolSettings.xml' was not found in the package.
+</code></pre>
+<p><strong>Cause:</strong> This error previously occurred with global tool installations due to corrupted NuGet cache or incomplete package downloads.</p>
+<p><strong>Solution:</strong> As of the latest version, the project now uses a <strong>local dotnet tool manifest</strong> (<code>.config/dotnet-tools.json</code>) instead of global tools, which is more reliable and reproducible.</p>
+<p><strong>How It Works:</strong></p>
+<ul>
+<li>The <code>dotnet-ef</code> tool is now defined in <code>.config/dotnet-tools.json</code></li>
+<li>Build scripts automatically run <code>dotnet tool restore</code> to install tools locally</li>
+<li>No more global tool installation or NuGet cache issues</li>
+<li>Tools are versioned and tracked in source control</li>
+</ul>
+<p><strong>Manual Restore</strong> (if needed):</p>
+<pre><code class="lang-bash"># From repository root
+dotnet tool restore
+
+# Verify installation
+dotnet ef --version
+</code></pre>
+<p><strong>For Developers:</strong>
+If you need to update the dotnet-ef tool version:</p>
+<pre><code class="lang-bash"># Update to latest version
+dotnet tool update dotnet-ef
+
+# Or update to specific version
+dotnet tool update dotnet-ef --version 8.0.11
+</code></pre>
+<p><strong>Note:</strong> Build-time migrations are optional. If they fail, migrations will be applied automatically when you first run the application.</p>
 <h3 id="build-fails-on-windows-with-long-paths">Build Fails on Windows with Long Paths</h3>
 <p><strong>Error:</strong> Files or paths too long</p>
 <p><strong>Solution:</strong></p>

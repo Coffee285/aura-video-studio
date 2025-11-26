@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Database Migrations - Developer Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Database Migrations - Developer Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/DATABASE_MIGRATIONS_DEVELOPER_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="database-migrations---developer-guide">Database Migrations - Developer Guide</h1>
+
+<p>This guide explains how to create and manage Entity Framework Core migrations in Aura Video Studio.</p>
+<h2 id="overview">Overview</h2>
+<p>Aura uses Entity Framework Core Code-First migrations to manage database schema changes. Migrations are stored in the <code>Aura.Api/Migrations/</code> directory and are automatically applied on API startup or manually via CLI commands.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>.NET 8 SDK</li>
+<li>Entity Framework Core CLI tools</li>
+<li>Understanding of Entity Framework Core concepts</li>
+<li>Aura solution built and running</li>
+</ul>
+<h2 id="migration-files-location">Migration Files Location</h2>
+<p>All migrations are stored in:</p>
+<pre><code>Aura.Api/Migrations/
+</code></pre>
+<p>The migrations assembly is configured as <code>Aura.Api</code> in the DbContext setup.</p>
+<h2 id="creating-a-new-migration">Creating a New Migration</h2>
+<h3 id="step-1-modify-entity-classes">Step 1: Modify Entity Classes</h3>
+<p>First, make your changes to the entity classes in <code>Aura.Core/Data/</code>:</p>
+<pre><code class="lang-csharp">// Aura.Core/Data/Entities/MyNewEntity.cs
+public class MyNewEntity : IAuditableEntity
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+}
+</code></pre>
+<h3 id="step-2-add-dbset-to-auradbcontext">Step 2: Add DbSet to AuraDbContext</h3>
+<p>Update <code>Aura.Core/Data/AuraDbContext.cs</code>:</p>
+<pre><code class="lang-csharp">public class AuraDbContext : DbContext
+{
+    // ... existing DbSets ...
+    
+    /// &lt;summary&gt;
+    /// My new entity collection
+    /// &lt;/summary&gt;
+    public DbSet&lt;MyNewEntity&gt; MyNewEntities { get; set; } = null!;
+    
+    // ... rest of the class ...
+}
+</code></pre>
+<h3 id="step-3-configure-entity-optional">Step 3: Configure Entity (Optional)</h3>
+<p>If needed, add entity configuration in the <code>OnModelCreating</code> method:</p>
+<pre><code class="lang-csharp">protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+    
+    // ... existing configurations ...
+    
+    // Configure MyNewEntity
+    modelBuilder.Entity&lt;MyNewEntity&gt;(entity =&gt;
+    {
+        entity.HasKey(e =&gt; e.Id);
+        entity.HasIndex(e =&gt; e.Name);
+        entity.HasIndex(e =&gt; e.CreatedAt);
+        
+        // Add seed data if needed
+        entity.HasData(new MyNewEntity
+        {
+            Id = &quot;default-1&quot;,
+            Name = &quot;Default Item&quot;,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+    });
+}
+</code></pre>
+<h3 id="step-4-create-the-migration">Step 4: Create the Migration</h3>
+<p>From the solution root directory, run:</p>
+<pre><code class="lang-bash">dotnet ef migrations add YourMigrationName \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+</code></pre>
+<h4 id="naming-convention">Naming Convention</h4>
+<p>Migration names should:</p>
+<ul>
+<li>Use PascalCase</li>
+<li>Be descriptive of the change</li>
+<li>Start with a verb (Add, Update, Remove, etc.)</li>
+</ul>
+<p>Examples:</p>
+<ul>
+<li><code>AddUserPreferencesTable</code></li>
+<li><code>AddIndexToProjectStates</code></li>
+<li><code>UpdateJobQueueConstraints</code></li>
+<li><code>RemoveDeprecatedFields</code></li>
+</ul>
+<h3 id="step-5-review-the-generated-migration">Step 5: Review the Generated Migration</h3>
+<p>The EF Core tools will generate two files in <code>Aura.Api/Migrations/</code>:</p>
+<ol>
+<li><strong><code>{timestamp}_{MigrationName}.cs</code></strong> - Contains Up() and Down() methods</li>
+<li><strong><code>{timestamp}_{MigrationName}.Designer.cs</code></strong> - Contains model snapshot</li>
+</ol>
+<p>Example migration file:</p>
+<pre><code class="lang-csharp">public partial class AddUserPreferencesTable : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.CreateTable(
+            name: &quot;UserPreferences&quot;,
+            columns: table =&gt; new
+            {
+                Id = table.Column&lt;string&gt;(nullable: false),
+                UserId = table.Column&lt;string&gt;(nullable: false),
+                Theme = table.Column&lt;string&gt;(nullable: true),
+                Language = table.Column&lt;string&gt;(nullable: false),
+                CreatedAt = table.Column&lt;DateTime&gt;(nullable: false),
+                UpdatedAt = table.Column&lt;DateTime&gt;(nullable: false)
+            },
+            constraints: table =&gt;
+            {
+                table.PrimaryKey(&quot;PK_UserPreferences&quot;, x =&gt; x.Id);
+            });
+
+        migrationBuilder.CreateIndex(
+            name: &quot;IX_UserPreferences_UserId&quot;,
+            table: &quot;UserPreferences&quot;,
+            column: &quot;UserId&quot;,
+            unique: true);
+    }
+
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(
+            name: &quot;UserPreferences&quot;);
+    }
+}
+</code></pre>
+<h3 id="step-6-customize-migration-if-needed">Step 6: Customize Migration (If Needed)</h3>
+<p>You can manually edit the generated migration to:</p>
+<ul>
+<li>Add custom SQL</li>
+<li>Insert seed data</li>
+<li>Create indexes</li>
+<li>Add data transformations</li>
+</ul>
+<p>Example of adding custom SQL:</p>
+<pre><code class="lang-csharp">protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // Generated code
+    migrationBuilder.CreateTable(...);
+    
+    // Custom SQL
+    migrationBuilder.Sql(@&quot;
+        CREATE TRIGGER UpdateTimestamp
+        AFTER UPDATE ON UserPreferences
+        FOR EACH ROW
+        BEGIN
+            UPDATE UserPreferences 
+            SET UpdatedAt = CURRENT_TIMESTAMP 
+            WHERE Id = NEW.Id;
+        END;
+    &quot;);
+}
+</code></pre>
+<h3 id="step-7-test-the-migration">Step 7: Test the Migration</h3>
+<h4 id="option-1-using-cli">Option 1: Using CLI</h4>
+<pre><code class="lang-bash"># Apply migration to development database
+aura-cli migrate
+
+# Check status
+aura-cli status -v
+</code></pre>
+<h4 id="option-2-using-api">Option 2: Using API</h4>
+<p>Start the API server - it will automatically apply the migration on startup.</p>
+<h4 id="option-3-using-ef-core-cli">Option 3: Using EF Core CLI</h4>
+<pre><code class="lang-bash"># Apply migration directly
+dotnet ef database update \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+</code></pre>
+<h3 id="step-8-verify-migration">Step 8: Verify Migration</h3>
+<p>Check that:</p>
+<ol>
+<li>Migration applied successfully (check logs)</li>
+<li>Database schema is correct (inspect with DB browser)</li>
+<li>Seed data was inserted (if applicable)</li>
+<li>Indexes were created</li>
+<li>Application runs without errors</li>
+</ol>
+<h3 id="step-9-test-rollback-optional">Step 9: Test Rollback (Optional)</h3>
+<p>If your migration supports rollback, test the Down() method:</p>
+<pre><code class="lang-bash"># Rollback to previous migration
+dotnet ef database update PreviousMigrationName \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="migration-design">Migration Design</h3>
+<ol>
+<li><strong>Keep migrations small</strong> - One logical change per migration</li>
+<li><strong>Make migrations reversible</strong> - Implement Down() method properly</li>
+<li><strong>Test both Up and Down</strong> - Ensure migrations can be rolled back</li>
+<li><strong>Add appropriate indexes</strong> - Consider query performance</li>
+<li><strong>Include seed data</strong> - For required default values</li>
+</ol>
+<h3 id="data-migrations">Data Migrations</h3>
+<p>When migrating data:</p>
+<ol>
+<li><strong>Separate schema and data changes</strong> - Create separate migrations if possible</li>
+<li><strong>Handle large datasets</strong> - Use batching for large data migrations</li>
+<li><strong>Preserve existing data</strong> - Don't delete data unnecessarily</li>
+<li><strong>Test with production-like data</strong> - Use realistic data volumes</li>
+</ol>
+<p>Example data migration:</p>
+<pre><code class="lang-csharp">protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // Add new column
+    migrationBuilder.AddColumn&lt;string&gt;(
+        name: &quot;Status&quot;,
+        table: &quot;Projects&quot;,
+        nullable: true);
+    
+    // Migrate existing data
+    migrationBuilder.Sql(@&quot;
+        UPDATE Projects
+        SET Status = CASE
+            WHEN IsCompleted = 1 THEN 'Completed'
+            WHEN IsActive = 1 THEN 'Active'
+            ELSE 'Draft'
+        END
+    &quot;);
+    
+    // Make column required
+    migrationBuilder.AlterColumn&lt;string&gt;(
+        name: &quot;Status&quot;,
+        table: &quot;Projects&quot;,
+        nullable: false);
+}
+</code></pre>
+<h3 id="testing">Testing</h3>
+<ol>
+<li><strong>Test on clean database</strong> - Use <code>aura-cli reset</code> to start fresh</li>
+<li><strong>Test on existing database</strong> - Verify migration works with existing data</li>
+<li><strong>Test rollback</strong> - Ensure Down() method works correctly</li>
+<li><strong>Test in integration tests</strong> - Add tests to verify migration behavior</li>
+</ol>
+<h3 id="code-review">Code Review</h3>
+<p>Before committing:</p>
+<ol>
+<li><strong>Review generated code</strong> - Ensure migration does what you expect</li>
+<li><strong>Check for breaking changes</strong> - Avoid breaking existing functionality</li>
+<li><strong>Verify naming</strong> - Use consistent, descriptive names</li>
+<li><strong>Test thoroughly</strong> - Don't skip testing</li>
+<li><strong>Document complex migrations</strong> - Add comments for non-obvious changes</li>
+</ol>
+<h2 id="common-scenarios">Common Scenarios</h2>
+<h3 id="adding-a-new-table">Adding a New Table</h3>
+<pre><code class="lang-bash"># 1. Create entity class in Aura.Core/Data/Entities/
+# 2. Add DbSet to AuraDbContext
+# 3. Configure entity in OnModelCreating
+# 4. Create migration
+dotnet ef migrations add AddMyNewTable \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+
+# 5. Test migration
+aura-cli migrate
+aura-cli status -v
+</code></pre>
+<h3 id="adding-a-column">Adding a Column</h3>
+<pre><code class="lang-bash"># 1. Add property to entity class
+# 2. Create migration
+dotnet ef migrations add AddColumnToTable \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+
+# 3. Customize if needed (default value, data migration)
+# 4. Test migration
+aura-cli migrate
+</code></pre>
+<h3 id="adding-an-index">Adding an Index</h3>
+<pre><code class="lang-bash"># 1. Add index configuration in OnModelCreating
+modelBuilder.Entity&lt;MyEntity&gt;(entity =&gt;
+{
+    entity.HasIndex(e =&gt; e.MyProperty);
+});
+
+# 2. Create migration
+dotnet ef migrations add AddIndexToMyEntity \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+
+# 3. Test migration
+aura-cli migrate
+</code></pre>
+<h3 id="renaming-a-column">Renaming a Column</h3>
+<pre><code class="lang-bash"># 1. Rename property in entity class
+# 2. Create migration
+dotnet ef migrations add RenameColumnInTable \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+
+# 3. Customize migration to use RenameColumn
+migrationBuilder.RenameColumn(
+    name: &quot;OldName&quot;,
+    table: &quot;MyTable&quot;,
+    newName: &quot;NewName&quot;);
+
+# 4. Test migration
+aura-cli migrate
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="migration-creation-fails">Migration Creation Fails</h3>
+<p><strong>Error</strong>: &quot;No DbContext was found&quot;</p>
+<p><strong>Solution</strong>: Specify the context explicitly:</p>
+<pre><code class="lang-bash">dotnet ef migrations add YourMigration \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+</code></pre>
+<h3 id="migration-application-fails">Migration Application Fails</h3>
+<p><strong>Error</strong>: &quot;Could not load file or assembly 'Aura.Api'&quot;</p>
+<p><strong>Solution</strong>: Rebuild the solution:</p>
+<pre><code class="lang-bash">dotnet build Aura.Api/Aura.Api.csproj
+dotnet build Aura.Cli/Aura.Cli.csproj
+</code></pre>
+<h3 id="conflicting-migrations">Conflicting Migrations</h3>
+<p><strong>Error</strong>: &quot;The migration '{name}' has already been applied&quot;</p>
+<p><strong>Solution</strong>: Check current status and remove duplicate:</p>
+<pre><code class="lang-bash">aura-cli status -v
+
+# If duplicate, remove the migration file and recreate
+dotnet ef migrations remove \
+    --project Aura.Api/Aura.Api.csproj \
+    --context AuraDbContext
+</code></pre>
+<h3 id="schema-conflicts">Schema Conflicts</h3>
+<p><strong>Error</strong>: &quot;The table '{name}' already exists&quot;</p>
+<p><strong>Solution</strong>: Either:</p>
+<ol>
+<li>Reset database: <code>aura-cli reset --force</code></li>
+<li>Or manually fix the database schema</li>
+<li>Or create a migration to handle the conflict</li>
+</ol>
+<h2 id="migration-lifecycle">Migration Lifecycle</h2>
+<pre><code>┌─────────────────┐
+│ Modify Entities │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Create Migration│ ─── dotnet ef migrations add
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Review &amp; Test   │ ─── aura-cli status/migrate
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Commit to Git   │ ─── git add/commit
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Deploy &amp; Apply  │ ─── Auto on API startup
+└─────────────────┘
+</code></pre>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/">Entity Framework Core Migrations</a></li>
+<li><a href="https://learn.microsoft.com/en-us/ef/core/cli/dotnet">EF Core CLI Tools</a></li>
+<li><a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/operations">Migration Operations</a></li>
+<li><a href="DATABASE_MIGRATIONS_USER_GUIDE.html">User Guide</a></li>
+</ul>
+<h2 id="getting-help">Getting Help</h2>
+<p>For issues with migrations:</p>
+<ol>
+<li>Check this guide first</li>
+<li>Review EF Core documentation</li>
+<li>Check Aura logs for detailed error messages</li>
+<li>Use verbose mode: <code>aura-cli migrate -v</code></li>
+<li>Create an issue on GitHub with details</li>
+</ol>
+<hr>
+<p>Last Updated: November 2024</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/DATABASE_MIGRATIONS_DEVELOPER_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

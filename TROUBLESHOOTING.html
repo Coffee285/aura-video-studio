@@ -83,6 +83,8 @@
 <li><a href="#database-issues">Database Issues</a></li>
 <li><a href="#network-and-connectivity">Network and Connectivity</a></li>
 <li><a href="#performance-issues">Performance Issues</a></li>
+<li><a href="#desktop-app-and-process-issues">Desktop App and Process Issues</a></li>
+<li><a href="#ollama-script-generation-timeouts">Ollama Script Generation Timeouts</a></li>
 <li><a href="#platform-specific-issues">Platform-Specific Issues</a></li>
 <li><a href="#getting-help">Getting Help</a></li>
 </ul>
@@ -734,6 +736,137 @@ rd /s /q &quot;%TEMP%\aura-video-studio&quot;
 <li>How long before force quit was needed</li>
 <li>Logs from the session</li>
 </ul>
+<h3 id="issue-dotnet-ef-tool-installation-fails-during-build">Issue: dotnet-ef tool installation fails during build</h3>
+<p><strong>Symptom</strong>: When building the desktop application, you see this error:</p>
+<pre><code>[WARNING]   Could not install dotnet-ef tools. Database migration check skipped.
+[WARNING]   Migrations will be applied automatically on first application start.
+Installation error: Tool 'dotnet-ef' failed to update due to the following: 
+The settings file in the tool's NuGet package is invalid: Settings file 
+'DotnetToolSettings.xml' was not found in the package.
+</code></pre>
+<p><strong>Cause</strong>: This error previously occurred with global tool installations due to corrupted NuGet cache or incomplete package downloads.</p>
+<p><strong>Solution</strong>:</p>
+<p>As of the latest version, the project now uses a <strong>local dotnet tool manifest</strong> (<code>.config/dotnet-tools.json</code>) instead of global tools. This eliminates the issue entirely by:</p>
+<ol>
+<li>Using a project-local tool manifest tracked in source control</li>
+<li>Automatically restoring tools with <code>dotnet tool restore</code></li>
+<li>Providing version consistency across all developers</li>
+</ol>
+<p><strong>If You See This Error</strong> (should no longer occur):</p>
+<p>The build scripts now automatically run <code>dotnet tool restore</code> which installs dotnet-ef locally from the manifest. If you still encounter issues:</p>
+<ol>
+<li><p><strong>Verify the manifest exists</strong>:</p>
+<pre><code class="lang-bash"># Check for .config/dotnet-tools.json
+cat .config/dotnet-tools.json
+</code></pre>
+</li>
+<li><p><strong>Restore tools manually</strong>:</p>
+<pre><code class="lang-bash"># From repository root
+dotnet tool restore
+</code></pre>
+</li>
+<li><p><strong>Verify installation</strong>:</p>
+<pre><code class="lang-bash">dotnet ef --version
+# Should show: Entity Framework Core .NET Command-line Tools 8.0.11
+</code></pre>
+</li>
+</ol>
+<p><strong>For Developers</strong>:
+If you need to update the dotnet-ef tool version:</p>
+<pre><code class="lang-bash"># Update to latest version
+dotnet tool update dotnet-ef
+
+# Or install specific version
+dotnet tool update dotnet-ef --version 8.0.11
+</code></pre>
+<p><strong>Fallback Behavior</strong>: If tool restoration fails, the build will continue successfully and database migrations will be applied automatically when you first run the application.</p>
+<h2 id="ollama-script-generation-timeouts">Ollama Script Generation Timeouts</h2>
+<h3 id="issue-script-generation-fails-after-several-minutes-with-timeout-error">Issue: Script generation fails after several minutes with timeout error</h3>
+<p><strong>Symptom</strong>: Script generation with Ollama fails with a message like &quot;Ollama request timed out&quot; or the API returns a 408 timeout error, even though system resources show Ollama is being utilized.</p>
+<p><strong>Common Causes</strong>:</p>
+<ol>
+<li><strong>Model loading</strong>: The first request after Ollama starts requires loading the model into RAM, which can take 2-5 minutes (or longer on slow systems)</li>
+<li><strong>Slow system</strong>: Older CPUs or systems with limited RAM may take 10-15 minutes for generation</li>
+<li><strong>Large models</strong>: 13B, 70B+ models are extremely slow without GPU acceleration</li>
+</ol>
+<p><strong>Current Timeout Values</strong> (very lenient):</p>
+<ul>
+<li>Availability check: 60 seconds</li>
+<li>Script generation: 15 minutes</li>
+<li>API request: 20 minutes</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Wait for model to fully load</strong>:</p>
+<pre><code class="lang-bash"># Check if model is loaded
+ollama ps
+
+# If no model is shown, load it explicitly
+ollama run llama3.2 --keepalive 0
+</code></pre>
+</li>
+<li><p><strong>Use a smaller/faster model</strong>:</p>
+<pre><code class="lang-bash"># Try smaller models (much faster)
+ollama pull llama3.2:3b   # 3B parameters - fast
+ollama pull llama3.2:1b   # 1B parameters - fastest
+</code></pre>
+</li>
+<li><p><strong>Check system resources</strong>:</p>
+<ul>
+<li>Ensure you have sufficient RAM (model size + 2GB minimum)</li>
+<li>Close other memory-intensive applications</li>
+<li>Check CPU usage while generating</li>
+</ul>
+</li>
+<li><p><strong>Check Ollama status</strong>:</p>
+<pre><code class="lang-bash"># List available models
+ollama list
+
+# Check Ollama logs for errors
+ollama logs
+
+# Test generation manually
+ollama run llama3.2 &quot;Write a short story&quot;
+</code></pre>
+</li>
+<li><p><strong>Check backend logs</strong>:</p>
+<ul>
+<li>Look for &quot;Request sent to Ollama, awaiting response&quot; message</li>
+<li>Check for any error messages after the timeout</li>
+</ul>
+</li>
+</ol>
+<p><strong>Performance Tips</strong>:</p>
+<ul>
+<li>Models with &quot;q4&quot; in the name (like <code>llama3.1:8b-q4_k_m</code>) use less memory and are faster</li>
+<li>First generation after Ollama restart will be slower due to model loading</li>
+<li>GPU acceleration (if available) significantly improves performance</li>
+<li>Keep Ollama running in background to avoid model reload delays</li>
+</ul>
+<h3 id="frontend-timeout-issues">Frontend Timeout Issues</h3>
+<p>If script generation fails with &quot;Network Error&quot; or &quot;Request Timeout&quot; in the browser console, but backend logs show Ollama is still working:</p>
+<p><strong>Cause</strong>: The frontend may have a shorter timeout than the backend (typically 60-120 seconds by default for axios/fetch).</p>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Browser console shows &quot;Network Error&quot; or &quot;Request Timeout&quot;</li>
+<li>Backend logs show &quot;Still awaiting Ollama response...&quot; heartbeat messages</li>
+<li>Backend continues processing after frontend shows error</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Use the streaming endpoint instead: <code>/api/scripts/generate/stream</code> (provides real-time progress)</li>
+<li>Increase frontend axios timeout in <code>Aura.Web/src/services/api/scriptApi.ts</code></li>
+<li>Use Server-Sent Events (SSE) for long-running operations</li>
+</ol>
+<p><strong>For developers</strong>: Consider using SSE streaming for all Ollama requests to provide real-time progress feedback and prevent frontend timeouts.</p>
+<p><strong>If You Still Hit the 20-Minute API Timeout</strong>:</p>
+<p>This timeout is very lenient. If you're hitting it, your system may be:</p>
+<ul>
+<li>Too slow for the selected model (try a smaller model)</li>
+<li>Experiencing Ollama issues (check <code>ollama logs</code>)</li>
+<li>Out of memory (check RAM usage)</li>
+</ul>
+<p>Consider using the RuleBased provider for immediate results (no LLM required).</p>
 <h2 id="platform-specific-issues">Platform-Specific Issues</h2>
 <h3 id="windows">Windows</h3>
 <h4 id="wsl-2-issues">WSL 2 Issues</h4>
@@ -808,6 +941,84 @@ docker compose config
 </code></pre>
 </li>
 </ol>
+<h2 id="complete-application-reset">Complete Application Reset</h2>
+<h3 id="desktop-app-reset-electron">Desktop App Reset (Electron)</h3>
+<p>If you're experiencing persistent issues with the desktop application (Electron version), you have several reset options:</p>
+<h4 id="option-1-ui-based-reset-recommended">Option 1: UI-Based Reset (Recommended)</h4>
+<ol>
+<li>Open Aura Video Studio</li>
+<li>Navigate to <strong>Settings</strong> → <strong>Security</strong> tab</li>
+<li>Scroll to the bottom to find <strong>&quot;Reset Application&quot;</strong> section</li>
+<li>Click <strong>&quot;Reset Application&quot;</strong> button</li>
+<li>Confirm the action in the dialog</li>
+<li>The application will clear all data and restart automatically</li>
+</ol>
+<p>This will clear:</p>
+<ul>
+<li>All settings and preferences</li>
+<li>Cached API keys and credentials</li>
+<li>Recent projects and history</li>
+<li>Downloaded models and assets</li>
+<li>All browser storage (localStorage, sessionStorage, IndexedDB, cookies)</li>
+</ul>
+<h4 id="option-2-command-line-reset">Option 2: Command Line Reset</h4>
+<p>Run the desktop app with the <code>--reset</code> flag:</p>
+<p><strong>Windows:</strong></p>
+<pre><code class="lang-powershell">.\Aura.Desktop\Aura.exe --reset
+</code></pre>
+<p><strong>macOS/Linux:</strong></p>
+<pre><code class="lang-bash">./Aura.Desktop/Aura.app/Contents/MacOS/Aura --reset
+</code></pre>
+<h4 id="option-3-deep-clean-script-development">Option 3: Deep Clean Script (Development)</h4>
+<p>For the most thorough cleanup during development:</p>
+<p><strong>Windows (PowerShell):</strong></p>
+<pre><code class="lang-powershell">cd Aura.Desktop
+.\clean-desktop.ps1
+</code></pre>
+<p>This comprehensive script will:</p>
+<ul>
+<li>Kill all running Aura processes</li>
+<li>Clean all Electron/Chromium cache</li>
+<li>Clean .NET application data</li>
+<li>Clean build artifacts</li>
+<li>Clear npm and NuGet caches</li>
+<li>Clean Windows prefetch files (requires admin)</li>
+<li>Verify cleanup completion</li>
+</ul>
+<p>After running, reinstall dependencies:</p>
+<pre><code class="lang-powershell">npm install
+dotnet restore
+</code></pre>
+<h3 id="backend-api-reset">Backend API Reset</h3>
+<p>If only the backend needs resetting:</p>
+<p><strong>Command line flag:</strong></p>
+<pre><code class="lang-bash">dotnet run --project Aura.Api -- --reset
+</code></pre>
+<p><strong>Environment variable:</strong></p>
+<pre><code class="lang-bash">export AURA_RESET=true
+dotnet run --project Aura.Api
+</code></pre>
+<p>This clears:</p>
+<ul>
+<li>Temporary files in <code>%TEMP%\Aura</code></li>
+<li>Backend logs</li>
+<li>Cached data in <code>%LOCALAPPDATA%\Aura</code></li>
+</ul>
+<h3 id="when-to-use-each-reset-option">When to Use Each Reset Option</h3>
+<ul>
+<li><strong>UI Reset</strong>: For everyday issues, corrupted settings, or fresh start</li>
+<li><strong>Command Line Reset</strong>: When the UI is inaccessible or scripting automation</li>
+<li><strong>Deep Clean Script</strong>: During development, between major builds, or when testing fresh installs</li>
+<li><strong>Backend Reset</strong>: When backend-specific data is causing issues</li>
+</ul>
+<h3 id="what-gets-preserved">What Gets Preserved</h3>
+<p>During any reset:</p>
+<ul>
+<li>✅ Source code (your development files)</li>
+<li>✅ Git history and branches</li>
+<li>✅ User documents in <code>Documents\Aura Video Studio</code> (unless using <code>-IncludeUserContent</code> flag)</li>
+<li>✅ User videos in <code>Videos\Aura Studio</code></li>
+</ul>
 <h3 id="reporting-issues">Reporting Issues</h3>
 <p>When reporting issues, include:</p>
 <ol>

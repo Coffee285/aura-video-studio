@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Backend Build and Bundling Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Backend Build and Bundling Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/BACKEND_BUILD_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="backend-build-and-bundling-guide">Backend Build and Bundling Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document explains how the Aura.Api backend is built and bundled into the Electron desktop application for production distribution.</p>
+<h2 id="build-process">Build Process</h2>
+<h3 id="1-backend-compilation">1. Backend Compilation</h3>
+<p>The backend is compiled as a self-contained .NET 8 executable using the <code>build-backend.ps1</code> script:</p>
+<pre><code class="lang-powershell">pwsh -File build-backend.ps1 -Configuration Release -OutputPath Aura.Desktop/resources/backend/win-x64
+</code></pre>
+<p>This creates:</p>
+<ul>
+<li><strong>Single-file executable</strong>: <code>Aura.Api.exe</code> (~72 MB)</li>
+<li><strong>Self-contained</strong>: Includes .NET 8 runtime (no .NET SDK required on end-user machine)</li>
+<li><strong>Compressed</strong>: Uses single-file compression to reduce size</li>
+<li><strong>Native libraries</strong>: Includes all native dependencies</li>
+</ul>
+<h3 id="2-electron-builder-bundling">2. Electron Builder Bundling</h3>
+<p>The Electron Builder configuration (<code>Aura.Desktop/package.json</code>) includes the backend in <code>extraResources</code>:</p>
+<pre><code class="lang-json">{
+  &quot;from&quot;: &quot;resources/backend&quot;,
+  &quot;to&quot;: &quot;backend&quot;,
+  &quot;filter&quot;: [&quot;**/*&quot;, &quot;!**/*.pdb&quot;, &quot;!**/*.xml&quot;]
+}
+</code></pre>
+<p>This copies the backend from <code>Aura.Desktop/resources/backend/win-x64/</code> to the installed app's <code>resources/backend/win-x64/</code> directory.</p>
+<h3 id="3-path-resolution-at-runtime">3. Path Resolution at Runtime</h3>
+<p>The <code>backend-service.js</code> detects the backend executable using the following order:</p>
+<ol>
+<li><p><strong>Production path</strong> (checked first):</p>
+<ul>
+<li><code>process.resourcesPath/backend/win-x64/Aura.Api.exe</code></li>
+</ul>
+</li>
+<li><p><strong>Development paths</strong> (fallback):</p>
+<ul>
+<li><code>dist/backend/Aura.Api.exe</code></li>
+<li><code>Aura.Api/bin/Release/net8.0/win-x64/publish/Aura.Api.exe</code></li>
+<li><code>Aura.Api/bin/Debug/net8.0/Aura.Api.exe</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="4-windows-firewall-configuration">4. Windows Firewall Configuration</h3>
+<p>The NSIS installer (<code>Aura.Desktop/build/installer.nsh</code>) automatically adds firewall rules:</p>
+<pre><code class="lang-nsis">; Private/Domain profile
+netsh advfirewall firewall add rule name=&quot;Aura Video Studio Backend&quot; 
+  dir=in action=allow program=&quot;$INSTDIR\resources\backend\win-x64\Aura.Api.exe&quot; 
+  enable=yes profile=private,domain
+
+; Public profile (optional)
+netsh advfirewall firewall add rule name=&quot;Aura Video Studio Backend (Public)&quot; 
+  dir=in action=allow program=&quot;$INSTDIR\resources\backend\win-x64\Aura.Api.exe&quot; 
+  enable=yes profile=public
+</code></pre>
+<h2 id="build-commands">Build Commands</h2>
+<h3 id="build-backend-only">Build Backend Only</h3>
+<pre><code class="lang-powershell"># From repository root
+pwsh -File build-backend.ps1
+</code></pre>
+<h3 id="build-full-electron-app">Build Full Electron App</h3>
+<pre><code class="lang-powershell"># From Aura.Desktop directory
+npm run build:electron          # Both installer and portable
+npm run build:electron:installer # NSIS installer only
+npm run build:electron:portable  # Portable exe only
+</code></pre>
+<h3 id="verify-build">Verify Build</h3>
+<pre><code class="lang-powershell"># From Aura.Desktop directory
+pwsh -File scripts/verify-build.ps1
+</code></pre>
+<h2 id="build-artifacts">Build Artifacts</h2>
+<p>After building, you'll find:</p>
+<pre><code>Aura.Desktop/dist/
+├── Aura Video Studio Setup-1.0.0.exe    # NSIS installer (~180 MB)
+├── Aura Video Studio-1.0.0-Portable.exe # Portable build (~180 MB)
+└── win-unpacked/                         # Unpacked build (for testing)
+    └── resources/
+        ├── backend/
+        │   └── win-x64/
+        │       └── Aura.Api.exe          # Backend executable (72 MB)
+        ├── frontend/                      # React app (35 MB)
+        └── ffmpeg/                        # FFmpeg binaries
+</code></pre>
+<h2 id="configuration">Configuration</h2>
+<h3 id="auraapicsproj">Aura.Api.csproj</h3>
+<p>Self-contained deployment properties:</p>
+<pre><code class="lang-xml">&lt;PublishSingleFile&gt;true&lt;/PublishSingleFile&gt;
+&lt;SelfContained&gt;true&lt;/SelfContained&gt;
+&lt;RuntimeIdentifier&gt;win-x64&lt;/RuntimeIdentifier&gt;
+&lt;PublishTrimmed&gt;false&lt;/PublishTrimmed&gt;
+&lt;IncludeNativeLibrariesForSelfExtract&gt;true&lt;/IncludeNativeLibrariesForSelfExtract&gt;
+&lt;EnableCompressionInSingleFile&gt;true&lt;/EnableCompressionInSingleFile&gt;
+</code></pre>
+<h3 id="key-benefits">Key Benefits</h3>
+<ol>
+<li><strong>No .NET SDK Required</strong>: Users don't need to install .NET 8 SDK</li>
+<li><strong>Single Executable</strong>: Backend is a single <code>.exe</code> file</li>
+<li><strong>Automatic Startup</strong>: Electron app automatically starts backend</li>
+<li><strong>Firewall Rules</strong>: Installer configures Windows Firewall</li>
+<li><strong>Offline Capable</strong>: All dependencies bundled</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="backend-not-found">Backend Not Found</h3>
+<p>If the app can't find the backend:</p>
+<ol>
+<li>Check <code>resources/backend/win-x64/Aura.Api.exe</code> exists in installation directory</li>
+<li>Verify build script was run: <code>npm run backend:build</code></li>
+<li>Check extraResources in package.json includes backend</li>
+</ol>
+<h3 id="backend-wont-start">Backend Won't Start</h3>
+<p>If backend fails to start:</p>
+<ol>
+<li>Check Windows Firewall rules: <code>netsh advfirewall firewall show rule name=&quot;Aura Video Studio Backend&quot;</code></li>
+<li>Verify port 5005 is available</li>
+<li>Check backend logs in AppData folder</li>
+</ol>
+<h3 id="build-fails">Build Fails</h3>
+<p>If build fails:</p>
+<ol>
+<li>Ensure .NET 8 SDK is installed: <code>dotnet --version</code></li>
+<li>Ensure PowerShell 7+ is installed: <code>pwsh --version</code></li>
+<li>Check for single-file publish errors (use AppContext.BaseDirectory instead of Assembly.Location)</li>
+</ol>
+<h2 id="cicd-integration">CI/CD Integration</h2>
+<p>The GitHub Actions workflow (<code>.github/workflows/build-windows-installer.yml</code>) automatically:</p>
+<ol>
+<li>Builds backend using <code>build-backend.ps1</code></li>
+<li>Builds frontend</li>
+<li>Packages everything with Electron Builder</li>
+<li>Verifies build artifacts</li>
+<li>Uploads installers as artifacts</li>
+<li>Creates GitHub releases for tagged versions</li>
+</ol>
+<h2 id="size-considerations">Size Considerations</h2>
+<ul>
+<li><strong>Backend</strong>: ~72 MB (self-contained .NET 8 runtime + app)</li>
+<li><strong>Frontend</strong>: ~35 MB (React app with assets)</li>
+<li><strong>FFmpeg</strong>: ~50 MB (video processing binaries)</li>
+<li><strong>Electron</strong>: ~150 MB (Chromium + Node.js)</li>
+<li><strong>Total Installer</strong>: ~180 MB compressed</li>
+</ul>
+<h2 id="future-improvements">Future Improvements</h2>
+<ul>
+<li>[ ] Add support for macOS and Linux builds</li>
+<li>[ ] Implement delta updates for backend</li>
+<li>[ ] Add backend version checking</li>
+<li>[ ] Support multiple backend runtime identifiers</li>
+<li>[ ] Add backend health monitoring</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/BACKEND_BUILD_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

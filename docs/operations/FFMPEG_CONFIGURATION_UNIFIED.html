@@ -94,11 +94,14 @@
 <li>Survives application restarts</li>
 </ul>
 </li>
-<li><p><strong>Environment Hint</strong> (<code>AURA_FFMPEG_PATH</code>)</p>
+<li><p><strong>Environment Hint</strong> (<code>AURA_FFMPEG_PATH</code>, <code>FFMPEG_PATH</code>, <code>FFMPEG_BINARIES_PATH</code>)</p>
 <ul>
 <li>Set by Electron based on detected FFmpeg installation</li>
 <li>Applied only if no persisted configuration exists</li>
 <li>Primary mechanism for Electron to communicate FFmpeg location to backend</li>
+<li><code>AURA_FFMPEG_PATH</code> is preferred (primary)</li>
+<li><code>FFMPEG_PATH</code> and <code>FFMPEG_BINARIES_PATH</code> are supported for backward compatibility</li>
+<li>Multiple variables are checked in priority order with deduplication</li>
 </ul>
 </li>
 <li><p><strong>Appsettings</strong> (<code>FFmpegOptions.ExecutablePath</code>)</p>
@@ -188,10 +191,16 @@ _prepareEnvironment() {
 <h3 id="startup-flow">Startup Flow</h3>
 <ol>
 <li>Electron detects FFmpeg on user's system (or uses bundled version)</li>
-<li>Electron sets <code>AURA_FFMPEG_PATH</code> environment variable</li>
-<li>Backend starts with <code>AURA_FFMPEG_PATH</code> in environment</li>
+<li>Electron sets <code>AURA_FFMPEG_PATH</code>, <code>FFMPEG_PATH</code>, and <code>FFMPEG_BINARIES_PATH</code> environment variables</li>
+<li>Backend starts with FFmpeg environment variables set</li>
 <li><code>FfmpegConfigurationService</code> loads persisted config from disk</li>
-<li>If no persisted config, applies <code>AURA_FFMPEG_PATH</code> from environment</li>
+<li>If no persisted config, applies environment variables in priority order:
+<ul>
+<li><code>AURA_FFMPEG_PATH</code> (primary)</li>
+<li><code>FFMPEG_PATH</code> (backward compatibility)</li>
+<li><code>FFMPEG_BINARIES_PATH</code> (legacy)</li>
+</ul>
+</li>
 <li>If no environment hint, applies <code>FFmpegOptions.ExecutablePath</code> from appsettings</li>
 <li><code>FfmpegLocator</code> receives effective path and uses it for validation</li>
 </ol>
