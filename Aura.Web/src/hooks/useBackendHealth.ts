@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiUrl } from '@/config/api';
 import { loggingService } from '@/services/loggingService';
+import { useConnectionStore } from '@/stores/connectionStore';
 import type { DesktopBridgeDiagnostics } from '@/types/ambient/window';
 
 export type BackendHealthStatus = 'online' | 'offline';
@@ -42,6 +43,8 @@ export interface BackendHealthSnapshot {
 }
 
 export function useBackendHealth(pollIntervalMs = 15000) {
+  const { recordSuccess, recordFailure } = useConnectionStore();
+
   const getCachedDiagnostics = () =>
     typeof window !== 'undefined'
       ? (window.aura?.runtime?.getCachedDiagnostics?.() ??
@@ -57,49 +60,58 @@ export function useBackendHealth(pollIntervalMs = 15000) {
     lastChecked: null,
   });
 
-  const checkHealth = useCallback(async (signal: AbortSignal) => {
-    try {
-      const response = await fetch(apiUrl('/api/health'), {
-        headers: {
-          'Cache-Control': 'no-cache',
-        },
-        signal,
-      });
+  const checkHealth = useCallback(
+    async (signal: AbortSignal) => {
+      try {
+        const response = await fetch(apiUrl('/api/health'), {
+          headers: {
+            'Cache-Control': 'no-cache',
+          },
+          signal,
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const diagnostics = (await response.json()) as ApiHealthResponse;
+        const desktopDiagnostics = getCachedDiagnostics();
+
+        // Update connection store with success
+        recordSuccess();
+
+        setSnapshot({
+          status: 'online',
+          diagnostics,
+          bridge: desktopDiagnostics,
+          error: null,
+          lastChecked: new Date(),
+        });
+      } catch (error) {
+        // Ignore abort errors (component unmounted or cleanup)
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
+
+        const err = error instanceof Error ? error : new Error(String(error));
+        loggingService.warn('Backend health check failed', 'useBackendHealth', 'poll', {
+          message: err.message,
+        });
+
+        // Update connection store with failure
+        recordFailure(err.message);
+
+        setSnapshot((prev) => ({
+          status: 'offline',
+          diagnostics: prev.diagnostics,
+          bridge: prev.bridge,
+          error: err.message,
+          lastChecked: new Date(),
+        }));
       }
-
-      const diagnostics = (await response.json()) as ApiHealthResponse;
-      const desktopDiagnostics = getCachedDiagnostics();
-
-      setSnapshot({
-        status: 'online',
-        diagnostics,
-        bridge: desktopDiagnostics,
-        error: null,
-        lastChecked: new Date(),
-      });
-    } catch (error) {
-      // Ignore abort errors (component unmounted or cleanup)
-      if (error instanceof Error && error.name === 'AbortError') {
-        return;
-      }
-
-      const err = error instanceof Error ? error : new Error(String(error));
-      loggingService.warn('Backend health check failed', 'useBackendHealth', 'poll', {
-        message: err.message,
-      });
-
-      setSnapshot((prev) => ({
-        status: 'offline',
-        diagnostics: prev.diagnostics,
-        bridge: prev.bridge,
-        error: err.message,
-        lastChecked: new Date(),
-      }));
-    }
-  }, []);
+    },
+    [recordSuccess, recordFailure]
+  );
 
   useEffect(() => {
     let isMounted = true;

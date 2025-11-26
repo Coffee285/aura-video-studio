@@ -4,10 +4,12 @@ import {
   PresenceBlockedRegular,
   PresenceUnknownRegular,
   ArrowClockwise16Regular,
+  Warning16Regular,
 } from '@fluentui/react-icons';
 import { useMemo } from 'react';
 import { env } from '@/config/env';
 import { useBackendHealth } from '@/hooks/useBackendHealth';
+import { useActionsDisabled } from '@/stores/connectionStore';
 
 const useStyles = makeStyles({
   container: {
@@ -28,6 +30,11 @@ const useStyles = makeStyles({
   meta: {
     fontSize: tokens.fontSizeBase100,
     color: tokens.colorNeutralForeground3,
+  },
+  actionsDisabledWarning: {
+    fontSize: tokens.fontSizeBase100,
+    color: tokens.colorPaletteYellowForeground1,
+    fontWeight: tokens.fontWeightSemibold,
   },
 });
 
@@ -52,18 +59,26 @@ const statusCopy = {
 export function BackendStatusIndicator() {
   const styles = useStyles();
   const { status, diagnostics, bridge, error, lastChecked, refresh } = useBackendHealth();
+  const actionsDisabled = useActionsDisabled();
   const statusKey = status ?? 'unknown';
   const copy = statusCopy[statusKey] ?? statusCopy.unknown;
   const Icon = copy.icon;
   const resolvedBaseUrl = bridge?.backend?.baseUrl ?? env.apiBaseUrl;
   const databaseInfo = diagnostics?.database;
   const migrationInfo = diagnostics?.database?.migration;
-  const serverTimestamp = diagnostics ? new Date(diagnostics.timestamp) : null;
 
   const tooltip = useMemo(() => {
+    // Create serverTimestamp inside useMemo to avoid recreating Date on every render
+    const serverTimestamp = diagnostics ? new Date(diagnostics.timestamp) : null;
+
     return (
       <div className={styles.tooltipContent}>
         <span className={styles.label}>{copy.label}</span>
+        {actionsDisabled && (
+          <span className={styles.actionsDisabledWarning}>
+            <Warning16Regular aria-hidden="true" /> Actions disabled - connection issues detected
+          </span>
+        )}
         {resolvedBaseUrl && <span className={styles.meta}>API Base: {resolvedBaseUrl}</span>}
         {bridge?.backend?.baseUrl && (
           <span className={styles.meta}>Desktop Bridge: {bridge.backend.baseUrl}</span>
@@ -103,6 +118,7 @@ export function BackendStatusIndicator() {
       </div>
     );
   }, [
+    actionsDisabled,
     bridge,
     copy.label,
     databaseInfo,
@@ -111,7 +127,7 @@ export function BackendStatusIndicator() {
     lastChecked,
     migrationInfo,
     resolvedBaseUrl,
-    serverTimestamp,
+    styles.actionsDisabledWarning,
     styles.label,
     styles.meta,
     styles.tooltipContent,
@@ -119,8 +135,14 @@ export function BackendStatusIndicator() {
 
   return (
     <Tooltip content={tooltip} relationship="label">
-      <div className={styles.container}>
-        <Badge appearance="tint" icon={<Icon />} size="small" shape="rounded" color={copy.color}>
+      <div className={styles.container} role="status" aria-live="polite">
+        <Badge
+          appearance="tint"
+          icon={<Icon aria-hidden="true" />}
+          size="small"
+          shape="rounded"
+          color={copy.color}
+        >
           {copy.label}
         </Badge>
         <Button

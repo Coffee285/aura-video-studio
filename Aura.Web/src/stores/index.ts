@@ -9,6 +9,9 @@ export type { AppState, AppSettings, Notification } from './appStore';
 export { useAuthStore } from './authStore';
 export type { AuthState } from './authStore';
 
+export { useConnectionStore, useActionsDisabled, useConnectionStatus } from './connectionStore';
+export type { ConnectionState, ConnectionStatus } from './connectionStore';
+
 export { useProjectsStore } from './projectsStore';
 export type { ProjectsState } from './projectsStore';
 

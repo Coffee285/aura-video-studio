@@ -145,7 +145,14 @@ export function FailureModal({ open, onClose, failure, jobId: _jobId }: FailureM
     <Dialog open={open} onOpenChange={(_, data) => data.open || onClose()}>
       <DialogSurface style={{ maxWidth: '600px' }}>
         <DialogTitle
-          action={<Button appearance="subtle" icon={<Dismiss24Regular />} onClick={onClose} />}
+          action={
+            <Button
+              appearance="subtle"
+              icon={<Dismiss24Regular />}
+              onClick={onClose}
+              aria-label="Close dialog"
+            />
+          }
         >
           Generation Failed
         </DialogTitle>

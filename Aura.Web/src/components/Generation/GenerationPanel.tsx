@@ -279,7 +279,12 @@ export function GenerationPanel({ jobId, onClose }: GenerationPanelProps) {
     <div className={styles.panel}>
       <div className={styles.header}>
         <Title2>Video Generation</Title2>
-        <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={onClose} />
+        <Button
+          appearance="subtle"
+          icon={<Dismiss24Regular />}
+          onClick={onClose}
+          aria-label="Close panel"
+        />
       </div>
 
       <div className={styles.content}>

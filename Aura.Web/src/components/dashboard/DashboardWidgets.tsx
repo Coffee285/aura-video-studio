@@ -139,7 +139,11 @@ export function UsageChart({ data, onExport }: UsageChartProps) {
         <Title3>API Usage</Title3>
         <Menu>
           <MenuTrigger disableButtonEnhancement>
-            <Button appearance="transparent" icon={<MoreHorizontal24Regular />} />
+            <Button
+              appearance="transparent"
+              icon={<MoreHorizontal24Regular />}
+              aria-label="More options"
+            />
           </MenuTrigger>
           <MenuPopover>
             <MenuList>

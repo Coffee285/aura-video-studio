@@ -12,8 +12,10 @@ import axios, {
 } from 'axios';
 import { env } from '../../config/env';
 import { timeoutConfig } from '../../config/timeouts';
+import { useConnectionStore } from '../../stores/connectionStore';
 import { createDedupeKey } from '../../utils/dedupeKey';
 import { requestDeduplicator } from '../../utils/requestDeduplicator';
+import { errorReportingService } from '../errorReportingService';
 import { loggingService } from '../loggingService';
 import { networkResilienceService } from '../networkResilience';
 import {
@@ -401,6 +403,9 @@ apiClient.interceptors.response.use(
       circuitBreaker.recordSuccess();
     }
 
+    // Record success in connection store - backend is reachable
+    useConnectionStore.getState().recordSuccess();
+
     // Capture correlation ID from response header
     const correlationId = response.headers['x-correlation-id'];
     if (correlationId) {
@@ -485,10 +490,31 @@ apiClient.interceptors.response.use(
         }
       }
 
-      // Handle 401 - clear auth and potentially redirect
+      // Handle 401 - clear auth and redirect to login
       if (status === 401) {
         localStorage.removeItem('auth_token');
-        // Auth refresh handled by interceptor
+        // Show notification and redirect to login
+        errorReportingService.warning(
+          'Session Expired',
+          'Your session has expired. Please sign in again.',
+          { duration: 5000 }
+        );
+        // Redirect to login page (using window.location to handle outside React Router context)
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login';
+        }
+      }
+
+      // Handle 500+ server errors - show user-friendly toast notification
+      if (status >= 500) {
+        errorReportingService.error(
+          'Server Error',
+          'Something went wrong on our end. Please try again later.',
+          new Error(`HTTP ${status}: ${error.response.statusText}`),
+          {
+            userAction: `Request to ${error.config?.url}`,
+          }
+        );
       }
 
       // Handle 429 - rate limit
@@ -501,7 +527,8 @@ apiClient.interceptors.response.use(
         });
       }
     } else if (error.request) {
-      // Request made but no response received
+      // Request made but no response received - record failure in connection store
+      useConnectionStore.getState().recordFailure('Network connection lost');
       userMessage = 'Network connection lost - Retrying...';
       errorCode = 'NETWORK_ERROR';
       technicalDetails = {
@@ -518,7 +545,8 @@ apiClient.interceptors.response.use(
         }
       }
     } else if ((error as ExtendedError).isCircuitBreakerError) {
-      // Circuit breaker blocked the request
+      // Circuit breaker blocked the request - record failure in connection store
+      useConnectionStore.getState().recordFailure('Service temporarily unavailable');
       userMessage = 'The service is temporarily unavailable. Please try again later.';
       errorCode = 'CIRCUIT_BREAKER_OPEN';
       technicalDetails = {
