@@ -524,6 +524,53 @@
 <li>May not require immediate action</li>
 <li>Document for future iterations</li>
 </ul>
+<h3 id="structured-output-instead-of-translation-ollamalocal-llms">Structured Output Instead of Translation (Ollama/Local LLMs)</h3>
+<p><strong>Problem:</strong> Translation returns JSON-like output with metadata fields (e.g., <code>{&quot;title&quot;: &quot;...&quot;, &quot;description&quot;: &quot;...&quot;}</code>) instead of clean translated text.</p>
+<p><strong>Cause:</strong> Local LLM (Ollama) is interpreting the translation prompt incorrectly, generating structured documentation or tutorial content rather than pure translation output.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Update to Latest Version</strong></p>
+<ul>
+<li>The latest version includes improved prompt engineering that provides stronger output constraints</li>
+<li>Prompts now include explicit instructions to avoid JSON/structured output</li>
+</ul>
+</li>
+<li><p><strong>Try a Different Ollama Model</strong></p>
+<ul>
+<li>Some models (e.g., llama3.1, mistral) follow translation instructions more reliably</li>
+<li>Models with larger context windows tend to perform better</li>
+<li>Check available models with: <code>ollama list</code></li>
+<li>Install a recommended model with: <code>ollama pull llama3.1:8b</code></li>
+</ul>
+</li>
+<li><p><strong>Adjust Model Temperature</strong></p>
+<ul>
+<li>Lower temperature values (0.3-0.5) produce more consistent output</li>
+<li>Higher temperatures may cause the model to &quot;improvise&quot; with structured formats</li>
+<li>Configure in your LLM settings or provider configuration</li>
+</ul>
+</li>
+<li><p><strong>Verify Model Context Length</strong></p>
+<ul>
+<li>Ensure the model has sufficient context length for your translation</li>
+<li>Long source texts may cause truncation issues</li>
+<li>Consider breaking long texts into smaller segments</li>
+</ul>
+</li>
+<li><p><strong>Automatic Recovery</strong></p>
+<ul>
+<li>The system now automatically attempts to extract translation from JSON responses</li>
+<li>If a <code>translation</code>, <code>translatedText</code>, <code>text</code>, or <code>content</code> field is detected, it will be extracted</li>
+<li>Check logs for warnings about &quot;structured JSON response&quot; if issues persist</li>
+</ul>
+</li>
+</ol>
+<p><strong>Technical Details:</strong></p>
+<ul>
+<li>The translation service includes robust response parsing that handles malformed output</li>
+<li>JSON artifacts are automatically stripped when detected</li>
+<li>Provider-specific prompt reinforcement is applied for local models</li>
+</ul>
 <h2 id="performance-expectations">Performance Expectations</h2>
 <ul>
 <li><strong>Single translation</strong>: 5-15 seconds (short text) to 30-45 seconds (10-min script)</li>
