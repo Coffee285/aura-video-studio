@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Context Menu Development Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Context Menu Development Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/CONTEXT_MENU_DEVELOPMENT.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="context-menu-development-guide">Context Menu Development Guide</h1>
+
+<h2 id="project-structure">Project Structure</h2>
+<pre><code>Aura.Desktop/electron/
+  context-menu-types.ts         # TypeScript type definitions
+  context-menu-builder.js       # Menu builder service
+  ipc-handlers/
+    context-menu-handler.js     # IPC handler for context menus
+  preload.js                    # Electron preload script
+
+Aura.Web/src/
+  hooks/
+    useContextMenu.ts           # React hook for context menus
+    useJobQueueContextMenu.ts   # Specialized hook for job queue
+    useMediaAssetContextMenu.ts # Specialized hook for media assets
+    useAIScriptContextMenu.ts   # Specialized hook for AI scripts
+    useAIProviderContextMenu.ts # Specialized hook for AI providers
+    usePreviewContextMenu.ts    # Specialized hook for preview window
+  types/
+    electron-context-menu.ts    # TypeScript definitions for frontend
+  components/                   # Components using context menus
+</code></pre>
+<h2 id="development-workflow">Development Workflow</h2>
+<h3 id="1-planning">1. Planning</h3>
+<p>Before implementing a new context menu:</p>
+<ul>
+<li>Identify the component that needs a context menu</li>
+<li>Define what actions are needed</li>
+<li>Design the menu structure (items, separators, submenus)</li>
+<li>Consider keyboard shortcuts (avoid conflicts)</li>
+<li>Plan conditional states (enabled/disabled, checkboxes)</li>
+</ul>
+<h3 id="2-implementation-order">2. Implementation Order</h3>
+<p>Follow this order for implementing new context menus:</p>
+<ol>
+<li>Add type definitions (<code>context-menu-types.ts</code>)</li>
+<li>Add menu builder method (<code>context-menu-builder.js</code>)</li>
+<li>Update IPC handler action map (<code>context-menu-handler.js</code>)</li>
+<li>Update frontend types (<code>electron-context-menu.ts</code>)</li>
+<li>Create or update React hook (<code>useContextMenu.ts</code>)</li>
+<li>Integrate into component</li>
+<li>Add unit tests</li>
+<li>Add integration tests</li>
+<li>Update documentation</li>
+</ol>
+<h3 id="3-testing-strategy">3. Testing Strategy</h3>
+<h4 id="unit-tests">Unit Tests</h4>
+<p>Test the menu builder logic in isolation:</p>
+<pre><code class="lang-javascript">// test-context-menu-builder.test.js
+const { ContextMenuBuilder } = require('../electron/context-menu-builder');
+
+describe('ContextMenuBuilder', () =&gt; {
+  let builder;
+  
+  beforeEach(() =&gt; {
+    builder = new ContextMenuBuilder(mockLogger);
+  });
+
+  it('should build menu with correct items', () =&gt; {
+    const menu = builder.build('my-menu', data, callbacks);
+    expect(menu.items).toHaveLength(5);
+  });
+});
+</code></pre>
+<h4 id="integration-tests">Integration Tests</h4>
+<p>Test React hook integration:</p>
+<pre><code class="lang-tsx">// context-menu-integration.test.tsx
+import { render, fireEvent } from '@testing-library/react';
+import { useContextMenu } from '../hooks/useContextMenu';
+
+describe('Context Menu Integration', () =&gt; {
+  it('should call showContextMenu on right-click', () =&gt; {
+    const { getByTestId } = render(&lt;Component /&gt;);
+    fireEvent.contextMenu(getByTestId('element'));
+    expect(mockShowContextMenu).toHaveBeenCalled();
+  });
+});
+</code></pre>
+<h4 id="e2e-tests">E2E Tests</h4>
+<p>Test complete user workflows:</p>
+<pre><code class="lang-javascript">// context-menus.spec.js
+describe('Context Menus E2E', () =&gt; {
+  it('should show context menu on right-click', async () =&gt; {
+    await element.rightClick();
+    // Verify menu appears and actions work
+  });
+});
+</code></pre>
+<h3 id="4-code-review-checklist">4. Code Review Checklist</h3>
+<p>Before submitting a PR:</p>
+<ul>
+<li>[ ] Type definitions are complete and accurate</li>
+<li>[ ] Menu items have appropriate labels</li>
+<li>[ ] Keyboard shortcuts don't conflict with existing ones</li>
+<li>[ ] Disabled states are handled correctly</li>
+<li>[ ] Callbacks are properly registered in action map</li>
+<li>[ ] Error handling is in place</li>
+<li>[ ] Console logs are removed or set to debug level</li>
+<li>[ ] Documentation is updated</li>
+<li>[ ] Unit tests pass</li>
+<li>[ ] Integration tests pass</li>
+</ul>
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="pattern-1-simple-menu">Pattern 1: Simple Menu</h3>
+<p>Use when you have a few actions without complex logic:</p>
+<pre><code class="lang-tsx">function SimpleComponent() {
+  const showMenu = useContextMenu('simple-menu');
+  
+  useContextMenuAction('simple-menu', 'onAction', handleAction);
+
+  return (
+    &lt;div onContextMenu={(e) =&gt; showMenu(e, { id: 'item-1' })}&gt;
+      Content
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="pattern-2-stateful-menu">Pattern 2: Stateful Menu</h3>
+<p>Use when menu items depend on component state:</p>
+<pre><code class="lang-tsx">function StatefulComponent({ item }) {
+  const showMenu = useContextMenu('stateful-menu');
+  
+  const handleContextMenu = useCallback((e) =&gt; {
+    showMenu(e, {
+      ...item,
+      canDelete: canDeleteItem(item),
+      isSelected: selectedItems.includes(item.id),
+      clipboardHasData: clipboard.hasData(),
+    });
+  }, [item, showMenu, selectedItems, clipboard]);
+
+  return &lt;div onContextMenu={handleContextMenu}&gt;Content&lt;/div&gt;;
+}
+</code></pre>
+<h3 id="pattern-3-nested-context-menus">Pattern 3: Nested Context Menus</h3>
+<p>Use when different areas need different menus:</p>
+<pre><code class="lang-tsx">function ParentComponent() {
+  const showParentMenu = useContextMenu('parent-menu');
+  const showChildMenu = useContextMenu('child-menu');
+
+  return (
+    &lt;div onContextMenu={(e) =&gt; showParentMenu(e, parentData)}&gt;
+      &lt;div 
+        onContextMenu={(e) =&gt; {
+          e.stopPropagation(); // Prevent parent menu
+          showChildMenu(e, childData);
+        }}
+      &gt;
+        Child content (has its own menu)
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="pattern-4-specialized-hook">Pattern 4: Specialized Hook</h3>
+<p>Create specialized hooks for frequently used menus:</p>
+<pre><code class="lang-tsx">// useMyFeatureContextMenu.ts
+export function useMyFeatureContextMenu(callbacks: MyFeatureCallbacks) {
+  const showContextMenu = useContextMenu&lt;MyFeatureMenuData&gt;('my-feature');
+
+  useContextMenuAction('my-feature', 'onEdit', callbacks.onEdit);
+  useContextMenuAction('my-feature', 'onDelete', callbacks.onDelete);
+  useContextMenuAction('my-feature', 'onDuplicate', callbacks.onDuplicate);
+
+  return useCallback(
+    (e: React.MouseEvent, item: MyFeatureItem) =&gt; {
+      showContextMenu(e, {
+        itemId: item.id,
+        canEdit: item.editable,
+        canDelete: !item.locked,
+      });
+    },
+    [showContextMenu]
+  );
+}
+</code></pre>
+<h3 id="pattern-5-confirmation-dialog">Pattern 5: Confirmation Dialog</h3>
+<p>For destructive actions, show a confirmation:</p>
+<pre><code class="lang-tsx">useContextMenuAction('my-menu', 'onDelete', useCallback(
+  async (data) =&gt; {
+    const confirmed = await showConfirmDialog({
+      title: 'Delete Item',
+      message: 'Are you sure you want to delete this item?',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+    });
+    
+    if (confirmed) {
+      deleteItem(data.itemId);
+    }
+  },
+  [showConfirmDialog, deleteItem]
+));
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="do">DO:</h3>
+<ul>
+<li>Use semantic menu item labels (action-oriented)</li>
+<li>Group related actions with separators</li>
+<li>Provide keyboard shortcuts for common actions</li>
+<li>Disable items that aren't applicable (don't hide them)</li>
+<li>Use checkboxes for toggleable states</li>
+<li>Show confirmation dialogs for destructive actions</li>
+<li>Log important actions for debugging (debug level)</li>
+<li>Memoize callbacks to prevent unnecessary re-renders</li>
+<li>Clean up action listeners when component unmounts</li>
+</ul>
+<h3 id="dont">DON'T:</h3>
+<ul>
+<li>Put more than 10 items in a menu</li>
+<li>Use technical jargon in labels</li>
+<li>Create deeply nested submenus (max 2 levels)</li>
+<li>Forget to handle errors in callbacks</li>
+<li>Block the UI thread in menu actions</li>
+<li>Expose sensitive data in menu labels</li>
+<li>Forget to clean up event listeners</li>
+<li>Use async operations in menu item click handlers without proper error handling</li>
+</ul>
+<h2 id="debugging">Debugging</h2>
+<h3 id="enable-debug-logging">Enable Debug Logging</h3>
+<p>In the context menu builder, set log level:</p>
+<pre><code class="lang-javascript">const logger = createLogger({ level: 'debug' });
+const builder = new ContextMenuBuilder(logger);
+</code></pre>
+<h3 id="inspect-ipc-messages">Inspect IPC Messages</h3>
+<p>Add logging in preload.js to debug IPC communication:</p>
+<pre><code class="lang-javascript">contextMenu: {
+  show: (type, data) =&gt; {
+    console.log('[Debug] Context menu show:', type, data);
+    return ipcRenderer.invoke('context-menu:show', type, data);
+  }
+}
+</code></pre>
+<h3 id="test-menu-building">Test Menu Building</h3>
+<p>Run unit tests for the context menu builder:</p>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm run test:context-menu
+</code></pre>
+<h3 id="simulate-user-actions">Simulate User Actions</h3>
+<p>In tests, simulate right-clicks:</p>
+<pre><code class="lang-javascript">// Using Testing Library
+fireEvent.contextMenu(element);
+
+// Using Playwright
+await page.click('[data-testid=&quot;clip&quot;]', { button: 'right' });
+</code></pre>
+<h3 id="debug-action-callbacks">Debug Action Callbacks</h3>
+<p>Add logging to verify callbacks are firing:</p>
+<pre><code class="lang-tsx">useContextMenuAction('my-menu', 'onAction', (data) =&gt; {
+  console.log('[Debug] Action triggered:', data);
+  // ... actual handler
+});
+</code></pre>
+<h2 id="performance-optimization">Performance Optimization</h2>
+<h3 id="lazy-loading">Lazy Loading</h3>
+<p>Menus are only built when shown, not on component mount. This is the default behavior - no extra work needed.</p>
+<h3 id="memoization">Memoization</h3>
+<p>Use <code>React.useCallback</code> for menu handlers:</p>
+<pre><code class="lang-tsx">// Good - memoized, won't cause re-renders
+const handleContextMenu = useCallback((e) =&gt; {
+  showMenu(e, data);
+}, [showMenu, data]);
+
+// Bad - new function on every render
+const handleContextMenu = (e) =&gt; showMenu(e, data);
+</code></pre>
+<h3 id="avoid-heavy-computation">Avoid Heavy Computation</h3>
+<p>Don't compute expensive data in the context menu handler:</p>
+<pre><code class="lang-tsx">// Bad - computes on every right-click
+const handleContextMenu = (e) =&gt; {
+  showMenu(e, {
+    ...data,
+    statistics: computeExpensiveStatistics(), // Slow!
+  });
+};
+
+// Good - use pre-computed or cached data
+const statistics = useMemo(() =&gt; computeExpensiveStatistics(), [deps]);
+const handleContextMenu = (e) =&gt; {
+  showMenu(e, { ...data, statistics });
+};
+</code></pre>
+<h3 id="debouncing">Debouncing</h3>
+<p>For frequently updating menus:</p>
+<pre><code class="lang-tsx">const debouncedUpdate = useMemo(
+  () =&gt; debounce(updateMenuData, 100),
+  [updateMenuData]
+);
+
+useEffect(() =&gt; {
+  debouncedUpdate(newData);
+  return () =&gt; debouncedUpdate.cancel();
+}, [newData, debouncedUpdate]);
+</code></pre>
+<h2 id="troubleshooting-guide">Troubleshooting Guide</h2>
+<h3 id="problem-menu-appears-in-wrong-location">Problem: Menu appears in wrong location</h3>
+<p><strong>Cause:</strong> Event coordinates not passed correctly</p>
+<p><strong>Solution:</strong> Ensure you're passing the MouseEvent to showContextMenu:</p>
+<pre><code class="lang-tsx">// Good
+onContextMenu={(e) =&gt; showMenu(e, data)}
+
+// Bad - e is undefined
+onContextMenu={() =&gt; showMenu(undefined, data)}
+</code></pre>
+<h3 id="problem-menu-items-are-all-disabled">Problem: Menu items are all disabled</h3>
+<p><strong>Cause:</strong> Data not being passed correctly to builder</p>
+<p><strong>Solution:</strong> Verify data properties in the builder:</p>
+<pre><code class="lang-javascript">buildMyMenu(data, callbacks) {
+  console.log('Building menu with data:', data);
+  // Check data properties
+}
+</code></pre>
+<h3 id="problem-actions-not-triggering">Problem: Actions not triggering</h3>
+<p><strong>Cause:</strong> Action type mismatch between handler and hook</p>
+<p><strong>Solution:</strong> Verify action types match exactly:</p>
+<pre><code class="lang-javascript">// In context-menu-handler.js
+const ACTION_MAP = {
+  'my-menu': ['onAction', 'onOtherAction'],
+};
+
+// In component - must match exactly
+useContextMenuAction('my-menu', 'onAction', handler); // ✓
+useContextMenuAction('my-menu', 'on-action', handler); // ✗ Wrong
+</code></pre>
+<h3 id="problem-memory-leak-warning">Problem: Memory leak warning</h3>
+<p><strong>Cause:</strong> Action listeners not cleaned up</p>
+<p><strong>Solution:</strong> The <code>useContextMenuAction</code> hook automatically cleans up on unmount. If you see warnings, ensure you're not conditionally rendering hooks:</p>
+<pre><code class="lang-tsx">// Bad - conditional hook
+if (someCondition) {
+  useContextMenuAction('menu', 'action', handler);
+}
+
+// Good - always call, conditionally handle
+useContextMenuAction('menu', 'action', (data) =&gt; {
+  if (someCondition) {
+    handler(data);
+  }
+});
+</code></pre>
+<h3 id="problem-multiple-menus-appear">Problem: Multiple menus appear</h3>
+<p><strong>Cause:</strong> Event bubbling to parent elements</p>
+<p><strong>Solution:</strong> Use <code>stopPropagation()</code>:</p>
+<pre><code class="lang-tsx">&lt;div onContextMenu={(e) =&gt; {
+  e.stopPropagation();
+  showChildMenu(e, data);
+}}&gt;
+</code></pre>
+<h2 id="release-checklist">Release Checklist</h2>
+<p>Before releasing context menu features:</p>
+<ul>
+<li>[ ] All unit tests pass</li>
+<li>[ ] All integration tests pass</li>
+<li>[ ] All E2E tests pass</li>
+<li>[ ] Manual testing on Windows completed</li>
+<li>[ ] Manual testing on macOS completed (if applicable)</li>
+<li>[ ] Manual testing on Linux completed (if applicable)</li>
+<li>[ ] Documentation is up to date</li>
+<li>[ ] Keyboard shortcuts documented</li>
+<li>[ ] Accessibility tested (keyboard navigation)</li>
+<li>[ ] Performance tested (menu build time &lt; 50ms)</li>
+<li>[ ] Error handling tested</li>
+<li>[ ] Logging is appropriate (not too verbose)</li>
+<li>[ ] Security review completed (file paths, API keys)</li>
+<li>[ ] Code review approved</li>
+</ul>
+<h2 id="contributing">Contributing</h2>
+<p>When adding new context menus:</p>
+<ol>
+<li>Follow existing naming conventions</li>
+<li>Add comprehensive tests</li>
+<li>Update documentation</li>
+<li>Consider accessibility</li>
+<li>Test on all platforms</li>
+<li>Request code review</li>
+</ol>
+<p>See <a href="/CONTRIBUTING.md">CONTRIBUTING.md</a> for general contribution guidelines.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/CONTEXT_MENU_DEVELOPMENT.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
