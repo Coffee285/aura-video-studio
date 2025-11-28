@@ -71,7 +71,7 @@ const SaveProjectDialog: FC<SaveProjectDialogProps> = ({
         <Toast>
           <ToastTitle>Project name is required</ToastTitle>
         </Toast>,
-        { intent: 'error' }
+        { intent: 'error', timeout: 5000 }
       );
       return;
     }
@@ -124,7 +124,7 @@ const SaveProjectDialog: FC<SaveProjectDialogProps> = ({
         <Toast>
           <ToastTitle>Project saved successfully</ToastTitle>
         </Toast>,
-        { intent: 'success' }
+        { intent: 'success', timeout: 5000 }
       );
 
       if (onSaveSuccess) {
@@ -138,7 +138,7 @@ const SaveProjectDialog: FC<SaveProjectDialogProps> = ({
         <Toast>
           <ToastTitle>Failed to save project</ToastTitle>
         </Toast>,
-        { intent: 'error' }
+        { intent: 'error', timeout: 5000 }
       );
     } finally {
       setIsSaving(false);

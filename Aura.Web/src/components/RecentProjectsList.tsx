@@ -58,7 +58,7 @@ const RecentProjectsList: FC<RecentProjectsListProps> = ({ onOpenProject, maxIte
         <Toast>
           <ToastTitle>Failed to load recent projects</ToastTitle>
         </Toast>,
-        { intent: 'error' }
+        { intent: 'error', timeout: 5000 }
       );
     } finally {
       setIsLoading(false);
@@ -89,7 +89,7 @@ const RecentProjectsList: FC<RecentProjectsListProps> = ({ onOpenProject, maxIte
           <Toast>
             <ToastTitle>Project duplicated successfully</ToastTitle>
           </Toast>,
-          { intent: 'success' }
+          { intent: 'success', timeout: 5000 }
         );
         loadProjects();
       } catch (error) {
@@ -98,7 +98,7 @@ const RecentProjectsList: FC<RecentProjectsListProps> = ({ onOpenProject, maxIte
           <Toast>
             <ToastTitle>Failed to duplicate project</ToastTitle>
           </Toast>,
-          { intent: 'error' }
+          { intent: 'error', timeout: 5000 }
         );
       } finally {
         setActionInProgress(null);
@@ -117,7 +117,7 @@ const RecentProjectsList: FC<RecentProjectsListProps> = ({ onOpenProject, maxIte
           <Toast>
             <ToastTitle>Project exported successfully</ToastTitle>
           </Toast>,
-          { intent: 'success' }
+          { intent: 'success', timeout: 5000 }
         );
       } catch (error) {
         console.error('Failed to export project:', error);
@@ -125,7 +125,7 @@ const RecentProjectsList: FC<RecentProjectsListProps> = ({ onOpenProject, maxIte
           <Toast>
             <ToastTitle>Failed to export project</ToastTitle>
           </Toast>,
-          { intent: 'error' }
+          { intent: 'error', timeout: 5000 }
         );
       } finally {
         setActionInProgress(null);
@@ -147,7 +147,7 @@ const RecentProjectsList: FC<RecentProjectsListProps> = ({ onOpenProject, maxIte
           <Toast>
             <ToastTitle>Project deleted successfully</ToastTitle>
           </Toast>,
-          { intent: 'success' }
+          { intent: 'success', timeout: 5000 }
         );
         loadProjects();
       } catch (error) {
@@ -156,7 +156,7 @@ const RecentProjectsList: FC<RecentProjectsListProps> = ({ onOpenProject, maxIte
           <Toast>
             <ToastTitle>Failed to delete project</ToastTitle>
           </Toast>,
-          { intent: 'error' }
+          { intent: 'error', timeout: 5000 }
         );
       } finally {
         setActionInProgress(null);
