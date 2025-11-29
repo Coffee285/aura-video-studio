@@ -632,6 +632,95 @@ POST /api/provider-profiles/keys
 </ul>
 <p><strong>Get API Key</strong>: <a href="https://www.pexels.com/api/">https://www.pexels.com/api/</a></p>
 <p><strong>Licensing</strong>: Pexels License - Free for commercial use, attribution appreciated but not required</p>
+<h5 id="intelligent-scene-matching">Intelligent Scene Matching</h5>
+<p>When using Pexels, Aura Video Studio can leverage intelligent scene matching to find more contextually relevant images:</p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Images&quot;: {
+      &quot;Pexels&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;,
+        &quot;Matching&quot;: {
+          &quot;EnableSemanticMatching&quot;: true,
+          &quot;MinimumRelevanceScore&quot;: 60.0,
+          &quot;MaxCandidatesPerScene&quot;: 8,
+          &quot;UseOrientationFiltering&quot;: true,
+          &quot;FallbackToBasicSearch&quot;: true,
+          &quot;MaxKeywordsInQuery&quot;: 5
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Configuration Options</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EnableSemanticMatching</code></td>
+<td><code>true</code></td>
+<td>Enable keyword extraction and intelligent query building</td>
+</tr>
+<tr>
+<td><code>MinimumRelevanceScore</code></td>
+<td><code>60.0</code></td>
+<td>Minimum score (0-100) for image inclusion</td>
+</tr>
+<tr>
+<td><code>MaxCandidatesPerScene</code></td>
+<td><code>8</code></td>
+<td>Number of candidates to fetch per scene</td>
+</tr>
+<tr>
+<td><code>UseOrientationFiltering</code></td>
+<td><code>true</code></td>
+<td>Apply Pexels orientation filter (16:9 → landscape, 9:16 → portrait)</td>
+</tr>
+<tr>
+<td><code>FallbackToBasicSearch</code></td>
+<td><code>true</code></td>
+<td>Fall back to basic search if semantic search returns no results</td>
+</tr>
+<tr>
+<td><code>MaxKeywordsInQuery</code></td>
+<td><code>5</code></td>
+<td>Maximum keywords to include in search query</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How It Works</strong>:</p>
+<ol>
+<li><strong>Keyword Extraction</strong>: Analyzes scene heading and narration to extract relevant visual keywords</li>
+<li><strong>Stop Word Filtering</strong>: Removes common words (the, a, and, etc.) that don't improve search quality</li>
+<li><strong>Visual Term Boosting</strong>: Prioritizes visually-descriptive terms like &quot;landscape&quot;, &quot;modern&quot;, &quot;technology&quot;</li>
+<li><strong>Query Building</strong>: Combines keywords with style and context for optimized Pexels queries</li>
+<li><strong>Orientation Filtering</strong>: Maps video aspect ratio to Pexels orientation (16:9 → landscape, 9:16 → portrait)</li>
+<li><strong>Relevance Scoring</strong>: Scores each candidate image for keyword matches and context alignment</li>
+<li><strong>Threshold Filtering</strong>: Returns only images that meet the minimum relevance score</li>
+</ol>
+<p><strong>Example</strong>:</p>
+<pre><code>Scene: &quot;Exploring the future of artificial intelligence in healthcare&quot;
+
+Without intelligent matching:
+- Search: &quot;artificial intelligence&quot;
+- Returns: Generic tech images
+
+With intelligent matching:
+- Extracted keywords: healthcare, technology, artificial, intelligence, future
+- Built query: &quot;healthcare technology artificial intelligence professional&quot;
+- Orientation: landscape (for 16:9 video)
+- Returns: Contextually relevant healthcare + technology images
+- Scoring: Images with medical/tech elements rank higher
+</code></pre>
+<p><strong>Performance</strong>: Adds ~10-20ms overhead per scene for keyword extraction and scoring.</p>
+<p><strong>Backward Compatibility</strong>: Existing configurations without the <code>Matching</code> section continue to work with default values.</p>
 <h4 id="unsplash-images-only">Unsplash (Images Only)</h4>
 <p><strong>Location</strong>: <code>Aura.Providers/Images/EnhancedUnsplashProvider.cs</code></p>
 <p><strong>Configuration</strong>:</p>
