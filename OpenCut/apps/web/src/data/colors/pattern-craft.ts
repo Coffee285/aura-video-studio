@@ -25,6 +25,6 @@ export const patternCraftGradients: string[] = [
   "linear-gradient(135deg, #a6c0fe 0%, #f68084 100%)",
   "linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)",
   "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)",
-  "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+  "linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%)",
   "linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%)",
 ];
