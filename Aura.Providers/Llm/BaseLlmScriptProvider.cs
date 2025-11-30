@@ -375,41 +375,21 @@ public abstract class BaseLlmScriptProvider : IScriptLlmProvider
     }
 
     /// <summary>
-    /// Check if a line is metadata/formatting that should be excluded from narration
+    /// Check if a line is metadata/formatting that should be excluded from narration.
+    /// Delegates to shared LlmScriptCleaner utility.
     /// </summary>
     private bool IsMetadataLine(string line)
     {
-        if (string.IsNullOrWhiteSpace(line))
-            return true;
-
-        var trimmed = line.Trim().ToLowerInvariant();
-        
-        // Check for common metadata patterns using static compiled regex
-        return trimmed.StartsWith("[visual:") ||
-               trimmed.StartsWith("[pause") ||
-               trimmed.StartsWith("[music") ||
-               trimmed.StartsWith("[sfx") ||
-               (trimmed.StartsWith("scene ") && SceneMetadataRegex.IsMatch(trimmed)) ||
-               trimmed.StartsWith("duration:") ||
-               trimmed.StartsWith("narration:") ||
-               trimmed.StartsWith("visual:");
+        return LlmScriptCleaner.IsMetadataLine(line);
     }
 
     /// <summary>
-    /// Clean narration text by removing metadata and formatting artifacts
+    /// Clean narration text by removing metadata and formatting artifacts.
+    /// Delegates to shared LlmScriptCleaner utility.
     /// </summary>
     private string CleanNarration(string narration)
     {
-        if (string.IsNullOrWhiteSpace(narration))
-            return string.Empty;
-
-        // Remove visual markers, pause markers, media markers, and clean up spaces
-        var cleaned = VisualMarkerRegex.Replace(narration, "");
-        cleaned = PauseMarkerRegex.Replace(cleaned, "");
-        cleaned = MediaMarkerRegex.Replace(cleaned, "");
-        cleaned = MultiSpaceRegex.Replace(cleaned, " ");
-        
-        return cleaned.Trim();
+        return LlmScriptCleaner.CleanNarration(narration);
     }
 
     /// <summary>

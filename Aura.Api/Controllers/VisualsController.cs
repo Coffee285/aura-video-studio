@@ -378,6 +378,24 @@ public class VisualsController : ControllerBase
                 unsplashKey));
         }
 
+        // Add Pexels stock provider if API key is configured
+        if (apiKeys.TryGetValue("pexels", out var pexelsKey) && !string.IsNullOrWhiteSpace(pexelsKey))
+        {
+            providers.Add(new PexelsVisualProvider(
+                _loggerFactory.CreateLogger<PexelsVisualProvider>(),
+                httpClient,
+                pexelsKey));
+        }
+
+        // Add Pixabay stock provider if API key is configured
+        if (apiKeys.TryGetValue("pixabay", out var pixabayKey) && !string.IsNullOrWhiteSpace(pixabayKey))
+        {
+            providers.Add(new PixabayVisualProvider(
+                _loggerFactory.CreateLogger<PixabayVisualProvider>(),
+                httpClient,
+                pixabayKey));
+        }
+
         return providers;
     }
 

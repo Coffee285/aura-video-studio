@@ -169,8 +169,41 @@ export function GlobalLlmSelector() {
   // Validate and sync persisted selection with available models
   const validateAndSyncSelection = useCallback(
     async (modelsData: Record<string, LlmModelInfo[]>) => {
+      // If no selection exists, try to set a default from available models
       if (!selection?.provider || !selection?.modelId) {
-        // No selection to validate
+        // Find the first available provider with models
+        // Priority: Ollama (local/detected in setup) > other providers
+        const providerPriority = ['Ollama', 'OpenAI', 'Anthropic', 'Gemini', 'Azure'];
+
+        for (const provider of providerPriority) {
+          const models = modelsData[provider];
+          if (models && models.length > 0) {
+            console.info(
+              `[GlobalLlmSelector] No selection found, defaulting to ${provider}:${models[0].modelId}`
+            );
+            setSelection({
+              provider,
+              modelId: models[0].modelId,
+            });
+            return;
+          }
+        }
+
+        // If none of the priority providers have models, use any available provider
+        for (const [provider, models] of Object.entries(modelsData)) {
+          if (models && models.length > 0) {
+            console.info(
+              `[GlobalLlmSelector] No selection found, defaulting to ${provider}:${models[0].modelId}`
+            );
+            setSelection({
+              provider,
+              modelId: models[0].modelId,
+            });
+            return;
+          }
+        }
+
+        console.warn('[GlobalLlmSelector] No available models to set as default');
         return;
       }
 
