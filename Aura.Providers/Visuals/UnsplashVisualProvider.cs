@@ -45,7 +45,7 @@ public class UnsplashVisualProvider : BaseVisualProvider
 
             var searchRequest = new StockMediaSearchRequest
             {
-                Query = ExtractSearchKeywords(prompt),
+                Query = StockProviderUtils.ExtractSearchKeywords(prompt),
                 Count = 1,
                 Page = 1,
                 SafeSearchEnabled = true,
@@ -114,30 +114,11 @@ public class UnsplashVisualProvider : BaseVisualProvider
 
     public override string AdaptPrompt(string prompt, VisualGenerationOptions options)
     {
-        return ExtractSearchKeywords(prompt);
-    }
-
-    private static string ExtractSearchKeywords(string prompt)
-    {
-        var words = prompt.Split(new[] { ' ', ',', '.', ':', ';' }, StringSplitOptions.RemoveEmptyEntries);
-        var keywords = words.Where(w => w.Length > 3 && !IsStopWord(w)).Take(5);
-        return string.Join(" ", keywords);
-    }
-
-    private static bool IsStopWord(string word)
-    {
-        var stopWords = new[] { "the", "and", "with", "that", "this", "from", "have", "will", "would", "could" };
-        return stopWords.Contains(word.ToLowerInvariant());
+        return StockProviderUtils.ExtractSearchKeywords(prompt);
     }
 
     private static string? GetOrientation(string aspectRatio)
     {
-        return aspectRatio switch
-        {
-            "16:9" or "4:3" => "landscape",
-            "9:16" or "3:4" => "portrait",
-            "1:1" => "squarish",
-            _ => null
-        };
+        return StockProviderUtils.GetUnsplashOrientation(aspectRatio);
     }
 }

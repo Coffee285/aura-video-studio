@@ -17,16 +17,30 @@ namespace Aura.Providers.Visuals;
 public class PixabayVisualProvider : BaseVisualProvider
 {
     private readonly EnhancedPixabayProvider _pixabayProvider;
-    private readonly HttpClient _httpClient;
 
     public PixabayVisualProvider(
         ILogger<PixabayVisualProvider> logger,
         HttpClient httpClient,
         string? apiKey) : base(logger)
     {
-        _httpClient = httpClient;
+        // Use same logger instance for the underlying provider
         _pixabayProvider = new EnhancedPixabayProvider(
-            Microsoft.Extensions.Logging.LoggerFactory.Create(builder => { }).CreateLogger<EnhancedPixabayProvider>(),
+            (ILogger<EnhancedPixabayProvider>)logger,
+            httpClient,
+            apiKey);
+    }
+
+    /// <summary>
+    /// Constructor with explicit logger factory for proper logging configuration
+    /// </summary>
+    public PixabayVisualProvider(
+        ILogger<PixabayVisualProvider> logger,
+        ILoggerFactory loggerFactory,
+        HttpClient httpClient,
+        string? apiKey) : base(logger)
+    {
+        _pixabayProvider = new EnhancedPixabayProvider(
+            loggerFactory.CreateLogger<EnhancedPixabayProvider>(),
             httpClient,
             apiKey);
     }
@@ -46,11 +60,11 @@ public class PixabayVisualProvider : BaseVisualProvider
 
             var searchRequest = new StockMediaSearchRequest
             {
-                Query = ExtractSearchKeywords(prompt),
+                Query = StockProviderUtils.ExtractSearchKeywords(prompt),
                 Count = 1,
                 Page = 1,
                 SafeSearchEnabled = true,
-                Orientation = GetOrientation(options.AspectRatio)
+                Orientation = StockProviderUtils.GetPixabayOrientation(options.AspectRatio)
             };
 
             var results = await _pixabayProvider.SearchAsync(searchRequest, ct).ConfigureAwait(false);
@@ -110,30 +124,6 @@ public class PixabayVisualProvider : BaseVisualProvider
 
     public override string AdaptPrompt(string prompt, VisualGenerationOptions options)
     {
-        return ExtractSearchKeywords(prompt);
-    }
-
-    private static string ExtractSearchKeywords(string prompt)
-    {
-        var words = prompt.Split(new[] { ' ', ',', '.', ':', ';' }, StringSplitOptions.RemoveEmptyEntries);
-        var keywords = words.Where(w => w.Length > 3 && !IsStopWord(w)).Take(5);
-        return string.Join(" ", keywords);
-    }
-
-    private static bool IsStopWord(string word)
-    {
-        var stopWords = new[] { "the", "and", "with", "that", "this", "from", "have", "will", "would", "could" };
-        return stopWords.Contains(word.ToLowerInvariant());
-    }
-
-    private static string? GetOrientation(string aspectRatio)
-    {
-        return aspectRatio switch
-        {
-            "16:9" or "4:3" => "horizontal",
-            "9:16" or "3:4" => "vertical",
-            "1:1" => "all", // Pixabay doesn't have a square-only filter
-            _ => null
-        };
+        return StockProviderUtils.ExtractSearchKeywords(prompt);
     }
 }
