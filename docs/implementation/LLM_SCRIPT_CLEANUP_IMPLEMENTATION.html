@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>LLM Script Output Cleanup - Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="LLM Script Output Cleanup - Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/implementation/LLM_SCRIPT_CLEANUP_IMPLEMENTATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="llm-script-output-cleanup---implementation-summary">LLM Script Output Cleanup - Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>Implemented comprehensive LLM script output cleanup for <strong>ALL LLM providers</strong> to remove meta-information that should not be included in TTS narration. This ensures clean, professional narration output regardless of which LLM provider is used.</p>
+<h2 id="problem">Problem</h2>
+<p>LLM providers (OpenAI, Anthropic, Gemini, Azure OpenAI, Ollama) sometimes add metadata to their script outputs, such as:</p>
+<ul>
+<li>Word Count: X</li>
+<li>TTS Pacing Check: ...</li>
+<li>AI Detection Avoided: ...</li>
+<li>Visual Synergy: ...</li>
+<li>Emotional Flow: ...</li>
+<li>Accuracy notes</li>
+<li>Various other meta-commentary</li>
+</ul>
+<p>This metadata was previously only cleaned up for Ollama, but all LLM providers can produce similar artifacts. These need to be removed before TTS synthesis to ensure clean narration.</p>
+<h2 id="solution">Solution</h2>
+<p>Created a shared utility class <code>LlmScriptCleanup</code> that provides comprehensive cleanup for all LLM providers:</p>
+<ol>
+<li><p><strong>Centralized Cleanup Utility</strong> (<code>Aura.Core/Utilities/LlmScriptCleanup.cs</code>)</p>
+<ul>
+<li>Contains all regex patterns for detecting LLM meta-information</li>
+<li>Provides <code>IsMetadataLine()</code>, <code>IsLlmMetaCommentary()</code>, and <code>CleanNarration()</code> methods</li>
+<li>Used consistently across all providers and script parsing locations</li>
+</ul>
+</li>
+<li><p><strong>Updated All Script Parsing Locations</strong></p>
+<ul>
+<li><code>VideoOrchestrator.ParseScriptIntoScenes()</code> - Enhanced with cleanup</li>
+<li><code>PipelineOrchestrationEngine.ParseScriptIntoScenes()</code> - Enhanced with cleanup</li>
+<li><code>VoiceStage.ParseScriptIntoScenes()</code> - Enhanced with cleanup</li>
+<li><code>EnhancedVideoOrchestrator.ParseScriptIntoScenes()</code> - Enhanced with cleanup</li>
+<li><code>ScriptsController.CleanupNarrationText()</code> - Now uses shared utility</li>
+<li><code>BaseLlmScriptProvider</code> - Updated to use shared utility</li>
+<li><code>OllamaLlmProvider</code> - Refactored to use shared utility (removed duplicate code)</li>
+</ul>
+</li>
+<li><p><strong>Comprehensive Pattern Detection</strong></p>
+<ul>
+<li>Word Count patterns: <code>Word Count: X</code>, <code>Words: X</code></li>
+<li>TTS Pacing patterns: <code>TTS Pacing Check: ...</code></li>
+<li>AI Detection patterns: <code>AI Detection Avoided: ...</code></li>
+<li>Visual Synergy patterns: <code>Visual Synergy: ...</code></li>
+<li>Emotional Flow patterns: <code>Emotional Flow: ...</code></li>
+<li>Accuracy notes: <code>Accuracy: ...</code></li>
+<li>Meta labels: <code>Note:</code>, <code>P.S.:</code>, <code>Disclaimer:</code>, etc.</li>
+<li>WPM patterns: <code>150 WPM</code></li>
+<li>Horizontal rules: <code>---</code>, <code>===</code></li>
+<li>Bracketed metadata: <code>[Visual: ...]</code>, <code>[Music: ...]</code>, etc.</li>
+</ul>
+</li>
+</ol>
+<h2 id="files-modified">Files Modified</h2>
+<h3 id="core-utility">Core Utility</h3>
+<ul>
+<li><strong>NEW</strong>: <code>Aura.Core/Utilities/LlmScriptCleanup.cs</code> - Shared cleanup utility</li>
+</ul>
+<h3 id="orchestrators">Orchestrators</h3>
+<ul>
+<li><code>Aura.Core/Orchestrator/VideoOrchestrator.cs</code> - Enhanced script parsing</li>
+<li><code>Aura.Core/Orchestrator/EnhancedVideoOrchestrator.cs</code> - Enhanced script parsing</li>
+<li><code>Aura.Core/Orchestrator/Stages/VoiceStage.cs</code> - Enhanced script parsing</li>
+<li><code>Aura.Core/Services/Orchestration/PipelineOrchestrationEngine.cs</code> - Enhanced script parsing</li>
+</ul>
+<h3 id="providers">Providers</h3>
+<ul>
+<li><code>Aura.Providers/Llm/BaseLlmScriptProvider.cs</code> - Uses shared utility</li>
+<li><code>Aura.Providers/Llm/OllamaLlmProvider.cs</code> - Refactored to use shared utility</li>
+</ul>
+<h3 id="api-controllers">API Controllers</h3>
+<ul>
+<li><code>Aura.Api/Controllers/ScriptsController.cs</code> - Uses shared utility</li>
+</ul>
+<h2 id="implementation-details">Implementation Details</h2>
+<h3 id="regex-patterns">Regex Patterns</h3>
+<p>The cleanup utility includes 10+ compiled regex patterns:</p>
+<pre><code class="lang-csharp">- WordCountRegex: Detects &quot;Word Count: X&quot; patterns
+- TtsPacingRegex: Detects &quot;TTS Pacing Check:&quot; patterns
+- AiDetectionRegex: Detects &quot;AI Detection Avoided:&quot; patterns
+- VisualSynergyRegex: Detects &quot;Visual Synergy:&quot; patterns
+- EmotionalFlowRegex: Detects &quot;Emotional Flow:&quot; patterns
+- AccuracyNoteRegex: Detects &quot;Accuracy:&quot; patterns
+- HorizontalRuleRegex: Detects separator lines (---, ===)
+- MetaLabelRegex: Detects meta labels (Note:, P.S., etc.)
+- WpmRegex: Detects WPM patterns
+- BracketedMetaRegex: Detects [Visual: ...], [Music: ...], etc.
+</code></pre>
+<h3 id="cleanup-process">Cleanup Process</h3>
+<ol>
+<li><strong>Line-by-line filtering</strong>: Scripts are processed line-by-line to remove metadata lines</li>
+<li><strong>Pattern matching</strong>: Each line is checked against comprehensive regex patterns</li>
+<li><strong>Meta-commentary detection</strong>: Additional checks for LLM meta-commentary patterns</li>
+<li><strong>Final cleanup</strong>: Removes multiple spaces and normalizes whitespace</li>
+</ol>
+<h3 id="integration-points">Integration Points</h3>
+<p>Cleanup is applied at multiple points in the pipeline:</p>
+<ol>
+<li><strong>During Script Parsing</strong>: Metadata lines are filtered out when parsing scripts into scenes</li>
+<li><strong>Before Scene Creation</strong>: Scene narration is cleaned before creating Scene objects</li>
+<li><strong>Before TTS Synthesis</strong>: Final cleanup applied in <code>ConvertScenesToScriptLines()</code> to ensure no metadata leaks through</li>
+</ol>
+<h2 id="benefits">Benefits</h2>
+<ol>
+<li><strong>Consistency</strong>: All LLM providers now use the same cleanup logic</li>
+<li><strong>Maintainability</strong>: Single source of truth for cleanup patterns</li>
+<li><strong>Completeness</strong>: Comprehensive pattern detection catches all known metadata types</li>
+<li><strong>Performance</strong>: Compiled regex patterns for efficient matching</li>
+<li><strong>Extensibility</strong>: Easy to add new patterns as they are discovered</li>
+</ol>
+<h2 id="testing-recommendations">Testing Recommendations</h2>
+<ol>
+<li>Test with each LLM provider (OpenAI, Anthropic, Gemini, Azure OpenAI, Ollama)</li>
+<li>Verify that metadata lines are removed from narration</li>
+<li>Verify that actual narrative content is preserved</li>
+<li>Test edge cases (metadata in middle of text, multiple metadata lines, etc.)</li>
+<li>Verify TTS output is clean and professional</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>Add provider-specific patterns if needed (some LLMs may have unique metadata formats)</li>
+<li>Consider machine learning approach for detecting metadata (if patterns become too complex)</li>
+<li>Add logging/metrics for metadata detection (to track which patterns are most common)</li>
+</ul>
+<h2 id="related-work">Related Work</h2>
+<p>This implementation extends the work done in a previous PR for Ollama cleanup:</p>
+<ul>
+<li>Original Ollama cleanup: <code>Aura.Providers/Llm/OllamaLlmProvider.cs</code></li>
+<li>Now generalized for all providers via shared utility</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/implementation/LLM_SCRIPT_CLEANUP_IMPLEMENTATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
