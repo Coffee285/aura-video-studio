@@ -214,7 +214,7 @@ public class FfmpegVideoComposer : IVideoComposer
                 CreateNoWindow = true,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
-                RedirectStandardInput = true  // Required for graceful termination via 'q' command
+                RedirectStandardInput = true  // Required for graceful termination via 'q' command.
             },
             EnableRaisingEvents = true
         };

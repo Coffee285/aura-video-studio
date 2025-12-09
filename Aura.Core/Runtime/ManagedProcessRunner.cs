@@ -217,14 +217,18 @@ public class ManagedProcessRunner
                         StartInfo = new ProcessStartInfo
                         {
                             FileName = "taskkill",
-                            // Process.Id is a validated integer, safe to interpolate
-                            Arguments = $"/T /F /PID {process.Id}",
                             UseShellExecute = false,
                             CreateNoWindow = true,
                             RedirectStandardOutput = true,
                             RedirectStandardError = true
                         }
                     };
+
+                    // Use ArgumentList for security (safer than string concatenation)
+                    taskkillProcess.StartInfo.ArgumentList.Add("/T");
+                    taskkillProcess.StartInfo.ArgumentList.Add("/F");
+                    taskkillProcess.StartInfo.ArgumentList.Add("/PID");
+                    taskkillProcess.StartInfo.ArgumentList.Add(process.Id.ToString());
 
                     taskkillProcess.Start();
                     await taskkillProcess.WaitForExitAsync().ConfigureAwait(false);
