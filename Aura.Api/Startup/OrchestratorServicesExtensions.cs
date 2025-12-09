@@ -28,6 +28,10 @@ public static class OrchestratorServicesExtensions
             return new ScriptOrchestrator(logger, loggerFactory, mixer, providers, ollamaDetectionService);
         });
 
+        // Process management for video rendering
+        services.AddSingleton<Aura.Core.Runtime.ProcessRegistry>();
+        services.AddSingleton<Aura.Core.Runtime.ManagedProcessRunner>();
+
         // Smart orchestration services
         services.AddSingleton<ResourceMonitor>();
         services.AddSingleton<StrategySelector>();

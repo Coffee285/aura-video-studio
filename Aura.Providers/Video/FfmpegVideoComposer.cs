@@ -36,6 +36,13 @@ public class FfmpegVideoComposer : IVideoComposer
 
     // Default fade transition duration between scenes (in seconds)
     private const double DefaultFadeTransitionDuration = 0.5;
+    
+    // Minimum scene duration for safe crossfade transitions (in seconds)
+    // Scenes shorter than this will use direct concatenation to prevent invalid FFmpeg filter parameters
+    private const double MinSceneDurationForTransition = 0.6;
+    
+    // Minimum transition duration when scene is too short for default transition
+    private const double MinTransitionDuration = 0.2;
 
     private readonly ILogger<FfmpegVideoComposer> _logger;
     private readonly IFfmpegLocator _ffmpegLocator;
@@ -206,7 +213,8 @@ public class FfmpegVideoComposer : IVideoComposer
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardError = true,
-                RedirectStandardOutput = true
+                RedirectStandardOutput = true,
+                RedirectStandardInput = true  // Required for graceful termination via 'q' command.
             },
             EnableRaisingEvents = true
         };
@@ -329,6 +337,19 @@ public class FfmpegVideoComposer : IVideoComposer
                             float percentage = (float)(currentTime.TotalSeconds / totalDuration.TotalSeconds * 100);
                             percentage = Math.Clamp(percentage, 0, 100);
                             lastProgressPercent = percentage; // Track for watchdog
+
+                            // Enhanced diagnostic logging around 72% mark (common hang point)
+                            if (percentage >= 70.0f && percentage <= 75.0f)
+                            {
+                                _logger.LogInformation(
+                                    "DIAGNOSTIC: FFmpeg at {Percentage}% (VideoComposition stage). " +
+                                    "Memory: {Memory}MB, CPU: {Cpu}s, Elapsed: {Elapsed}s, JobId: {JobId}",
+                                    percentage.ToString("F1"),
+                                    process.WorkingSet64 / 1024 / 1024,
+                                    process.TotalProcessorTime.TotalSeconds,
+                                    (now - startTime).TotalSeconds,
+                                    jobId);
+                            }
 
                             // Calculate time remaining
                             var elapsed = now - startTime;
@@ -1126,23 +1147,47 @@ public class FfmpegVideoComposer : IVideoComposer
 
             for (int i = 0; i < assets.Count - 1; i++)
             {
-                // FIX: Accumulate offset BEFORE calculating transition
-                currentOffset += assets[i].Duration.TotalSeconds;
-
-                // FIX: Ensure transition offset is never negative
-                var transitionDuration = DefaultFadeTransitionDuration;
-                var safeTransitionOffset = Math.Max(0, currentOffset - transitionDuration);
-
-                // FIX: If scene is too short, reduce transition duration
-                if (assets[i].Duration.TotalSeconds < transitionDuration)
+                var currentSceneDuration = assets[i].Duration.TotalSeconds;
+                var nextSceneDuration = assets[i + 1].Duration.TotalSeconds;
+                
+                // Skip transition if either scene is too short
+                // This prevents invalid FFmpeg filter parameters
+                if (currentSceneDuration < MinSceneDurationForTransition || nextSceneDuration < MinSceneDurationForTransition)
                 {
-                    transitionDuration = Math.Max(0.1, assets[i].Duration.TotalSeconds * 0.5);
-                    safeTransitionOffset = currentOffset - transitionDuration;
+                    _logger.LogWarning(
+                        "Scene {Index} or {NextIndex} duration too short ({CurrentDuration}s, {NextDuration}s). " +
+                        "Skipping crossfade transition to prevent FFmpeg hang.",
+                        i, i + 1, currentSceneDuration, nextSceneDuration);
+                    
+                    // Just concatenate without transition
+                    var concatInput1 = i == 0 ? "v0" : $"vt{i - 1}";
+                    var concatInput2 = $"v{i + 1}";
+                    var concatOutput = i == assets.Count - 2 ? "vout" : $"vt{i}";
+                    
+                    // Use concat filter for direct concatenation
+                    filterParts.Add($"[{concatInput1}][{concatInput2}]concat=n=2:v=1:a=0[{concatOutput}]");
+                    currentOffset += currentSceneDuration;
+                    continue;
+                }
+
+                // Accumulate offset BEFORE calculating transition
+                currentOffset += currentSceneDuration;
+
+                // Calculate safe transition parameters
+                var transitionDuration = DefaultFadeTransitionDuration;
+                
+                // If scene is shorter than transition, reduce transition duration
+                if (currentSceneDuration < transitionDuration)
+                {
+                    transitionDuration = Math.Max(MinTransitionDuration, currentSceneDuration * 0.5);
                     _logger.LogWarning(
                         "Scene {Index} duration ({Duration}s) shorter than default transition. " +
                         "Reduced transition to {Adjusted}s",
-                        i, assets[i].Duration.TotalSeconds, transitionDuration);
+                        i, currentSceneDuration, transitionDuration);
                 }
+                
+                // Ensure transition offset is never negative
+                var safeTransitionOffset = Math.Max(0, currentOffset - transitionDuration);
 
                 var fadeTransition = TransitionBuilder.BuildCrossfade(
                     transitionDuration,
@@ -1517,12 +1562,21 @@ public class FfmpegVideoComposer : IVideoComposer
         else
         {
             // FFmpeg has a full path, look for ffprobe in the same directory
-            ffprobePath = Path.Combine(ffmpegDir, "ffprobe.exe");
+            // Check OS to determine correct executable extension
+            var ffprobeFileName = OperatingSystem.IsWindows() ? "ffprobe.exe" : "ffprobe";
+            ffprobePath = Path.Combine(ffmpegDir, ffprobeFileName);
+            
             if (!File.Exists(ffprobePath))
             {
-                // Try without .exe extension (Linux/Mac)
-                ffprobePath = Path.Combine(ffmpegDir, "ffprobe");
-                if (!File.Exists(ffprobePath))
+                // Try alternate extension (shouldn't happen with correct OS detection, but fallback)
+                var alternateName = OperatingSystem.IsWindows() ? "ffprobe" : "ffprobe.exe";
+                var alternatePath = Path.Combine(ffmpegDir, alternateName);
+                
+                if (File.Exists(alternatePath))
+                {
+                    ffprobePath = alternatePath;
+                }
+                else
                 {
                     // Fall back to PATH
                     ffprobePath = "ffprobe";

@@ -1248,8 +1248,8 @@ builder.Services.AddSingleton<IVideoComposer>(sp =>
     var ffmpegLocator = sp.GetRequiredService<Aura.Core.Dependencies.IFfmpegLocator>();
     var configuredFfmpegPath = providerSettings.GetFfmpegPath();
     var outputDirectory = providerSettings.GetOutputDirectory();
-    var processRegistry = sp.GetService<Aura.Core.Runtime.ProcessRegistry>();
-    var processRunner = sp.GetService<Aura.Core.Runtime.ManagedProcessRunner>();
+    var processRegistry = sp.GetRequiredService<Aura.Core.Runtime.ProcessRegistry>();
+    var processRunner = sp.GetRequiredService<Aura.Core.Runtime.ManagedProcessRunner>();
     return new FfmpegVideoComposer(logger, ffmpegLocator, configuredFfmpegPath, outputDirectory, processRegistry, processRunner);
 });
 
