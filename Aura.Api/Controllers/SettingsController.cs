@@ -328,7 +328,7 @@ public class SettingsController : ControllerBase
     /// <summary>
     /// Get export settings section
     /// </summary>
-    [HttpGet("export")]
+    [HttpGet("export-settings")]
     [ProducesResponseType(typeof(Aura.Core.Models.Settings.ExportSettings), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetExportSettings(CancellationToken ct)
     {

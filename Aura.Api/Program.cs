@@ -320,6 +320,10 @@ builder.Services.AddMemoryCache();
 // Health checks depend on FFmpegResolver via DependencyHealthCheck
 builder.Services.AddSingleton<Aura.Core.Dependencies.FFmpegResolver>();
 
+// Register health services (including ProviderHealthMonitor and ProviderHealthInitializer)
+// These services must be registered before health checks since ProviderHealthCheck depends on them
+builder.Services.AddHealthServices();
+
 // Add health checks
 // Note: Health checks depend on services registered above
 builder.Services.AddSingleton<Aura.Api.HealthChecks.StartupHealthCheck>();
@@ -760,9 +764,6 @@ builder.Services.AddSingleton<Aura.Core.Services.Providers.LlmProviderRecommenda
         settings,
         providers);
 });
-
-// Register system health checker
-builder.Services.AddSingleton<Aura.Core.Services.Health.SystemHealthChecker>();
 
 // Script orchestrator with lazy provider creation and Ollama detection support
 builder.Services.AddSingleton<Aura.Core.Orchestrator.ScriptOrchestrator>(sp =>
