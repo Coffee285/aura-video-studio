@@ -51,7 +51,9 @@ public class LocalizationController : ControllerBase
         IConfiguration configuration,
         LlmStageAdapter stageAdapter,
         TranslationService translationService,
-        ILocalizationService localizationService)
+        ILocalizationService localizationService,
+        GlossaryManager glossaryManager,
+        IEnumerable<ISSMLMapper> ssmlMappers)
     {
         _logger = logger;
         _llmProvider = llmProvider;
@@ -59,6 +61,8 @@ public class LocalizationController : ControllerBase
         _translationService = translationService;
         _loggerFactory = loggerFactory;
         _localizationService = localizationService;
+        _glossaryManager = glossaryManager;
+        _ssmlMappers = ssmlMappers.ToList();
 
         // Load timeout configuration with defaults
         // Translation with local LLMs (Ollama) can take several minutes for longer texts or when models need to load
@@ -66,23 +70,6 @@ public class LocalizationController : ControllerBase
         // Increase defaults to better accommodate first-run model loads on local LLMs (GPU warmup)
         _requestTimeoutSeconds = configuration.GetValue("Localization:RequestTimeoutSeconds", 180);
         _llmTimeoutSeconds = configuration.GetValue("Localization:LlmTimeoutSeconds", 420);
-
-        var storageDir = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AuraVideoStudio",
-            "Glossaries");
-        _glossaryManager = new GlossaryManager(
-            loggerFactory.CreateLogger<GlossaryManager>(),
-            storageDir);
-
-        _ssmlMappers = new List<ISSMLMapper>
-        {
-            new ElevenLabsSSMLMapper(),
-            new WindowsSSMLMapper(),
-            new PlayHTSSMLMapper(),
-            new PiperSSMLMapper(),
-            new Mimic3SSMLMapper()
-        };
     }
 
     /// <summary>
