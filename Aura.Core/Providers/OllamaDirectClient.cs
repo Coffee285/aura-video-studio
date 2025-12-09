@@ -53,6 +53,13 @@ public class OllamaSettings
     /// Avoids repeated slow availability checks during active operations.
     /// </summary>
     public TimeSpan AvailabilityCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Buffer time added to operation timeout when configuring HttpClient timeout (default: 5 minutes).
+    /// This ensures HttpClient doesn't timeout before the operation timeout,
+    /// allowing proper error handling and retry logic.
+    /// </summary>
+    public TimeSpan HttpClientTimeoutBuffer { get; set; } = TimeSpan.FromMinutes(5);
 }
 
 /// <summary>
@@ -97,7 +104,7 @@ public class OllamaDirectClient : IOllamaDirectClient
         // NOTE: Cannot use OllamaHttpClientHelper.EnsureProperTimeout() because it's in Aura.Providers
         // and Aura.Core doesn't reference Aura.Providers (would create circular dependency).
         // This inline implementation provides the same functionality.
-        var requiredTimeout = _settings.Timeout.Add(TimeSpan.FromMinutes(5)); // 5-minute buffer
+        var requiredTimeout = _settings.Timeout.Add(_settings.HttpClientTimeoutBuffer);
         
         // If HttpClient timeout is insufficient, update it
         if (_httpClient.Timeout != Timeout.InfiniteTimeSpan && _httpClient.Timeout < requiredTimeout)
@@ -263,7 +270,7 @@ public class OllamaDirectClient : IOllamaDirectClient
                 response.EnsureSuccessStatusCode();
 
                 var result = await response.Content.ReadFromJsonAsync<OllamaGenerateResponse>(
-                    cancellationToken: CancellationToken.None).ConfigureAwait(false);
+                    cancellationToken: cancellationToken).ConfigureAwait(false);
 
                 if (result == null || string.IsNullOrEmpty(result.Response))
                 {
