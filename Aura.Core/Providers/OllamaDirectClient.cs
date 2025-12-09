@@ -175,6 +175,9 @@ public class OllamaDirectClient : IOllamaDirectClient
         var attempt = 0;
         var maxAttempts = _settings.MaxRetries;
         Exception? lastException = null;
+        
+        // Track start time for the entire request (not just individual attempts)
+        var requestStartTime = DateTime.UtcNow;
 
         while (attempt < maxAttempts)
         {
@@ -184,8 +187,9 @@ public class OllamaDirectClient : IOllamaDirectClient
             {
                 if (attempt > 1)
                 {
-                    // Match OllamaScriptProvider pattern: Math.Pow(2, attempt) for delays of 2s, 4s, 8s
-                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    // Match OllamaScriptProvider pattern: Math.Pow(2, attempt - 1) for delays of 2s, 4s, 8s
+                    // attempt=2 -> 2^1=2s, attempt=3 -> 2^2=4s, attempt=4 -> 2^3=8s
+                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt - 1));
                     _logger.LogInformation(
                         "Retrying Ollama request (attempt {Attempt}/{MaxAttempts}) after {Delay}s delay",
                         attempt, maxAttempts, backoffDelay.TotalSeconds);
@@ -194,7 +198,8 @@ public class OllamaDirectClient : IOllamaDirectClient
                     await Task.Delay(backoffDelay, cts.Token).ConfigureAwait(false);
                 }
 
-                var startTime = DateTime.UtcNow;
+                // Track start time for this individual attempt (for duration logging)
+                var attemptStartTime = DateTime.UtcNow;
 
                 _logger.LogInformation(
                     "Sending request to Ollama (attempt {Attempt}/{MaxAttempts}, timeout: {Timeout:F1} minutes)",
@@ -210,7 +215,7 @@ public class OllamaDirectClient : IOllamaDirectClient
                         while (!heartbeatCts.Token.IsCancellationRequested)
                         {
                             await Task.Delay(_settings.HeartbeatInterval, heartbeatCts.Token).ConfigureAwait(false);
-                            var elapsed = DateTime.UtcNow - startTime;
+                            var elapsed = DateTime.UtcNow - attemptStartTime;
                             var remaining = _settings.Timeout.TotalSeconds - elapsed.TotalSeconds;
                             if (remaining > 0)
                             {
@@ -265,22 +270,22 @@ public class OllamaDirectClient : IOllamaDirectClient
                     throw new InvalidOperationException("Ollama returned empty response");
                 }
 
-                var duration = DateTime.UtcNow - startTime;
+                var attemptDuration = DateTime.UtcNow - attemptStartTime;
                 _logger.LogInformation(
                     "Ollama generation completed: model={Model}, duration={Duration}s, responseLength={Length} (attempt {Attempt})",
-                    model, duration.TotalSeconds, result.Response.Length, attempt);
+                    model, attemptDuration.TotalSeconds, result.Response.Length, attempt);
 
                 return result.Response;
             }
             catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
             {
                 lastException = ex;
-                // Calculate elapsed time from the start of the request (not just this attempt)
-                var elapsed = DateTime.UtcNow - startTime;
+                // Calculate total elapsed time from the start of all attempts (not just this attempt)
+                var totalElapsed = DateTime.UtcNow - requestStartTime;
                 _logger.LogWarning(ex,
-                    "Ollama request timed out after {Elapsed:F1}s (attempt {Attempt}/{MaxAttempts}, configured timeout: {Timeout:F1}s). " +
+                    "Ollama request timed out after {Elapsed:F1}s total (attempt {Attempt}/{MaxAttempts}, configured timeout: {Timeout:F1}s). " +
                     "This may be normal for slow models or when Ollama is loading the model. Will retry if attempts remain.",
-                    elapsed.TotalSeconds, attempt, maxAttempts, _settings.Timeout.TotalSeconds);
+                    totalElapsed.TotalSeconds, attempt, maxAttempts, _settings.Timeout.TotalSeconds);
 
                 if (attempt >= maxAttempts)
                 {
