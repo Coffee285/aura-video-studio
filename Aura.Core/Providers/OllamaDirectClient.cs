@@ -222,13 +222,14 @@ public class OllamaDirectClient : IOllamaDirectClient
                         while (!heartbeatCts.Token.IsCancellationRequested)
                         {
                             await Task.Delay(_settings.HeartbeatInterval, heartbeatCts.Token).ConfigureAwait(false);
-                            var elapsed = DateTime.UtcNow - attemptStartTime;
-                            var remaining = _settings.Timeout.TotalSeconds - elapsed.TotalSeconds;
+                            // Calculate elapsed time from start of entire request (not just current attempt)
+                            var totalElapsed = DateTime.UtcNow - requestStartTime;
+                            var remaining = _settings.Timeout.TotalSeconds - totalElapsed.TotalSeconds;
                             if (remaining > 0)
                             {
                                 _logger.LogInformation(
                                     "Still awaiting Ollama response... ({Elapsed:F0}s elapsed, {Remaining:F0}s remaining before timeout)",
-                                    elapsed.TotalSeconds,
+                                    totalElapsed.TotalSeconds,
                                     remaining);
                             }
                         }
@@ -269,8 +270,10 @@ public class OllamaDirectClient : IOllamaDirectClient
 
                 response.EnsureSuccessStatusCode();
 
+                // Use cts.Token for JSON deserialization to maintain independent timeout strategy
+                // Using parent cancellationToken would allow upstream components to cancel during parsing
                 var result = await response.Content.ReadFromJsonAsync<OllamaGenerateResponse>(
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
+                    cancellationToken: cts.Token).ConfigureAwait(false);
 
                 if (result == null || string.IsNullOrEmpty(result.Response))
                 {
