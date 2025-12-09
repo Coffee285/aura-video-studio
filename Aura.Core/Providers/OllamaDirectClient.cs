@@ -94,6 +94,9 @@ public class OllamaDirectClient : IOllamaDirectClient
         
         // CRITICAL FIX: Ensure HttpClient timeout is properly configured for Ollama's long-running requests
         // Add buffer to prevent HttpClient from timing out before our operation timeout
+        // NOTE: Cannot use OllamaHttpClientHelper.EnsureProperTimeout() because it's in Aura.Providers
+        // and Aura.Core doesn't reference Aura.Providers (would create circular dependency).
+        // This inline implementation provides the same functionality.
         var requiredTimeout = _settings.Timeout.Add(TimeSpan.FromMinutes(5)); // 5-minute buffer
         
         // If HttpClient timeout is insufficient, update it
@@ -177,18 +180,18 @@ public class OllamaDirectClient : IOllamaDirectClient
         {
             attempt++;
 
-            // Track start time for this attempt
-            var attemptStartTime = DateTime.UtcNow;
-
             try
             {
                 if (attempt > 1)
                 {
-                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt - 1));
+                    // Match OllamaScriptProvider pattern: Math.Pow(2, attempt) for delays of 2s, 4s, 8s
+                    var backoffDelay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
                     _logger.LogInformation(
                         "Retrying Ollama request (attempt {Attempt}/{MaxAttempts}) after {Delay}s delay",
                         attempt, maxAttempts, backoffDelay.TotalSeconds);
-                    await Task.Delay(backoffDelay, cancellationToken).ConfigureAwait(false);
+                    // Use cts.Token to ensure retries complete within the 15-minute window
+                    // Using parent cancellationToken would allow upstream timeouts to cancel retries
+                    await Task.Delay(backoffDelay, cts.Token).ConfigureAwait(false);
                 }
 
                 var startTime = DateTime.UtcNow;
@@ -272,7 +275,8 @@ public class OllamaDirectClient : IOllamaDirectClient
             catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
             {
                 lastException = ex;
-                var elapsed = DateTime.UtcNow - attemptStartTime;
+                // Calculate elapsed time from the start of the request (not just this attempt)
+                var elapsed = DateTime.UtcNow - startTime;
                 _logger.LogWarning(ex,
                     "Ollama request timed out after {Elapsed:F1}s (attempt {Attempt}/{MaxAttempts}, configured timeout: {Timeout:F1}s). " +
                     "This may be normal for slow models or when Ollama is loading the model. Will retry if attempts remain.",
