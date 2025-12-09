@@ -198,6 +198,13 @@ public class ManagedProcessRunner
                 return;
             }
 
+            // Validate process ID (defensive programming against potential invalid states)
+            if (process.Id <= 0)
+            {
+                _logger.LogWarning("Invalid process ID {Pid}, cannot kill process tree", process.Id);
+                return;
+            }
+
             // On Windows, use taskkill for more reliable process tree termination
             if (OperatingSystem.IsWindows())
             {
@@ -210,6 +217,7 @@ public class ManagedProcessRunner
                         StartInfo = new ProcessStartInfo
                         {
                             FileName = "taskkill",
+                            // Process.Id is a validated integer, safe to interpolate
                             Arguments = $"/T /F /PID {process.Id}",
                             UseShellExecute = false,
                             CreateNoWindow = true,

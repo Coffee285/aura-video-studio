@@ -36,6 +36,13 @@ public class FfmpegVideoComposer : IVideoComposer
 
     // Default fade transition duration between scenes (in seconds)
     private const double DefaultFadeTransitionDuration = 0.5;
+    
+    // Minimum scene duration for safe crossfade transitions (in seconds)
+    // Scenes shorter than this will use direct concatenation to prevent invalid FFmpeg filter parameters
+    private const double MinSceneDurationForTransition = 0.6;
+    
+    // Minimum transition duration when scene is too short for default transition
+    private const double MinTransitionDuration = 0.2;
 
     private readonly ILogger<FfmpegVideoComposer> _logger;
     private readonly IFfmpegLocator _ffmpegLocator;
@@ -1143,9 +1150,9 @@ public class FfmpegVideoComposer : IVideoComposer
                 var currentSceneDuration = assets[i].Duration.TotalSeconds;
                 var nextSceneDuration = assets[i + 1].Duration.TotalSeconds;
                 
-                // Skip transition if either scene is too short (less than 0.6s)
+                // Skip transition if either scene is too short
                 // This prevents invalid FFmpeg filter parameters
-                if (currentSceneDuration < 0.6 || nextSceneDuration < 0.6)
+                if (currentSceneDuration < MinSceneDurationForTransition || nextSceneDuration < MinSceneDurationForTransition)
                 {
                     _logger.LogWarning(
                         "Scene {Index} or {NextIndex} duration too short ({CurrentDuration}s, {NextDuration}s). " +
@@ -1172,7 +1179,7 @@ public class FfmpegVideoComposer : IVideoComposer
                 // If scene is shorter than transition, reduce transition duration
                 if (currentSceneDuration < transitionDuration)
                 {
-                    transitionDuration = Math.Max(0.2, currentSceneDuration * 0.5);
+                    transitionDuration = Math.Max(MinTransitionDuration, currentSceneDuration * 0.5);
                     _logger.LogWarning(
                         "Scene {Index} duration ({Duration}s) shorter than default transition. " +
                         "Reduced transition to {Adjusted}s",
