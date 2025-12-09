@@ -268,12 +268,24 @@ public class OllamaDirectClient : IOllamaDirectClient
                     throw new OperationCanceledException("Operation was cancelled by user", cancellationToken);
                 }
 
-                response.EnsureSuccessStatusCode();
+                // CRITICAL: Check status code BEFORE EnsureSuccessStatusCode to provide better error messages
+                // Match OllamaScriptProvider pattern (line 225-234)
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync(CancellationToken.None).ConfigureAwait(false);
+                    if (errorContent.Contains("model") && errorContent.Contains("not found"))
+                    {
+                        throw new InvalidOperationException(
+                            $"Model '{model}' not found. Please pull the model first using: ollama pull {model}");
+                    }
+                    response.EnsureSuccessStatusCode();
+                }
 
-                // Use cts.Token for JSON deserialization to maintain independent timeout strategy
-                // Using parent cancellationToken would allow upstream components to cancel during parsing
+                // CRITICAL: Use CancellationToken.None for JSON deserialization to ensure complete data read
+                // This matches OllamaScriptProvider pattern (line 236) which uses CancellationToken.None
+                // Even if timeout occurs during HTTP request, we want to fully read the response that was received
                 var result = await response.Content.ReadFromJsonAsync<OllamaGenerateResponse>(
-                    cancellationToken: cts.Token).ConfigureAwait(false);
+                    cancellationToken: CancellationToken.None).ConfigureAwait(false);
 
                 if (result == null || string.IsNullOrEmpty(result.Response))
                 {
