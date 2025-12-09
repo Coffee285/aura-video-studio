@@ -177,6 +177,9 @@ public class OllamaDirectClient : IOllamaDirectClient
         {
             attempt++;
 
+            // Track start time for this attempt
+            var attemptStartTime = DateTime.UtcNow;
+
             try
             {
                 if (attempt > 1)
@@ -269,11 +272,11 @@ public class OllamaDirectClient : IOllamaDirectClient
             catch (TaskCanceledException ex) when (ex.CancellationToken.IsCancellationRequested)
             {
                 lastException = ex;
-                var elapsed = DateTime.UtcNow.Subtract(DateTime.UtcNow);
+                var elapsed = DateTime.UtcNow - attemptStartTime;
                 _logger.LogWarning(ex,
-                    "Ollama request timed out after {Timeout:F1}s (attempt {Attempt}/{MaxAttempts}). " +
+                    "Ollama request timed out after {Elapsed:F1}s (attempt {Attempt}/{MaxAttempts}, configured timeout: {Timeout:F1}s). " +
                     "This may be normal for slow models or when Ollama is loading the model. Will retry if attempts remain.",
-                    _settings.Timeout.TotalSeconds, attempt, maxAttempts);
+                    elapsed.TotalSeconds, attempt, maxAttempts, _settings.Timeout.TotalSeconds);
 
                 if (attempt >= maxAttempts)
                 {
