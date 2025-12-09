@@ -1002,6 +1002,24 @@ builder.Services.AddSingleton<Aura.Api.Services.ILocalizationService>(sp =>
     return new Aura.Api.Services.LocalizationService(logger, llmProvider, loggerFactory, stageAdapter, translationService);
 });
 
+// Register GlossaryManager for localization glossaries
+builder.Services.AddSingleton<Aura.Core.Services.Localization.GlossaryManager>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<Aura.Core.Services.Localization.GlossaryManager>>();
+    var storageDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "AuraVideoStudio",
+        "Glossaries");
+    return new Aura.Core.Services.Localization.GlossaryManager(logger, storageDir);
+});
+
+// Register SSML mappers for TTS providers
+builder.Services.AddSingleton<Aura.Core.Services.Audio.ISSMLMapper, Aura.Providers.Tts.validators.ElevenLabsSSMLMapper>();
+builder.Services.AddSingleton<Aura.Core.Services.Audio.ISSMLMapper, Aura.Providers.Tts.validators.WindowsSSMLMapper>();
+builder.Services.AddSingleton<Aura.Core.Services.Audio.ISSMLMapper, Aura.Providers.Tts.validators.PlayHTSSMLMapper>();
+builder.Services.AddSingleton<Aura.Core.Services.Audio.ISSMLMapper, Aura.Providers.Tts.validators.PiperSSMLMapper>();
+builder.Services.AddSingleton<Aura.Core.Services.Audio.ISSMLMapper, Aura.Providers.Tts.validators.Mimic3SSMLMapper>();
+
 // Register Audience Profile services
 builder.Services.AddSingleton<Aura.Core.Services.Audience.AudienceProfileStore>();
 builder.Services.AddSingleton<Aura.Core.Services.Audience.AudienceProfileValidator>();
