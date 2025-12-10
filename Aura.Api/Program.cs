@@ -66,13 +66,13 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 
 // Configure Kestrel for long-running LLM requests and large file uploads
 // - KeepAliveTimeout: 15 minutes for long-running LLM operations
-// - RequestHeadersTimeout: 15 minutes to match KeepAlive
+// - RequestHeadersTimeout: 2 minutes for header processing (sufficient for slow connections)
 // - MaxRequestBodySize: 100GB for large file uploads
 // - AddServerHeader: false for security
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(15);
-    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(15);
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(2); // Headers should arrive much faster than full request
     serverOptions.Limits.MaxRequestBodySize = 100L * 1024L * 1024L * 1024L; // 100GB max request size
     serverOptions.AddServerHeader = false; // Reduce attack surface
 });
