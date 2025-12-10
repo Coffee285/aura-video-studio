@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Unified FFmpeg Configuration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Unified FFmpeg Configuration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/FFMPEG_CONFIGURATION_UNIFIED.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="unified-ffmpeg-configuration-guide">Unified FFmpeg Configuration Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>FFmpeg configuration is now unified across all parts of the Aura Video Studio stack (Electron, Aura.Api, and Aura.Core) through a single service: <code>IFfmpegConfigurationService</code>.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="components">Components</h3>
+<ol>
+<li><strong>IFfmpegConfigurationService</strong> - Single authoritative access point for FFmpeg configuration</li>
+<li><strong>FfmpegConfigurationService</strong> - Implementation that combines multiple configuration sources</li>
+<li><strong>FFmpegConfigurationStore</strong> - Persistent storage for FFmpeg configuration</li>
+<li><strong>FFmpegOptions</strong> - Configuration from appsettings.json</li>
+<li><strong>AURA_FFMPEG_PATH</strong> - Environment hint from Electron</li>
+</ol>
+<h3 id="configuration-priority-order">Configuration Priority Order</h3>
+<p>The system applies configuration sources in the following priority (highest to lowest):</p>
+<ol>
+<li><p><strong>Persisted Configuration</strong> (highest priority)</p>
+<ul>
+<li>Stored in <code>%LOCALAPPDATA%\AuraVideoStudio\ffmpeg-config.json</code></li>
+<li>Set by user through UI or API</li>
+<li>Survives application restarts</li>
+</ul>
+</li>
+<li><p><strong>Environment Hint</strong> (<code>AURA_FFMPEG_PATH</code>, <code>FFMPEG_PATH</code>, <code>FFMPEG_BINARIES_PATH</code>)</p>
+<ul>
+<li>Set by Electron based on detected FFmpeg installation</li>
+<li>Applied only if no persisted configuration exists</li>
+<li>Primary mechanism for Electron to communicate FFmpeg location to backend</li>
+<li><code>AURA_FFMPEG_PATH</code> is preferred (primary)</li>
+<li><code>FFMPEG_PATH</code> and <code>FFMPEG_BINARIES_PATH</code> are supported for backward compatibility</li>
+<li>Multiple variables are checked in priority order with deduplication</li>
+</ul>
+</li>
+<li><p><strong>Appsettings</strong> (<code>FFmpegOptions.ExecutablePath</code>)</p>
+<ul>
+<li>Configured in <code>appsettings.json</code></li>
+<li>Applied only if no persisted configuration or environment hint exists</li>
+<li>Useful for development and deployment scenarios</li>
+</ul>
+</li>
+<li><p><strong>System PATH</strong> (lowest priority)</p>
+<ul>
+<li>Fallback when no other configuration is available</li>
+<li>FfmpegLocator checks standard system locations</li>
+</ul>
+</li>
+</ol>
+<h2 id="usage">Usage</h2>
+<h3 id="backend-auraapi--auracore">Backend (Aura.Api / Aura.Core)</h3>
+<h4 id="getting-ffmpeg-configuration">Getting FFmpeg Configuration</h4>
+<pre><code class="lang-csharp">public class MyService
+{
+    private readonly IFfmpegConfigurationService _ffmpegConfig;
+    
+    public MyService(IFfmpegConfigurationService ffmpegConfig)
+    {
+        _ffmpegConfig = ffmpegConfig;
+    }
+    
+    public async Task&lt;string&gt; GetFfmpegPathAsync()
+    {
+        var config = await _ffmpegConfig.GetEffectiveConfigurationAsync();
+        return config.Path ?? &quot;ffmpeg&quot;; // Fallback to PATH
+    }
+}
+</code></pre>
+<h4 id="updating-ffmpeg-configuration">Updating FFmpeg Configuration</h4>
+<pre><code class="lang-csharp">public async Task ConfigureFfmpegAsync(string path)
+{
+    var config = new FFmpegConfiguration
+    {
+        Path = path,
+        Mode = FFmpegMode.Custom,
+        Source = &quot;User&quot;,
+        LastValidatedAt = DateTime.UtcNow,
+        LastValidationResult = FFmpegValidationResult.Ok
+    };
+    
+    await _ffmpegConfig.UpdateConfigurationAsync(config);
+}
+</code></pre>
+<h3 id="electron-desktop-app">Electron (Desktop App)</h3>
+<p>Electron sets the <code>AURA_FFMPEG_PATH</code> environment variable for the backend process:</p>
+<pre><code class="lang-javascript">// In backend-service.js
+_prepareEnvironment() {
+  const ffmpegPath = this._getFFmpegPath();
+
+  return {
+    ...process.env,
+    // Primary hint for backend FFmpeg configuration pipeline
+    AURA_FFMPEG_PATH: ffmpegPath,
+    // Backwards-compatible env vars
+    FFMPEG_PATH: ffmpegPath,
+    FFMPEG_BINARIES_PATH: ffmpegPath,
+  };
+}
+</code></pre>
+<h3 id="providersettings-integration">ProviderSettings Integration</h3>
+<p><code>ProviderSettings.GetFfmpegPath()</code> now delegates to the unified configuration service:</p>
+<pre><code class="lang-csharp">public string GetFfmpegPath()
+{
+    // If configuration service is available, use it
+    if (_ffmpegConfigService != null)
+    {
+        var config = _ffmpegConfigService.GetEffectiveConfigurationAsync()
+            .GetAwaiter().GetResult();
+        if (!string.IsNullOrWhiteSpace(config.Path))
+        {
+            return config.Path!;
+        }
+    }
+    
+    // Fallback to legacy settings.json or system PATH
+    return &quot;ffmpeg&quot;;
+}
+</code></pre>
+<h2 id="configuration-flow">Configuration Flow</h2>
+<h3 id="startup-flow">Startup Flow</h3>
+<ol>
+<li>Electron detects FFmpeg on user's system (or uses bundled version)</li>
+<li>Electron sets <code>AURA_FFMPEG_PATH</code>, <code>FFMPEG_PATH</code>, and <code>FFMPEG_BINARIES_PATH</code> environment variables</li>
+<li>Backend starts with FFmpeg environment variables set</li>
+<li><code>FfmpegConfigurationService</code> loads persisted config from disk</li>
+<li>If no persisted config, applies environment variables in priority order:
+<ul>
+<li><code>AURA_FFMPEG_PATH</code> (primary)</li>
+<li><code>FFMPEG_PATH</code> (backward compatibility)</li>
+<li><code>FFMPEG_BINARIES_PATH</code> (legacy)</li>
+</ul>
+</li>
+<li>If no environment hint, applies <code>FFmpegOptions.ExecutablePath</code> from appsettings</li>
+<li><code>FfmpegLocator</code> receives effective path and uses it for validation</li>
+</ol>
+<h3 id="user-configuration-flow">User Configuration Flow</h3>
+<ol>
+<li>User opens Settings UI and specifies FFmpeg path</li>
+<li>Frontend sends path to backend API</li>
+<li>Backend validates FFmpeg at specified path</li>
+<li>Backend creates <code>FFmpegConfiguration</code> with validation results</li>
+<li>Backend calls <code>IFfmpegConfigurationService.UpdateConfigurationAsync()</code></li>
+<li>Configuration persisted to <code>ffmpeg-config.json</code></li>
+<li>All subsequent operations use the new persisted configuration</li>
+</ol>
+<h2 id="benefits">Benefits</h2>
+<ol>
+<li><strong>Single Source of Truth</strong> - All code uses <code>IFfmpegConfigurationService</code> for FFmpeg path</li>
+<li><strong>Consistent Behavior</strong> - FFmpeg path resolution is identical across all components</li>
+<li><strong>Testability</strong> - Service interface allows easy mocking in unit tests</li>
+<li><strong>Persistence</strong> - User configuration survives application restarts</li>
+<li><strong>Flexibility</strong> - Supports multiple configuration sources with clear priority</li>
+<li><strong>Backward Compatibility</strong> - Maintains support for legacy env vars and settings.json</li>
+</ol>
+<h2 id="migration-guide">Migration Guide</h2>
+<h3 id="for-existing-code">For Existing Code</h3>
+<p>If you have code that:</p>
+<ol>
+<li><strong>Reads from ProviderSettings.GetFfmpegPath()</strong>: No changes needed, method now delegates to unified service</li>
+<li><strong>Uses environment variables directly</strong>: Should migrate to <code>IFfmpegConfigurationService</code></li>
+<li><strong>Reads from appsettings</strong>: No changes needed, <code>FFmpegOptions</code> still supported</li>
+<li><strong>Constructs FfmpegLocator</strong>: Update to inject <code>IFfmpegLocator</code> instead of concrete type</li>
+</ol>
+<h3 id="example-migration">Example Migration</h3>
+<p><strong>Before:</strong></p>
+<pre><code class="lang-csharp">var ffmpegPath = Environment.GetEnvironmentVariable(&quot;FFMPEG_PATH&quot;) ?? &quot;ffmpeg&quot;;
+</code></pre>
+<p><strong>After:</strong></p>
+<pre><code class="lang-csharp">var config = await _ffmpegConfigService.GetEffectiveConfigurationAsync();
+var ffmpegPath = config.Path ?? &quot;ffmpeg&quot;;
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="ffmpeg-not-found">FFmpeg Not Found</h3>
+<ol>
+<li>Check persisted configuration: <code>%LOCALAPPDATA%\AuraVideoStudio\ffmpeg-config.json</code></li>
+<li>Check <code>AURA_FFMPEG_PATH</code> environment variable (set by Electron)</li>
+<li>Check <code>FFmpegOptions.ExecutablePath</code> in appsettings.json</li>
+<li>Verify FFmpeg is on system PATH</li>
+</ol>
+<h3 id="configuration-not-persisting">Configuration Not Persisting</h3>
+<ol>
+<li>Ensure application has write permissions to <code>%LOCALAPPDATA%\AuraVideoStudio\</code></li>
+<li>Check logs for FFmpegConfigurationStore errors</li>
+<li>Verify <code>UpdateConfigurationAsync()</code> is being called successfully</li>
+</ol>
+<h3 id="electron-not-setting-path">Electron Not Setting Path</h3>
+<ol>
+<li>Check Electron logs for FFmpeg detection</li>
+<li>Verify <code>_getFFmpegPath()</code> in backend-service.js is finding FFmpeg</li>
+<li>Check that <code>_prepareEnvironment()</code> is setting <code>AURA_FFMPEG_PATH</code></li>
+</ol>
+<h2 id="related-files">Related Files</h2>
+<ul>
+<li><code>Aura.Core/Configuration/IFfmpegConfigurationService.cs</code> - Service interface</li>
+<li><code>Aura.Core/Configuration/FfmpegConfigurationService.cs</code> - Service implementation</li>
+<li><code>Aura.Core/Configuration/FFmpegConfigurationStore.cs</code> - Persistent storage</li>
+<li><code>Aura.Core/Configuration/FFmpegOptions.cs</code> - Appsettings model</li>
+<li><code>Aura.Core/Configuration/ProviderSettings.cs</code> - Provider settings integration</li>
+<li><code>Aura.Core/Dependencies/FfmpegLocator.cs</code> - FFmpeg path resolution</li>
+<li><code>Aura.Api/Program.cs</code> - Service registration</li>
+<li><code>Aura.Desktop/electron/backend-service.js</code> - Electron integration</li>
+</ul>
+<h2 id="diagnostics">Diagnostics</h2>
+<p>To troubleshoot FFmpeg configuration issues, use the diagnostics endpoint:</p>
+<h3 id="ffmpeg-configuration-diagnostics-endpoint">FFmpeg Configuration Diagnostics Endpoint</h3>
+<p><strong>GET</strong> <code>/api/system/diagnostics/ffmpeg-config</code></p>
+<p>Returns the current effective FFmpeg configuration from the unified configuration service.</p>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;correlationId&quot;: &quot;abc123&quot;,
+  &quot;timestamp&quot;: &quot;2024-01-01T12:00:00Z&quot;,
+  &quot;available&quot;: true,
+  &quot;mode&quot;: &quot;Custom&quot;,
+  &quot;path&quot;: &quot;C:\\Tools\\ffmpeg\\bin\\ffmpeg.exe&quot;,
+  &quot;isValid&quot;: true,
+  &quot;source&quot;: &quot;Persisted&quot;,
+  &quot;lastValidatedAt&quot;: &quot;2024-01-01T11:55:00Z&quot;,
+  &quot;validationResult&quot;: &quot;Ok&quot;
+}
+</code></pre>
+<p><strong>Fields:</strong></p>
+<ul>
+<li><code>available</code>: Whether the FFmpeg configuration service is available</li>
+<li><code>mode</code>: Configuration mode (Auto, Custom, Bundled, etc.)</li>
+<li><code>path</code>: Effective FFmpeg executable path</li>
+<li><code>isValid</code>: Whether the FFmpeg binary was successfully validated</li>
+<li><code>source</code>: Where the configuration came from (Persisted, Environment, Configured, PATH)</li>
+<li><code>lastValidatedAt</code>: When the FFmpeg binary was last validated</li>
+<li><code>validationResult</code>: Result of last validation (Ok, NotFound, Invalid, etc.)</li>
+</ul>
+<h3 id="usage-1">Usage</h3>
+<p>Call this endpoint when:</p>
+<ul>
+<li>FFmpeg is not being detected</li>
+<li>Video rendering fails with FFmpeg errors</li>
+<li>After changing FFmpeg configuration</li>
+<li>During initial setup to verify FFmpeg is properly configured</li>
+</ul>
+<p>This endpoint is available in all environments (dev, test, production) for troubleshooting.</p>
+<h2 id="legacy-configuration-migration">Legacy Configuration Migration</h2>
+<p><strong>Note:</strong> The following legacy configuration methods are <strong>no longer supported</strong> and have been removed:</p>
+<ol>
+<li><p><strong>Environment Variables:</strong></p>
+<ul>
+<li>❌ <code>FFMPEG_PATH</code> (removed)</li>
+<li>❌ <code>FFMPEG_BINARIES_PATH</code> (removed)</li>
+<li>✅ <code>AURA_FFMPEG_PATH</code> (supported, but only as a hint from Electron)</li>
+</ul>
+</li>
+<li><p><strong>Direct Configuration Access:</strong></p>
+<ul>
+<li>❌ Reading <code>Configuration[&quot;FFmpeg:ExecutablePath&quot;]</code> directly</li>
+<li>✅ Use <code>IFfmpegConfigurationService.GetEffectiveConfigurationAsync()</code></li>
+</ul>
+</li>
+<li><p><strong>ProviderSettings FFmpeg Path:</strong></p>
+<ul>
+<li>⚠️  <code>ProviderSettings.GetFfmpegPath()</code> now delegates to <code>IFfmpegConfigurationService</code></li>
+<li>Legacy settings.json fallback maintained for backward compatibility but deprecated</li>
+</ul>
+</li>
+</ol>
+<p><strong>Migration Path:</strong></p>
+<p>If your code currently uses:</p>
+<pre><code class="lang-csharp">// OLD (deprecated)
+var ffmpegPath = Environment.GetEnvironmentVariable(&quot;FFMPEG_PATH&quot;);
+var configuredPath = _configuration[&quot;FFmpeg:ExecutablePath&quot;];
+</code></pre>
+<p>Update to:</p>
+<pre><code class="lang-csharp">// NEW (unified configuration)
+var config = await _ffmpegConfigurationService.GetEffectiveConfigurationAsync();
+var ffmpegPath = config.Path;
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/FFMPEG_CONFIGURATION_UNIFIED.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

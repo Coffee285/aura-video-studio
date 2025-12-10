@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Quick Installation Guide - Portable Version | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Quick Installation Guide - Portable Version | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/INSTALL.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="quick-installation-guide---portable-version">Quick Installation Guide - Portable Version</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide will help you build and create the portable version of Aura Video Studio. The portable version requires no installation - just extract and run!</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Before building, ensure you have:</p>
+<ol>
+<li><strong>Windows 10 or 11</strong> (64-bit)</li>
+<li><strong>.NET 8 SDK</strong> - <a href="https://dotnet.microsoft.com/download/dotnet/8.0">Download here</a></li>
+<li><strong>Node.js 20+</strong> - <a href="https://nodejs.org/">Download here</a></li>
+<li><strong>PowerShell</strong> (included with Windows)</li>
+</ol>
+<h2 id="quick-build">Quick Build</h2>
+<h3 id="option-1-simple-build-script-recommended">Option 1: Simple Build Script (Recommended)</h3>
+<p>Open PowerShell and run:</p>
+<pre><code class="lang-powershell">cd scripts\packaging
+.\build-portable.ps1
+</code></pre>
+<p>This will:</p>
+<ul>
+<li>Build all .NET projects</li>
+<li>Build the React web UI</li>
+<li>Publish the API as a self-contained executable</li>
+<li>Copy the web UI to the wwwroot folder</li>
+<li>Create a portable ZIP file</li>
+</ul>
+<p>The output will be in <code>artifacts\portable\AuraVideoStudio_Portable_x64.zip</code></p>
+<h3 id="option-2-using-the-full-build-script">Option 2: Using the Full Build Script</h3>
+<p>If you want to use the existing build script:</p>
+<pre><code class="lang-powershell">cd scripts\packaging
+.\build-all.ps1
+</code></pre>
+<p>This does the same thing as Option 1 but maintains compatibility with the existing build process.</p>
+<h2 id="testing-locally">Testing Locally</h2>
+<p>To test without creating a ZIP:</p>
+<ol>
+<li><p>Build and publish the API:</p>
+<pre><code class="lang-powershell">dotnet publish Aura.Api\Aura.Api.csproj -c Release -r win-x64 --self-contained -o test-portable\Api
+</code></pre>
+</li>
+<li><p>Build the web UI:</p>
+<pre><code class="lang-powershell">cd Aura.Web
+npm install
+npm run build
+cd ..
+</code></pre>
+</li>
+<li><p>Copy web UI to API's wwwroot:</p>
+<pre><code class="lang-powershell">mkdir test-portable\Api\wwwroot
+xcopy Aura.Web\dist test-portable\Api\wwwroot /E /I /Y
+</code></pre>
+</li>
+<li><p>Run the API:</p>
+<pre><code class="lang-powershell">cd test-portable\Api
+.\Aura.Api.exe
+</code></pre>
+</li>
+<li><p>Open <a href="http://127.0.0.1:5005">http://127.0.0.1:5005</a> in your browser</p>
+</li>
+</ol>
+<h2 id="distributing">Distributing</h2>
+<p>Once built, the portable ZIP contains:</p>
+<pre><code>AuraVideoStudio_Portable_x64.zip
+├── Api/
+│   ├── Aura.Api.exe          (Main executable)
+│   ├── wwwroot/               (Web UI files)
+│   │   ├── index.html
+│   │   └── assets/
+│   └── (other DLLs and dependencies)
+├── ffmpeg/
+│   ├── ffmpeg.exe
+│   └── ffprobe.exe
+├── Launch.bat                 (Easy launcher)
+├── README.md                  (User documentation)
+├── appsettings.json          (Configuration)
+└── LICENSE
+
+</code></pre>
+<p>Users simply:</p>
+<ol>
+<li>Extract the ZIP</li>
+<li>Double-click <code>Launch.bat</code></li>
+<li>Start creating videos!</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="build-errors">Build Errors</h3>
+<p><strong>&quot;npm is not recognized&quot;</strong></p>
+<ul>
+<li>Install Node.js from <a href="https://nodejs.org/">https://nodejs.org/</a></li>
+<li>Restart PowerShell after installation</li>
+</ul>
+<p><strong>&quot;dotnet is not recognized&quot;</strong></p>
+<ul>
+<li>Install .NET 8 SDK from <a href="https://dotnet.microsoft.com/download">https://dotnet.microsoft.com/download</a></li>
+<li>Restart PowerShell after installation</li>
+</ul>
+<p><strong>&quot;Web UI not found&quot;</strong></p>
+<ul>
+<li>Make sure you run <code>npm install</code> and <code>npm run build</code> in the Aura.Web directory</li>
+<li>Check that <code>Aura.Web\dist</code> exists and contains files</li>
+</ul>
+<h3 id="runtime-errors">Runtime Errors</h3>
+<p><strong>&quot;wwwroot directory not found&quot;</strong></p>
+<ul>
+<li>This means the web UI wasn't copied correctly</li>
+<li>Ensure the build script completed successfully</li>
+<li>Manually verify that <code>Api\wwwroot\index.html</code> exists</li>
+</ul>
+<p><strong>&quot;Port 5005 already in use&quot;</strong></p>
+<ul>
+<li>Close any other instances of Aura Video Studio</li>
+<li>Check Task Manager for <code>Aura.Api.exe</code> and end the process</li>
+<li>Restart your computer if the issue persists</li>
+</ul>
+<h2 id="ffmpeg">FFmpeg</h2>
+<p>The portable build includes FFmpeg binaries if they exist in <code>scripts\ffmpeg\</code>. If not included:</p>
+<ol>
+<li>Download FFmpeg from <a href="https://ffmpeg.org/download.html">https://ffmpeg.org/download.html</a></li>
+<li>Extract <code>ffmpeg.exe</code> and <code>ffprobe.exe</code></li>
+<li>Place them in the <code>ffmpeg\</code> folder inside the portable distribution</li>
+</ol>
+<h2 id="next-steps">Next Steps</h2>
+<p>After building the portable version:</p>
+<ol>
+<li>Test it locally to ensure everything works</li>
+<li>Zip it up for distribution</li>
+<li>Share the checksum file for verification</li>
+<li>Provide the README.md for users</li>
+</ol>
+<h2 id="advanced-options">Advanced Options</h2>
+<h3 id="custom-platform">Custom Platform</h3>
+<p>Build for a different architecture:</p>
+<pre><code class="lang-powershell">.\build-portable.ps1 -Platform &quot;ARM64&quot;
+</code></pre>
+<h3 id="debug-build">Debug Build</h3>
+<p>Build in Debug configuration:</p>
+<pre><code class="lang-powershell">.\build-portable.ps1 -Configuration &quot;Debug&quot;
+</code></pre>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ul>
+<li>Check the main README.md</li>
+<li>Review PORTABLE.md for user-facing documentation</li>
+<li>Open an issue on GitHub</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/INSTALL.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

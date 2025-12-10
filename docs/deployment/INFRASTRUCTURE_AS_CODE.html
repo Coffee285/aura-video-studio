@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Infrastructure as Code Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Infrastructure as Code Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/deployment/INFRASTRUCTURE_AS_CODE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="infrastructure-as-code-guide">Infrastructure as Code Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide covers the Infrastructure as Code (IaC) implementation for Aura, including Terraform and Azure Bicep templates for provisioning and managing cloud infrastructure.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#terraform-setup">Terraform Setup</a></li>
+<li><a href="#azure-bicep-setup">Azure Bicep Setup</a></li>
+<li><a href="#infrastructure-components">Infrastructure Components</a></li>
+<li>Infrastructure Deployment</li>
+<li><a href="#state-management">State Management</a></li>
+</ul>
+<h2 id="getting-started">Getting Started</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<p><strong>Required Tools</strong>:</p>
+<pre><code class="lang-bash"># Terraform
+terraform --version  # &gt;= 1.5.0
+
+# Azure CLI
+az --version  # &gt;= 2.50.0
+
+# For Azure Bicep
+az bicep version  # &gt;= 0.20.0
+</code></pre>
+<p><strong>Required Access</strong>:</p>
+<ul>
+<li>Azure subscription owner or contributor role</li>
+<li>Service principal with appropriate permissions</li>
+<li>Access to Azure Key Vault for secrets</li>
+</ul>
+<h3 id="directory-structure">Directory Structure</h3>
+<pre><code>infrastructure/
+├── terraform/
+│   ├── main.tf                 # Main configuration
+│   ├── variables.tf            # Variable definitions
+│   ├── outputs.tf              # Output values
+│   ├── providers.tf            # Provider configuration
+│   └── modules/
+│       ├── aks/               # AKS module
+│       ├── networking/        # Network module
+│       └── storage/           # Storage module
+├── bicep/
+│   ├── main.bicep             # Main deployment
+│   └── modules/
+│       ├── network.bicep      # Network resources
+│       ├── aks.bicep          # AKS cluster
+│       ├── acr.bicep          # Container registry
+│       ├── redis.bicep        # Redis cache
+│       ├── storage.bicep      # Storage account
+│       ├── keyvault.bicep     # Key Vault
+│       └── monitoring.bicep   # Monitoring resources
+└── kubernetes/
+    ├── namespaces/
+    ├── deployments/
+    └── services/
+</code></pre>
+<h2 id="terraform-setup">Terraform Setup</h2>
+<h3 id="initialize-terraform">Initialize Terraform</h3>
+<pre><code class="lang-bash">cd infrastructure/terraform
+
+# Initialize Terraform
+terraform init
+
+# Create workspace for environment
+terraform workspace new production
+terraform workspace new staging
+
+# Select workspace
+terraform workspace select production
+</code></pre>
+<h3 id="configure-backend">Configure Backend</h3>
+<p>The Terraform state is stored in Azure Storage:</p>
+<pre><code class="lang-hcl"># backend.tf
+terraform {
+  backend &quot;azurerm&quot; {
+    resource_group_name  = &quot;aura-terraform-state&quot;
+    storage_account_name = &quot;auraterraformstate&quot;
+    container_name       = &quot;tfstate&quot;
+    key                  = &quot;production.terraform.tfstate&quot;
+  }
+}
+</code></pre>
+<p><strong>Setup Backend Storage</strong>:</p>
+<pre><code class="lang-bash"># Create resource group
+az group create \
+  --name aura-terraform-state \
+  --location eastus
+
+# Create storage account
+az storage account create \
+  --name auraterraformstate \
+  --resource-group aura-terraform-state \
+  --location eastus \
+  --sku Standard_LRS \
+  --encryption-services blob
+
+# Create container
+az storage container create \
+  --name tfstate \
+  --account-name auraterraformstate
+</code></pre>
+<h3 id="terraform-variables">Terraform Variables</h3>
+<p>Create <code>terraform.tfvars</code>:</p>
+<pre><code class="lang-hcl"># Environment configuration
+environment = &quot;production&quot;
+location    = &quot;eastus&quot;
+
+# AKS configuration
+aks_node_count = 3
+aks_node_size  = &quot;Standard_D4s_v3&quot;
+
+# Feature flags
+enable_monitoring = true
+enable_backup     = true
+
+# Tags
+tags = {
+  Environment = &quot;Production&quot;
+  Project     = &quot;Aura&quot;
+  ManagedBy   = &quot;Terraform&quot;
+  CostCenter  = &quot;Engineering&quot;
+}
+</code></pre>
+<h3 id="deploy-infrastructure">Deploy Infrastructure</h3>
+<pre><code class="lang-bash"># Plan deployment
+terraform plan -out=tfplan
+
+# Review plan
+terraform show tfplan
+
+# Apply deployment
+terraform apply tfplan
+
+# Get outputs
+terraform output -json &gt; infrastructure-outputs.json
+</code></pre>
+<h3 id="update-infrastructure">Update Infrastructure</h3>
+<pre><code class="lang-bash"># Check what will change
+terraform plan
+
+# Apply changes
+terraform apply
+
+# Refresh state
+terraform refresh
+</code></pre>
+<h3 id="destroy-infrastructure">Destroy Infrastructure</h3>
+<pre><code class="lang-bash"># Plan destruction
+terraform plan -destroy
+
+# Destroy resources (CAUTION!)
+terraform destroy
+</code></pre>
+<h2 id="azure-bicep-setup">Azure Bicep Setup</h2>
+<h3 id="deploy-with-bicep">Deploy with Bicep</h3>
+<h4 id="1-validate-template">1. Validate Template</h4>
+<pre><code class="lang-bash">cd infrastructure/bicep
+
+# Validate main template
+az bicep build --file main.bicep
+
+# What-if deployment
+az deployment sub create \
+  --location eastus \
+  --template-file main.bicep \
+  --parameters environment=production \
+  --what-if
+</code></pre>
+<h4 id="2-deploy-to-subscription">2. Deploy to Subscription</h4>
+<pre><code class="lang-bash"># Deploy main template
+az deployment sub create \
+  --name aura-production-deployment \
+  --location eastus \
+  --template-file main.bicep \
+  --parameters environment=production \
+               location=eastus \
+               aksNodeCount=3 \
+               enableMonitoring=true
+</code></pre>
+<h4 id="3-deploy-with-parameters-file">3. Deploy with Parameters File</h4>
+<p>Create <code>parameters.production.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;$schema&quot;: &quot;https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#&quot;,
+  &quot;contentVersion&quot;: &quot;1.0.0.0&quot;,
+  &quot;parameters&quot;: {
+    &quot;environment&quot;: {
+      &quot;value&quot;: &quot;production&quot;
+    },
+    &quot;location&quot;: {
+      &quot;value&quot;: &quot;eastus&quot;
+    },
+    &quot;aksNodeCount&quot;: {
+      &quot;value&quot;: 3
+    },
+    &quot;aksNodeSize&quot;: {
+      &quot;value&quot;: &quot;Standard_D4s_v3&quot;
+    },
+    &quot;enableMonitoring&quot;: {
+      &quot;value&quot;: true
+    }
+  }
+}
+</code></pre>
+<p>Deploy:</p>
+<pre><code class="lang-bash">az deployment sub create \
+  --name aura-production-deployment \
+  --location eastus \
+  --template-file main.bicep \
+  --parameters @parameters.production.json
+</code></pre>
+<h4 id="4-get-deployment-outputs">4. Get Deployment Outputs</h4>
+<pre><code class="lang-bash"># Get outputs
+az deployment sub show \
+  --name aura-production-deployment \
+  --query properties.outputs
+
+# Save outputs to file
+az deployment sub show \
+  --name aura-production-deployment \
+  --query properties.outputs \
+  &gt; infrastructure-outputs.json
+</code></pre>
+<h2 id="infrastructure-components">Infrastructure Components</h2>
+<h3 id="1-networking">1. Networking</h3>
+<p><strong>Resources</strong>:</p>
+<ul>
+<li>Virtual Network (VNet)</li>
+<li>Subnets (AKS, Services, Application Gateway)</li>
+<li>Network Security Groups (NSGs)</li>
+<li>Private DNS zones</li>
+</ul>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-bash"># Terraform
+terraform plan -target=module.networking
+
+# Bicep
+az deployment group create \
+  --resource-group aura-production-rg \
+  --template-file modules/network.bicep
+</code></pre>
+<h3 id="2-azure-kubernetes-service-aks">2. Azure Kubernetes Service (AKS)</h3>
+<p><strong>Resources</strong>:</p>
+<ul>
+<li>AKS cluster</li>
+<li>Node pools</li>
+<li>System-assigned managed identity</li>
+<li>Azure AD integration</li>
+</ul>
+<p><strong>Access Cluster</strong>:</p>
+<pre><code class="lang-bash"># Get credentials
+az aks get-credentials \
+  --resource-group aura-production-rg \
+  --name aura-production-aks
+
+# Verify access
+kubectl get nodes
+</code></pre>
+<p><strong>Scale Node Pool</strong>:</p>
+<pre><code class="lang-bash"># Manual scaling
+az aks nodepool scale \
+  --resource-group aura-production-rg \
+  --cluster-name aura-production-aks \
+  --name default \
+  --node-count 5
+
+# Update autoscaling
+az aks nodepool update \
+  --resource-group aura-production-rg \
+  --cluster-name aura-production-aks \
+  --name default \
+  --enable-cluster-autoscaler \
+  --min-count 2 \
+  --max-count 10
+</code></pre>
+<h3 id="3-container-registry">3. Container Registry</h3>
+<p><strong>Resources</strong>:</p>
+<ul>
+<li>Azure Container Registry (ACR)</li>
+<li>Geo-replication</li>
+<li>Content trust</li>
+<li>Retention policies</li>
+</ul>
+<p><strong>Push Images</strong>:</p>
+<pre><code class="lang-bash"># Login to ACR
+az acr login --name auraproductionacr
+
+# Tag image
+docker tag aura-api:v1.2.3 auraproductionacr.azurecr.io/aura-api:v1.2.3
+
+# Push image
+docker push auraproductionacr.azurecr.io/aura-api:v1.2.3
+</code></pre>
+<h3 id="4-redis-cache">4. Redis Cache</h3>
+<p><strong>Resources</strong>:</p>
+<ul>
+<li>Azure Cache for Redis (Premium)</li>
+<li>Private endpoint</li>
+<li>TLS 1.2 enforcement</li>
+</ul>
+<p><strong>Connection</strong>:</p>
+<pre><code class="lang-bash"># Get connection string
+az redis show \
+  --resource-group aura-production-rg \
+  --name aura-production-redis \
+  --query &quot;hostName&quot; -o tsv
+
+# Get access key
+az redis list-keys \
+  --resource-group aura-production-rg \
+  --name aura-production-redis \
+  --query &quot;primaryKey&quot; -o tsv
+</code></pre>
+<h3 id="5-storage-account">5. Storage Account</h3>
+<p><strong>Resources</strong>:</p>
+<ul>
+<li>Storage account (GRS)</li>
+<li>Blob containers</li>
+<li>Versioning enabled</li>
+<li>Soft delete enabled</li>
+</ul>
+<p><strong>Upload Files</strong>:</p>
+<pre><code class="lang-bash"># Upload file
+az storage blob upload \
+  --account-name auraproductionsa \
+  --container-name media \
+  --name video.mp4 \
+  --file ./video.mp4
+
+# Generate SAS token
+az storage blob generate-sas \
+  --account-name auraproductionsa \
+  --container-name media \
+  --name video.mp4 \
+  --permissions r \
+  --expiry 2024-12-31
+</code></pre>
+<h3 id="6-key-vault">6. Key Vault</h3>
+<p><strong>Resources</strong>:</p>
+<ul>
+<li>Azure Key Vault</li>
+<li>Secrets</li>
+<li>Access policies</li>
+<li>Network restrictions</li>
+</ul>
+<p><strong>Manage Secrets</strong>:</p>
+<pre><code class="lang-bash"># Add secret
+az keyvault secret set \
+  --vault-name aura-production-kv \
+  --name OpenAI-ApiKey \
+  --value &quot;sk-...&quot;
+
+# Get secret
+az keyvault secret show \
+  --vault-name aura-production-kv \
+  --name OpenAI-ApiKey \
+  --query &quot;value&quot; -o tsv
+
+# List secrets
+az keyvault secret list \
+  --vault-name aura-production-kv
+</code></pre>
+<h3 id="7-monitoring">7. Monitoring</h3>
+<p><strong>Resources</strong>:</p>
+<ul>
+<li>Log Analytics workspace</li>
+<li>Application Insights</li>
+<li>Alerts</li>
+<li>Dashboards</li>
+</ul>
+<p><strong>Query Logs</strong>:</p>
+<pre><code class="lang-bash"># Query with Azure CLI
+az monitor log-analytics query \
+  --workspace aura-production-logs \
+  --analytics-query &quot;
+    AppTraces
+    | where TimeGenerated &gt; ago(1h)
+    | where SeverityLevel &gt;= 3
+    | project TimeGenerated, Message, SeverityLevel
+    | order by TimeGenerated desc
+  &quot;
+</code></pre>
+<h2 id="state-management">State Management</h2>
+<h3 id="terraform-state">Terraform State</h3>
+<p><strong>View State</strong>:</p>
+<pre><code class="lang-bash"># List resources in state
+terraform state list
+
+# Show specific resource
+terraform state show azurerm_kubernetes_cluster.main
+
+# Pull current state
+terraform state pull &gt; terraform.tfstate.backup
+</code></pre>
+<p><strong>Import Existing Resources</strong>:</p>
+<pre><code class="lang-bash"># Import resource
+terraform import azurerm_kubernetes_cluster.main \
+  /subscriptions/{subscription-id}/resourceGroups/aura-production-rg/providers/Microsoft.ContainerService/managedClusters/aura-production-aks
+</code></pre>
+<p><strong>Manage State</strong>:</p>
+<pre><code class="lang-bash"># Move resource to different state file
+terraform state mv \
+  azurerm_storage_account.main \
+  module.storage.azurerm_storage_account.main
+
+# Remove resource from state (keeps in Azure)
+terraform state rm azurerm_resource_group.main
+</code></pre>
+<h3 id="backup-and-recovery">Backup and Recovery</h3>
+<p><strong>Backup State</strong>:</p>
+<pre><code class="lang-bash"># Backup Terraform state
+terraform state pull &gt; backups/terraform.tfstate.$(date +%Y%m%d)
+
+# Backup Bicep deployment
+az deployment sub show \
+  --name aura-production-deployment \
+  &gt; backups/bicep-deployment.$(date +%Y%m%d).json
+</code></pre>
+<p><strong>Disaster Recovery</strong>:</p>
+<pre><code class="lang-bash"># Restore Terraform state
+terraform state push backups/terraform.tfstate.20241110
+
+# Re-import resources if state is lost
+./scripts/infrastructure/reimport-resources.sh
+</code></pre>
+<h2 id="environment-management">Environment Management</h2>
+<h3 id="multiple-environments">Multiple Environments</h3>
+<h4 id="terraform-workspaces">Terraform Workspaces</h4>
+<pre><code class="lang-bash"># Create environments
+terraform workspace new staging
+terraform workspace new production
+
+# Deploy to staging
+terraform workspace select staging
+terraform apply -var-file=staging.tfvars
+
+# Deploy to production
+terraform workspace select production
+terraform apply -var-file=production.tfvars
+</code></pre>
+<h4 id="bicep-parameters">Bicep Parameters</h4>
+<pre><code class="lang-bash"># Deploy staging
+az deployment sub create \
+  --template-file main.bicep \
+  --parameters @parameters.staging.json
+
+# Deploy production
+az deployment sub create \
+  --template-file main.bicep \
+  --parameters @parameters.production.json
+</code></pre>
+<h2 id="cost-management">Cost Management</h2>
+<h3 id="estimate-costs">Estimate Costs</h3>
+<pre><code class="lang-bash"># Use Azure Pricing Calculator
+# https://azure.microsoft.com/en-us/pricing/calculator/
+
+# Export current costs
+az consumption usage list \
+  --start-date 2024-11-01 \
+  --end-date 2024-11-10 \
+  &gt; consumption-report.json
+</code></pre>
+<h3 id="optimize-costs">Optimize Costs</h3>
+<ul>
+<li>Use Azure Reserved Instances for AKS nodes</li>
+<li>Enable autoscaling for dynamic workloads</li>
+<li>Use Standard storage tier for non-critical data</li>
+<li>Configure retention policies for logs</li>
+<li>Delete unused resources</li>
+</ul>
+<h2 id="security-best-practices">Security Best Practices</h2>
+<h3 id="access-control">Access Control</h3>
+<ul>
+<li>Use managed identities instead of service principals</li>
+<li>Implement RBAC at resource level</li>
+<li>Restrict Key Vault access to specific IPs/VNets</li>
+<li>Enable Azure Defender for all services</li>
+</ul>
+<h3 id="network-security">Network Security</h3>
+<ul>
+<li>Deploy AKS in private VNet</li>
+<li>Use private endpoints for PaaS services</li>
+<li>Enable network security groups</li>
+<li>Implement Azure Firewall for egress traffic</li>
+</ul>
+<h3 id="secrets-management">Secrets Management</h3>
+<ul>
+<li>Store all secrets in Key Vault</li>
+<li>Use Key Vault references in configuration</li>
+<li>Rotate secrets regularly</li>
+<li>Enable audit logging for secret access</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="common-issues">Common Issues</h3>
+<h4 id="terraform-state-lock">Terraform State Lock</h4>
+<pre><code class="lang-bash"># If state is locked
+terraform force-unlock &lt;LOCK_ID&gt;
+
+# Alternatively, in Azure Storage
+az storage blob lease break \
+  --container-name tfstate \
+  --blob-name production.terraform.tfstate \
+  --account-name auraterraformstate
+</code></pre>
+<h4 id="bicep-deployment-failures">Bicep Deployment Failures</h4>
+<pre><code class="lang-bash"># Get deployment error details
+az deployment sub show \
+  --name aura-production-deployment \
+  --query properties.error
+
+# List all deployments
+az deployment sub list --query &quot;[].{name:name,state:properties.provisioningState}&quot;
+</code></pre>
+<h4 id="aks-connection-issues">AKS Connection Issues</h4>
+<pre><code class="lang-bash"># Re-authenticate
+az aks get-credentials \
+  --resource-group aura-production-rg \
+  --name aura-production-aks \
+  --overwrite-existing
+
+# Check RBAC
+az role assignment list \
+  --scope /subscriptions/{subscription-id}/resourceGroups/aura-production-rg
+</code></pre>
+<hr>
+<p><strong>Last Updated</strong>: 2024-11-10<br>
+<strong>Document Owner</strong>: DevOps Team<br>
+<strong>Review Cycle</strong>: Quarterly</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/deployment/INFRASTRUCTURE_AS_CODE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

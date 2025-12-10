@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Orchestrator Usage Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Orchestrator Usage Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ORCHESTRATOR_USAGE_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="orchestrator-usage-guide">Orchestrator Usage Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide explains how to properly use the orchestrator layer for all provider calls in Aura Video Studio. Direct provider usage is now forbidden in application layers to ensure middleware coverage (content safety, telemetry, retry/backoff) for all generation and search routes.</p>
+<h2 id="why-orchestrator-only-access">Why Orchestrator-Only Access?</h2>
+<p>The orchestrator pattern provides critical benefits:</p>
+<ol>
+<li><strong>Middleware Coverage</strong>: All operations automatically get content safety checks, telemetry collection, and retry logic</li>
+<li><strong>Consistent Error Handling</strong>: Unified error handling and reporting across all providers</li>
+<li><strong>Budget Management</strong>: Automatic cost and token tracking with configurable limits</li>
+<li><strong>Caching</strong>: Automatic response caching for deterministic operations</li>
+<li><strong>Observability</strong>: Comprehensive telemetry for monitoring and debugging</li>
+<li><strong>Fallback Chains</strong>: Automatic provider failover for improved reliability</li>
+</ol>
+<h2 id="analyzer-rule-aur001">Analyzer Rule AUR001</h2>
+<p>The <code>AUR001</code> analyzer rule enforces this pattern:</p>
+<p><strong>Rule</strong>: Direct usage of provider interfaces (<code>ILlmProvider</code>, <code>ITtsProvider</code>, <code>IImageProvider</code>, etc.) is forbidden outside orchestrator namespaces.</p>
+<p><strong>Severity</strong>: Error in CI, Warning in development</p>
+<p><strong>Allowed Namespaces</strong>:</p>
+<ul>
+<li><code>Aura.Core.Orchestration.*</code> - Orchestration infrastructure</li>
+<li><code>Aura.Core.Orchestrator.*</code> - Legacy orchestrator (being migrated)</li>
+<li><code>Aura.Core.AI.Orchestration.*</code> - AI orchestration layer</li>
+<li><code>Aura.Providers.*</code> - Provider implementations</li>
+<li><code>Aura.Api.Startup.*</code> - Dependency injection registration</li>
+<li><code>Aura.Tests.*</code> - Test projects can mock providers</li>
+<li><code>Aura.E2E.*</code> - E2E tests</li>
+</ul>
+<h2 id="how-to-use-orchestrator">How to Use Orchestrator</h2>
+<h3 id="for-llm-operations">For LLM Operations</h3>
+<p>Use <code>UnifiedLlmOrchestrator</code> or <code>LlmStageAdapter</code>:</p>
+<h4 id="unifiedllmorchestrator">UnifiedLlmOrchestrator</h4>
+<pre><code class="lang-csharp">public class MyService
+{
+    private readonly UnifiedLlmOrchestrator _orchestrator;
+    private readonly ILlmProvider _provider;  // Injected but passed to orchestrator
+    
+    public MyService(
+        UnifiedLlmOrchestrator orchestrator,
+        ILlmProvider provider)
+    {
+        _orchestrator = orchestrator;
+        _provider = provider;
+    }
+    
+    public async Task&lt;string&gt; GenerateContentAsync(
+        string prompt,
+        string sessionId,
+        CancellationToken ct)
+    {
+        var request = new LlmOperationRequest
+        {
+            SessionId = sessionId,
+            OperationType = LlmOperationType.Completion,
+            Prompt = prompt,
+            EnableCache = true
+        };
+        
+        var response = await _orchestrator.ExecuteAsync(request, _provider, ct);
+        
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(
+                $&quot;LLM operation failed: {response.ErrorMessage}&quot;);
+        }
+        
+        return response.Content;
+    }
+}
+</code></pre>
+<h4 id="llmstageadapter-for-script-generation">LlmStageAdapter (for script generation)</h4>
+<pre><code class="lang-csharp">public class MyScriptService
+{
+    private readonly LlmStageAdapter _stageAdapter;
+    
+    public MyScriptService(LlmStageAdapter stageAdapter)
+    {
+        _stageAdapter = stageAdapter;
+    }
+    
+    public async Task&lt;Script&gt; GenerateScriptAsync(
+        Brief brief,
+        PlanSpec spec,
+        CancellationToken ct)
+    {
+        var result = await _stageAdapter.GenerateScriptAsync(
+            brief,
+            spec,
+            preferredTier: &quot;Free&quot;,
+            offlineOnly: false,
+            ct);
+        
+        if (!result.IsSuccess)
+        {
+            throw new InvalidOperationException(
+                $&quot;Script generation failed: {result.ErrorMessage}&quot;);
+        }
+        
+        return ParseScript(result.Data);
+    }
+}
+</code></pre>
+<h3 id="for-tts-operations">For TTS Operations</h3>
+<p>Use <code>SSMLStageAdapter</code>:</p>
+<pre><code class="lang-csharp">public class MyTtsService
+{
+    private readonly SSMLStageAdapter _ssmlAdapter;
+    
+    public MyTtsService(SSMLStageAdapter ssmlAdapter)
+    {
+        _ssmlAdapter = ssmlAdapter;
+    }
+    
+    public async Task&lt;SSMLPlanningResult&gt; GenerateSSMLAsync(
+        List&lt;ScriptLine&gt; lines,
+        VoiceSpec voiceSpec,
+        CancellationToken ct)
+    {
+        var targetDurations = lines.Select(l =&gt; l.Duration).ToList();
+        
+        var result = await _ssmlAdapter.GenerateSSMLAsync(
+            lines,
+            voiceSpec,
+            targetDurations,
+            VoiceProvider.ElevenLabs,
+            ct);
+        
+        if (!result.IsSuccess)
+        {
+            throw new InvalidOperationException(
+                $&quot;SSML generation failed: {result.ErrorMessage}&quot;);
+        }
+        
+        return result.Data;
+    }
+}
+</code></pre>
+<h3 id="for-visual-generation">For Visual Generation</h3>
+<p>Use <code>VisualStageAdapter</code>:</p>
+<pre><code class="lang-csharp">public class MyVisualService
+{
+    private readonly VisualStageAdapter _visualAdapter;
+    
+    public MyVisualService(VisualStageAdapter visualAdapter)
+    {
+        _visualAdapter = visualAdapter;
+    }
+    
+    public async Task&lt;VisualPrompt&gt; GenerateVisualPromptAsync(
+        Scene scene,
+        VisualStyle style,
+        CancellationToken ct)
+    {
+        var result = await _visualAdapter.GenerateVisualPromptAsync(
+            scene,
+            style,
+            ct);
+        
+        if (!result.IsSuccess)
+        {
+            throw new InvalidOperationException(
+                $&quot;Visual prompt generation failed: {result.ErrorMessage}&quot;);
+        }
+        
+        return result.Data;
+    }
+}
+</code></pre>
+<h2 id="middleware-architecture">Middleware Architecture</h2>
+<p>All operations through the orchestrator automatically get:</p>
+<h3 id="1-telemetry-collection">1. Telemetry Collection</h3>
+<p>Every operation is tracked with:</p>
+<ul>
+<li>Operation ID and session ID</li>
+<li>Provider and model used</li>
+<li>Token counts (input/output)</li>
+<li>Latency metrics</li>
+<li>Cost estimates</li>
+<li>Success/failure status</li>
+<li>Cache hit/miss</li>
+</ul>
+<p><strong>Access telemetry</strong>:</p>
+<pre><code class="lang-csharp">var stats = _orchestrator.GetStatistics();
+Console.WriteLine($&quot;Total operations: {stats.TotalOperations}&quot;);
+Console.WriteLine($&quot;Cache hit rate: {stats.CacheHitRate:P}&quot;);
+Console.WriteLine($&quot;Average latency: {stats.AverageLatencyMs}ms&quot;);
+Console.WriteLine($&quot;Total cost: ${stats.TotalEstimatedCost:F4}&quot;);
+</code></pre>
+<h3 id="2-budget-management">2. Budget Management</h3>
+<p>Set limits on tokens and cost:</p>
+<pre><code class="lang-csharp">var budgetConstraint = new LlmBudgetConstraint
+{
+    MaxTokensPerOperation = 5000,
+    MaxCostPerOperation = 0.50m,
+    MaxTokensPerSession = 50000,
+    MaxCostPerSession = 5.00m,
+    EnforceHardLimits = true
+};
+
+var request = new LlmOperationRequest
+{
+    SessionId = sessionId,
+    OperationType = LlmOperationType.Planning,
+    Prompt = prompt,
+    BudgetConstraint = budgetConstraint
+};
+</code></pre>
+<h3 id="3-retry-logic-with-backoff">3. Retry Logic with Backoff</h3>
+<p>Automatic retry for transient failures:</p>
+<pre><code class="lang-csharp">var request = new LlmOperationRequest
+{
+    OperationType = LlmOperationType.Completion,
+    Prompt = prompt,
+    CustomPreset = new LlmOperationPreset
+    {
+        MaxRetries = 3,
+        TimeoutSeconds = 30
+    }
+};
+</code></pre>
+<p>The orchestrator will:</p>
+<ul>
+<li>Retry up to MaxRetries times</li>
+<li>Use exponential backoff between retries</li>
+<li>Track retry count in telemetry</li>
+</ul>
+<h3 id="4-response-caching">4. Response Caching</h3>
+<p>Automatic caching for deterministic operations:</p>
+<pre><code class="lang-csharp">var request = new LlmOperationRequest
+{
+    OperationType = LlmOperationType.SceneAnalysis,
+    Prompt = prompt,
+    EnableCache = true,
+    CacheTtlSeconds = 3600  // 1 hour
+};
+</code></pre>
+<p>First call hits the provider, subsequent identical calls return cached result.</p>
+<h3 id="5-content-safety-future">5. Content Safety (Future)</h3>
+<p>Content safety middleware will be added to:</p>
+<ul>
+<li>Filter inappropriate prompts</li>
+<li>Validate response content</li>
+<li>Apply policy constraints</li>
+<li>Log safety violations</li>
+</ul>
+<h2 id="migration-guide">Migration Guide</h2>
+<h3 id="step-1-identify-direct-provider-usage">Step 1: Identify Direct Provider Usage</h3>
+<p>The <code>AUR001</code> analyzer will flag all direct provider usage:</p>
+<pre><code>error AUR001: Direct usage of 'ILlmProvider' is not allowed. 
+Use orchestrator layer instead (LlmStageAdapter, SSMLStageAdapter, VisualStageAdapter)
+</code></pre>
+<h3 id="step-2-add-orchestrator-dependency">Step 2: Add Orchestrator Dependency</h3>
+<p><strong>Before</strong>:</p>
+<pre><code class="lang-csharp">public class MyService
+{
+    private readonly ILlmProvider _llmProvider;
+    
+    public MyService(ILlmProvider llmProvider)
+    {
+        _llmProvider = llmProvider;
+    }
+    
+    public async Task&lt;string&gt; ProcessAsync(string input, CancellationToken ct)
+    {
+        return await _llmProvider.CompleteAsync(input, ct);
+    }
+}
+</code></pre>
+<p><strong>After</strong>:</p>
+<pre><code class="lang-csharp">public class MyService
+{
+    private readonly UnifiedLlmOrchestrator _orchestrator;
+    private readonly ILlmProvider _provider;
+    
+    public MyService(
+        UnifiedLlmOrchestrator orchestrator,
+        ILlmProvider provider)
+    {
+        _orchestrator = orchestrator;
+        _provider = provider;
+    }
+    
+    public async Task&lt;string&gt; ProcessAsync(
+        string input,
+        string sessionId,
+        CancellationToken ct)
+    {
+        var request = new LlmOperationRequest
+        {
+            SessionId = sessionId,
+            OperationType = LlmOperationType.Completion,
+            Prompt = input,
+            EnableCache = false
+        };
+        
+        var response = await _orchestrator.ExecuteAsync(request, _provider, ct);
+        
+        if (!response.Success)
+        {
+            throw new InvalidOperationException(response.ErrorMessage);
+        }
+        
+        return response.Content;
+    }
+}
+</code></pre>
+<h3 id="step-3-update-dependency-injection">Step 3: Update Dependency Injection</h3>
+<p>Ensure orchestrator dependencies are registered:</p>
+<pre><code class="lang-csharp">// In Startup or Program.cs
+services.AddSingleton&lt;ILlmCache, MemoryLlmCache&gt;();
+services.AddSingleton&lt;LlmBudgetManager&gt;();
+services.AddSingleton&lt;LlmTelemetryCollector&gt;();
+services.AddSingleton&lt;SchemaValidator&gt;();
+services.AddSingleton&lt;UnifiedLlmOrchestrator&gt;();
+
+// Stage adapters
+services.AddSingleton&lt;LlmStageAdapter&gt;();
+services.AddSingleton&lt;SSMLStageAdapter&gt;();
+services.AddSingleton&lt;VisualStageAdapter&gt;();
+</code></pre>
+<h3 id="step-4-update-tests">Step 4: Update Tests</h3>
+<p>Tests can continue to mock providers directly:</p>
+<pre><code class="lang-csharp">[Fact]
+public async Task MyTest()
+{
+    var mockProvider = new Mock&lt;ILlmProvider&gt;();
+    mockProvider.Setup(x =&gt; x.CompleteAsync(It.IsAny&lt;string&gt;(), It.IsAny&lt;CancellationToken&gt;()))
+        .ReturnsAsync(&quot;Test response&quot;);
+    
+    var orchestrator = new UnifiedLlmOrchestrator(...);
+    var service = new MyService(orchestrator, mockProvider.Object);
+    
+    var result = await service.ProcessAsync(&quot;test&quot;, &quot;session&quot;, CancellationToken.None);
+    
+    Assert.Equal(&quot;Test response&quot;, result);
+}
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-always-use-session-ids">1. Always Use Session IDs</h3>
+<p>Group related operations under a single session ID for accurate budget tracking:</p>
+<pre><code class="lang-csharp">var sessionId = $&quot;video-{videoId}&quot;;
+
+await GeneratePlanAsync(sessionId, ...);
+await GenerateScriptAsync(sessionId, ...);
+await GenerateVisualsAsync(sessionId, ...);
+
+// Clear session when complete
+orchestrator.ClearSession(sessionId);
+</code></pre>
+<h3 id="2-enable-caching-for-deterministic-operations">2. Enable Caching for Deterministic Operations</h3>
+<pre><code class="lang-csharp">// Cache deterministic operations
+var analysisRequest = new LlmOperationRequest
+{
+    OperationType = LlmOperationType.SceneAnalysis,
+    EnableCache = true,
+    CacheTtlSeconds = 3600
+};
+
+// Don't cache creative operations
+var creativeRequest = new LlmOperationRequest
+{
+    OperationType = LlmOperationType.Creative,
+    EnableCache = false
+};
+</code></pre>
+<h3 id="3-set-appropriate-budgets">3. Set Appropriate Budgets</h3>
+<pre><code class="lang-csharp">// Set conservative budgets for user-facing operations
+var userConstraint = new LlmBudgetConstraint
+{
+    MaxTokensPerSession = 50000,
+    MaxCostPerSession = 2.00m,
+    EnforceHardLimits = true
+};
+
+// More generous budgets for background processing
+var backgroundConstraint = new LlmBudgetConstraint
+{
+    MaxTokensPerSession = 200000,
+    MaxCostPerSession = 10.00m,
+    EnforceHardLimits = false  // Log warnings only
+};
+</code></pre>
+<h3 id="4-handle-errors-gracefully">4. Handle Errors Gracefully</h3>
+<pre><code class="lang-csharp">var response = await orchestrator.ExecuteAsync(request, provider, ct);
+
+if (!response.Success)
+{
+    _logger.LogWarning(
+        &quot;LLM operation failed: {Error} (Operation: {OpId})&quot;,
+        response.ErrorMessage,
+        response.Telemetry.OperationId);
+    
+    // Handle specific errors
+    if (response.ErrorMessage?.Contains(&quot;Budget exceeded&quot;) == true)
+    {
+        await NotifyUserAsync(&quot;Operation paused due to budget limit&quot;);
+        return new Result { RequiresBudgetIncrease = true };
+    }
+    
+    // Generic fallback
+    throw new InvalidOperationException(response.ErrorMessage);
+}
+</code></pre>
+<h3 id="5-monitor-telemetry">5. Monitor Telemetry</h3>
+<pre><code class="lang-csharp">// Periodic monitoring
+var stats = orchestrator.GetStatistics();
+
+if (stats.CacheHitRate &lt; 0.3)
+{
+    _logger.LogWarning(&quot;Low cache hit rate: {Rate:P}&quot;, stats.CacheHitRate);
+}
+
+if (stats.P95LatencyMs &gt; 5000)
+{
+    _logger.LogWarning(&quot;High P95 latency: {Latency}ms&quot;, stats.P95LatencyMs);
+}
+
+if (stats.TotalEstimatedCost &gt; 100.0m)
+{
+    _logger.LogWarning(&quot;High cost accumulated: ${Cost:F2}&quot;, stats.TotalEstimatedCost);
+}
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="build-error-aur001">Build Error: AUR001</h3>
+<p><strong>Problem</strong>: CI fails with <code>error AUR001: Direct usage of 'ILlmProvider' is not allowed</code></p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Identify the service using direct provider access</li>
+<li>Add <code>UnifiedLlmOrchestrator</code> or <code>LlmStageAdapter</code> dependency</li>
+<li>Route calls through orchestrator as shown in this guide</li>
+<li>Rebuild and verify</li>
+</ol>
+<h3 id="provider-not-working">Provider Not Working</h3>
+<p><strong>Problem</strong>: Orchestrator returns errors when provider works directly</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check that provider is registered in DI container</li>
+<li>Verify API keys are configured</li>
+<li>Check telemetry for specific error details:
+<pre><code class="lang-csharp">var telemetry = response.Telemetry;
+_logger.LogError(&quot;Provider: {Provider}, Error: {Error}&quot;, 
+    telemetry.ProviderName, telemetry.ErrorMessage);
+</code></pre>
+</li>
+</ol>
+<h3 id="high-costs">High Costs</h3>
+<p><strong>Problem</strong>: Operations consuming too many tokens/cost</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Review telemetry to identify expensive operations:
+<pre><code class="lang-csharp">var stats = orchestrator.GetStatistics();
+foreach (var (provider, count) in stats.OperationsByProvider)
+{
+    _logger.LogInformation(&quot;{Provider}: {Count} ops&quot;, provider, count);
+}
+</code></pre>
+</li>
+<li>Set budget constraints</li>
+<li>Use cheaper models for non-critical operations</li>
+<li>Enable caching for repeated operations</li>
+</ol>
+<h3 id="low-cache-hit-rate">Low Cache Hit Rate</h3>
+<p><strong>Problem</strong>: Expected cache hits not occurring</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Verify prompts are normalized consistently</li>
+<li>Check cache TTL settings</li>
+<li>Consider increasing cache TTL:
+<pre><code class="lang-csharp">request.CacheTtlSeconds = 7200;  // 2 hours
+</code></pre>
+</li>
+<li>Monitor cache size and eviction</li>
+</ol>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="ORCHESTRATOR_UNIFICATION_SUMMARY.md">Orchestrator Unification Summary</a></li>
+<li><a href="UNIFIED_LLM_ORCHESTRATOR_GUIDE.md">Unified LLM Orchestrator Guide</a></li>
+<li><a href="LLM_CACHE_GUIDE.md">LLM Cache Guide</a></li>
+<li><a href="PROVIDER_INTEGRATION_GUIDE.md">Provider Integration Guide</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For questions or issues with orchestrator usage:</p>
+<ol>
+<li>Check existing tests in <code>Aura.Tests/OrchestratorMiddlewareTests.cs</code></li>
+<li>Review orchestrator implementation in <code>Aura.Core/AI/Orchestration/</code></li>
+<li>Consult related documentation above</li>
+<li>Create an issue with <code>orchestrator</code> label</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ORCHESTRATOR_USAGE_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

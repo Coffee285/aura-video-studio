@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Portable-Only Cleanup - Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Portable-Only Cleanup - Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PORTABLE_ONLY_CLEANUP_SUMMARY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="portable-only-cleanup---implementation-summary">Portable-Only Cleanup - Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This implementation enforces a portable-only distribution policy for Aura Video Studio by removing all MSIX/EXE packaging infrastructure and adding CI guards to prevent their reintroduction.</p>
+<h2 id="changes-made">Changes Made</h2>
+<h3 id="1-cleanup-scripts-created">1. Cleanup Scripts Created</h3>
+<h4 id="scriptscleanupportable_only_cleanupps1-powershell"><code>scripts/cleanup/portable_only_cleanup.ps1</code> (PowerShell)</h4>
+<ul>
+<li>Searches for and removes forbidden packaging files</li>
+<li>Supports dry-run mode for preview</li>
+<li>Comprehensive file pattern matching</li>
+<li>Clear progress reporting</li>
+</ul>
+<h4 id="scriptscleanupportable_only_cleanupsh-bash"><code>scripts/cleanup/portable_only_cleanup.sh</code> (Bash)</h4>
+<ul>
+<li>Linux/macOS compatible version</li>
+<li>Same functionality as PowerShell version</li>
+<li>Executable permissions set</li>
+<li>Duplicate file handling via associative arrays</li>
+</ul>
+<h4 id="scriptscleanupci_guardsh-ci-enforcement"><code>scripts/cleanup/ci_guard.sh</code> (CI Enforcement)</h4>
+<ul>
+<li>Runs in CI pipeline to enforce policy</li>
+<li>Checks for forbidden file patterns</li>
+<li>Scans workflows for MSIX/EXE references</li>
+<li>Fails build if violations detected</li>
+</ul>
+<h3 id="2-files-removed">2. Files Removed</h3>
+<ul>
+<li><strong><code>scripts/packaging/setup.iss</code></strong> - Inno Setup installer script</li>
+<li><strong><code>Aura.App/Package.appxmanifest</code></strong> - MSIX package manifest</li>
+</ul>
+<h3 id="3-ci-workflows-updated">3. CI Workflows Updated</h3>
+<h4 id="githubworkflowsciyml"><code>.github/workflows/ci.yml</code></h4>
+<ul>
+<li>Removed <code>build-winui-app</code> job (WinUI 3/MSIX build)</li>
+<li>Added <code>portable-only-guard</code> job</li>
+<li>Simplified to core build and test</li>
+</ul>
+<h4 id="githubworkflowsci-windowsyml"><code>.github/workflows/ci-windows.yml</code></h4>
+<ul>
+<li>Removed MSBuild and MSIX packaging steps</li>
+<li>Added portable ZIP build step</li>
+<li>Added <code>portable-only-guard</code> job</li>
+<li>Updated artifact uploads</li>
+</ul>
+<h4 id="githubworkflowsci-linuxyml"><code>.github/workflows/ci-linux.yml</code></h4>
+<ul>
+<li>Added <code>portable-only-guard</code> job</li>
+<li>Maintains existing Linux build/test</li>
+</ul>
+<h3 id="4-documentation-updated">4. Documentation Updated</h3>
+<h4 id="readmemd"><code>README.md</code></h4>
+<ul>
+<li>Added &quot;Distribution Policy&quot; section</li>
+<li>Updated packaging references</li>
+<li>Clarified portable-only approach</li>
+</ul>
+<h4 id="scriptspackagingreadmemd"><code>scripts/packaging/README.md</code></h4>
+<ul>
+<li>Added distribution policy at top</li>
+<li>Removed MSIX/EXE references</li>
+<li>Focused on portable ZIP only</li>
+</ul>
+<h4 id="deploymentmd"><code>DEPLOYMENT.md</code></h4>
+<ul>
+<li>Updated Windows CI description</li>
+<li>Replaced MSIX/EXE sections with portable-only</li>
+<li>Added cleanup scripts documentation</li>
+<li>Updated CI/CD pipeline description</li>
+</ul>
+<h4 id="architecturemd"><code>ARCHITECTURE.md</code></h4>
+<ul>
+<li>Removed production MSIX/EXE scenarios</li>
+<li>Updated directory structure</li>
+<li>Simplified technology stack table</li>
+<li>Added distribution policy note</li>
+</ul>
+<h4 id="scriptscleanupreadmemd-new"><code>scripts/cleanup/README.md</code> (New)</h4>
+<ul>
+<li>Complete cleanup scripts documentation</li>
+<li>Usage examples for all scripts</li>
+<li>CI integration details</li>
+<li>Troubleshooting guide</li>
+</ul>
+<h2 id="distribution-policy">Distribution Policy</h2>
+<p><strong>Aura Video Studio follows a portable-only distribution model:</strong></p>
+<p>✅ <strong>Supported:</strong></p>
+<ul>
+<li>Portable ZIP - Self-contained, no-install distribution</li>
+</ul>
+<p>❌ <strong>Not Supported:</strong></p>
+<ul>
+<li>MSIX/APPX packages</li>
+<li>Traditional installers (EXE/Inno Setup)</li>
+<li>Windows Store submissions</li>
+</ul>
+<h2 id="benefits">Benefits</h2>
+<ol>
+<li><strong>No Installation Required</strong> - Extract and run</li>
+<li><strong>No Administrator Rights</strong> - Runs from any directory</li>
+<li><strong>No System Changes</strong> - No registry or system file modifications</li>
+<li><strong>Maximum Compatibility</strong> - Works on any Windows system</li>
+<li><strong>Easy Distribution</strong> - Single ZIP file</li>
+<li><strong>Easy Updates</strong> - Replace files in place</li>
+<li><strong>Portable</strong> - Can run from USB drives or network shares</li>
+</ol>
+<h2 id="ci-guard-operation">CI Guard Operation</h2>
+<p>The CI guard runs on every push and pull request to ensure policy compliance:</p>
+<pre><code class="lang-bash">./scripts/cleanup/ci_guard.sh
+</code></pre>
+<p><strong>Checks performed:</strong></p>
+<ol>
+<li>Scans for forbidden file patterns (*.iss, <em>.msix</em>, <em>.appx</em>, etc.)</li>
+<li>Checks scripts/packaging/ for forbidden directories</li>
+<li>Searches workflows for MSIX/EXE references</li>
+</ol>
+<p><strong>Exit codes:</strong></p>
+<ul>
+<li><code>0</code> - Clean (CI passes)</li>
+<li><code>1</code> - Violations found (CI fails with detailed report)</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<p>All cleanup scripts and CI guards have been tested with:</p>
+<ul>
+<li>✅ Dry-run mode verification</li>
+<li>✅ File deletion functionality</li>
+<li>✅ Duplicate file handling</li>
+<li>✅ CI guard detection accuracy</li>
+<li>✅ YAML syntax validation</li>
+<li>✅ Workflow compatibility</li>
+</ul>
+<h2 id="usage">Usage</h2>
+<h3 id="run-cleanup-if-needed">Run Cleanup (if needed)</h3>
+<pre><code class="lang-bash"># Preview what would be deleted
+./scripts/cleanup/portable_only_cleanup.sh --dry-run
+
+# Actually delete forbidden files
+./scripts/cleanup/portable_only_cleanup.sh
+</code></pre>
+<h3 id="verify-compliance">Verify Compliance</h3>
+<pre><code class="lang-bash"># Check for policy violations
+./scripts/cleanup/ci_guard.sh
+</code></pre>
+<h3 id="build-portable-distribution">Build Portable Distribution</h3>
+<pre><code class="lang-powershell"># Windows
+.\scripts\packaging\build-portable.ps1
+</code></pre>
+<h2 id="future-maintenance">Future Maintenance</h2>
+<p>The portable-only policy is now enforced automatically:</p>
+<ul>
+<li>CI guard runs on every build</li>
+<li>Violations cause build failures</li>
+<li>Clear error messages guide remediation</li>
+<li>Documentation clearly states policy</li>
+</ul>
+<p>No manual intervention needed - the CI guard ensures compliance.</p>
+<h2 id="definition-of-done">Definition of Done</h2>
+<p>✅ Repository contains no MSIX/EXE packaging files<br>
+✅ CI guard active and functional<br>
+✅ All documentation updated<br>
+✅ All tests passing<br>
+✅ Workflows validated</p>
+<p><strong>Status: COMPLETE</strong></p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PORTABLE_ONLY_CLEANUP_SUMMARY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

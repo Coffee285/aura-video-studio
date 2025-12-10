@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Video Generation Pipeline Pre-flight Validation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Video Generation Pipeline Pre-flight Validation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/PR5_PIPELINE_VALIDATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="video-generation-pipeline-pre-flight-validation">Video Generation Pipeline Pre-flight Validation</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This feature adds comprehensive pre-flight validation to the video generation pipeline, ensuring all required services are available and functional before starting expensive video generation operations.</p>
+<h2 id="problem-solved">Problem Solved</h2>
+<p>Previously, the video generation pipeline could fail midway through with cryptic error messages because:</p>
+<ul>
+<li>Services were not checked before starting generation</li>
+<li>Users wasted time on partial generation that would inevitably fail</li>
+<li>Error messages were unclear about which service was missing or misconfigured</li>
+</ul>
+<h2 id="solution">Solution</h2>
+<h3 id="backend-validation-videoorchestratorvalidatepipelineasync">Backend Validation (<code>VideoOrchestrator.ValidatePipelineAsync</code>)</h3>
+<p>A new <code>ValidatePipelineAsync</code> method validates all required services:</p>
+<ol>
+<li><p><strong>LLM Provider</strong> - Checks if script generation service is available</p>
+<ul>
+<li>Special handling for Ollama: Verifies the service is actually running</li>
+</ul>
+</li>
+<li><p><strong>TTS Provider</strong> - Checks if text-to-speech service is available</p>
+<ul>
+<li>Verifies at least one voice is available for narration</li>
+</ul>
+</li>
+<li><p><strong>FFmpeg</strong> - Checks if video rendering tool is installed</p>
+<ul>
+<li>Uses FFmpegResolver to search standard locations</li>
+<li>Reports specific path attempts if not found</li>
+</ul>
+</li>
+<li><p><strong>Image Provider</strong> - Checks if visual generation is available (optional)</p>
+<ul>
+<li>Logs warning if missing but doesn't fail validation</li>
+<li>System can use fallback placeholders</li>
+</ul>
+</li>
+<li><p><strong>Output Directory</strong> - Checks if output location is writable</p>
+<ul>
+<li>Tests write permissions before generation</li>
+</ul>
+</li>
+</ol>
+<h3 id="api-endpoints">API Endpoints</h3>
+<h4 id="get-apivideovalidate">GET /api/video/validate</h4>
+<p>Returns validation status without starting generation.</p>
+<p><strong>Response (Success)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;isValid&quot;: true,
+  &quot;errors&quot;: [],
+  &quot;timestamp&quot;: &quot;2025-11-21T02:39:37.532Z&quot;,
+  &quot;correlationId&quot;: &quot;xyz789&quot;
+}
+</code></pre>
+<p><strong>Response (Failure)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;isValid&quot;: false,
+  &quot;errors&quot;: [
+    &quot;FFmpeg not found. Checked 5 locations. Please install FFmpeg or run setup.&quot;,
+    &quot;TTS Provider has no available voices. Check TTS configuration.&quot;,
+    &quot;Ollama LLM configured but not responding. Please start Ollama.&quot;
+  ],
+  &quot;timestamp&quot;: &quot;2025-11-21T02:39:37.532Z&quot;,
+  &quot;correlationId&quot;: &quot;xyz789&quot;
+}
+</code></pre>
+<h4 id="post-apivideogenerate-updated">POST /api/video/generate (Updated)</h4>
+<p>Now includes automatic pre-flight validation before creating generation job.</p>
+<p><strong>Error Response (400 Bad Request)</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/errors/README.md#E400&quot;,
+  &quot;title&quot;: &quot;Pipeline Validation Failed&quot;,
+  &quot;status&quot;: 400,
+  &quot;detail&quot;: &quot;The video generation pipeline is not ready. Please fix the issues below before generating videos.&quot;,
+  &quot;correlationId&quot;: &quot;xyz789&quot;,
+  &quot;errors&quot;: [
+    &quot;FFmpeg not found. Checked 5 locations. Please install FFmpeg or run setup.&quot;
+  ],
+  &quot;message&quot;: &quot;Please fix the issues above before generating videos&quot;
+}
+</code></pre>
+<h2 id="frontend-integration-optional">Frontend Integration (Optional)</h2>
+<p>The validation endpoint can be called from the frontend before showing the &quot;Generate&quot; button:</p>
+<pre><code class="lang-typescript">// Example frontend code (not implemented in this PR)
+import { apiClient } from '@/services/api/apiClient';
+
+interface PipelineValidation {
+  isValid: boolean;
+  errors: string[];
+  timestamp: string;
+  correlationId: string;
+}
+
+export async function validatePipeline(): Promise&lt;PipelineValidation&gt; {
+  const response = await apiClient.get('/api/video/validate');
+  return response.data;
+}
+
+// In your React component before generation:
+const handleGenerate = async () =&gt; {
+  // Check pipeline first
+  const validation = await validatePipeline();
+  
+  if (!validation.isValid) {
+    toast.error('Cannot generate video', {
+      description: validation.errors.join('\n')
+    });
+    return;
+  }
+
+  // Proceed with generation
+  await generateVideo(brief);
+};
+</code></pre>
+<h2 id="benefits">Benefits</h2>
+<ol>
+<li><strong>Fail Fast</strong> - Detects problems before starting expensive generation</li>
+<li><strong>Clear Error Messages</strong> - Each error message is actionable and specific</li>
+<li><strong>Better User Experience</strong> - Users know what to fix before waiting</li>
+<li><strong>Resource Efficiency</strong> - Avoids wasting CPU/GPU on doomed generation</li>
+<li><strong>Debugging Support</strong> - Correlation IDs enable better tracing</li>
+</ol>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p><code>VideoOrchestratorValidationTests.cs</code> includes tests for:</p>
+<ul>
+<li>✅ Successful validation with all services available</li>
+<li>✅ Validation failure when TTS has no voices</li>
+<li>✅ Validation passes without image provider (optional)</li>
+<li>✅ Validation failure when FFmpeg is not found</li>
+</ul>
+<h3 id="manual-testing">Manual Testing</h3>
+<ol>
+<li><p><strong>Test without FFmpeg</strong>:</p>
+<pre><code class="lang-bash">curl http://localhost:5005/api/video/validate
+# Should return isValid: false with FFmpeg error
+</code></pre>
+</li>
+<li><p><strong>Test with all services</strong>:</p>
+<ul>
+<li>Install FFmpeg</li>
+<li>Start Ollama (if using Ollama LLM)</li>
+<li>Configure TTS provider</li>
+</ul>
+<pre><code class="lang-bash">curl http://localhost:5005/api/video/validate
+# Should return isValid: true
+</code></pre>
+</li>
+<li><p><strong>Test generation endpoint</strong>:</p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/video/generate \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;brief&quot;: &quot;Test video&quot;,
+    &quot;durationMinutes&quot;: 1
+  }'
+# Should return 400 if validation fails, 202 if successful
+</code></pre>
+</li>
+</ol>
+<h2 id="implementation-notes">Implementation Notes</h2>
+<h3 id="ollama-health-check">Ollama Health Check</h3>
+<p>The Ollama health check uses reflection to avoid circular dependency:</p>
+<ul>
+<li><code>Aura.Core</code> doesn't reference <code>Aura.Providers</code></li>
+<li>Uses <code>GetType().Name == &quot;OllamaLlmProvider&quot;</code> to detect Ollama</li>
+<li>Calls <code>IsServiceAvailableAsync</code> via reflection</li>
+<li>Falls back gracefully if method not found</li>
+</ul>
+<h3 id="ffmpeg-resolver-integration">FFmpeg Resolver Integration</h3>
+<p>The <code>FFmpegResolver</code> is injected optionally into <code>VideoOrchestrator</code>:</p>
+<ul>
+<li>Maintains backward compatibility with existing code</li>
+<li>Uses resolver to check FFmpeg availability if present</li>
+<li>Logs warning if resolver not available (but doesn't fail)</li>
+</ul>
+<h3 id="error-handling">Error Handling</h3>
+<p>All validation checks are wrapped in try-catch:</p>
+<ul>
+<li>Individual check failures don't crash entire validation</li>
+<li>Each failure adds to error list</li>
+<li>Returns all errors at once for better UX</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><strong>Frontend Integration</strong>: Add validation UI in wizard flow</li>
+<li><strong>Provider-Specific Checks</strong>: More detailed validation per provider type</li>
+<li><strong>Estimated Fix Time</strong>: Suggest time needed to fix each issue</li>
+<li><strong>Auto-Repair</strong>: Automatic installation of missing components</li>
+<li><strong>Caching</strong>: Cache validation results for short period</li>
+</ol>
+<h2 id="related-prs">Related PRs</h2>
+<ul>
+<li>PR #1: FFmpeg resolver implementation</li>
+<li>PR #2: Ollama health check implementation</li>
+</ul>
+<h2 id="files-changed">Files Changed</h2>
+<ul>
+<li><code>Aura.Core/Orchestrator/VideoOrchestrator.cs</code> - Added validation method</li>
+<li><code>Aura.Api/Controllers/VideoController.cs</code> - Added validation endpoint</li>
+<li><code>Aura.Api/Models/ApiModels.V1/VideoDtos.cs</code> - Added response DTO</li>
+<li><code>Aura.Tests/VideoOrchestratorValidationTests.cs</code> - Added unit tests</li>
+</ul>
+<h2 id="author">Author</h2>
+<p>GitHub Copilot for Coffee285 (PR #5)
+Date: 2025-11-21</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/PR5_PIPELINE_VALIDATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

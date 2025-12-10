@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>FFmpeg Status Implementation - Testing Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="FFmpeg Status Implementation - Testing Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/FFMPEG_STATUS_TESTING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ffmpeg-status-implementation---testing-guide">FFmpeg Status Implementation - Testing Guide</h1>
+
+<h2 id="summary-of-changes">Summary of Changes</h2>
+<p>This PR updates the FFmpeg card in Settings/Downloads to use the comprehensive <code>/api/system/ffmpeg/status</code> endpoint and fixes the critical 428 error in the first-run wizard.</p>
+<ul>
+<li>Desktop builds now download and bundle a Windows x64 FFmpeg copy during <code>build-desktop.ps1</code> so users always have a working encoder out of the box.</li>
+</ul>
+<h2 id="problem-statement-addressed">Problem Statement Addressed</h2>
+<h3 id="original-issues">Original Issues</h3>
+<ol>
+<li><strong>Settings/Downloads FFmpeg card showed &quot;Installed&quot; with &quot;Version: unknown&quot;</strong> - This misled users into thinking FFmpeg was ready when it wasn't actually functional.</li>
+<li><strong>First-run wizard (Step 4) showed &quot;Request failed with status code 428&quot;</strong> - The wizard couldn't check FFmpeg status during setup, creating a catch-22 situation.</li>
+</ol>
+<h3 id="root-causes">Root Causes</h3>
+<ol>
+<li><strong>FFmpegCard</strong> was using <code>/api/downloads/ffmpeg/status</code> which returned incomplete status information with <code>state</code> field instead of comprehensive validation data.</li>
+<li><strong>FirstRunMiddleware</strong> was blocking <code>/api/system/ffmpeg/status</code> calls during wizard setup with HTTP 428 (Precondition Required), even though this endpoint is essential for the wizard itself.</li>
+</ol>
+<h2 id="changes-made">Changes Made</h2>
+<h3 id="backend-auraapi">Backend (Aura.Api)</h3>
+<p><strong>File: <code>Aura.Api/Middleware/FirstRunMiddleware.cs</code></strong></p>
+<ul>
+<li>Added <code>/api/system</code> to the whitelist (line 42)</li>
+<li>Added <code>/api/ffmpeg</code> to the whitelist (line 43)</li>
+<li><strong>Impact</strong>: Wizard can now check FFmpeg status and install FFmpeg during first-run setup</li>
+</ul>
+<h3 id="frontend-auraweb">Frontend (Aura.Web)</h3>
+<p><strong>File: <code>Aura.Web/src/components/Engines/FFmpegCard.tsx</code></strong></p>
+<ul>
+<li>Changed <code>FFmpegStatus</code> interface to match comprehensive API (lines 73-86)</li>
+<li>Updated <code>loadStatus()</code> to call <code>/api/system/ffmpeg/status</code> (line 99)</li>
+<li>Enhanced <code>getStatusBadge()</code> logic to validate installed AND valid AND version (lines 255-295)</li>
+<li>Changed install button text to &quot;Install Managed FFmpeg&quot; (line 356)</li>
+<li>Display Version, Path, and Source fields when FFmpeg is detected (lines 320-367)</li>
+<li>Improved error handling to parse HTTP error responses (lines 101-115)</li>
+<li>Added Technical Details expander that calls <code>/api/debug/ffmpeg/direct-check</code> for per-candidate diagnostics (PR-003 follow-up)</li>
+<li><strong>Impact</strong>: Card never shows &quot;Installed&quot; unless FFmpeg is truly ready (installed=true, valid=true, version!=null, versionMeetsRequirement=true)</li>
+</ul>
+<p><strong>File: <code>Aura.Web/src/components/FirstRun/FFmpegSetup.tsx</code></strong></p>
+<ul>
+<li>Enhanced <code>checkStatus()</code> error handling to parse HTTP errors (lines 94-172)</li>
+<li>Set meaningful error states instead of silent failures</li>
+<li>Display error messages to users when status check fails</li>
+<li><strong>Impact</strong>: Users see clear error messages instead of cryptic &quot;428&quot; errors</li>
+</ul>
+<p><strong>File: <code>Aura.Web/src/components/Engines/__tests__/FFmpegCard.test.tsx</code></strong></p>
+<ul>
+<li>Added comprehensive unit tests covering all acceptance criteria</li>
+<li>Tests verify badge logic for different states</li>
+<li>Tests verify display of Version, Path, and Source</li>
+<li><strong>Impact</strong>: Ensures changes work correctly and prevent regressions</li>
+</ul>
+<h2 id="acceptance-criteria---verification">Acceptance Criteria - Verification</h2>
+<h3 id="-settingsdownloads-ffmpeg-card-never-shows-installed-if-version-is-null-or-validfalse">✅ Settings/Downloads FFmpeg card never shows &quot;Installed&quot; if Version is null or Valid=false</h3>
+<p><strong>Logic</strong>: Lines 263-277 in FFmpegCard.tsx</p>
+<pre><code class="lang-typescript">if (status.installed &amp;&amp; status.valid &amp;&amp; status.version) {
+  return &lt;Badge appearance=&quot;filled&quot; color=&quot;success&quot;&gt;Installed&lt;/Badge&gt;;
+}
+</code></pre>
+<h3 id="-after-managed-install-card-shows-version-path-sourcemanaged">✅ After Managed install, card shows Version, Path, Source=Managed</h3>
+<p><strong>Logic</strong>: Lines 320-367 in FFmpegCard.tsx - displays path, version with min-version check, and source badge</p>
+<h3 id="-after-attach-existing-card-shows-version-and-sourceconfigured">✅ After &quot;Attach Existing…&quot;, card shows Version and Source=Configured</h3>
+<p><strong>Logic</strong>: Same display logic handles all sources (Managed, PATH, Configured)</p>
+<h3 id="-no-changes-to-wizard-components-that-conflict-with-pr-2">✅ No changes to wizard components that conflict with PR 2</h3>
+<p><strong>Evidence</strong>: Only modified <code>FFmpegSetup.tsx</code> error handling, not UI or core logic</p>
+<h3 id="-428-error-in-wizard-is-fixed">✅ 428 error in wizard is fixed</h3>
+<p><strong>Evidence</strong>: Added <code>/api/system</code> and <code>/api/ffmpeg</code> to FirstRunMiddleware whitelist</p>
+<h2 id="testing-instructions">Testing Instructions</h2>
+<h3 id="manual-testing---settingsdownloads-page">Manual Testing - Settings/Downloads Page</h3>
+<h4 id="test-case-1-not-installed-state">Test Case 1: Not Installed State</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Ensure FFmpeg is not installed</li>
+<li>Navigate to Settings → Downloads → Engines tab</li>
+<li>Observe FFmpeg card</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Badge shows &quot;Not Installed&quot; (NOT &quot;Installed&quot;)</li>
+<li>No Version or Path displayed</li>
+<li>Primary button shows &quot;Install Managed FFmpeg&quot;</li>
+<li>Secondary button shows &quot;Attach Existing...&quot;</li>
+</ul>
+<h4 id="test-case-2-managed-install">Test Case 2: Managed Install</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Click &quot;Install Managed FFmpeg&quot;</li>
+<li>Wait for installation to complete</li>
+<li>Observe FFmpeg card after refresh</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Badge shows &quot;Installed&quot; (green)</li>
+<li>Version displayed (e.g., &quot;Version: 5.1.2&quot;)</li>
+<li>Min-version badge shows &quot;✓ 4.0+&quot; (green)</li>
+<li>Path displayed (e.g., &quot;C:\Program Files\AuraVideoStudio\ffmpeg...&quot;)</li>
+<li>Source badge shows &quot;Managed Installation&quot;</li>
+</ul>
+<h4 id="test-case-3-path-source">Test Case 3: PATH Source</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Install FFmpeg system-wide (e.g., via chocolatey or apt)</li>
+<li>Click &quot;Rescan&quot;</li>
+<li>Observe FFmpeg card</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Badge shows &quot;Installed&quot;</li>
+<li>Version displayed</li>
+<li>Path displayed (e.g., &quot;/usr/bin/ffmpeg&quot;)</li>
+<li>Source badge shows &quot;System PATH&quot;</li>
+</ul>
+<h4 id="test-case-4-attach-existing">Test Case 4: Attach Existing</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Click &quot;Attach Existing...&quot;</li>
+<li>Enter path to FFmpeg binary</li>
+<li>Click &quot;Attach&quot;</li>
+<li>Observe FFmpeg card</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Badge shows &quot;Installed&quot;</li>
+<li>Version displayed</li>
+<li>Path displayed (the path you entered)</li>
+<li>Source badge shows &quot;User Configured&quot;</li>
+</ul>
+<h4 id="test-case-5-invalidcorrupt-ffmpeg">Test Case 5: Invalid/Corrupt FFmpeg</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Attach a corrupt or non-executable file</li>
+<li>Observe FFmpeg card</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Badge shows &quot;Invalid&quot; (red/danger color)</li>
+<li>Error message displayed</li>
+<li>Primary button shows &quot;Install Managed FFmpeg&quot; (remediation CTA)</li>
+</ul>
+<h4 id="test-case-6-outdated-version--40">Test Case 6: Outdated Version (&lt; 4.0)</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Attach FFmpeg version 3.x</li>
+<li>Observe FFmpeg card</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Badge shows &quot;Outdated&quot; (warning color)</li>
+<li>Version displayed (e.g., &quot;Version: 3.4.0&quot;)</li>
+<li>Min-version badge shows &quot;Requires 4.0+&quot; (warning color)</li>
+<li>Primary button shows &quot;Install Managed FFmpeg&quot;</li>
+</ul>
+<h3 id="manual-testing---first-run-wizard">Manual Testing - First-Run Wizard</h3>
+<h4 id="test-case-7-wizard-step-4---ffmpeg-check">Test Case 7: Wizard Step 4 - FFmpeg Check</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>Reset first-run state (delete config.json or database)</li>
+<li>Launch application</li>
+<li>Complete wizard steps 1-3</li>
+<li>Reach step 4 (System Requirements)</li>
+<li>Observe FFmpeg status</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li><strong>NO 428 ERROR</strong> shown</li>
+<li>FFmpeg status loads successfully</li>
+<li>Shows &quot;Not Installed&quot; with &quot;Install FFmpeg&quot; button OR</li>
+<li>Shows &quot;Installed&quot; with version and hardware acceleration info</li>
+<li>No cryptic error messages</li>
+</ul>
+<h4 id="test-case-8-install-ffmpeg-from-wizard">Test Case 8: Install FFmpeg from Wizard</h4>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li>In wizard step 4, click &quot;Install FFmpeg&quot;</li>
+<li>Wait for installation</li>
+<li>Observe status update</li>
+</ol>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Progress bar shows during installation</li>
+<li>After completion, status updates to &quot;Installed&quot;</li>
+<li>Version, path, and hardware acceleration info displayed</li>
+<li>Can proceed to next wizard step</li>
+</ul>
+<h3 id="automated-testing">Automated Testing</h3>
+<p>Run the unit tests:</p>
+<pre><code class="lang-bash">cd Aura.Web
+npm test -- src/components/Engines/__tests__/FFmpegCard.test.tsx
+</code></pre>
+<p><strong>Expected</strong>: All 12 tests pass:</p>
+<ul>
+<li>✓ should show loading state initially</li>
+<li>✓ should NOT show &quot;Installed&quot; badge when version is null</li>
+<li>✓ should NOT show &quot;Installed&quot; badge when valid is false</li>
+<li>✓ should show &quot;Installed&quot; badge only when installed, valid, and has version</li>
+<li>✓ should display Version, Path, and Source when FFmpeg is installed</li>
+<li>✓ should display &quot;Outdated&quot; badge when version does not meet requirement</li>
+<li>✓ should show &quot;Install Managed FFmpeg&quot; button when not ready</li>
+<li>✓ should display Source as &quot;User Configured&quot; for Configured source</li>
+<li>✓ should display Source as &quot;System PATH&quot; for PATH source</li>
+<li>✓ should call correct API endpoint for status check</li>
+</ul>
+<h2 id="technical-details">Technical Details</h2>
+<h3 id="api-endpoint-comparison">API Endpoint Comparison</h3>
+<p><strong>Old</strong>: <code>/api/downloads/ffmpeg/status</code></p>
+<pre><code class="lang-json">{
+  &quot;state&quot;: &quot;Installed&quot;,
+  &quot;ffmpegPath&quot;: &quot;/usr/bin/ffmpeg&quot;,
+  &quot;version&quot;: &quot;4.4.2&quot;
+}
+</code></pre>
+<p><strong>New</strong>: <code>/api/system/ffmpeg/status</code></p>
+<pre><code class="lang-json">{
+  &quot;installed&quot;: true,
+  &quot;valid&quot;: true,
+  &quot;version&quot;: &quot;4.4.2&quot;,
+  &quot;path&quot;: &quot;/usr/bin/ffmpeg&quot;,
+  &quot;source&quot;: &quot;PATH&quot;,
+  &quot;error&quot;: null,
+  &quot;versionMeetsRequirement&quot;: true,
+  &quot;minimumVersion&quot;: &quot;4.0&quot;,
+  &quot;hardwareAcceleration&quot;: {
+    &quot;nvencSupported&quot;: false,
+    &quot;amfSupported&quot;: false,
+    &quot;quickSyncSupported&quot;: false,
+    &quot;videoToolboxSupported&quot;: false,
+    &quot;availableEncoders&quot;: [&quot;libx264&quot;, &quot;libx265&quot;]
+  },
+  &quot;correlationId&quot;: &quot;...&quot;
+}
+</code></pre>
+<h3 id="status-badge-logic">Status Badge Logic</h3>
+<p>The card shows &quot;Installed&quot; badge ONLY when ALL conditions are met:</p>
+<pre><code class="lang-typescript">status.installed === true
+AND status.valid === true
+AND status.version !== null
+AND status.versionMeetsRequirement === true
+</code></pre>
+<p>This prevents false positives where FFmpeg appears installed but is actually broken or too old.</p>
+<h3 id="error-handling-improvements">Error Handling Improvements</h3>
+<p>Both FFmpegCard and FFmpegSetup now:</p>
+<ol>
+<li>Check <code>response.ok</code> before parsing JSON</li>
+<li>Parse error responses to extract meaningful messages</li>
+<li>Display user-friendly error messages instead of HTTP codes</li>
+<li>Set proper error state for UI rendering</li>
+</ol>
+<h2 id="constraints-followed">Constraints Followed</h2>
+<ul>
+<li>✅ Changes isolated to FFmpegCard and FFmpegSetup components</li>
+<li>✅ No modifications to other first-run wizard components</li>
+<li>✅ No changes to shared utilities that could conflict with PR 2</li>
+<li>✅ Zero-placeholder policy maintained (no TODO/FIXME/HACK comments)</li>
+<li>✅ All pre-commit checks pass (linting, type-checking, placeholder scanning)</li>
+<li>✅ Frontend and backend both build successfully</li>
+</ul>
+<h2 id="known-issueslimitations">Known Issues/Limitations</h2>
+<p>None. All acceptance criteria met and 428 error resolved.</p>
+<h2 id="rollback-plan">Rollback Plan</h2>
+<p>If issues arise, revert commits:</p>
+<ol>
+<li><code>5c260b1</code> - Fix 428 error in wizard by whitelisting endpoints</li>
+<li><code>f633eae</code> - Update FFmpegCard to use comprehensive status API</li>
+</ol>
+<p>Reverting these commits will restore the old behavior (with the 428 error and incomplete status display).</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/FFMPEG_STATUS_TESTING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

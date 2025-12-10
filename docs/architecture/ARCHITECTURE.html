@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Video Studio - Architecture Overview | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Video Studio - Architecture Overview | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ARCHITECTURE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-video-studio---architecture-overview">Aura Video Studio - Architecture Overview</h1>
+
+<h2 id="introduction">Introduction</h2>
+<p>Aura Video Studio is an <strong>Electron desktop application</strong> for creating AI-powered videos. The application bundles a React frontend and ASP.NET Core backend into a native cross-platform desktop app.</p>
+<p><strong>Note:</strong> For information about the architectural migration from web-based to Electron, see <a href="ARCHITECTURE_MIGRATION_NOTE.html">ARCHITECTURE_MIGRATION_NOTE.md</a>.</p>
+<h2 id="high-level-architecture">High-Level Architecture</h2>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│              Electron Main Process                       │
+│         (Node.js, Window Mgmt, IPC, Lifecycle)          │
+└────┬──────────────────────────────┬────────────────────┘
+     │ spawns child process         │ IPC communication
+     ▼                              ▼
+┌────────────────┐         ┌─────────────────────────────┐
+│   ASP.NET      │ HTTP    │    Electron Renderer        │
+│   Backend      │◄────────┤      (React UI)             │
+│   (Aura.Api)   │────────►│      Sandboxed Browser      │
+└────────────────┘         └─────────────────────────────┘
+     │
+     ▼
+┌────────────────────────────────────────────────────────┐
+│  Aura.Core (Domain Logic)                              │
+│  Aura.Providers (LLM, TTS, Images, Video)              │
+│  FFmpeg (Video Rendering)                              │
+└────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>Distribution:</strong></p>
+<ul>
+<li>Windows: NSIS installer + portable executable</li>
+<li>macOS: DMG installer (future)</li>
+<li>Linux: AppImage (future)</li>
+</ul>
+<h2 id="architecture-components">Architecture Components</h2>
+<h3 id="1-auradesktop-electron-application">1. Aura.Desktop (Electron Application)</h3>
+<p><strong>Technology</strong>: Electron 32.2.5 + Node.js<br>
+<strong>Purpose</strong>: Desktop application shell, process management, native OS integration</p>
+<p><strong>This is the authoritative shell</strong> — the primary, user-facing runtime for Aura Video Studio. All new integrations should be tested in the Electron app, not just in the browser.</p>
+<p><strong>Main entry point:</strong> <code>Aura.Desktop/electron/main.js</code> (modular main process)</p>
+<p><strong>Key Components</strong>:</p>
+<ul>
+<li><code>electron/main.js</code> - Main process entry point, orchestration</li>
+<li><code>electron/network-contract.js</code> - Network contract resolution and validation</li>
+<li><code>electron/window-manager.js</code> - Window lifecycle and state persistence</li>
+<li><code>electron/backend-service.js</code> - Backend process spawning and management (enforces network contract)</li>
+<li><code>electron/external-backend-service.js</code> - External backend connection (enforces network contract)</li>
+<li><code>electron/menu-builder.js</code> - Application menu system</li>
+<li><code>electron/tray-manager.js</code> - System tray integration</li>
+<li><code>electron/protocol-handler.js</code> - Custom protocol (aura://) support</li>
+<li><code>electron/ipc-handlers/</code> - IPC handlers (config, system, video, diagnostics)</li>
+<li><code>electron/preload.js</code> - Security bridge for renderer ↔ main IPC (exposes contract URL)</li>
+</ul>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Single instance lock (prevents multiple instances)</li>
+<li>Auto-updater (electron-updater)</li>
+<li>Native dialogs (file pickers, save dialogs)</li>
+<li>System tray with quick actions</li>
+<li>Custom protocol handling (aura:// URLs)</li>
+<li>Window state persistence</li>
+<li>Crash recovery and logging</li>
+</ul>
+<p><strong>Security</strong>:</p>
+<ul>
+<li>Context isolation enabled</li>
+<li>Node integration disabled (renderer sandboxed)</li>
+<li>Web security enabled</li>
+<li>IPC channel whitelisting</li>
+<li>Input validation and sanitization</li>
+<li>Content Security Policy (CSP)</li>
+</ul>
+<p><strong>Network Contract:</strong></p>
+<p>Aura.Desktop enforces a strict network contract to ensure all components (Electron, backend, frontend) share a single source of truth for the API endpoint:</p>
+<ul>
+<li><strong>Contract Resolution</strong> (<code>network-contract.js</code>): Resolves and validates the backend URL from environment variables on startup, ensuring <code>baseUrl</code>, <code>port</code>, and health endpoints are valid before proceeding</li>
+<li><strong>Contract Enforcement</strong>: Both <code>BackendService</code> and <code>ExternalBackendService</code> require a valid <code>networkContract</code> in their constructors and throw descriptive errors if the contract is missing or invalid</li>
+<li><strong>Contract Exposure</strong> (<code>preload.js</code>): The validated contract URL is exposed to the renderer via <code>window.desktopBridge.backend.getUrl()</code> and <code>window.AURA_BACKEND_URL</code> for consistent API resolution</li>
+<li><strong>Fail-Fast Design</strong>: Invalid configurations are caught at startup with clear error messages, preventing silent failures or hardcoded fallbacks</li>
+</ul>
+<p>This architecture guarantees that Electron never spawns a backend with an invalid URL, and the frontend always uses the same URL that Electron validated.</p>
+<p><strong>References:</strong></p>
+<ul>
+<li><a href="../../DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> - Complete Electron development guide</li>
+<li><a href="../../DEVELOPMENT.html#backend-url-contract">DEVELOPMENT.md</a> - Network contract usage and configuration</li>
+<li><a href="../../Aura.Desktop/electron/README.md">Aura.Desktop/electron/README.md</a> - Electron main process architecture (IPC, window manager, backend service, tray, menu, protocol handler)</li>
+</ul>
+<h3 id="2-auracore-business-logic">2. Aura.Core (Business Logic)</h3>
+<p><strong>Technology</strong>: .NET 8 Class Library<br>
+<strong>Purpose</strong>: Platform-agnostic business logic, models, and orchestration</p>
+<p><strong>Key Components</strong>:</p>
+<ul>
+<li><code>Models/</code> - Data models (Brief, PlanSpec, Scene, etc.)</li>
+<li><code>Hardware/</code> - Hardware detection and capability tiering</li>
+<li><code>Orchestrator/</code> - Video generation pipeline orchestration</li>
+<li><code>Rendering/</code> - FFmpeg plan building</li>
+<li><code>VideoOptimization/</code> - Frame analysis, transitions, optimization</li>
+<li><code>Dependencies/</code> - Dependency manager with SHA-256 verification</li>
+</ul>
+<p><strong>Hardware Tiers:</strong></p>
+<ul>
+<li>Tier S: High-end (32GB+ RAM, RTX 3080+)</li>
+<li>Tier A: Upper mid (16GB+ RAM, RTX 3060+)</li>
+<li>Tier B: Mid-range (16GB RAM, GTX 1660+)</li>
+<li>Tier C: Lower mid (8GB RAM, integrated GPU)</li>
+<li>Tier D: Minimum (8GB RAM, CPU only)</li>
+</ul>
+<p><strong>Platforms</strong>: Cross-platform (.NET 8)</p>
+<h3 id="3-auraproviders-provider-implementations">3. Aura.Providers (Provider Implementations)</h3>
+<p><strong>Technology</strong>: .NET 8 Class Library<br>
+<strong>Purpose</strong>: Concrete implementations of provider interfaces</p>
+<p><strong>LLM Providers:</strong></p>
+<ul>
+<li><code>OpenAiLlmProvider</code> - GPT-4/GPT-3.5 via OpenAI API</li>
+<li><code>AnthropicProvider</code> - Claude models</li>
+<li><code>GoogleGeminiProvider</code> - Google Gemini</li>
+<li><code>OllamaProvider</code> - Local models via Ollama</li>
+<li><code>RuleBasedLlmProvider</code> - Template-based (offline fallback)</li>
+</ul>
+<p><strong>TTS Providers:</strong></p>
+<ul>
+<li><code>ElevenLabsProvider</code> - Premium realistic voices</li>
+<li><code>PlayHtProvider</code> - Premium with voice cloning</li>
+<li><code>WindowsSapiProvider</code> - Windows native TTS</li>
+<li><code>PiperTtsProvider</code> - Free offline neural TTS</li>
+<li><code>Mimic3Provider</code> - Free offline TTS</li>
+</ul>
+<p><strong>Image Providers:</strong></p>
+<ul>
+<li>Stable Diffusion WebUI (local GPU)</li>
+<li>Stock image APIs (Pexels, Pixabay, Unsplash)</li>
+<li>Replicate (cloud-based models)</li>
+</ul>
+<p><strong>Video Rendering:</strong></p>
+<ul>
+<li>FFmpeg 4.0+ with hardware acceleration (NVENC, AMF, QuickSync)</li>
+<li>Multi-pass encoding support</li>
+</ul>
+<p><strong>Platforms</strong>: Cross-platform (.NET 8)</p>
+<h3 id="4-auraapi-backend-api">4. Aura.Api (Backend API)</h3>
+<p><strong>Technology</strong>: ASP.NET Core 8 (Minimal API + Controllers)<br>
+<strong>Purpose</strong>: RESTful API backend embedded in Electron app</p>
+<p><strong>Key Endpoints</strong> (Contracted paths expected by Electron main and frontend):</p>
+<ul>
+<li><code>GET /health/live</code> - Liveness check (fast startup detection, HTTP server ready)</li>
+<li><code>GET /health/ready</code> - Readiness check (dependencies available, returns 200/503)</li>
+<li><code>GET /api/jobs/{id}/events</code> - Server-Sent Events (SSE) for job progress updates</li>
+<li><code>GET /api/jobs</code>, <code>POST /api/jobs</code> - Job management</li>
+<li><code>POST /api/quick/demo</code> - Quick demo generation</li>
+<li><code>GET /api/settings</code>, <code>POST /api/settings</code> - Settings persistence</li>
+<li><code>GET /api/system/capabilities</code> - Hardware detection</li>
+<li><code>GET /api/providers/status</code> - Provider health checks</li>
+</ul>
+<p><strong>Endpoint Contract</strong>:
+All health and SSE endpoint paths are defined in <code>Aura.Api/Contracts/BackendEndpoints.cs</code> as constants to ensure consistency across:</p>
+<ul>
+<li>Backend API route registration (Program.cs, HealthEndpoints.cs)</li>
+<li>Electron main process (network-contract.js, backend-service.js)</li>
+<li>Frontend API clients (via network contract exposed through preload bridge)</li>
+</ul>
+<p><strong>Configuration:</strong></p>
+<ul>
+<li>Runs on random available port in Electron (spawned by main process)</li>
+<li>Uses Serilog for structured logging</li>
+<li>Integrates with Aura.Core and Aura.Providers</li>
+<li>SQLite database for persistence</li>
+<li>Server-Sent Events (SSE) for real-time progress</li>
+</ul>
+<p><strong>Network Contract:</strong></p>
+<p>The backend API's URL and port are determined by a validated <code>NetworkContract</code> that enforces a single source of truth:</p>
+<ul>
+<li><strong>Contract Resolution</strong>: Electron main process resolves the network contract on startup via <code>resolveBackendContract()</code>, which reads environment variables (<code>AURA_BACKEND_URL</code> or <code>ASPNETCORE_URLS</code>) and validates the URL format, port range, and required endpoints</li>
+<li><strong>Contract Validation</strong>: The contract validates:
+<ul>
+<li><code>baseUrl</code> must be a non-empty string with valid URL format</li>
+<li><code>port</code> must be a valid integer between 1 and 65535</li>
+<li><code>healthEndpoint</code> and <code>readinessEndpoint</code> must be non-empty strings</li>
+<li>Throws descriptive errors if validation fails, preventing silent failures</li>
+</ul>
+</li>
+<li><strong>Contract Enforcement</strong>: Both <code>BackendService</code> (managed) and <code>ExternalBackendService</code> (external) require a valid <code>networkContract</code> in their constructors and will refuse to start without one</li>
+<li><strong>Contract Exposure</strong>: The validated contract is exposed to the frontend via the preload bridge at <code>window.desktopBridge.backend.getUrl()</code> for consistent API resolution</li>
+</ul>
+<p>This architecture ensures no hardcoded ports, fail-fast validation for invalid configurations, and a single canonical URL shared across Electron, backend, and frontend layers.</p>
+<p><strong>Platforms</strong>: Cross-platform (ASP.NET Core 8)</p>
+<h3 id="5-auraweb-frontend-ui">5. Aura.Web (Frontend UI)</h3>
+<p><strong>Technology</strong>: React 18.2 + TypeScript + Vite 6.4 + Fluent UI 9.47<br>
+<strong>Purpose</strong>: Modern user interface bundled into Electron</p>
+<p><strong>Key Features</strong>:</p>
+<ul>
+<li>Fluent UI React components for modern UI</li>
+<li>TypeScript strict mode for type safety</li>
+<li>Vite for fast development builds</li>
+<li>Zustand for state management</li>
+<li>React Router for navigation</li>
+<li>Axios with circuit breaker for API calls</li>
+</ul>
+<p><strong>Views:</strong></p>
+<ul>
+<li>Dashboard (quick actions, recent projects)</li>
+<li>Create Wizard (Brief → Plan → Voice → Generate)</li>
+<li>Job Queue (monitoring, cancellation)</li>
+<li>Settings (providers, hardware, preferences)</li>
+<li>Advanced Mode (ML Lab, deep customization)</li>
+</ul>
+<p><strong>Development:</strong></p>
+<ul>
+<li><code>npm run dev</code> - Vite dev server on port 5173 (component mode)</li>
+<li><code>npm run build:prod</code> - Production build to <code>dist/</code> (bundled into Electron)</li>
+</ul>
+<p><strong>In Electron:</strong></p>
+<ul>
+<li>Loaded from bundled files (not via network)</li>
+<li>Communicates with backend via HTTP (localhost on random port)</li>
+<li>Communicates with Electron main process via IPC (through preload script)</li>
+</ul>
+<p><strong>Platforms</strong>: Cross-platform (bundled in Electron)</p>
+<h3 id="6-auracli-command-line-interface">6. Aura.Cli (Command Line Interface)</h3>
+<p><strong>Technology</strong>: .NET 8 Console Application<br>
+<strong>Purpose</strong>: Headless automation and scripting</p>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Complete video generation pipeline without UI</li>
+<li>Batch processing support</li>
+<li>JSON configuration files</li>
+<li>Progress reporting to console or file</li>
+<li>CI/CD integration support</li>
+</ul>
+<p><strong>Platforms</strong>: Cross-platform (.NET 8)</p>
+<h2 id="data-flow">Data Flow</h2>
+<h3 id="user-interaction-flow">User Interaction Flow</h3>
+<pre><code>User Interaction
+    ↓
+Electron Window (React UI)
+    ↓ HTTP (localhost)
+Backend API (ASP.NET Core child process)
+    ↓ In-process calls
+Aura.Core (Business Logic)
+    ↓
+Aura.Providers (LLM, TTS, Images, Video)
+    ↓
+External Services / Local Tools (FFmpeg, APIs)
+</code></pre>
+<h3 id="ipc-flow-electron">IPC Flow (Electron)</h3>
+<pre><code>React Component
+    ↓ window.electron.* API
+Preload Script (contextBridge)
+    ↓ IPC
+Main Process IPC Handler
+    ↓
+Native OS APIs / Backend Control
+</code></pre>
+<h2 id="development-workflows">Development Workflows</h2>
+<h3 id="desktop-app-development-recommended-for-production-testing">Desktop App Development (Recommended for Production Testing)</h3>
+<pre><code class="lang-bash"># 1. Build frontend
+cd Aura.Web
+npm run build:prod
+
+# 2. Run Electron app
+cd ../Aura.Desktop
+npm run dev
+</code></pre>
+<p><strong>Characteristics:</strong></p>
+<ul>
+<li>Complete desktop app experience</li>
+<li>Backend spawned automatically</li>
+<li>Native OS integration (dialogs, menus, tray)</li>
+<li>IPC communication available</li>
+<li>Production-like environment</li>
+</ul>
+<h3 id="component-development-rapid-iteration">Component Development (Rapid Iteration)</h3>
+<pre><code class="lang-bash"># Terminal 1: Backend
+cd Aura.Api
+dotnet watch run
+# Runs at http://localhost:5005
+
+# Terminal 2: Frontend
+cd Aura.Web
+npm run dev
+# Runs at http://localhost:5173 with HMR
+</code></pre>
+<p><strong>Characteristics:</strong></p>
+<ul>
+<li>Fast iteration with hot reload</li>
+<li>Browser-based (not Electron)</li>
+<li>No Electron features (IPC, native APIs)</li>
+<li>Quick testing of API and UI components</li>
+</ul>
+<h2 id="deployment-scenarios">Deployment Scenarios</h2>
+<h3 id="production-desktop-application">Production (Desktop Application)</h3>
+<p><strong>Windows:</strong></p>
+<ul>
+<li>NSIS installer: <code>Aura Video Studio-Setup-1.0.0.exe</code></li>
+<li>Portable executable: <code>Aura Video Studio-1.0.0.exe</code></li>
+<li>Installed to: <code>C:\Program Files\Aura Video Studio</code></li>
+<li>User data: <code>%APPDATA%\aura-video-studio</code></li>
+</ul>
+<p><strong>macOS (planned):</strong></p>
+<ul>
+<li>DMG installer</li>
+<li>Installed to: <code>/Applications/Aura Video Studio.app</code></li>
+<li>User data: <code>~/Library/Application Support/aura-video-studio</code></li>
+</ul>
+<p><strong>Linux (planned):</strong></p>
+<ul>
+<li>AppImage: <code>Aura-Video-Studio-1.0.0.AppImage</code></li>
+<li>User data: <code>~/.config/aura-video-studio</code></li>
+</ul>
+<h3 id="development-environments">Development Environments</h3>
+<p><strong>Electron Development:</strong></p>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm run dev
+# Electron app with dev tools enabled
+</code></pre>
+<p><strong>Component Development:</strong></p>
+<pre><code class="lang-bash"># Backend: http://localhost:5005
+# Frontend: http://localhost:5173 (browser)
+</code></pre>
+<h2 id="technology-stack-summary">Technology Stack Summary</h2>
+<h3 id="frontend">Frontend</h3>
+<ul>
+<li><strong>React</strong>: 18.2.0</li>
+<li><strong>TypeScript</strong>: 5.3.3 (strict mode)</li>
+<li><strong>Vite</strong>: 6.4.1</li>
+<li><strong>Fluent UI</strong>: 9.47.0</li>
+<li><strong>State</strong>: Zustand 5.0.8</li>
+<li><strong>Router</strong>: React Router 6.21.0</li>
+<li><strong>HTTP</strong>: Axios 1.6.5</li>
+</ul>
+<h3 id="backend">Backend</h3>
+<ul>
+<li><strong>.NET</strong>: 8.0</li>
+<li><strong>ASP.NET Core</strong>: 8.0 (Minimal API + Controllers)</li>
+<li><strong>Logging</strong>: Serilog</li>
+<li><strong>Database</strong>: SQLite</li>
+</ul>
+<h3 id="desktop">Desktop</h3>
+<ul>
+<li><strong>Electron</strong>: 32.2.5</li>
+<li><strong>Node.js</strong>: 18.0.0+ (Desktop), 20.0.0+ (Web)</li>
+<li><strong>electron-builder</strong>: 25.1.8</li>
+<li><strong>electron-updater</strong>: 6.3.9</li>
+</ul>
+<h3 id="video-processing">Video Processing</h3>
+<ul>
+<li><strong>FFmpeg</strong>: 4.0+</li>
+<li><strong>Hardware Acceleration</strong>: NVENC, AMF, QuickSync</li>
+</ul>
+<h2 id="key-design-principles">Key Design Principles</h2>
+<h3 id="security">Security</h3>
+<ul>
+<li>Context isolation in Electron renderer</li>
+<li>Node integration disabled (sandboxed renderer)</li>
+<li>IPC channel whitelisting</li>
+<li>Input validation and sanitization</li>
+<li>Content Security Policy (CSP)</li>
+<li>Secrets encryption at rest</li>
+</ul>
+<h3 id="performance">Performance</h3>
+<ul>
+<li>Hardware-accelerated video rendering</li>
+<li>Frame analysis and optimization</li>
+<li>Proxy media support</li>
+<li>Cached waveforms and thumbnails</li>
+<li>Efficient state management (Zustand)</li>
+</ul>
+<h3 id="reliability">Reliability</h3>
+<ul>
+<li>Provider fallback chains</li>
+<li>Circuit breaker pattern for API calls</li>
+<li>Automatic retry with exponential backoff</li>
+<li>Crash recovery and logging</li>
+<li>Health checks and diagnostics</li>
+</ul>
+<h3 id="user-experience">User Experience</h3>
+<ul>
+<li>Guided Mode for beginners</li>
+<li>Advanced Mode for power users</li>
+<li>Real-time progress via SSE</li>
+<li>Offline mode support</li>
+<li>Native OS integration</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="../../DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> - Complete Electron development guide (current, canonical)</li>
+<li><a href="../../Aura.Desktop/electron/README.md">Aura.Desktop/electron/README.md</a> - Electron main process architecture (current, canonical)</li>
+<li><a href="ARCHITECTURE_MIGRATION_NOTE.html">ARCHITECTURE_MIGRATION_NOTE.md</a> - Historic migration documentation (web-based to Electron; migration complete)</li>
+<li><a href="../../DEVELOPMENT.html">DEVELOPMENT.md</a> - Component development workflows</li>
+</ul>
+<p><strong>Note:</strong> The migration from web-based to Electron desktop is complete. ARCHITECTURE_MIGRATION_NOTE.md is historic documentation explaining the migration context. The current architecture is described in the main ARCHITECTURE.md document, DESKTOP_APP_GUIDE.md, and Aura.Desktop/electron/README.md.</p>
+<hr>
+<p><strong>Last Updated:</strong> November 2025 (Electron migration complete)</p>
+<pre><code>
+**Distribution Policy**: Aura Video Studio follows a portable-only distribution model. MSIX/APPX packages and traditional installers are not supported.
+
+## Platform Strategy
+
+### Linux (Development &amp; CI)
+- **Purpose**: Cross-platform development, automated testing
+- **What Works**: Aura.Core, Aura.Api, Aura.Web, unit tests
+- **What Doesn't**: Windows-specific providers (Windows TTS, hardware detection details)
+- **Strategy**: Use mocks and stubs for Windows-only features
+
+### Windows (Production)
+- **Purpose**: Final deployment target
+- **What Works**: Everything, including full provider support and hardware acceleration
+- **Requirements**: Windows 10/11 x64, Modern web browser (Chrome, Edge, Firefox recommended)
+- **Distribution**: Portable ZIP only - no installation required
+
+## Build &amp; CI Strategy
+
+### ci-linux.yml
+- Runs on `ubuntu-latest`
+- Builds Aura.Core, Aura.Providers, Aura.Api
+- Builds Aura.Web (npm install + build)
+- Runs unit tests
+- Starts API and tests basic functionality
+- Produces build artifacts
+
+### ci-windows.yml
+- Runs on `windows-latest`
+- Builds all .NET projects
+- Runs unit tests
+- Builds portable ZIP distribution
+- Generates checksums (SHA-256)
+- Uploads portable artifacts and test results
+- Enforces portable-only policy (no MSIX/installer packaging)
+
+## Security Considerations
+
+### API Keys
+- Stored in `%LOCALAPPDATA%\Aura\settings.json`
+- **Windows**: Encrypted with DPAPI (planned)
+- **Linux dev**: Plaintext in `~/.aura-dev/` with warnings
+
+### Code Signing
+- Portable distributions can be signed with PFX certificate (optional)
+- Certificate stored in GitHub Secrets for CI/CD
+- Unsigned builds clearly marked in documentation
+
+### Browser Security
+- Application served over localhost HTTP (127.0.0.1:5005)
+- CORS restricted to localhost only
+- Uses standard browser security sandbox
+- HTTPS-only for external API calls (OpenAI, etc.)
+
+## Directory Structure
+
+</code></pre>
+<p>aura-video-studio/
+├── Aura.Core/              # Business logic (.NET 8)
+├── Aura.Providers/         # Provider implementations (.NET 8)
+├── Aura.Api/               # Backend API (ASP.NET Core 8)
+├── Aura.Web/               # Frontend UI (React + Vite)
+├── Aura.Tests/             # Unit tests
+├── Aura.E2E/               # Integration tests
+├── scripts/
+│   ├── ffmpeg/             # FFmpeg binaries
+│   ├── packaging/          # Build scripts (Portable ZIP only)
+│   └── cleanup/            # Cleanup scripts and CI guard
+├── .github/workflows/
+│   ├── ci-linux.yml        # Linux CI
+│   └── ci-windows.yml      # Windows CI + packaging
+└── artifacts/              # Build outputs (created during build)
+└── windows/
+├── portable/       # Portable ZIP distribution
+├── checksums.txt
+├── sbom.json
+└── attributions.txt</p>
+<pre><code>
+## Technology Stack Summary
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| Aura.Core | .NET 8 | Business logic |
+| Aura.Providers | .NET 8 | Provider implementations |
+| Aura.Api | ASP.NET Core 8 | Backend API |
+| Aura.Web | React 18 + TypeScript | Frontend UI |
+| UI Framework | Fluent UI React | Windows 11 design system |
+| Build Tool | Vite | Fast bundling |
+| Packaging | Portable ZIP | No-install distribution |
+| Video | FFmpeg | Rendering engine |
+| Audio | NAudio | DSP and mixing |
+| Logging | Serilog | Structured logging |
+| Testing | xUnit | Unit tests |
+
+## Getting Started
+
+### Prerequisites
+- .NET 8 SDK
+- Node.js 20+
+- (Windows only) Visual Studio 2022 or Build Tools
+- (Windows only) Windows 11 SDK
+
+### Development Workflow
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Coffee285/aura-video-studio.git
+cd aura-video-studio
+
+# 2. Restore .NET dependencies
+dotnet restore
+
+# 3. Install npm dependencies
+cd Aura.Web
+npm install
+cd ..
+
+# 4. Start API (Terminal 1)
+dotnet run --project Aura.Api
+
+# 5. Start Web UI (Terminal 2)
+cd Aura.Web
+npm run dev
+
+# 6. Open browser to http://localhost:5173
+</code></pre>
+<h3 id="building-for-production-windows">Building for Production (Windows)</h3>
+<pre><code class="lang-powershell"># Run the build script
+.\scripts\packaging\build-all.ps1
+
+# Generate SBOM and attributions
+.\scripts\packaging\generate-sbom.ps1
+
+# Output in artifacts/windows/
+</code></pre>
+<h2 id="support--contact">Support &amp; Contact</h2>
+<ul>
+<li><strong>Issues</strong>: <a href="https://github.com/Coffee285/aura-video-studio/issues">https://github.com/Coffee285/aura-video-studio/issues</a></li>
+<li><strong>Documentation</strong>: See README.md and individual project READMEs</li>
+<li><strong>License</strong>: See LICENSE file</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ARCHITECTURE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Fix Summary: LLM Provider Constructor Issues and Missing API Key Fields | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Fix Summary: LLM Provider Constructor Issues and Missing API Key Fields | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/FIX_SUMMARY_LLM_PROVIDERS_AND_API_KEYS.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="fix-summary-llm-provider-constructor-issues-and-missing-api-key-fields">Fix Summary: LLM Provider Constructor Issues and Missing API Key Fields</h1>
+
+<h2 id="problems-fixed">Problems Fixed</h2>
+<h3 id="1-llm-provider-constructor-errors">1. LLM Provider Constructor Errors</h3>
+<p><strong>Issue</strong>: Script generation was failing with errors:</p>
+<ul>
+<li><code>CreateLogger method not found on ILoggerFactory</code></li>
+<li><code>Constructor on type 'Aura.Providers.Llm.OpenAiLlmProvider' not found</code></li>
+<li><code>Constructor on type 'Aura.Providers.Llm.RuleBasedLlmProvider' not found</code></li>
+</ul>
+<p><strong>Root Cause</strong>: The code was trying to use reflection to create typed loggers like <code>ILogger&lt;RuleBasedLlmProvider&gt;</code>, but couldn't reference the provider types directly from <code>Aura.Core</code> because it would create a circular dependency. The incorrect approach was:</p>
+<ul>
+<li>Using <code>GetMethod(&quot;CreateLogger&quot;, Array.Empty&lt;Type&gt;())</code> which doesn't find the generic extension method</li>
+<li>Passing non-typed loggers to constructors that expect <code>ILogger&lt;T&gt;</code></li>
+</ul>
+<p><strong>Solution</strong>: Used <code>LoggerFactoryExtensions.CreateLogger&lt;T&gt;()</code> via reflection:</p>
+<pre><code class="lang-csharp">var createLoggerMethod = typeof(LoggerFactoryExtensions)
+    .GetMethods()
+    .FirstOrDefault(m =&gt; m.Name == &quot;CreateLogger&quot; &amp;&amp; m.IsGenericMethod &amp;&amp; m.GetParameters().Length == 1);
+
+var genericMethod = createLoggerMethod.MakeGenericMethod(type);
+var logger = genericMethod.Invoke(null, new object[] { loggerFactory });
+</code></pre>
+<p><strong>Files Changed</strong>:</p>
+<ul>
+<li><code>Aura.Core/Orchestrator/LlmProviderFactory.cs</code> - Fixed all provider creation methods</li>
+<li><code>Aura.Core/Orchestrator/ScriptOrchestrator.cs</code> - Fixed RuleBased fallback instantiation, added <code>ILoggerFactory</code> parameter</li>
+<li><code>Aura.Api/Program.cs</code> - Updated ScriptOrchestrator registration to pass <code>ILoggerFactory</code></li>
+<li>All test files in <code>Aura.Tests/</code> - Updated to pass <code>ILoggerFactory</code> to ScriptOrchestrator</li>
+</ul>
+<h3 id="2-missing-api-key-fields-for-stock-sources">2. Missing API Key Fields for Stock Sources</h3>
+<p><strong>Issue</strong>: Pixabay and Unsplash stock sources required API keys but there was no place in the UI to enter them. The API key storage system only included:</p>
+<ul>
+<li>OpenAI</li>
+<li>ElevenLabs</li>
+<li>Pexels</li>
+<li>Stability AI</li>
+</ul>
+<p><strong>Solution</strong>: Added Pixabay and Unsplash API key fields throughout the stack:</p>
+<p><strong>Backend Changes</strong>:</p>
+<ul>
+<li><code>Aura.Api/Models/ApiModels.V1/Dtos.cs</code> - Added <code>PixabayKey</code> and <code>UnsplashKey</code> to <code>ApiKeysRequest</code> record</li>
+<li><code>Aura.Api/Program.cs</code> - Updated API key save/load endpoints to include pixabay and unsplash keys</li>
+</ul>
+<p><strong>Frontend Changes</strong>:</p>
+<ul>
+<li><code>Aura.Web/src/pages/SettingsPage.tsx</code> - Added input fields for Pixabay and Unsplash API keys in the settings UI</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<p>All tests pass successfully:</p>
+<ul>
+<li>54 script-related tests pass</li>
+<li>The RuleBased &quot;free&quot; provider now works as a guaranteed fallback</li>
+<li>Script generation no longer fails with constructor errors</li>
+<li>API keys for all stock sources can now be saved and loaded</li>
+</ul>
+<h2 id="impact">Impact</h2>
+<h3 id="before">Before</h3>
+<ul>
+<li>Script generation failed completely with &quot;No LLM providers available&quot; or constructor errors</li>
+<li>Even the &quot;free&quot; RuleBased provider couldn't be instantiated as a fallback</li>
+<li>Users could not enter API keys for Pixabay and Unsplash</li>
+</ul>
+<h3 id="after">After</h3>
+<ul>
+<li>Script generation works with all provider types (OpenAI, Ollama, Azure, Gemini, RuleBased)</li>
+<li>RuleBased provider successfully instantiates as a guaranteed free fallback</li>
+<li>Users can now enter and save API keys for all stock sources including Pixabay and Unsplash</li>
+<li>The system has proper fallback chains: Cloud → Local → RuleBased</li>
+</ul>
+<h2 id="files-modified">Files Modified</h2>
+<h3 id="core-changes">Core Changes</h3>
+<ol>
+<li><code>Aura.Core/Orchestrator/LlmProviderFactory.cs</code></li>
+<li><code>Aura.Core/Orchestrator/ScriptOrchestrator.cs</code></li>
+<li><code>Aura.Api/Program.cs</code></li>
+<li><code>Aura.Api/Models/ApiModels.V1/Dtos.cs</code></li>
+<li><code>Aura.Web/src/pages/SettingsPage.tsx</code></li>
+</ol>
+<h3 id="test-updates">Test Updates</h3>
+<ol start="6">
+<li><code>Aura.Tests/ScriptApiTests.cs</code></li>
+<li><code>Aura.Tests/ScriptEndpointE2ETests.cs</code></li>
+<li><code>Aura.Tests/ScriptOrchestratorTests.cs</code></li>
+<li><code>Aura.Tests/ProviderDowngradeTests.cs</code></li>
+</ol>
+<h2 id="verification">Verification</h2>
+<p>To verify the fixes work:</p>
+<ol>
+<li><p><strong>Test Script Generation</strong>:</p>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~Script&quot;
+</code></pre>
+<p>Result: All 54 tests pass ✓</p>
+</li>
+<li><p><strong>Test RuleBased Provider</strong>:</p>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~RuleBased&quot;
+</code></pre>
+<p>Result: All 17 tests pass ✓</p>
+</li>
+<li><p><strong>UI Verification</strong>:</p>
+<ul>
+<li>Navigate to Settings → API Keys tab</li>
+<li>Verify fields are present for: OpenAI, ElevenLabs, Pexels, Pixabay, Unsplash, Stability AI</li>
+<li>Enter and save keys</li>
+<li>Reload page and verify keys are persisted (masked)</li>
+</ul>
+</li>
+<li><p><strong>E2E Verification</strong>:</p>
+<ul>
+<li>Create a video with &quot;Free&quot; tier (no API keys)</li>
+<li>Should use RuleBased provider successfully</li>
+<li>Enable Pixabay/Unsplash in wizard</li>
+<li>Should request API keys if not configured</li>
+</ul>
+</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/FIX_SUMMARY_LLM_PROVIDERS_AND_API_KEYS.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

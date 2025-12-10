@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Configuration Persistence Implementation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Configuration Persistence Implementation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONFIGURATION_PERSISTENCE_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="configuration-persistence-implementation-guide">Configuration Persistence Implementation Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the configuration persistence system implemented for Aura Video Studio. The system provides database-backed configuration storage with caching, versioning, and immediate persistence suitable for an Adobe Suite type application.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="components">Components</h3>
+<ol>
+<li><p><strong>ConfigurationEntity</strong> (<code>Aura.Core/Data/ConfigurationEntity.cs</code>)</p>
+<ul>
+<li>Database entity for storing configuration key-value pairs</li>
+<li>Supports versioning, categorization, and sensitive data flagging</li>
+<li>Tracks creation, updates, and modifications</li>
+</ul>
+</li>
+<li><p><strong>ConfigurationRepository</strong> (<code>Aura.Core/Data/ConfigurationRepository.cs</code>)</p>
+<ul>
+<li>CRUD operations for configuration data</li>
+<li>Transaction support for bulk operations</li>
+<li>Soft delete functionality</li>
+<li>History tracking</li>
+</ul>
+</li>
+<li><p><strong>ConfigurationManager</strong> (<code>Aura.Core/Services/ConfigurationManager.cs</code>)</p>
+<ul>
+<li>Singleton service for configuration management</li>
+<li>In-memory caching with 10-minute expiration</li>
+<li>Thread-safe operations with SemaphoreSlim</li>
+<li>Automatic default initialization</li>
+<li>Type-safe get/set methods</li>
+</ul>
+</li>
+<li><p><strong>DatabaseInitializationService</strong> (<code>Aura.Core/Services/DatabaseInitializationService.cs</code>)</p>
+<ul>
+<li>Database creation and migration</li>
+<li>Health checking and integrity verification</li>
+<li>Automatic repair for corrupted databases</li>
+<li>WAL mode configuration</li>
+</ul>
+</li>
+<li><p><strong>ConfigurationManagementController</strong> (<code>Aura.Api/Controllers/ConfigurationManagementController.cs</code>)</p>
+<ul>
+<li>RESTful API endpoints</li>
+<li>Configuration CRUD operations</li>
+<li>Debugging and diagnostics</li>
+<li>Health monitoring</li>
+</ul>
+</li>
+</ol>
+<h2 id="database-schema">Database Schema</h2>
+<pre><code class="lang-sql">CREATE TABLE Configurations (
+    Key TEXT PRIMARY KEY NOT NULL,
+    Value TEXT NOT NULL,
+    Category TEXT NOT NULL,
+    ValueType TEXT NOT NULL,
+    Description TEXT,
+    IsSensitive INTEGER NOT NULL DEFAULT 0,
+    Version INTEGER NOT NULL DEFAULT 1,
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL,
+    ModifiedBy TEXT,
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IX_Configurations_Category ON Configurations(Category);
+CREATE INDEX IX_Configurations_Category_IsActive ON Configurations(Category, IsActive);
+CREATE INDEX IX_Configurations_Category_UpdatedAt ON Configurations(Category, UpdatedAt);
+CREATE INDEX IX_Configurations_IsActive ON Configurations(IsActive);
+CREATE INDEX IX_Configurations_IsSensitive ON Configurations(IsSensitive);
+CREATE INDEX IX_Configurations_UpdatedAt ON Configurations(UpdatedAt);
+</code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="get-configuration">Get Configuration</h3>
+<pre><code class="lang-http">GET /api/configuration/{key}
+</code></pre>
+<p>Returns a single configuration value with metadata.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;key&quot;: &quot;General.AutosaveEnabled&quot;,
+  &quot;value&quot;: &quot;true&quot;,
+  &quot;source&quot;: &quot;database&quot;
+}
+</code></pre>
+<h3 id="get-category">Get Category</h3>
+<pre><code class="lang-http">GET /api/configuration/category/{category}
+</code></pre>
+<p>Returns all configurations in a category.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;category&quot;: &quot;General&quot;,
+  &quot;count&quot;: 5,
+  &quot;configurations&quot;: {
+    &quot;General.AutosaveEnabled&quot;: &quot;true&quot;,
+    &quot;General.AutosaveIntervalSeconds&quot;: &quot;300&quot;,
+    ...
+  },
+  &quot;source&quot;: &quot;database&quot;
+}
+</code></pre>
+<h3 id="set-configuration">Set Configuration</h3>
+<pre><code class="lang-http">POST /api/configuration/{key}
+Content-Type: application/json
+
+{
+  &quot;value&quot;: &quot;1920x1080&quot;,
+  &quot;category&quot;: &quot;VideoDefaults&quot;,
+  &quot;description&quot;: &quot;Default video resolution&quot;,
+  &quot;isSensitive&quot;: false
+}
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;Configuration saved successfully&quot;,
+  &quot;key&quot;: &quot;VideoDefaults.DefaultResolution&quot;,
+  &quot;category&quot;: &quot;VideoDefaults&quot;,
+  &quot;persisted&quot;: true
+}
+</code></pre>
+<h3 id="set-bulk-configurations">Set Bulk Configurations</h3>
+<pre><code class="lang-http">POST /api/configuration/bulk
+Content-Type: application/json
+
+{
+  &quot;configurations&quot;: [
+    {
+      &quot;key&quot;: &quot;Setting1&quot;,
+      &quot;value&quot;: &quot;Value1&quot;,
+      &quot;category&quot;: &quot;Category1&quot;,
+      &quot;description&quot;: &quot;Description 1&quot;
+    },
+    ...
+  ]
+}
+</code></pre>
+<h3 id="delete-configuration">Delete Configuration</h3>
+<pre><code class="lang-http">DELETE /api/configuration/{key}
+</code></pre>
+<p>Performs soft delete (sets IsActive = false).</p>
+<h3 id="debug-endpoints">Debug Endpoints</h3>
+<p><strong>Dump All Configurations:</strong></p>
+<pre><code class="lang-http">GET /api/configuration/debug/dump?includeInactive=false
+</code></pre>
+<p><strong>Reset to Defaults:</strong></p>
+<pre><code class="lang-http">POST /api/configuration/reset
+</code></pre>
+<p><strong>Database Health:</strong></p>
+<pre><code class="lang-http">GET /api/configuration/health/database
+</code></pre>
+<p><strong>Clear Cache:</strong></p>
+<pre><code class="lang-http">POST /api/configuration/cache/clear
+</code></pre>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="c-service-usage">C# Service Usage</h3>
+<pre><code class="lang-csharp">public class MyService
+{
+    private readonly ConfigurationManager _configManager;
+
+    public MyService(ConfigurationManager configManager)
+    {
+        _configManager = configManager;
+    }
+
+    public async Task DoWork()
+    {
+        // Get string value
+        var resolution = await _configManager.GetStringAsync(
+            &quot;VideoDefaults.DefaultResolution&quot;, 
+            &quot;1920x1080&quot;);
+
+        // Get int value
+        var fps = await _configManager.GetIntAsync(
+            &quot;VideoDefaults.DefaultFrameRate&quot;, 
+            30);
+
+        // Get bool value
+        var autosave = await _configManager.GetBoolAsync(
+            &quot;General.AutosaveEnabled&quot;, 
+            true);
+
+        // Set value
+        await _configManager.SetAsync(
+            &quot;MyService.LastRun&quot;,
+            DateTime.UtcNow.ToString(&quot;O&quot;),
+            &quot;ServiceTracking&quot;,
+            &quot;Last execution timestamp&quot;);
+
+        // Get category
+        var generalSettings = await _configManager.GetCategoryAsync(&quot;General&quot;);
+    }
+}
+</code></pre>
+<h3 id="typescriptreact-usage">TypeScript/React Usage</h3>
+<pre><code class="lang-typescript">import { apiClient } from '@/services/api/apiClient';
+
+// Get configuration
+async function getConfig(key: string): Promise&lt;string | null&gt; {
+  try {
+    const response = await apiClient.get(`/api/configuration/${key}`);
+    return response.data.value;
+  } catch (error) {
+    console.error('Failed to get configuration:', error);
+    return null;
+  }
+}
+
+// Set configuration
+async function setConfig(
+  key: string, 
+  value: string, 
+  category: string
+): Promise&lt;boolean&gt; {
+  try {
+    await apiClient.post(`/api/configuration/${key}`, {
+      value,
+      category,
+      description: 'User setting'
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to set configuration:', error);
+    return false;
+  }
+}
+
+// Get category
+async function getCategory(category: string): Promise&lt;Record&lt;string, string&gt;&gt; {
+  try {
+    const response = await apiClient.get(`/api/configuration/category/${category}`);
+    return response.data.configurations;
+  } catch (error) {
+    console.error('Failed to get category:', error);
+    return {};
+  }
+}
+</code></pre>
+<h2 id="default-configurations">Default Configurations</h2>
+<p>The system automatically creates these default configurations on first run:</p>
+<h3 id="general">General</h3>
+<ul>
+<li><code>General.DefaultProjectSaveLocation</code>: &quot;&quot; (empty, user must configure)</li>
+<li><code>General.AutosaveIntervalSeconds</code>: &quot;300&quot; (5 minutes)</li>
+<li><code>General.AutosaveEnabled</code>: &quot;true&quot;</li>
+<li><code>General.Language</code>: &quot;en-US&quot;</li>
+<li><code>General.Theme</code>: &quot;Auto&quot;</li>
+<li><code>General.CheckForUpdatesOnStartup</code>: &quot;true&quot;</li>
+</ul>
+<h3 id="file-locations">File Locations</h3>
+<ul>
+<li><code>FileLocations.OutputDirectory</code>: &quot;&quot;</li>
+<li><code>FileLocations.TempDirectory</code>: &quot;&quot;</li>
+<li><code>FileLocations.ProjectsDirectory</code>: &quot;&quot;</li>
+</ul>
+<h3 id="video-defaults">Video Defaults</h3>
+<ul>
+<li><code>VideoDefaults.DefaultResolution</code>: &quot;1920x1080&quot;</li>
+<li><code>VideoDefaults.DefaultFrameRate</code>: &quot;30&quot;</li>
+<li><code>VideoDefaults.DefaultCodec</code>: &quot;libx264&quot;</li>
+<li><code>VideoDefaults.DefaultBitrate</code>: &quot;5M&quot;</li>
+</ul>
+<h3 id="advanced">Advanced</h3>
+<ul>
+<li><code>Advanced.OfflineMode</code>: &quot;false&quot;</li>
+<li><code>Advanced.StableDiffusionUrl</code>: &quot;http://127.0.0.1:7860&quot;</li>
+<li><code>Advanced.OllamaUrl</code>: &quot;http://127.0.0.1:11434&quot;</li>
+<li><code>Advanced.EnableTelemetry</code>: &quot;false&quot;</li>
+</ul>
+<h3 id="system">System</h3>
+<ul>
+<li><code>System.DatabaseVersion</code>: &quot;1&quot;</li>
+<li><code>System.LastBackupDate</code>: (current timestamp)</li>
+</ul>
+<h2 id="performance-characteristics">Performance Characteristics</h2>
+<ul>
+<li><strong>First access</strong>: ~10-50ms (database query)</li>
+<li><strong>Cached access</strong>: &lt;1ms (memory lookup)</li>
+<li><strong>Set operation</strong>: ~10-30ms (database write + cache invalidation)</li>
+<li><strong>Bulk set</strong>: ~50-200ms for 10 items (transaction)</li>
+<li><strong>Cache expiration</strong>: 10 minutes</li>
+<li><strong>Database</strong>: SQLite with WAL mode enabled</li>
+</ul>
+<h2 id="thread-safety">Thread Safety</h2>
+<p>The ConfigurationManager uses:</p>
+<ul>
+<li><code>SemaphoreSlim</code> for key-level locking during set operations</li>
+<li><code>IMemoryCache</code> which is thread-safe</li>
+<li>Scoped <code>DbContext</code> instances per operation</li>
+</ul>
+<h2 id="logging">Logging</h2>
+<p>All operations are logged with structured logging:</p>
+<pre><code>[Information] Configuration TestKey set in category TestCategory by JohnDoe
+[Information] Bulk updated 5 configurations
+[Warning] Configuration cache cleared
+[Error] Error setting configuration TestKey: {ErrorMessage}
+</code></pre>
+<p>Correlation IDs from <code>HttpContext.TraceIdentifier</code> are included in all API operations.</p>
+<h2 id="testing">Testing</h2>
+<p>Run the manual test script:</p>
+<pre><code class="lang-bash">./test-configuration-persistence.sh
+</code></pre>
+<p>Or use curl directly:</p>
+<pre><code class="lang-bash"># Health check
+curl http://localhost:5005/api/configuration/health/database
+
+# Get config
+curl http://localhost:5005/api/configuration/General.Theme
+
+# Set config
+curl -X POST http://localhost:5005/api/configuration/MyKey \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;value&quot;:&quot;MyValue&quot;,&quot;category&quot;:&quot;MyCategory&quot;}'
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="database-not-created">Database not created</h3>
+<ul>
+<li>Check permissions on application directory</li>
+<li>Review logs for &quot;Database path is not writable&quot; errors</li>
+<li>Ensure directory exists and is writable</li>
+</ul>
+<h3 id="configuration-not-persisting">Configuration not persisting</h3>
+<ul>
+<li>Check database health: <code>GET /api/configuration/health/database</code></li>
+<li>Verify migrations ran successfully in application logs</li>
+<li>Check for SQLite file locks</li>
+</ul>
+<h3 id="cache-issues">Cache issues</h3>
+<ul>
+<li>Clear cache: <code>POST /api/configuration/cache/clear</code></li>
+<li>Restart application to reset all caches</li>
+<li>Check memory cache service is registered</li>
+</ul>
+<h3 id="performance-issues">Performance issues</h3>
+<ul>
+<li>Verify database indexes exist</li>
+<li>Check WAL mode is enabled</li>
+<li>Monitor cache hit rate in logs</li>
+<li>Consider increasing cache expiration time</li>
+</ul>
+<h2 id="migration">Migration</h2>
+<p>The system uses Entity Framework Core migrations. The configuration table is created by migration <code>20251109150500_AddConfigurationPersistence</code>.</p>
+<p>To apply migrations manually:</p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet ef database update
+</code></pre>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements (not currently implemented):</p>
+<ol>
+<li><strong>Configuration validation</strong> - JSON schema validation for complex values</li>
+<li><strong>Configuration encryption</strong> - Encrypt sensitive values at rest</li>
+<li><strong>Configuration audit log</strong> - Track all changes with full history</li>
+<li><strong>Configuration import/export</strong> - JSON file import/export for profiles</li>
+<li><strong>Configuration sync</strong> - Multi-instance synchronization</li>
+<li><strong>Configuration UI</strong> - Web-based configuration editor</li>
+<li><strong>Configuration hot reload</strong> - Detect changes without restart</li>
+</ol>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li>Database Schema: See <code>Aura.Core/Data/AuraDbContext.cs</code></li>
+<li>API Reference: See Swagger UI at <code>/swagger</code></li>
+<li>Migration History: See <code>Aura.Api/Migrations/</code></li>
+<li>Tests: See <code>Aura.Tests/Configuration/</code></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONFIGURATION_PERSISTENCE_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

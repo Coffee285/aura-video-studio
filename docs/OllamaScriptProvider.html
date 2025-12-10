@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>OllamaScriptProvider - Streaming Support | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="OllamaScriptProvider - Streaming Support | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/OllamaScriptProvider.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ollamascriptprovider---streaming-support">OllamaScriptProvider - Streaming Support</h1>
+
+<h2 id="overview">Overview</h2>
+<p><code>OllamaScriptProvider</code> extends <code>BaseLlmScriptProvider</code> to provide streaming script generation support using Ollama's local LLM service.</p>
+<h2 id="usage">Usage</h2>
+<h3 id="basic-script-generation">Basic Script Generation</h3>
+<pre><code class="lang-csharp">var logger = loggerFactory.CreateLogger&lt;OllamaScriptProvider&gt;();
+var httpClient = new HttpClient();
+
+var provider = new OllamaScriptProvider(
+    logger,
+    httpClient,
+    baseUrl: &quot;http://127.0.0.1:11434&quot;,
+    model: &quot;llama3.1:8b-q4_k_m&quot;,
+    maxRetries: 3,
+    timeoutSeconds: 120
+);
+
+var request = new ScriptGenerationRequest
+{
+    Brief = new Brief
+    {
+        Topic = &quot;Introduction to Machine Learning&quot;,
+        Audience = &quot;Beginners&quot;,
+        Goal = &quot;Educate&quot;,
+        Tone = &quot;Friendly&quot;
+    },
+    PlanSpec = new PlanSpec
+    {
+        TargetDuration = TimeSpan.FromSeconds(60),
+        Style = &quot;Educational&quot;,
+        Pacing = &quot;Medium&quot;
+    },
+    CorrelationId = Guid.NewGuid().ToString()
+};
+
+var script = await provider.GenerateScriptAsync(request, cancellationToken);
+</code></pre>
+<h3 id="streaming-script-generation">Streaming Script Generation</h3>
+<pre><code class="lang-csharp">await foreach (var progress in provider.StreamGenerateAsync(request, cancellationToken))
+{
+    Console.WriteLine($&quot;[{progress.PercentComplete}%] {progress.Stage}: {progress.Message}&quot;);
+    Console.WriteLine($&quot;Partial script: {progress.PartialScript}&quot;);
+    
+    if (progress.PercentComplete == 100)
+    {
+        Console.WriteLine(&quot;Generation complete!&quot;);
+        Console.WriteLine($&quot;Final script: {progress.PartialScript}&quot;);
+    }
+}
+</code></pre>
+<h3 id="progress-updates">Progress Updates</h3>
+<p>The <code>StreamGenerateAsync</code> method yields <code>ScriptGenerationProgress</code> objects with:</p>
+<ul>
+<li><code>Stage</code>: Current generation stage (e.g., &quot;Generating&quot;)</li>
+<li><code>PercentComplete</code>: 0-100 progress percentage</li>
+<li><code>PartialScript</code>: Accumulated script content so far</li>
+<li><code>Message</code>: Human-readable status message with token count</li>
+</ul>
+<p>Progress is calculated based on:</p>
+<ul>
+<li>Token-by-token generation tracking</li>
+<li>Maximum expected tokens (2048)</li>
+<li>Final chunk completion signal from Ollama</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ol>
+<li><strong>Install Ollama</strong>: Download from <a href="https://ollama.com">ollama.com</a></li>
+<li><strong>Start Ollama service</strong>: Run <code>ollama serve</code> in terminal</li>
+<li><strong>Pull a model</strong>: Run <code>ollama pull llama3.1:8b-q4_k_m</code></li>
+</ol>
+<h3 id="validation">Validation</h3>
+<p>Check if the provider is properly configured:</p>
+<pre><code class="lang-csharp">var validationResult = await provider.ValidateConfigurationAsync(cancellationToken);
+
+if (!validationResult.IsValid)
+{
+    foreach (var error in validationResult.Errors)
+    {
+        Console.WriteLine($&quot;Error: {error}&quot;);
+    }
+}
+
+foreach (var warning in validationResult.Warnings)
+{
+    Console.WriteLine($&quot;Warning: {warning}&quot;);
+}
+</code></pre>
+<h3 id="check-availability">Check Availability</h3>
+<pre><code class="lang-csharp">var isAvailable = await provider.IsAvailableAsync(cancellationToken);
+if (!isAvailable)
+{
+    Console.WriteLine(&quot;Ollama service is not running. Please start it with: ollama serve&quot;);
+}
+</code></pre>
+<h3 id="list-available-models">List Available Models</h3>
+<pre><code class="lang-csharp">var models = await provider.GetAvailableModelsAsync(cancellationToken);
+foreach (var model in models)
+{
+    Console.WriteLine($&quot;Available model: {model}&quot;);
+}
+</code></pre>
+<h2 id="error-handling">Error Handling</h2>
+<p>The provider handles several error scenarios:</p>
+<ol>
+<li><strong>Service Unavailable</strong>: Throws <code>InvalidOperationException</code> if Ollama is not running</li>
+<li><strong>Model Not Found</strong>: Throws <code>InvalidOperationException</code> with instructions to pull the model</li>
+<li><strong>Timeout</strong>: Respects the configured timeout (default 120 seconds)</li>
+<li><strong>Cancellation</strong>: Properly handles <code>CancellationToken</code> for graceful shutdown</li>
+</ol>
+<h2 id="features">Features</h2>
+<ul>
+<li>✅ <strong>Streaming Support</strong>: Real-time token-by-token generation</li>
+<li>✅ <strong>Local Execution</strong>: No internet required, runs offline</li>
+<li>✅ <strong>Free</strong>: No API costs or usage limits</li>
+<li>✅ <strong>Privacy</strong>: All processing happens locally</li>
+<li>✅ <strong>Cancellable</strong>: Full cancellation token support</li>
+<li>✅ <strong>Progress Tracking</strong>: Real-time progress updates</li>
+<li>✅ <strong>Error Recovery</strong>: Automatic retries with exponential backoff</li>
+</ul>
+<h2 id="provider-metadata">Provider Metadata</h2>
+<pre><code class="lang-csharp">var metadata = provider.GetProviderMetadata();
+
+// Name: &quot;Ollama&quot;
+// Tier: ProviderTier.Free
+// RequiresInternet: false
+// RequiresApiKey: false
+// Capabilities: [&quot;streaming&quot;, &quot;local-execution&quot;, &quot;offline&quot;]
+// EstimatedCostPer1KTokens: $0.00
+</code></pre>
+<h2 id="integration-with-basellmscriptprovider">Integration with BaseLlmScriptProvider</h2>
+<p>This provider extends <code>BaseLlmScriptProvider</code>, which means it:</p>
+<ul>
+<li>Inherits retry logic with exponential backoff</li>
+<li>Provides consistent error handling</li>
+<li>Implements the <code>IScriptLlmProvider</code> interface</li>
+<li>Includes script parsing utilities</li>
+<li>Supports model selection and validation</li>
+</ul>
+<h2 id="differences-from-ollamallmprovider">Differences from OllamaLlmProvider</h2>
+<p><code>OllamaScriptProvider</code> is designed for script-centric workflows, while <code>OllamaLlmProvider</code> implements the broader <code>ILlmProvider</code> interface:</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>OllamaScriptProvider</th>
+<th>OllamaLlmProvider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base Class</td>
+<td>BaseLlmScriptProvider</td>
+<td>ILlmProvider</td>
+</tr>
+<tr>
+<td>Primary Use</td>
+<td>Script generation workflows</td>
+<td>General LLM tasks</td>
+</tr>
+<tr>
+<td>Streaming Output</td>
+<td>ScriptGenerationProgress</td>
+<td>OllamaStreamResponse</td>
+</tr>
+<tr>
+<td>Script Parsing</td>
+<td>✅ Built-in</td>
+<td>Manual</td>
+</tr>
+<tr>
+<td>Retry Logic</td>
+<td>✅ Inherited</td>
+<td>✅ Custom</td>
+</tr>
+<tr>
+<td>Scene Analysis</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Visual Prompts</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Tool Calling</td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p>Choose <code>OllamaScriptProvider</code> when:</p>
+<ul>
+<li>You need structured script generation</li>
+<li>You want progress tracking during generation</li>
+<li>You're using <code>BaseLlmScriptProvider</code>-based workflows</li>
+</ul>
+<p>Choose <code>OllamaLlmProvider</code> when:</p>
+<ul>
+<li>You need scene analysis or visual prompt generation</li>
+<li>You want tool calling support</li>
+<li>You need direct access to Ollama's streaming format</li>
+</ul>
+<h2 id="example-cli-application">Example: CLI Application</h2>
+<pre><code class="lang-csharp">var provider = new OllamaScriptProvider(
+    logger,
+    httpClient,
+    baseUrl: &quot;http://127.0.0.1:11434&quot;,
+    model: &quot;llama3.1:8b-q4_k_m&quot;
+);
+
+Console.WriteLine(&quot;Generating script with streaming...&quot;);
+
+await foreach (var progress in provider.StreamGenerateAsync(request, cts.Token))
+{
+    // Clear current line and show progress
+    Console.Write($&quot;\r[{progress.PercentComplete}%] {progress.Message}&quot;);
+    
+    if (progress.PercentComplete == 100)
+    {
+        Console.WriteLine(&quot;\n\nFinal Script:&quot;);
+        Console.WriteLine(&quot;=&quot; + new string('=', 79));
+        Console.WriteLine(progress.PartialScript);
+        Console.WriteLine(&quot;=&quot; + new string('=', 79));
+    }
+}
+</code></pre>
+<h2 id="testing">Testing</h2>
+<p>The provider includes comprehensive unit tests in <code>OllamaScriptProviderTests.cs</code>:</p>
+<pre><code class="lang-bash"># Run all OllamaScriptProvider tests
+dotnet test --filter &quot;FullyQualifiedName~OllamaScriptProviderTests&quot;
+
+# Run streaming-specific tests
+dotnet test --filter &quot;FullyQualifiedName~OllamaScriptProviderTests.StreamGenerateAsync&quot;
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="cannot-connect-to-ollama">&quot;Cannot connect to Ollama&quot;</h3>
+<ol>
+<li>Ensure Ollama is installed and running: <code>ollama serve</code></li>
+<li>Check the base URL matches your Ollama instance (default: <code>http://127.0.0.1:11434</code>)</li>
+<li>Verify firewall settings allow localhost connections</li>
+</ol>
+<h3 id="model-not-found">&quot;Model not found&quot;</h3>
+<ol>
+<li>Pull the model: <code>ollama pull llama3.1:8b-q4_k_m</code></li>
+<li>List available models: <code>ollama list</code></li>
+<li>Use a model that's already pulled</li>
+</ol>
+<h3 id="slow-generation">Slow Generation</h3>
+<ol>
+<li>Check your hardware (Ollama performs better with GPU)</li>
+<li>Use a smaller model (e.g., <code>llama3.1:7b</code> instead of <code>13b</code>)</li>
+<li>Increase timeout if model is loading: <code>timeoutSeconds: 300</code></li>
+</ol>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="https://github.com/ollama/ollama/blob/main/docs/api.md">Ollama Documentation</a></li>
+<li><a href="../BaseLlmScriptProvider.cs">BaseLlmScriptProvider</a></li>
+<li><a href="../../Aura.Core/Interfaces/IScriptLlmProvider.cs">IScriptLlmProvider Interface</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/OllamaScriptProvider.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

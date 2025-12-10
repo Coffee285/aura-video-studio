@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Proxy Media Timeline Integration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Proxy Media Timeline Integration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/PROXY_TIMELINE_INTEGRATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="proxy-media-timeline-integration-guide">Proxy Media Timeline Integration Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide provides instructions for integrating proxy media seamlessly into the timeline components for smooth playback and scrubbing performance.</p>
+<h2 id="current-state">Current State</h2>
+<h3 id="implemented-">Implemented ✅</h3>
+<ul>
+<li>Proxy media generation with quality presets (Draft/Preview/High)</li>
+<li>LRU cache eviction with configurable size limits</li>
+<li>Background automatic eviction service</li>
+<li>Hardware-based quality preset suggestions</li>
+<li>Cache management UI component (ProxyCacheManager)</li>
+<li>Quality toggle component (QualityToggle)</li>
+</ul>
+<h3 id="pending-">Pending ⏳</h3>
+<ul>
+<li>Timeline playback integration with proxy switching</li>
+<li>Proxy-in-use indicators in timeline UI</li>
+<li>Seamless proxy/source switching during scrubbing</li>
+<li>Performance telemetry for timeline operations</li>
+</ul>
+<h2 id="integration-steps">Integration Steps</h2>
+<h3 id="1-timeline-component-enhancement">1. Timeline Component Enhancement</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/components/Timeline/TimelineView.tsx</code></p>
+<h4 id="add-proxy-support-to-timeline-state">Add Proxy Support to Timeline State</h4>
+<pre><code class="lang-typescript">import { proxyMediaService } from '@/services/proxyMediaService';
+import { QualityToggle } from '@/components/Preview/QualityToggle';
+
+interface TimelineViewProps {
+  clips: TimelineClip[];
+  // ... existing props
+}
+
+export const TimelineView: FC&lt;TimelineViewProps&gt; = ({ clips, ...props }) =&gt; {
+  const [useProxy, setUseProxy] = useState(proxyMediaService.isProxyModeEnabled());
+  const [effectivePaths, setEffectivePaths] = useState&lt;Map&lt;string, string&gt;&gt;(new Map());
+
+  // Resolve proxy paths for all clips
+  useEffect(() =&gt; {
+    const resolvePaths = async () =&gt; {
+      const newPaths = new Map&lt;string, string&gt;();
+      
+      for (const clip of clips) {
+        const effectivePath = await proxyMediaService.getEffectiveMediaPath(clip.sourcePath);
+        newPaths.set(clip.id, effectivePath);
+      }
+      
+      setEffectivePaths(newPaths);
+    };
+    
+    resolvePaths();
+  }, [clips, useProxy]);
+
+  const handleQualityToggle = (newUseProxy: boolean) =&gt; {
+    setUseProxy(newUseProxy);
+  };
+
+  return (
+    &lt;div className=&quot;timeline-container&quot;&gt;
+      &lt;div className=&quot;timeline-controls&quot;&gt;
+        &lt;QualityToggle onToggle={handleQualityToggle} /&gt;
+        {/* ... other controls */}
+      &lt;/div&gt;
+      
+      &lt;div className=&quot;timeline-tracks&quot;&gt;
+        {clips.map(clip =&gt; (
+          &lt;TimelineClip
+            key={clip.id}
+            clip={clip}
+            effectivePath={effectivePaths.get(clip.id) || clip.sourcePath}
+            isUsingProxy={effectivePaths.get(clip.id) !== clip.sourcePath}
+          /&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+};
+</code></pre>
+<h3 id="2-timeline-clip-component-enhancement">2. Timeline Clip Component Enhancement</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/components/Timeline/TimelineClip.tsx</code></p>
+<h4 id="add-proxy-indicator-badge">Add Proxy Indicator Badge</h4>
+<pre><code class="lang-typescript">import { Badge } from '@fluentui/react-components';
+import { VideoClip24Regular } from '@fluentui/react-icons';
+
+interface TimelineClipProps {
+  clip: TimelineClip;
+  effectivePath: string;
+  isUsingProxy: boolean;
+  // ... existing props
+}
+
+export const TimelineClip: FC&lt;TimelineClipProps&gt; = ({ 
+  clip, 
+  effectivePath, 
+  isUsingProxy,
+  ...props 
+}) =&gt; {
+  return (
+    &lt;div className=&quot;timeline-clip&quot;&gt;
+      {/* Clip thumbnail */}
+      &lt;img src={generateThumbnail(effectivePath)} alt={clip.name} /&gt;
+      
+      {/* Proxy indicator badge */}
+      {isUsingProxy &amp;&amp; (
+        &lt;Badge 
+          appearance=&quot;tint&quot; 
+          color=&quot;brand&quot; 
+          icon={&lt;VideoClip24Regular /&gt;}
+          size=&quot;small&quot;
+          style={{ position: 'absolute', top: 4, right: 4 }}
+        &gt;
+          Proxy
+        &lt;/Badge&gt;
+      )}
+      
+      {/* Clip name and duration */}
+      &lt;div className=&quot;clip-info&quot;&gt;
+        &lt;span&gt;{clip.name}&lt;/span&gt;
+        &lt;span&gt;{formatDuration(clip.duration)}&lt;/span&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+};
+</code></pre>
+<h3 id="3-video-player-integration">3. Video Player Integration</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/components/VideoPreview/VideoPreview.tsx</code></p>
+<h4 id="use-effective-path-for-playback">Use Effective Path for Playback</h4>
+<pre><code class="lang-typescript">import { proxyMediaService } from '@/services/proxyMediaService';
+
+export const VideoPreview: FC&lt;VideoPreviewProps&gt; = ({ sourcePath, ...props }) =&gt; {
+  const [effectivePath, setEffectivePath] = useState(sourcePath);
+  const [isLoadingProxy, setIsLoadingProxy] = useState(false);
+  const videoRef = useRef&lt;HTMLVideoElement&gt;(null);
+
+  useEffect(() =&gt; {
+    const loadEffectivePath = async () =&gt; {
+      setIsLoadingProxy(true);
+      
+      try {
+        const path = await proxyMediaService.getEffectiveMediaPath(sourcePath);
+        setEffectivePath(path);
+        
+        // Preserve playback position if video was playing
+        if (videoRef.current &amp;&amp; !videoRef.current.paused) {
+          const currentTime = videoRef.current.currentTime;
+          videoRef.current.src = path;
+          videoRef.current.currentTime = currentTime;
+          videoRef.current.play();
+        }
+      } catch (error) {
+        console.error('Error loading effective path:', error);
+        setEffectivePath(sourcePath); // Fallback to source
+      } finally {
+        setIsLoadingProxy(false);
+      }
+    };
+    
+    loadEffectivePath();
+  }, [sourcePath]);
+
+  return (
+    &lt;div className=&quot;video-preview&quot;&gt;
+      {isLoadingProxy &amp;&amp; &lt;Spinner size=&quot;small&quot; label=&quot;Loading...&quot; /&gt;}
+      
+      &lt;video
+        ref={videoRef}
+        src={effectivePath}
+        controls
+        preload=&quot;metadata&quot;
+      /&gt;
+    &lt;/div&gt;
+  );
+};
+</code></pre>
+<h3 id="4-scrubbing-performance-enhancement">4. Scrubbing Performance Enhancement</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/services/timeline/TimelineEditor.ts</code></p>
+<h4 id="add-proxy-aware-scrubbing">Add Proxy-Aware Scrubbing</h4>
+<pre><code class="lang-typescript">export class TimelineEditor {
+  private proxyMediaService = proxyMediaService;
+  private effectivePathCache = new Map&lt;string, string&gt;();
+
+  async loadClip(clipId: string, sourcePath: string): Promise&lt;string&gt; {
+    // Check cache first
+    if (this.effectivePathCache.has(clipId)) {
+      return this.effectivePathCache.get(clipId)!;
+    }
+
+    // Resolve effective path (proxy or source)
+    const effectivePath = await this.proxyMediaService.getEffectiveMediaPath(sourcePath);
+    this.effectivePathCache.set(clipId, effectivePath);
+    
+    return effectivePath;
+  }
+
+  async scrubToTime(time: number): Promise&lt;void&gt; {
+    const clip = this.getClipAtTime(time);
+    
+    if (!clip) {
+      return;
+    }
+
+    const effectivePath = await this.loadClip(clip.id, clip.sourcePath);
+    
+    // Update video player with effective path
+    this.updatePlayerSource(effectivePath, time - clip.startTime);
+  }
+
+  clearCache(): void {
+    this.effectivePathCache.clear();
+  }
+}
+</code></pre>
+<h3 id="5-settings-integration">5. Settings Integration</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/pages/Settings/PerformanceSettings.tsx</code></p>
+<h4 id="add-cache-management-section">Add Cache Management Section</h4>
+<pre><code class="lang-typescript">import { ProxyCacheManager } from '@/components/Preview/ProxyCacheManager';
+
+export const PerformanceSettings: FC = () =&gt; {
+  return (
+    &lt;div className=&quot;performance-settings&quot;&gt;
+      &lt;h2&gt;Performance Settings&lt;/h2&gt;
+      
+      {/* Existing performance settings */}
+      
+      &lt;section&gt;
+        &lt;h3&gt;Proxy Media Cache&lt;/h3&gt;
+        &lt;p&gt;
+          Proxy media improves timeline scrubbing and playback performance by using
+          lower-resolution versions of your source media. The cache is managed automatically.
+        &lt;/p&gt;
+        
+        &lt;ProxyCacheManager 
+          onStatsChanged={(stats) =&gt; {
+            console.log('Cache stats updated:', stats);
+          }}
+        /&gt;
+      &lt;/section&gt;
+    &lt;/div&gt;
+  );
+};
+</code></pre>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="proxy-generation-triggers">Proxy Generation Triggers</h3>
+<ol>
+<li><strong>On Asset Import</strong>: Automatically generate proxy when media is imported</li>
+<li><strong>Background Processing</strong>: Generate proxies for all timeline clips in background</li>
+<li><strong>On-Demand</strong>: Generate proxy when clip is added to timeline if not already cached</li>
+</ol>
+<h3 id="recommended-implementation">Recommended Implementation</h3>
+<pre><code class="lang-typescript">// In asset import service
+export class AssetImportService {
+  async importAsset(file: File): Promise&lt;Asset&gt; {
+    const asset = await this.uploadAsset(file);
+    
+    // Trigger background proxy generation
+    this.generateProxyInBackground(asset);
+    
+    return asset;
+  }
+
+  private async generateProxyInBackground(asset: Asset): Promise&lt;void&gt; {
+    // Don't block UI
+    setTimeout(async () =&gt; {
+      try {
+        const quality = await this.suggestProxyQuality(asset);
+        await proxyMediaService.generateProxy({
+          sourcePath: asset.path,
+          quality,
+          backgroundGeneration: true,
+          priority: 0,
+        });
+      } catch (error) {
+        console.error('Background proxy generation failed:', error);
+      }
+    }, 0);
+  }
+
+  private async suggestProxyQuality(asset: Asset): Promise&lt;string&gt; {
+    // Get system hardware tier
+    const hardwareTier = await this.getHardwareTier();
+    
+    // Simple suggestion logic (can be replaced with API call)
+    if (asset.width &gt;= 3840) {
+      return hardwareTier === 'A' ? 'High' : 'Preview';
+    } else if (asset.width &gt;= 1920) {
+      return 'Preview';
+    } else {
+      return 'Draft';
+    }
+  }
+}
+</code></pre>
+<h2 id="testing-strategy">Testing Strategy</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-typescript">describe('Timeline with Proxy Integration', () =&gt; {
+  it('should use proxy path when proxy mode is enabled', async () =&gt; {
+    proxyMediaService.setUseProxyMode(true);
+    
+    const clip = { id: '1', sourcePath: '/source/video.mp4' };
+    const proxyPath = '/cache/proxy/video_preview.mp4';
+    
+    // Mock proxy service
+    vi.spyOn(proxyMediaService, 'getEffectiveMediaPath')
+      .mockResolvedValue(proxyPath);
+    
+    const timeline = new TimelineEditor();
+    const effectivePath = await timeline.loadClip(clip.id, clip.sourcePath);
+    
+    expect(effectivePath).toBe(proxyPath);
+  });
+
+  it('should show proxy indicator badge when using proxy', () =&gt; {
+    const clip = { id: '1', name: 'Video', sourcePath: '/source/video.mp4' };
+    
+    const { getByText } = render(
+      &lt;TimelineClip
+        clip={clip}
+        effectivePath=&quot;/cache/proxy/video_preview.mp4&quot;
+        isUsingProxy={true}
+      /&gt;
+    );
+    
+    expect(getByText('Proxy')).toBeInTheDocument();
+  });
+});
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-typescript">describe('Timeline Playback with Proxy', () =&gt; {
+  it('should seamlessly switch between proxy and source', async () =&gt; {
+    const timeline = render(&lt;TimelineView clips={testClips} /&gt;);
+    
+    // Start with proxy mode
+    proxyMediaService.setUseProxyMode(true);
+    await waitFor(() =&gt; {
+      expect(timeline.getByText('Proxy Active')).toBeInTheDocument();
+    });
+    
+    // Toggle to source mode
+    const toggle = timeline.getByRole('switch');
+    fireEvent.click(toggle);
+    
+    await waitFor(() =&gt; {
+      expect(timeline.getByText('Source Quality')).toBeInTheDocument();
+    });
+  });
+});
+</code></pre>
+<h3 id="performance-tests">Performance Tests</h3>
+<pre><code class="lang-typescript">describe('Scrubbing Performance', () =&gt; {
+  it('should measure FPS improvement with proxies', async () =&gt; {
+    const timeline = new TimelineEditor();
+    
+    // Measure without proxy
+    proxyMediaService.setUseProxyMode(false);
+    const fpsWithoutProxy = await measureScrubbingFPS(timeline);
+    
+    // Measure with proxy
+    proxyMediaService.setUseProxyMode(true);
+    const fpsWithProxy = await measureScrubbingFPS(timeline);
+    
+    // Expect at least 50% improvement
+    expect(fpsWithProxy).toBeGreaterThan(fpsWithoutProxy * 1.5);
+  });
+});
+
+async function measureScrubbingFPS(timeline: TimelineEditor): Promise&lt;number&gt; {
+  const frames: number[] = [];
+  const duration = 5000; // 5 seconds
+  const startTime = performance.now();
+  
+  while (performance.now() - startTime &lt; duration) {
+    const frameStart = performance.now();
+    await timeline.scrubToTime(Math.random() * 60);
+    const frameTime = performance.now() - frameStart;
+    frames.push(1000 / frameTime);
+  }
+  
+  return frames.reduce((a, b) =&gt; a + b) / frames.length;
+}
+</code></pre>
+<h2 id="final-render-verification">Final Render Verification</h2>
+<h3 id="ensure-original-media-is-used">Ensure Original Media is Used</h3>
+<pre><code class="lang-typescript">export class RenderService {
+  async renderTimeline(timeline: Timeline): Promise&lt;string&gt; {
+    // CRITICAL: Always use source paths for final render
+    const clips = timeline.clips.map(clip =&gt; ({
+      ...clip,
+      // Force source path, not proxy path
+      path: clip.sourcePath,
+    }));
+
+    console.log('Rendering with source quality:', clips);
+    
+    const result = await this.ffmpegService.render({
+      clips,
+      resolution: timeline.resolution,
+      bitrate: timeline.bitrate,
+      // Use original quality settings
+    });
+
+    return result.outputPath;
+  }
+}
+</code></pre>
+<h2 id="acceptance-criteria-checklist">Acceptance Criteria Checklist</h2>
+<ul>
+<li>[ ] Proxy media is generated on asset ingest</li>
+<li>[ ] Timeline uses proxy media for preview playback</li>
+<li>[ ] Scrubbing is smooth with proxies enabled (24+ FPS)</li>
+<li>[ ] Proxy-in-use indicators visible in timeline</li>
+<li>[ ] Quality toggle switches between proxy/source seamlessly</li>
+<li>[ ] Cache size limits are enforced</li>
+<li>[ ] LRU eviction removes least recently used proxies</li>
+<li>[ ] Manual cache purge works via UI</li>
+<li>[ ] <strong>Final render always uses original source media (CRITICAL)</strong></li>
+<li>[ ] Performance improvement is measurable (2x+ FPS improvement)</li>
+</ul>
+<h2 id="common-pitfalls-to-avoid">Common Pitfalls to Avoid</h2>
+<ol>
+<li><strong>Using Proxy in Final Render</strong>: Always verify render service uses source paths</li>
+<li><strong>Not Handling Missing Proxies</strong>: Always fall back to source if proxy doesn't exist</li>
+<li><strong>Memory Leaks</strong>: Clear path caches when components unmount</li>
+<li><strong>Race Conditions</strong>: Handle concurrent proxy generation requests properly</li>
+<li><strong>Cache Invalidation</strong>: Update effective paths when proxy mode changes</li>
+</ol>
+<h2 id="next-steps">Next Steps</h2>
+<ol>
+<li>Implement timeline component integration following this guide</li>
+<li>Add performance telemetry to measure FPS improvements</li>
+<li>Run performance benchmarks with/without proxies</li>
+<li>Verify final render uses original media</li>
+<li>Update user documentation with proxy usage guide</li>
+</ol>
+<hr>
+<p><strong>Document Version</strong>: 1.0<br>
+<strong>Last Updated</strong>: 2025-11-05<br>
+<strong>Status</strong>: ⏳ Integration Guide Ready for Implementation</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/PROXY_TIMELINE_INTEGRATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

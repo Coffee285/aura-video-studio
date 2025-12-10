@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Key Vault API - Validation Status Endpoints | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Key Vault API - Validation Status Endpoints | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/KEY_VAULT_VALIDATION_API.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="key-vault-api---validation-status-endpoints">Key Vault API - Validation Status Endpoints</h1>
+
+<p>This document describes the new validation status endpoints added to the Key Vault API for provider API key lifecycle management.</p>
+<h2 id="base-url">Base URL</h2>
+<pre><code>/api/keys
+</code></pre>
+<h2 id="endpoints">Endpoints</h2>
+<h3 id="get-all-keys-status">Get All Keys Status</h3>
+<p>Retrieves validation status for all configured API keys.</p>
+<p><strong>Endpoint</strong>: <code>GET /api/keys/status</code></p>
+<p><strong>Authentication</strong>: None (planned for future)</p>
+<p><strong>Response</strong>: <code>200 OK</code></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;statuses&quot;: {
+    &quot;openai&quot;: {
+      &quot;success&quot;: true,
+      &quot;provider&quot;: &quot;openai&quot;,
+      &quot;status&quot;: &quot;Valid&quot;,
+      &quot;message&quot;: &quot;API key is valid and working&quot;,
+      &quot;lastValidated&quot;: &quot;2025-11-13T21:30:00Z&quot;,
+      &quot;validationStarted&quot;: null,
+      &quot;elapsedMs&quot;: 0,
+      &quot;remainingTimeoutMs&quot;: 0,
+      &quot;details&quot;: {
+        &quot;provider&quot;: &quot;openai&quot;,
+        &quot;status&quot;: &quot;connected&quot;
+      },
+      &quot;canRetry&quot;: false,
+      &quot;canManuallyRevalidate&quot;: true
+    },
+    &quot;ollama&quot;: {
+      &quot;success&quot;: true,
+      &quot;provider&quot;: &quot;ollama&quot;,
+      &quot;status&quot;: &quot;ValidatingExtended&quot;,
+      &quot;message&quot;: &quot;Validation in progress, taking longer than usual (45000ms elapsed).&quot;,
+      &quot;validationStarted&quot;: &quot;2025-11-13T21:29:15Z&quot;,
+      &quot;elapsedMs&quot;: 45000,
+      &quot;remainingTimeoutMs&quot;: 135000,
+      &quot;details&quot;: {},
+      &quot;canRetry&quot;: true,
+      &quot;canManuallyRevalidate&quot;: false
+    }
+  },
+  &quot;totalKeys&quot;: 2,
+  &quot;validKeys&quot;: 1,
+  &quot;invalidKeys&quot;: 0,
+  &quot;pendingValidation&quot;: 1
+}
+</code></pre>
+<p><strong>Status Codes</strong>:</p>
+<ul>
+<li><code>200 OK</code> - Success</li>
+<li><code>500 Internal Server Error</code> - Server error</li>
+</ul>
+<hr>
+<h3 id="get-specific-key-status">Get Specific Key Status</h3>
+<p>Retrieves validation status for a specific provider's API key.</p>
+<p><strong>Endpoint</strong>: <code>GET /api/keys/status/{provider}</code></p>
+<p><strong>Path Parameters</strong>:</p>
+<ul>
+<li><code>provider</code> (string, required) - Provider name (e.g., &quot;openai&quot;, &quot;anthropic&quot;)</li>
+</ul>
+<p><strong>Response</strong>: <code>200 OK</code></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;provider&quot;: &quot;openai&quot;,
+  &quot;status&quot;: &quot;Valid&quot;,
+  &quot;message&quot;: &quot;API key is valid and working&quot;,
+  &quot;lastValidated&quot;: &quot;2025-11-13T21:30:00Z&quot;,
+  &quot;validationStarted&quot;: null,
+  &quot;elapsedMs&quot;: 0,
+  &quot;remainingTimeoutMs&quot;: 0,
+  &quot;details&quot;: {
+    &quot;provider&quot;: &quot;openai&quot;,
+    &quot;status&quot;: &quot;connected&quot;
+  },
+  &quot;canRetry&quot;: false,
+  &quot;canManuallyRevalidate&quot;: true
+}
+</code></pre>
+<p><strong>Error Response</strong>: <code>404 Not Found</code></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: false,
+  &quot;message&quot;: &quot;No API key configured for anthropic&quot;
+}
+</code></pre>
+<p><strong>Status Codes</strong>:</p>
+<ul>
+<li><code>200 OK</code> - Success</li>
+<li><code>400 Bad Request</code> - Missing or invalid provider name</li>
+<li><code>404 Not Found</code> - No key configured for provider</li>
+<li><code>500 Internal Server Error</code> - Server error</li>
+</ul>
+<hr>
+<h3 id="manually-revalidate-api-key">Manually Revalidate API Key</h3>
+<p>Triggers manual revalidation of an API key. This is a user-initiated action that bypasses caching and forces a fresh validation.</p>
+<p><strong>Endpoint</strong>: <code>POST /api/keys/revalidate</code></p>
+<p><strong>Request Body</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;provider&quot;: &quot;openai&quot;,
+  &quot;apiKey&quot;: null
+}
+</code></pre>
+<p><strong>Request Fields</strong>:</p>
+<ul>
+<li><code>provider</code> (string, required) - Provider name to revalidate</li>
+<li><code>apiKey</code> (string, optional) - API key to test. If null/empty, uses stored key</li>
+</ul>
+<p><strong>Response</strong>: <code>200 OK</code></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;provider&quot;: &quot;openai&quot;,
+  &quot;status&quot;: &quot;Valid&quot;,
+  &quot;message&quot;: &quot;OpenAI API key is valid and working&quot;,
+  &quot;lastValidated&quot;: &quot;2025-11-13T21:35:00Z&quot;,
+  &quot;details&quot;: {
+    &quot;provider&quot;: &quot;openai&quot;,
+    &quot;status&quot;: &quot;connected&quot;
+  },
+  &quot;canManuallyRevalidate&quot;: true
+}
+</code></pre>
+<p><strong>Error Response</strong>: <code>404 Not Found</code></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: false,
+  &quot;message&quot;: &quot;No API key configured for ollama&quot;
+}
+</code></pre>
+<p><strong>Status Codes</strong>:</p>
+<ul>
+<li><code>200 OK</code> - Validation completed (check <code>success</code> field for result)</li>
+<li><code>400 Bad Request</code> - Missing or invalid provider name</li>
+<li><code>404 Not Found</code> - No key configured and no key provided</li>
+<li><code>500 Internal Server Error</code> - Server error</li>
+</ul>
+<p><strong>Audit Logging</strong>: All revalidation requests are logged with:</p>
+<ul>
+<li>Provider name (sanitized)</li>
+<li>User identifier</li>
+<li>Timestamp</li>
+<li>Result (Valid/Invalid)</li>
+<li>Correlation ID</li>
+</ul>
+<hr>
+<h2 id="validation-status-values">Validation Status Values</h2>
+<h3 id="status-enum">Status Enum</h3>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Description</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NotValidated</code></td>
+<td>Key not yet tested</td>
+<td>Initial state after configuration</td>
+</tr>
+<tr>
+<td><code>Validating</code></td>
+<td>Currently validating (normal)</td>
+<td>Within normal timeout threshold</td>
+</tr>
+<tr>
+<td><code>ValidatingExtended</code></td>
+<td>Taking longer than usual</td>
+<td>Between normal and extended threshold</td>
+</tr>
+<tr>
+<td><code>ValidatingMaxWait</code></td>
+<td>Approaching maximum wait</td>
+<td>Between extended and max threshold</td>
+</tr>
+<tr>
+<td><code>Valid</code></td>
+<td>Validation succeeded</td>
+<td>Key is working correctly</td>
+</tr>
+<tr>
+<td><code>Invalid</code></td>
+<td>Validation failed</td>
+<td>Key is incorrect or provider error</td>
+</tr>
+<tr>
+<td><code>SlowButWorking</code></td>
+<td>Provider slow but valid</td>
+<td>Key works but high latency detected</td>
+</tr>
+<tr>
+<td><code>TimedOut</code></td>
+<td>Exceeded maximum wait</td>
+<td>Provider unresponsive or unreachable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="status-details-object">Status Details Object</h3>
+<p>Contains provider-specific validation details:</p>
+<pre><code class="lang-json">{
+  &quot;provider&quot;: &quot;openai&quot;,
+  &quot;status&quot;: &quot;connected&quot;,
+  &quot;reason&quot;: &quot;success&quot;,
+  &quot;status_code&quot;: &quot;200&quot;
+}
+</code></pre>
+<p>Common detail fields:</p>
+<ul>
+<li><code>provider</code> - Provider identifier</li>
+<li><code>status</code> - Connection status</li>
+<li><code>reason</code> - Reason for status (success, timeout, error, unauthorized)</li>
+<li><code>status_code</code> - HTTP status code (if applicable)</li>
+<li><code>error</code> - Error type (network, timeout, authentication)</li>
+</ul>
+<hr>
+<h2 id="validation-timeouts">Validation Timeouts</h2>
+<p>Timeouts vary by provider category (configured in <code>providerTimeoutProfiles.json</code>):</p>
+<table>
+<thead>
+<tr>
+<th>Provider Category</th>
+<th>Normal</th>
+<th>Extended</th>
+<th>Maximum</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cloud LLM</td>
+<td>15s</td>
+<td>60s</td>
+<td>120s</td>
+</tr>
+<tr>
+<td>Local LLM (Ollama)</td>
+<td>30s</td>
+<td>180s</td>
+<td>300s</td>
+</tr>
+<tr>
+<td>TTS Services</td>
+<td>20s</td>
+<td>60s</td>
+<td>120s</td>
+</tr>
+<tr>
+<td>Image Generation</td>
+<td>60s</td>
+<td>240s</td>
+<td>480s</td>
+</tr>
+<tr>
+<td>Video Rendering</td>
+<td>120s</td>
+<td>600s</td>
+<td>1800s</td>
+</tr>
+<tr>
+<td>Fallback</td>
+<td>5s</td>
+<td>15s</td>
+<td>30s</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Progressive Validation</strong>:</p>
+<ol>
+<li>Initial attempt within normal timeout</li>
+<li>If fails, retry with exponential backoff</li>
+<li>Continue up to max retries (typically 3)</li>
+<li>Status updates progressively based on elapsed time</li>
+<li>No auto-disable if provider is slow</li>
+</ol>
+<hr>
+<h2 id="integration-examples">Integration Examples</h2>
+<h3 id="typescript-react">TypeScript (React)</h3>
+<pre><code class="lang-typescript">import { apiClient } from '@/services/api/apiClient';
+
+// Get all key statuses
+const getAllStatuses = async () =&gt; {
+  try {
+    const response = await apiClient.get('/api/keys/status');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch key statuses:', error);
+    throw error;
+  }
+};
+
+// Get specific key status
+const getKeyStatus = async (provider: string) =&gt; {
+  try {
+    const response = await apiClient.get(`/api/keys/status/${provider}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch status for ${provider}:`, error);
+    throw error;
+  }
+};
+
+// Manually revalidate
+const revalidateKey = async (provider: string, apiKey?: string) =&gt; {
+  try {
+    const response = await apiClient.post('/api/keys/revalidate', {
+      provider,
+      apiKey: apiKey || null,
+    });
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to revalidate ${provider}:`, error);
+    throw error;
+  }
+};
+</code></pre>
+<h3 id="c-net">C# (.NET)</h3>
+<pre><code class="lang-csharp">using System.Net.Http;
+using System.Text.Json;
+
+public class KeyVaultClient
+{
+    private readonly HttpClient _httpClient;
+    
+    public KeyVaultClient(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+    
+    public async Task&lt;AllKeysStatusResponse&gt; GetAllStatusesAsync()
+    {
+        var response = await _httpClient.GetAsync(&quot;/api/keys/status&quot;);
+        response.EnsureSuccessStatusCode();
+        
+        var json = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize&lt;AllKeysStatusResponse&gt;(json);
+    }
+    
+    public async Task&lt;KeyStatusResponse&gt; RevalidateKeyAsync(string provider)
+    {
+        var request = new { provider };
+        var content = new StringContent(
+            JsonSerializer.Serialize(request),
+            Encoding.UTF8,
+            &quot;application/json&quot;);
+            
+        var response = await _httpClient.PostAsync(&quot;/api/keys/revalidate&quot;, content);
+        response.EnsureSuccessStatusCode();
+        
+        var json = await response.Content.ReadAsStringAsync();
+        return JsonSerializer.Deserialize&lt;KeyStatusResponse&gt;(json);
+    }
+}
+</code></pre>
+<hr>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="polling-strategy">Polling Strategy</h3>
+<p>When validating keys with long timeouts:</p>
+<ol>
+<li><strong>Initial call</strong>: Start validation with POST <code>/api/keys/revalidate</code></li>
+<li><strong>Poll for status</strong>: GET <code>/api/keys/status/{provider}</code> every 5 seconds</li>
+<li><strong>Check status</strong>: Look for terminal states (Valid, Invalid, TimedOut)</li>
+<li><strong>Stop polling</strong>: When status is terminal or user cancels</li>
+<li><strong>Max duration</strong>: Don't poll longer than maximum timeout + buffer</li>
+</ol>
+<h3 id="rate-limiting">Rate Limiting</h3>
+<ul>
+<li><strong>Revalidation</strong>: Limit to once per 30 seconds per provider</li>
+<li><strong>Status checks</strong>: Safe to poll frequently (no external API calls)</li>
+<li><strong>Batch operations</strong>: Use GET <code>/api/keys/status</code> for multiple providers</li>
+</ul>
+<h3 id="error-handling">Error Handling</h3>
+<p>Always handle these scenarios:</p>
+<ul>
+<li>Network timeouts (longer than UI expects)</li>
+<li>Provider outages (persistent failures)</li>
+<li>Invalid keys (immediate failure)</li>
+<li>Rate limits (429 responses from providers)</li>
+</ul>
+<h3 id="user-experience">User Experience</h3>
+<ul>
+<li>Show progress indicators for extended validations</li>
+<li>Display timeout countdown for max wait states</li>
+<li>Provide clear guidance on what user should do</li>
+<li>Never auto-disable slow providers without user confirmation</li>
+</ul>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="../VALIDATION_PATIENCE_STRATEGY.html">Validation Patience Strategy</a></li>
+<li><a href="../../PROVIDER_INTEGRATION_GUIDE.md">Provider Integration Guide</a></li>
+<li><a href="../../SECURITY.html">Security Best Practices</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/KEY_VAULT_VALIDATION_API.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

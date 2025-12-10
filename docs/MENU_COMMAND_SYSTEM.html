@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Menu Command System Developer Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Menu Command System Developer Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/MENU_COMMAND_SYSTEM.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="menu-command-system-developer-guide">Menu Command System Developer Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Menu Command System provides a type-safe, validated, and observable communication channel between Electron's application menu (File, Edit, View, Tools, Help) and the React renderer process. It includes:</p>
+<ul>
+<li><strong>Command Registry</strong>: Central definition of all menu commands with schemas</li>
+<li><strong>Payload Validation</strong>: Zod-based validation at multiple layers</li>
+<li><strong>Correlation Tracking</strong>: Unique IDs for tracking commands from menu click to completion</li>
+<li><strong>Context Awareness</strong>: Commands respect application state (e.g., &quot;Save&quot; only when project loaded)</li>
+<li><strong>User Feedback</strong>: Toast notifications when commands unavailable or fail</li>
+<li><strong>Structured Logging</strong>: Detailed logs on both main and renderer processes</li>
+</ul>
+<h2 id="architecture">Architecture</h2>
+<h3 id="main-process-electron">Main Process (Electron)</h3>
+<pre><code>menu-builder.js
+  ↓ (user clicks menu item)
+  ↓ (validates payload, generates correlation ID)
+  ↓
+webContents.send(channel, payload)
+</code></pre>
+<p><strong>Files:</strong></p>
+<ul>
+<li><code>Aura.Desktop/electron/menu-command-map.js</code> - Command registry with Zod schemas</li>
+<li><code>Aura.Desktop/electron/menu-builder.js</code> - Menu creation and command dispatch</li>
+<li><code>Aura.Desktop/electron/menu-command-handler.js</code> - Validation utilities</li>
+</ul>
+<h3 id="preload-script">Preload Script</h3>
+<pre><code>preload.js
+  ↓ (receives IPC event)
+  ↓ (validates against schema)
+  ↓ (enhances with metadata)
+  ↓
+window.electron.menu.onXXX(callback)
+</code></pre>
+<p><strong>Files:</strong></p>
+<ul>
+<li><code>Aura.Desktop/electron/preload.js</code> - Context bridge and IPC exposure</li>
+<li><code>Aura.Desktop/electron/menu-command-handler.js</code> - Validated listener creation</li>
+</ul>
+<h3 id="renderer-process-react">Renderer Process (React)</h3>
+<pre><code>useMenuCommandSystem.ts
+  ↓ (registers handlers)
+  ↓
+menuCommandDispatcher.ts
+  ↓ (checks context availability)
+  ↓ (executes feature handlers)
+  ↓ (shows user feedback)
+</code></pre>
+<p><strong>Files:</strong></p>
+<ul>
+<li><code>Aura.Web/src/hooks/useMenuCommandSystem.ts</code> - Hook for registering handlers</li>
+<li><code>Aura.Web/src/services/menuCommandDispatcher.ts</code> - Central command dispatcher</li>
+<li><code>Aura.Web/src/components/AppRouterContent.tsx</code> - Integration point</li>
+</ul>
+<h2 id="command-flow-with-correlation-ids">Command Flow with Correlation IDs</h2>
+<ol>
+<li><p><strong>User clicks menu item</strong> (e.g., File → New Project)</p>
+</li>
+<li><p><strong>Main Process</strong> (<code>menu-builder.js</code>):</p>
+<ul>
+<li>Validates payload against schema</li>
+<li>Generates correlation ID: <code>cmd_1763080295_abc123</code></li>
+<li>Logs: <code>[MenuBuilder] Sending command to renderer { correlationId, channel, command: &quot;New Project&quot; }</code></li>
+<li>Sends IPC message with validated payload</li>
+</ul>
+</li>
+<li><p><strong>Preload Script</strong> (<code>menu-command-handler.js</code>):</p>
+<ul>
+<li>Receives IPC event</li>
+<li>Re-validates payload</li>
+<li>Enhances with metadata: <code>_command</code>, <code>_timestamp</code>, <code>_correlationId</code></li>
+<li>Logs: <code>[Preload:MenuCommand] Validation passed, dispatching to renderer { correlationId, channel }</code></li>
+<li>Calls registered callback</li>
+</ul>
+</li>
+<li><p><strong>Renderer</strong> (<code>menuCommandDispatcher.ts</code>):</p>
+<ul>
+<li>Checks if command available in current context</li>
+<li>Finds registered handler(s) for command</li>
+<li>Executes handler (e.g., navigate to route)</li>
+<li>Logs: <code>[MenuCommand] Command completed { correlationId, duration }</code></li>
+<li>Shows toast if unavailable/failed</li>
+</ul>
+</li>
+</ol>
+<h2 id="adding-a-new-menu-command">Adding a New Menu Command</h2>
+<h3 id="step-1-define-command-in-menucommandmap">Step 1: Define Command in MenuCommandMap</h3>
+<p>Edit <code>Aura.Desktop/electron/menu-command-map.js</code>:</p>
+<pre><code class="lang-javascript">const MENU_COMMANDS = {
+  // ... existing commands ...
+  
+  MY_NEW_COMMAND: {
+    id: 'menu:myNewCommand',
+    label: 'My New Command',
+    category: 'Tools',  // File, Edit, View, Tools, or Help
+    schema: EmptyPayloadSchema,  // or custom Zod schema
+    contexts: [CommandContext.GLOBAL],  // or PROJECT_LOADED, TIMELINE, etc.
+    accelerator: 'CmdOrCtrl+Shift+M',  // optional keyboard shortcut
+    description: 'Does something awesome'
+  }
+};
+</code></pre>
+<p>If your command needs payload data, define a schema:</p>
+<pre><code class="lang-javascript">const MyCommandSchema = z.object({
+  itemId: z.string().min(1, 'Item ID is required'),
+  options: z.object({
+    verbose: z.boolean().optional()
+  }).optional()
+});
+</code></pre>
+<h3 id="step-2-add-to-menu-event-types">Step 2: Add to Menu Event Types</h3>
+<p>Edit <code>Aura.Desktop/electron/menu-event-types.js</code>:</p>
+<pre><code class="lang-javascript">const MENU_EVENT_CHANNELS = [
+  // ... existing channels ...
+  'menu:myNewCommand'
+];
+</code></pre>
+<h3 id="step-3-add-to-preload-api">Step 3: Add to Preload API</h3>
+<p>The <code>createValidatedMenuAPI</code> in <code>menu-command-handler.js</code> automatically creates listeners for all commands. If not using this, manually add:</p>
+<pre><code class="lang-javascript">// In preload.js
+menu: {
+  // ... existing methods ...
+  onMyNewCommand: createCommandListener('menu:myNewCommand')
+}
+</code></pre>
+<h3 id="step-4-add-to-menu-builder">Step 4: Add to Menu Builder</h3>
+<p>Edit <code>Aura.Desktop/electron/menu-builder.js</code>:</p>
+<pre><code class="lang-javascript">_buildToolsMenu() {
+  return {
+    label: 'Tools',
+    submenu: [
+      // ... existing items ...
+      {
+        label: 'My New Command',
+        accelerator: 'CmdOrCtrl+Shift+M',
+        click: () =&gt; this._myNewCommand()
+      }
+    ]
+  };
+}
+
+_myNewCommand() {
+  this._sendToRenderer('menu:myNewCommand', { 
+    /* optional payload data */
+  });
+}
+</code></pre>
+<h3 id="step-5-add-typescript-type">Step 5: Add TypeScript Type</h3>
+<p>Edit <code>Aura.Web/src/types/electron-menu.ts</code>:</p>
+<pre><code class="lang-typescript">export interface MenuAPI {
+  // ... existing methods ...
+  onMyNewCommand: (callback: MenuEventHandler) =&gt; MenuEventUnsubscribe;
+}
+</code></pre>
+<h3 id="step-6-register-handler-in-renderer">Step 6: Register Handler in Renderer</h3>
+<p>Edit <code>Aura.Web/src/hooks/useMenuCommandSystem.ts</code>:</p>
+<pre><code class="lang-typescript">const unsubMyNewCommand = menuCommandDispatcher.registerHandler({
+  commandId: 'menu:myNewCommand',
+  handler: (payload: MenuCommandPayload) =&gt; {
+    loggingService.info('Executing: My New Command', { 
+      correlationId: payload._correlationId 
+    });
+    
+    // Do something awesome
+    navigate('/my-awesome-feature');
+  },
+  context: AppContext.GLOBAL,  // or PROJECT_LOADED, TIMELINE, etc.
+  feature: 'my-feature',
+});
+
+// Wire up Electron listener
+unsubscribers.push(
+  menu.onMyNewCommand((payload) =&gt; 
+    menuCommandDispatcher.dispatch('menu:myNewCommand', payload)
+  )
+);
+
+// Cleanup function
+return () =&gt; {
+  // ...
+  unsubMyNewCommand();
+};
+</code></pre>
+<h3 id="step-7-add-test">Step 7: Add Test</h3>
+<p>Create test in <code>Aura.Desktop/test/test-menu-command-map.js</code> or add to existing tests:</p>
+<pre><code class="lang-javascript">// Test command is registered
+const myCommandMetadata = getCommandMetadata('menu:myNewCommand');
+assert.ok(myCommandMetadata, 'Command should be registered');
+assert.strictEqual(myCommandMetadata.label, 'My New Command');
+
+// Test validation
+const result = validateCommandPayload('menu:myNewCommand', {});
+assert.strictEqual(result.success, true);
+</code></pre>
+<h2 id="context-system">Context System</h2>
+<p>Commands can specify which contexts they're available in:</p>
+<pre><code class="lang-javascript">contexts: [CommandContext.PROJECT_LOADED, CommandContext.TIMELINE]
+</code></pre>
+<p>Available contexts:</p>
+<ul>
+<li><code>GLOBAL</code> - Available everywhere (default for most commands)</li>
+<li><code>PROJECT_LOADED</code> - Requires active project (e.g., Save, Export)</li>
+<li><code>TIMELINE</code> - Available in timeline view</li>
+<li><code>MEDIA_LIBRARY</code> - Available in media library view</li>
+<li><code>SETTINGS</code> - Available in settings view</li>
+<li><code>HELP</code> - Available in help/documentation views</li>
+</ul>
+<p>Set current context in your components:</p>
+<pre><code class="lang-typescript">import { menuCommandDispatcher, AppContext } from '../services/menuCommandDispatcher';
+
+// When project loads
+menuCommandDispatcher.setContext(AppContext.PROJECT_LOADED);
+
+// When entering timeline view
+menuCommandDispatcher.setContext(AppContext.TIMELINE);
+
+// Back to global
+menuCommandDispatcher.setContext(AppContext.GLOBAL);
+</code></pre>
+<h2 id="user-feedback">User Feedback</h2>
+<p>When commands are unavailable or fail, the system automatically shows toast notifications:</p>
+<ul>
+<li><strong>Context mismatch</strong>: &quot;Save Project is not available in this view&quot;</li>
+<li><strong>No handler</strong>: &quot;Command is not available&quot;</li>
+<li><strong>Validation error</strong>: &quot;Command validation failed: [reason]&quot;</li>
+<li><strong>Handler error</strong>: &quot;Failed to execute [command]: [error message]&quot;</li>
+</ul>
+<p>Customize feedback by setting a toast handler:</p>
+<pre><code class="lang-typescript">menuCommandDispatcher.setToastHandler((message, type) =&gt; {
+  // Custom notification system
+  showMyCustomToast(message, type);
+});
+</code></pre>
+<h2 id="debugging">Debugging</h2>
+<h3 id="enable-verbose-logging">Enable Verbose Logging</h3>
+<p>All command events are logged with structured data:</p>
+<pre><code>[MenuBuilder] Sending command to renderer
+  correlationId: cmd_1763080295_abc123
+  channel: menu:newProject
+  command: New Project
+  category: File
+
+[Preload:MenuCommand] Validation passed, dispatching to renderer
+  correlationId: cmd_1763080295_abc123
+  channel: menu:newProject
+  command: New Project
+
+[MenuCommand] Command completed
+  correlationId: cmd_1763080295_abc123
+  duration: 15ms
+</code></pre>
+<p>Search logs by correlation ID to trace a command's full journey.</p>
+<h3 id="common-issues">Common Issues</h3>
+<p><strong>&quot;Command not available&quot;</strong></p>
+<ul>
+<li>Check that handler is registered in <code>useMenuCommandSystem.ts</code></li>
+<li>Verify command ID matches in all files</li>
+<li>Check context is correct for current app state</li>
+</ul>
+<p><strong>&quot;Validation failed&quot;</strong></p>
+<ul>
+<li>Check payload matches Zod schema in <code>menu-command-map.js</code></li>
+<li>Look for <code>_validationError</code> in payload</li>
+<li>Review <code>_validationIssues</code> for specific field errors</li>
+</ul>
+<p><strong>Handler not executing</strong></p>
+<ul>
+<li>Verify listener wired in <code>useMenuCommandSystem.ts</code></li>
+<li>Check if multiple handlers registered (only one should match)</li>
+<li>Look for errors in browser console</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<p>Run all menu tests:</p>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm test:menu-events        # Preload validation
+npm test:menu-ipc           # IPC integration
+npm test:menu-command-map   # Command registry
+npm test:menu-command-handler  # Enhanced validation
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Always use correlation IDs</strong> when logging command-related events</li>
+<li><strong>Validate early</strong> - validation happens in main process, preload, and dispatcher</li>
+<li><strong>Context awareness</strong> - respect user's current view/state</li>
+<li><strong>User feedback</strong> - always provide feedback when commands fail</li>
+<li><strong>Structured logging</strong> - include command metadata in all logs</li>
+<li><strong>Test coverage</strong> - add tests for new commands</li>
+<li><strong>Type safety</strong> - update TypeScript types alongside JavaScript</li>
+<li><strong>Cleanup</strong> - always unregister handlers on component unmount</li>
+</ol>
+<h2 id="migration-from-old-system">Migration from Old System</h2>
+<p>The new system is backward compatible. To migrate:</p>
+<ol>
+<li>Replace <code>useElectronMenuEvents()</code> with <code>useMenuCommandSystem()</code></li>
+<li>Test that all menu items still work</li>
+<li>Gradually add context awareness to handlers</li>
+<li>Monitor logs for validation errors</li>
+</ol>
+<p>Old handlers will continue to work but won't have:</p>
+<ul>
+<li>Payload validation</li>
+<li>Correlation tracking</li>
+<li>Context awareness</li>
+<li>Enhanced error handling</li>
+</ul>
+<h2 id="performance">Performance</h2>
+<ul>
+<li>Command validation is fast (~1-2ms per command)</li>
+<li>Correlation ID generation is negligible</li>
+<li>Logging is asynchronous and doesn't block</li>
+<li>Memory usage: ~100 bytes per registered handler</li>
+<li>No performance impact on menu rendering</li>
+</ul>
+<h2 id="security">Security</h2>
+<ul>
+<li>All payloads validated against schemas (prevents injection)</li>
+<li>Channel names validated against whitelist</li>
+<li>Context bridge sandboxing maintained</li>
+<li>Correlation IDs are cryptographically random</li>
+<li>No sensitive data logged by default</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/MENU_COMMAND_SYSTEM.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>API Contract V1 Documentation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="API Contract V1 Documentation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/API_CONTRACT_V1.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="api-contract-v1-documentation">API Contract V1 Documentation</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Aura Video Studio API V1 contract is the authoritative interface between the backend and frontend. It is defined in C# under <code>Aura.Api/Models/ApiModels.V1/</code> and exposed via OpenAPI/Swagger.</p>
+<h2 id="design-principles">Design Principles</h2>
+<ol>
+<li><strong>Single Source of Truth</strong>: All API types are defined in <code>ApiModels.V1</code> namespace</li>
+<li><strong>Backward Compatibility</strong>: Tolerant enum converters accept legacy aliases</li>
+<li><strong>Type Safety</strong>: TypeScript types are generated from OpenAPI spec</li>
+<li><strong>Versioned</strong>: V1 prefix allows future API evolution</li>
+<li><strong>Documented</strong>: XML comments and OpenAPI descriptions</li>
+</ol>
+<h2 id="contract-structure">Contract Structure</h2>
+<pre><code>Aura.Api/Models/ApiModels.V1/
+├── Enums.cs          # Enum definitions (Pacing, Density, Aspect, PauseStyle, etc.)
+├── Dtos.cs           # Request/Response DTOs
+└── EnumMappings      # Conversion helpers to Core.Models types
+</code></pre>
+<h2 id="enum-tolerant-mappings">Enum Tolerant Mappings</h2>
+<p>The API accepts both canonical enum names and legacy aliases for backward compatibility.</p>
+<h3 id="aspect-ratio">Aspect Ratio</h3>
+<p><strong>Canonical Values:</strong></p>
+<ul>
+<li><code>Widescreen16x9</code> - Standard widescreen (YouTube, most platforms)</li>
+<li><code>Vertical9x16</code> - Mobile/portrait (TikTok, Instagram Stories)</li>
+<li><code>Square1x1</code> - Square format (Instagram feed)</li>
+</ul>
+<p><strong>Legacy Aliases Accepted:</strong></p>
+<ul>
+<li><code>&quot;16:9&quot;</code> → <code>Widescreen16x9</code></li>
+<li><code>&quot;9:16&quot;</code> → <code>Vertical9x16</code></li>
+<li><code>&quot;1:1&quot;</code> → <code>Square1x1</code></li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;aspect&quot;: &quot;16:9&quot;
+}
+</code></pre>
+<p>or</p>
+<pre><code class="lang-json">{
+  &quot;aspect&quot;: &quot;Widescreen16x9&quot;
+}
+</code></pre>
+<p>Both are valid and map to the same internal value.</p>
+<h3 id="density">Density</h3>
+<p><strong>Canonical Values:</strong></p>
+<ul>
+<li><code>Sparse</code> - Minimal information per scene</li>
+<li><code>Balanced</code> - Moderate information density</li>
+<li><code>Dense</code> - Maximum information per scene</li>
+</ul>
+<p><strong>Legacy Aliases Accepted:</strong></p>
+<ul>
+<li><code>&quot;Normal&quot;</code> → <code>Balanced</code></li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;density&quot;: &quot;Normal&quot;
+}
+</code></pre>
+<p>Maps to <code>Balanced</code> internally.</p>
+<h3 id="pacing">Pacing</h3>
+<p><strong>Canonical Values:</strong></p>
+<ul>
+<li><code>Chill</code> - Slow, relaxed narration</li>
+<li><code>Conversational</code> - Natural speaking pace</li>
+<li><code>Fast</code> - Quick, energetic narration</li>
+</ul>
+<p><strong>Case Insensitive:</strong>
+All pacing values are case-insensitive: <code>&quot;chill&quot;</code>, <code>&quot;CHILL&quot;</code>, <code>&quot;Chill&quot;</code> all work.</p>
+<h3 id="pausestyle">PauseStyle</h3>
+<p><strong>Canonical Values:</strong></p>
+<ul>
+<li><code>Natural</code> - Standard pauses between sentences</li>
+<li><code>Short</code> - Minimal pauses</li>
+<li><code>Long</code> - Extended pauses for emphasis</li>
+<li><code>Dramatic</code> - Variable pauses for dramatic effect</li>
+</ul>
+<p><strong>Case Insensitive:</strong>
+All pause styles are case-insensitive.</p>
+<h2 id="key-dtos">Key DTOs</h2>
+<h3 id="scriptrequest">ScriptRequest</h3>
+<p>Request to generate a video script.</p>
+<pre><code class="lang-typescript">interface ScriptRequest {
+  topic: string;                    // Video topic
+  audience: string;                 // Target audience
+  goal: string;                     // Video goal (inform, entertain, etc.)
+  tone: string;                     // Tone (informative, casual, etc.)
+  language: string;                 // Language code (e.g., &quot;en-US&quot;)
+  aspect: Aspect;                   // Video aspect ratio
+  targetDurationMinutes: number;    // Desired video length
+  pacing: Pacing;                   // Narration pacing
+  density: Density;                 // Information density
+  style: string;                    // Video style
+  providerTier?: string | null;     // Optional: &quot;Free&quot; or &quot;Pro&quot;
+}
+</code></pre>
+<h3 id="ttsrequest">TtsRequest</h3>
+<p>Request to synthesize text-to-speech audio.</p>
+<pre><code class="lang-typescript">interface TtsRequest {
+  lines: LineDto[];                 // Script lines to synthesize
+  voiceName: string;                // TTS voice name
+  rate: number;                     // Speech rate (0.5 - 2.0)
+  pitch: number;                    // Voice pitch (-10 to +10)
+  pauseStyle: PauseStyle;           // Pause style between sentences
+}
+
+interface LineDto {
+  sceneIndex: number;
+  text: string;
+  startSeconds: number;
+  durationSeconds: number;
+}
+</code></pre>
+<h3 id="renderrequest">RenderRequest</h3>
+<p>Request to render a video.</p>
+<pre><code class="lang-typescript">interface RenderRequest {
+  timelineJson: string;             // Timeline JSON
+  presetName: string;               // Render preset (e.g., &quot;1080p-high&quot;)
+  settings?: RenderSettingsDto;     // Optional: custom settings
+}
+
+interface RenderSettingsDto {
+  width: number;
+  height: number;
+  fps: number;
+  codec: string;
+  container: string;
+  qualityLevel: number;
+  videoBitrateK: number;
+  audioBitrateK: number;
+  enableSceneCut: boolean;
+}
+</code></pre>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="error-codes">Error Codes</h3>
+<ul>
+<li><strong>E300</strong>: General script generation error</li>
+<li><strong>E301</strong>: Request cancelled/timeout</li>
+<li><strong>E303</strong>: Invalid enum value or validation error</li>
+<li><strong>E304</strong>: Invalid plan specification</li>
+<li><strong>E305</strong>: Recommendation service error</li>
+</ul>
+<h3 id="error-response-format">Error Response Format</h3>
+<p>All errors follow ProblemDetails (RFC 7807) format:</p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/errors/README.md#E303&quot;,
+  &quot;title&quot;: &quot;Invalid Enum Value&quot;,
+  &quot;status&quot;: 400,
+  &quot;detail&quot;: &quot;Unknown Aspect value: '4:3'. Valid values are: Widescreen16x9 (or 16:9), Vertical9x16 (or 9:16), Square1x1 (or 1:1)&quot;,
+  &quot;traceId&quot;: &quot;00-abc123...&quot;
+}
+</code></pre>
+<p><strong>Invalid Enum Example:</strong></p>
+<p>Request:</p>
+<pre><code class="lang-json">{
+  &quot;aspect&quot;: &quot;4:3&quot;,
+  ...
+}
+</code></pre>
+<p>Response (400 Bad Request):</p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/errors/README.md#E303&quot;,
+  &quot;title&quot;: &quot;Invalid Enum Value&quot;,
+  &quot;status&quot;: 400,
+  &quot;detail&quot;: &quot;Unknown Aspect value: '4:3'. Valid values are: Widescreen16x9 (or 16:9), Vertical9x16 (or 9:16), Square1x1 (or 1:1)&quot;
+}
+</code></pre>
+<h2 id="typescript-type-generation">TypeScript Type Generation</h2>
+<p>TypeScript types are <strong>automatically generated</strong> from the OpenAPI specification to ensure perfect sync.</p>
+<h3 id="generating-types">Generating Types</h3>
+<pre><code class="lang-bash"># From repository root
+node scripts/contract/generate-api-v1-types.js
+
+# Or on Windows
+.\scripts\contract\generate-api-v1-types.ps1
+</code></pre>
+<p>This generates <code>Aura.Web/src/types/api-v1.ts</code> with:</p>
+<ul>
+<li>All request/response interfaces</li>
+<li>Enum definitions</li>
+<li>Auto-generated header with timestamp</li>
+</ul>
+<h3 id="using-generated-types">Using Generated Types</h3>
+<pre><code class="lang-typescript">import { ScriptRequest, Pacing, Density, Aspect } from '@/types/api-v1';
+
+const request: ScriptRequest = {
+  topic: &quot;AI in Healthcare&quot;,
+  audience: &quot;General&quot;,
+  goal: &quot;Inform&quot;,
+  tone: &quot;Informative&quot;,
+  language: &quot;en-US&quot;,
+  aspect: Aspect.Widescreen16x9,  // or &quot;16:9&quot; as string
+  targetDurationMinutes: 3.0,
+  pacing: Pacing.Conversational,
+  density: Density.Balanced,      // or &quot;Normal&quot; as string
+  style: &quot;Standard&quot;
+};
+
+const response = await fetch('/api/script', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(request)
+});
+</code></pre>
+<h2 id="contract-tests">Contract Tests</h2>
+<h3 id="round-trip-tests">Round-Trip Tests</h3>
+<p>Located in <code>Aura.Tests/Models/EnumRoundTripTests.cs</code>, these tests verify:</p>
+<ul>
+<li>Every enum value serializes to correct string</li>
+<li>Every enum value deserializes correctly</li>
+<li>Aliases are accepted and map to canonical values</li>
+</ul>
+<h3 id="binding-tests">Binding Tests</h3>
+<p>Located in <code>Aura.Tests/ScriptApiTests.cs</code>, these tests verify:</p>
+<ul>
+<li>Valid payloads deserialize correctly</li>
+<li>Alias enums work (e.g., &quot;16:9&quot;, &quot;Normal&quot;)</li>
+<li>Case-insensitive enums work</li>
+<li>Invalid enums produce helpful error messages</li>
+</ul>
+<h3 id="running-tests">Running Tests</h3>
+<pre><code class="lang-bash">dotnet test Aura.Tests/Aura.Tests.csproj --filter &quot;FullyQualifiedName~EnumRoundTrip&quot;
+dotnet test Aura.Tests/Aura.Tests.csproj --filter &quot;FullyQualifiedName~ScriptApiTests&quot;
+</code></pre>
+<h2 id="versioning-strategy">Versioning Strategy</h2>
+<h3 id="current-v1">Current: V1</h3>
+<p>API V1 is the current and only version. All types are under <code>Aura.Api.Models.ApiModels.V1</code>.</p>
+<h3 id="future-v2">Future: V2+</h3>
+<p>When breaking changes are needed:</p>
+<ol>
+<li>Create <code>ApiModels.V2</code> namespace</li>
+<li>Add new controllers/endpoints under <code>/api/v2/</code></li>
+<li>Keep V1 endpoints for backward compatibility</li>
+<li>Generate separate TypeScript types: <code>api-v2.ts</code></li>
+</ol>
+<h3 id="non-breaking-changes">Non-Breaking Changes</h3>
+<p>These can be added to V1 without versioning:</p>
+<ul>
+<li><strong>Adding optional fields</strong> to existing DTOs</li>
+<li><strong>Adding new enum values</strong> (with backward-compatible defaults)</li>
+<li><strong>Adding new endpoints</strong></li>
+<li><strong>Relaxing validation rules</strong></li>
+</ul>
+<h3 id="breaking-changes-require-new-version">Breaking Changes (require new version)</h3>
+<ul>
+<li><strong>Removing fields</strong> from DTOs</li>
+<li><strong>Changing field types</strong></li>
+<li><strong>Removing enum values</strong></li>
+<li><strong>Changing required fields</strong></li>
+<li><strong>Renaming anything</strong></li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="for-backend-developers">For Backend Developers</h3>
+<ol>
+<li>✅ Always define DTOs in <code>ApiModels.V1</code></li>
+<li>✅ Add XML documentation comments</li>
+<li>✅ Use tolerant enum converters for enums with aliases</li>
+<li>✅ Return <code>ProblemDetails</code> for errors with error codes</li>
+<li>✅ Test enum round-trips and binding</li>
+<li>❌ Never change existing enum values</li>
+<li>❌ Never make optional fields required</li>
+</ol>
+<h3 id="for-frontend-developers">For Frontend Developers</h3>
+<ol>
+<li>✅ Regenerate types after backend changes</li>
+<li>✅ Use generated types, not handwritten</li>
+<li>✅ Handle enum aliases if needed (though backend accepts both)</li>
+<li>✅ Check ProblemDetails error responses</li>
+<li>❌ Never modify <code>api-v1.ts</code> manually</li>
+<li>❌ Never commit outdated generated types</li>
+</ol>
+<h2 id="maintenance-checklist">Maintenance Checklist</h2>
+<ul>
+<li>[ ] All public DTOs in <code>ApiModels.V1/Dtos.cs</code></li>
+<li>[ ] All enums in <code>ApiModels.V1/Enums.cs</code></li>
+<li>[ ] Tolerant converters registered in <code>EnumJsonConverters</code></li>
+<li>[ ] XML documentation on all public types</li>
+<li>[ ] Round-trip tests for all enums</li>
+<li>[ ] Binding tests for key endpoints</li>
+<li>[ ] TypeScript types regenerated</li>
+<li>[ ] No duplicate DTOs elsewhere (e.g., Program.cs)</li>
+<li>[ ] No TODO/FIXME/PLACEHOLDER comments</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>OpenAPI Spec: <code>http://localhost:5000/swagger</code> (when running)</li>
+<li>Swagger UI: <code>http://localhost:5000/swagger/index.html</code></li>
+<li>Type Generation: <code>scripts/contract/README.md</code></li>
+<li>RFC 7807 (Problem Details): <a href="https://tools.ietf.org/html/rfc7807">https://tools.ietf.org/html/rfc7807</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/API_CONTRACT_V1.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

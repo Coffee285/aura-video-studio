@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Script Refinement with Generator-Critic-Editor Pattern | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Script Refinement with Generator-Critic-Editor Pattern | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/REFINEMENT_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="script-refinement-with-generator-critic-editor-pattern">Script Refinement with Generator-Critic-Editor Pattern</h1>
+
+<p>This guide explains how to use the enhanced script refinement system that implements a generator-critic-editor pattern for iterative quality improvement.</p>
+<h2 id="overview">Overview</h2>
+<p>The refinement system uses three specialized roles:</p>
+<ol>
+<li><strong>Generator</strong>: Creates the initial script draft</li>
+<li><strong>Critic</strong>: Evaluates the script using structured rubrics and provides detailed feedback</li>
+<li><strong>Editor</strong>: Applies targeted improvements based on critique</li>
+</ol>
+<h2 id="key-features">Key Features</h2>
+<ul>
+<li><strong>Structured Rubrics</strong>: Five comprehensive evaluation criteria (Clarity, Coherence, Timing, Engagement, AudienceAlignment)</li>
+<li><strong>Cost-Aware</strong>: Respects budget constraints with early stopping</li>
+<li><strong>Telemetry</strong>: Tracks scores, cost, and convergence statistics per round</li>
+<li><strong>Model Routing</strong>: Can use cheaper/faster models for critic and editor roles</li>
+<li><strong>Schema Validation</strong>: Ensures outputs remain valid and within duration constraints</li>
+</ul>
+<h2 id="basic-usage">Basic Usage</h2>
+<h3 id="using-the-enhancedrefinementorchestrator">Using the EnhancedRefinementOrchestrator</h3>
+<pre><code class="lang-csharp">using Aura.Core.Services;
+using Aura.Core.Models;
+using Aura.Core.Providers;
+
+// Setup services
+var criticService = new CriticService(logger, llmProvider);
+var editorService = new EditorService(logger, llmProvider);
+var orchestrator = new EnhancedRefinementOrchestrator(
+    logger,
+    generatorProvider,
+    criticService,
+    editorService,
+    contentAdvisor
+);
+
+// Configure refinement
+var config = new ScriptRefinementConfig
+{
+    MaxRefinementPasses = 2,           // 1-3 rounds allowed
+    QualityThreshold = 85.0,           // Stop if score reaches this
+    MinimumImprovement = 5.0,          // Stop if improvement &lt; this
+    MaxCostBudget = 0.10,              // Maximum spend in dollars
+    CriticModel = &quot;gpt-3.5-turbo&quot;,     // Optional: use cheaper model for critique
+    EditorModel = &quot;gpt-3.5-turbo&quot;,     // Optional: use cheaper model for editing
+    EnableSchemaValidation = true,     // Validate after each edit
+    EnableTelemetry = true             // Track convergence stats
+};
+
+// Run refinement
+var result = await orchestrator.RefineScriptAsync(brief, spec, config);
+
+// Check results
+Console.WriteLine($&quot;Success: {result.Success}&quot;);
+Console.WriteLine($&quot;Final Score: {result.FinalMetrics?.OverallScore:F1}&quot;);
+Console.WriteLine($&quot;Total Cost: ${result.TotalCost:F4}&quot;);
+Console.WriteLine($&quot;Rounds: {result.TotalPasses}&quot;);
+Console.WriteLine($&quot;Stop Reason: {result.StopReason}&quot;);
+Console.WriteLine($&quot;\nCritique Summary:\n{result.CritiqueSummary}&quot;);
+</code></pre>
+<h2 id="configuration-options">Configuration Options</h2>
+<h3 id="scriptrefinementconfig-properties">ScriptRefinementConfig Properties</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MaxRefinementPasses</code></td>
+<td>int</td>
+<td>2</td>
+<td>Number of refinement rounds (1-3)</td>
+</tr>
+<tr>
+<td><code>QualityThreshold</code></td>
+<td>double</td>
+<td>85.0</td>
+<td>Early stop if overall score &gt;= this (0-100)</td>
+</tr>
+<tr>
+<td><code>MinimumImprovement</code></td>
+<td>double</td>
+<td>5.0</td>
+<td>Early stop if improvement &lt; this</td>
+</tr>
+<tr>
+<td><code>MaxCostBudget</code></td>
+<td>double?</td>
+<td>null</td>
+<td>Maximum spend in dollars (null = no limit)</td>
+</tr>
+<tr>
+<td><code>CriticModel</code></td>
+<td>string?</td>
+<td>null</td>
+<td>Model for critic (null = same as generator)</td>
+</tr>
+<tr>
+<td><code>EditorModel</code></td>
+<td>string?</td>
+<td>null</td>
+<td>Model for editor (null = same as generator)</td>
+</tr>
+<tr>
+<td><code>EnableSchemaValidation</code></td>
+<td>bool</td>
+<td>true</td>
+<td>Validate schema after each edit</td>
+</tr>
+<tr>
+<td><code>EnableTelemetry</code></td>
+<td>bool</td>
+<td>true</td>
+<td>Track convergence statistics</td>
+</tr>
+<tr>
+<td><code>EnableAdvisorValidation</code></td>
+<td>bool</td>
+<td>true</td>
+<td>Final validation with content advisor</td>
+</tr>
+<tr>
+<td><code>PassTimeout</code></td>
+<td>TimeSpan</td>
+<td>2 minutes</td>
+<td>Timeout per refinement pass</td>
+</tr>
+</tbody>
+</table>
+<h2 id="rubric-based-evaluation">Rubric-Based Evaluation</h2>
+<h3 id="default-rubrics">Default Rubrics</h3>
+<ol>
+<li><p><strong>Clarity (25% weight)</strong></p>
+<ul>
+<li>Language simplicity</li>
+<li>Visual clarity</li>
+<li>Target: 85/100</li>
+</ul>
+</li>
+<li><p><strong>Coherence (25% weight)</strong></p>
+<ul>
+<li>Logical flow</li>
+<li>Narrative arc</li>
+<li>Target: 85/100</li>
+</ul>
+</li>
+<li><p><strong>Timing (20% weight)</strong></p>
+<ul>
+<li>Word count fit (150 words/minute)</li>
+<li>Information density</li>
+<li>Target: 85/100</li>
+</ul>
+</li>
+<li><p><strong>Engagement (15% weight)</strong></p>
+<ul>
+<li>Hook strength</li>
+<li>Pattern interrupts</li>
+<li>Target: 85/100</li>
+</ul>
+</li>
+<li><p><strong>AudienceAlignment (15% weight)</strong></p>
+<ul>
+<li>Language level</li>
+<li>Relevance to audience</li>
+<li>Target: 85/100</li>
+</ul>
+</li>
+</ol>
+<h3 id="custom-rubrics">Custom Rubrics</h3>
+<p>You can create custom rubrics:</p>
+<pre><code class="lang-csharp">var customRubric = new RefinementRubric
+{
+    Name = &quot;BrandConsistency&quot;,
+    Description = &quot;Measures alignment with brand voice and values&quot;,
+    Weight = 0.20,
+    TargetThreshold = 90.0,
+    Criteria = new List&lt;RubricCriterion&gt;
+    {
+        new RubricCriterion
+        {
+            Name = &quot;Tone Match&quot;,
+            Description = &quot;Voice matches brand guidelines&quot;,
+            ScoringGuideline = &quot;100: Perfect match. 50: Partial. 0: Off-brand.&quot;,
+            ExcellentExamples = new List&lt;string&gt; { &quot;Uses brand-approved terminology&quot; },
+            PoorExamples = new List&lt;string&gt; { &quot;Generic or off-brand language&quot; }
+        }
+    }
+};
+
+// Use in critique
+var critique = await criticService.CritiqueScriptAsync(
+    script, brief, spec, 
+    new[] { customRubric }, 
+    currentMetrics, 
+    ct
+);
+</code></pre>
+<h2 id="telemetry-and-convergence">Telemetry and Convergence</h2>
+<h3 id="accessing-telemetry-data">Accessing Telemetry Data</h3>
+<pre><code class="lang-csharp">if (result.Telemetry != null)
+{
+    // Round-by-round data
+    foreach (var round in result.Telemetry.RoundData)
+    {
+        Console.WriteLine($&quot;Round {round.RoundNumber}:&quot;);
+        Console.WriteLine($&quot;  Score: {round.AfterMetrics?.OverallScore:F1}&quot;);
+        Console.WriteLine($&quot;  Cost: ${round.Cost:F4}&quot;);
+        Console.WriteLine($&quot;  Duration: {round.Duration.TotalSeconds:F1}s&quot;);
+        Console.WriteLine($&quot;  Valid: {round.SchemaValid}&quot;);
+    }
+
+    // Convergence statistics
+    var conv = result.Telemetry.Convergence;
+    Console.WriteLine($&quot;\nConvergence:&quot;);
+    Console.WriteLine($&quot;  Converged: {conv.Converged}&quot;);
+    Console.WriteLine($&quot;  Avg Improvement: {conv.AverageImprovementPerRound:F1}&quot;);
+    Console.WriteLine($&quot;  Total Improvement: {conv.TotalImprovement:F1}&quot;);
+    Console.WriteLine($&quot;  Rate: {conv.ConvergenceRate:F2}&quot;);
+
+    // Cost breakdown
+    foreach (var kvp in result.Telemetry.CostByPhase)
+    {
+        Console.WriteLine($&quot;  {kvp.Key}: ${kvp.Value:F4}&quot;);
+    }
+}
+</code></pre>
+<h2 id="early-stopping-conditions">Early Stopping Conditions</h2>
+<p>The orchestrator will stop early if any of these conditions are met:</p>
+<ol>
+<li><strong>Quality Threshold</strong>: Score &gt;= <code>QualityThreshold</code></li>
+<li><strong>Cost Budget</strong>: Total cost &gt;= <code>MaxCostBudget</code></li>
+<li><strong>Minimal Improvement</strong>: Improvement &lt; <code>MinimumImprovement</code></li>
+<li><strong>Max Passes</strong>: Reached <code>MaxRefinementPasses</code></li>
+</ol>
+<p>The reason is stored in <code>result.StopReason</code>.</p>
+<h2 id="example-workflow">Example Workflow</h2>
+<pre><code class="lang-csharp">// 1. Create brief and spec
+var brief = new Brief(
+    Topic: &quot;Artificial Intelligence Basics&quot;,
+    Audience: &quot;Beginners&quot;,
+    Goal: &quot;Educational introduction&quot;,
+    Tone: &quot;friendly&quot;,
+    Language: &quot;en&quot;,
+    Aspect: Aspect.Widescreen16x9
+);
+
+var spec = new PlanSpec(
+    TargetDuration: TimeSpan.FromMinutes(2),
+    Pacing: Pacing.Conversational,
+    Density: Density.Balanced,
+    Style: &quot;educational&quot;
+);
+
+// 2. Configure cost-aware refinement
+var config = new ScriptRefinementConfig
+{
+    MaxRefinementPasses = 2,
+    QualityThreshold = 85.0,
+    MaxCostBudget = 0.05,  // $0.05 limit
+    CriticModel = &quot;gpt-3.5-turbo&quot;,  // Cheaper for critique
+    EditorModel = &quot;gpt-3.5-turbo&quot;   // Cheaper for editing
+};
+
+// 3. Run refinement
+var result = await orchestrator.RefineScriptAsync(brief, spec, config);
+
+// 4. Check quality improvement
+var improvement = result.GetTotalImprovement();
+if (improvement != null)
+{
+    Console.WriteLine($&quot;Quality improved by {improvement.OverallDelta:+F1} points&quot;);
+    Console.WriteLine($&quot;  Clarity: {improvement.VisualClarityDelta:+F1}&quot;);
+    Console.WriteLine($&quot;  Coherence: {improvement.NarrativeCoherenceDelta:+F1}&quot;);
+    Console.WriteLine($&quot;  Timing: {improvement.PacingDelta:+F1}&quot;);
+}
+
+// 5. Use final script
+if (result.Success)
+{
+    var finalScript = result.FinalScript;
+    // Proceed with video generation...
+}
+</code></pre>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="cost-optimization">Cost Optimization</h3>
+<ul>
+<li>Use cheaper models for critic and editor roles</li>
+<li>Set reasonable <code>MaxCostBudget</code> to prevent runaway costs</li>
+<li>Monitor <code>result.TotalCost</code> to track spending</li>
+</ul>
+<h3 id="model-selection">Model Selection</h3>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Recommended Models</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Generator</td>
+<td>GPT-4, Claude 3</td>
+<td>High quality for initial draft</td>
+</tr>
+<tr>
+<td>Critic</td>
+<td>GPT-3.5, Gemini Pro</td>
+<td>Cheaper, still effective</td>
+</tr>
+<tr>
+<td>Editor</td>
+<td>GPT-3.5, Claude Instant</td>
+<td>Fast and cost-effective</td>
+</tr>
+</tbody>
+</table>
+<h3 id="timing-constraints">Timing Constraints</h3>
+<ul>
+<li>Each pass has a 2-minute default timeout</li>
+<li>Total refinement typically takes 1-5 minutes depending on rounds</li>
+<li>Schema validation adds ~1s per round</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="high-costs">High Costs</h3>
+<p><strong>Problem</strong>: Refinement exceeds budget</p>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Set <code>MaxCostBudget</code> to enforce limits</li>
+<li>Use cheaper models for <code>CriticModel</code> and <code>EditorModel</code></li>
+<li>Reduce <code>MaxRefinementPasses</code> to 1-2 rounds</li>
+</ul>
+<h3 id="low-quality-scores">Low Quality Scores</h3>
+<p><strong>Problem</strong>: Scores don't improve significantly</p>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Check if initial draft already meets threshold</li>
+<li>Review <code>result.Telemetry.Convergence.Converged</code> - may have plateaued</li>
+<li>Adjust rubric weights or thresholds</li>
+<li>Try different generator models</li>
+</ul>
+<h3 id="schema-validation-failures">Schema Validation Failures</h3>
+<p><strong>Problem</strong>: <code>SchemaValid = false</code> in telemetry</p>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Check <code>editResult.ValidationResult.Errors</code> for details</li>
+<li>Ensure target duration is reasonable</li>
+<li>Review script format requirements</li>
+</ul>
+<h2 id="integration-example">Integration Example</h2>
+<h3 id="using-with-existing-scriptorchestrator">Using with Existing ScriptOrchestrator</h3>
+<pre><code class="lang-csharp">// Generate initial script with existing orchestrator
+var scriptResult = await scriptOrchestrator.GenerateScriptDeterministicAsync(
+    brief, spec, preferredTier, offlineOnly, ct
+);
+
+if (!scriptResult.Success)
+{
+    return scriptResult;
+}
+
+// Optionally refine with enhanced orchestrator
+if (spec.RefinementConfig != null)
+{
+    var refinementResult = await enhancedOrchestrator.RefineScriptAsync(
+        brief, spec, spec.RefinementConfig, ct
+    );
+
+    if (refinementResult.Success)
+    {
+        scriptResult = scriptResult with 
+        { 
+            Script = refinementResult.FinalScript 
+        };
+    }
+}
+
+return scriptResult;
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Start Conservative</strong>: Use 1-2 passes initially, scale up if needed</li>
+<li><strong>Set Budgets</strong>: Always set <code>MaxCostBudget</code> in production</li>
+<li><strong>Monitor Telemetry</strong>: Track convergence to optimize configuration</li>
+<li><strong>Use Appropriate Models</strong>: Don't waste money on expensive models for critique/editing</li>
+<li><strong>Validate Schema</strong>: Keep <code>EnableSchemaValidation = true</code> to catch format issues</li>
+<li><strong>Review Critiques</strong>: Check <code>CritiqueSummary</code> to understand what improved</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements for future versions:</p>
+<ul>
+<li>Human-in-the-loop review points</li>
+<li>Adaptive rubric weights based on content type</li>
+<li>Multi-modal critique (visual + text)</li>
+<li>A/B testing different refinement strategies</li>
+<li>Custom stop conditions based on domain metrics</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/REFINEMENT_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

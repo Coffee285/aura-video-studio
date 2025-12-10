@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Process Shutdown Verification Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Process Shutdown Verification Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/PROCESS_SHUTDOWN_VERIFICATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="process-shutdown-verification-guide">Process Shutdown Verification Guide</h1>
+
+<p>This guide provides manual test steps to verify that all Aura and FFmpeg processes are properly terminated when the desktop application exits.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>Aura Video Studio desktop application installed</li>
+<li>Task Manager (Windows) or Activity Monitor (macOS) or <code>ps</code> (Linux) available</li>
+<li>Ability to run test renders or video generation jobs</li>
+</ul>
+<h2 id="test-scenarios">Test Scenarios</h2>
+<h3 id="scenario-1-normal-exit-no-jobs-running">Scenario 1: Normal Exit (No Jobs Running)</h3>
+<p><strong>Purpose</strong>: Verify clean shutdown when no background operations are active.</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><p>Launch Aura Video Studio desktop application</p>
+</li>
+<li><p>Note the initial processes in Task Manager:</p>
+<ul>
+<li>Count &quot;Aura&quot; processes (should see Electron main +renderer + Aura.Api)</li>
+<li>Count &quot;ffmpeg&quot; processes (should be 0)</li>
+<li><strong>Example</strong>: 3 Aura processes, 0 FFmpeg processes</li>
+</ul>
+</li>
+<li><p>Navigate through the UI (open different pages, check settings, etc.)</p>
+</li>
+<li><p>Exit the application using <strong>one of these methods</strong>:</p>
+<ul>
+<li>File → Quit menu item</li>
+<li>Alt+F4 / Cmd+Q keyboard shortcut</li>
+<li>Click X on title bar (if minimize to tray is disabled)</li>
+</ul>
+</li>
+<li><p>Wait 10 seconds</p>
+</li>
+<li><p><strong>Verify in Task Manager</strong>:</p>
+<ul>
+<li><strong>Expected</strong>: NO &quot;Aura&quot; processes remain</li>
+<li><strong>Expected</strong>: NO &quot;ffmpeg&quot; processes remain</li>
+<li><strong>Expected</strong>: NO &quot;dotnet&quot; processes running Aura.Api remain</li>
+</ul>
+</li>
+</ol>
+<p><strong>Pass Criteria</strong>:</p>
+<ul>
+<li>✅ All Aura-related processes terminated within 5 seconds</li>
+<li>✅ No zombie or orphan processes remain</li>
+<li>✅ Application exits gracefully without error dialogs</li>
+</ul>
+<p><strong>Failure Indicators</strong>:</p>
+<ul>
+<li>❌ Aura.Api.exe still running</li>
+<li>❌ ffmpeg.exe still running</li>
+<li>❌ Electron processes still running</li>
+<li>❌ Process shows &quot;(Not Responding)&quot; state</li>
+</ul>
+<hr>
+<h3 id="scenario-2-exit-during-ffmpeg-operation">Scenario 2: Exit During FFmpeg Operation</h3>
+<p><strong>Purpose</strong>: Verify that active FFmpeg processes are properly terminated when exiting during video operations.</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><p>Launch Aura Video Studio</p>
+</li>
+<li><p>Start a video generation job:</p>
+<ul>
+<li>Go to Quick Demo or Create Video wizard</li>
+<li>Start a render/generation process</li>
+<li><strong>Or</strong> use any feature that spawns FFmpeg (audio conversion, thumbnail generation, etc.)</li>
+</ul>
+</li>
+<li><p>While the operation is <strong>actively running</strong> (check Task Manager for ffmpeg.exe):</p>
+<ul>
+<li>Note FFmpeg process count (usually 1-4 processes)</li>
+<li>Note Aura.Api.exe PID</li>
+</ul>
+</li>
+<li><p>Exit the application via File → Quit</p>
+</li>
+<li><p><strong>Observe</strong> the shutdown behavior:</p>
+<ul>
+<li>You may see a warning dialog about active jobs (if implemented)</li>
+<li>Choose &quot;Force Quit&quot; or wait for timeout</li>
+</ul>
+</li>
+<li><p><strong>Verify in Task Manager</strong>:</p>
+<ul>
+<li><strong>Expected</strong>: All FFmpeg processes terminated immediately or within 2 seconds</li>
+<li><strong>Expected</strong>: Backend process (Aura.Api.exe) terminated</li>
+<li><strong>Expected</strong>: All Electron processes terminated</li>
+</ul>
+</li>
+</ol>
+<p><strong>Pass Criteria</strong>:</p>
+<ul>
+<li>✅ FFmpeg processes killed within 2 seconds of choosing Force Quit</li>
+<li>✅ No FFmpeg processes remain after 5 seconds</li>
+<li>✅ Backend process terminated (gracefully or forcefully)</li>
+<li>✅ No error dialogs or hang states</li>
+</ul>
+<p><strong>Failure Indicators</strong>:</p>
+<ul>
+<li>❌ ffmpeg.exe continues running indefinitely</li>
+<li>❌ Application hangs on &quot;Closing...&quot; message</li>
+<li>❌ Processes must be manually killed via Task Manager</li>
+</ul>
+<hr>
+<h3 id="scenario-3-crash--force-kill-desktop-shell">Scenario 3: Crash / Force Kill Desktop Shell</h3>
+<p><strong>Purpose</strong>: Verify that orphaned backend and FFmpeg processes are detected and cleaned up on restart.</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><p>Launch Aura Video Studio</p>
+</li>
+<li><p>Start a video operation to spawn FFmpeg processes</p>
+</li>
+<li><p><strong>Force close</strong> the Electron main process:</p>
+<ul>
+<li><strong>Windows</strong>: Open Task Manager → Find &quot;Aura Video Studio&quot; → Right-click → End Task (select main process, not backend)</li>
+<li><strong>macOS</strong>: Activity Monitor → Find &quot;Aura Video Studio&quot; → Force Quit</li>
+<li><strong>Linux</strong>: <code>kill -9 &lt;electron_pid&gt;</code></li>
+</ul>
+</li>
+<li><p><strong>DO NOT</strong> close Aura.Api.exe manually - let it orphan</p>
+</li>
+<li><p>Check Task Manager:</p>
+<ul>
+<li><strong>Expected</strong>: Aura.Api.exe still running (orphaned)</li>
+<li><strong>Expected</strong>: ffmpeg.exe may still be running (orphaned)</li>
+<li>Note these PIDs</li>
+</ul>
+</li>
+<li><p><strong>Restart</strong> Aura Video Studio</p>
+</li>
+<li><p><strong>Observe</strong> startup behavior:</p>
+<ul>
+<li>Check logs for &quot;Orphan detection&quot; messages</li>
+<li>Application should detect port conflict or stale processes</li>
+</ul>
+</li>
+<li><p><strong>Verify in Task Manager</strong>:</p>
+<ul>
+<li><strong>Expected</strong>: Old orphaned processes are terminated (either auto-killed or port conflict detected)</li>
+<li><strong>Expected</strong>: New backend process started with different PID</li>
+<li><strong>Expected</strong>: Application starts successfully</li>
+</ul>
+</li>
+</ol>
+<p><strong>Pass Criteria</strong>:</p>
+<ul>
+<li>✅ Orphaned backend detected on startup</li>
+<li>✅ Orphaned backend either reused or terminated</li>
+<li>✅ New backend starts on expected port</li>
+<li>✅ No duplicate Aura.Api.exe processes after restart</li>
+</ul>
+<p><strong>Failure Indicators</strong>:</p>
+<ul>
+<li>❌ &quot;Backend unreachable&quot; or &quot;Port already in use&quot; errors</li>
+<li>❌ Multiple Aura.Api.exe processes with different PIDs</li>
+<li>❌ Application fails to start due to port conflict</li>
+<li>❌ FFmpeg processes from previous session still running</li>
+</ul>
+<hr>
+<h3 id="scenario-4-multiple-rapid-startsexits">Scenario 4: Multiple Rapid Starts/Exits</h3>
+<p><strong>Purpose</strong>: Stress test shutdown sequence to detect race conditions or leaked processes.</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><p>Launch Aura Video Studio</p>
+</li>
+<li><p>Wait for full startup (backend ready)</p>
+</li>
+<li><p>Immediately exit (File → Quit)</p>
+</li>
+<li><p><strong>Repeat steps 1-3 five times</strong> in rapid succession (within 30 seconds total)</p>
+</li>
+<li><p>After the 5th exit, wait 10 seconds</p>
+</li>
+<li><p><strong>Verify in Task Manager</strong>:</p>
+<ul>
+<li><strong>Expected</strong>: NO Aura or FFmpeg processes remain</li>
+<li><strong>Expected</strong>: Only the processes from the LAST startup (if still running)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Pass Criteria</strong>:</p>
+<ul>
+<li>✅ No accumulation of background processes</li>
+<li>✅ Each exit cleanly removes all processes from that session</li>
+<li>✅ No port conflicts on subsequent starts</li>
+<li>✅ No &quot;orphaned&quot; processes from earlier sessions</li>
+</ul>
+<p><strong>Failure Indicators</strong>:</p>
+<ul>
+<li>❌ Process count increases with each start/exit cycle</li>
+<li>❌ Multiple Aura.Api.exe instances with different PIDs</li>
+<li>❌ &quot;Port already in use&quot; errors after 2-3 cycles</li>
+</ul>
+<hr>
+<h3 id="scenario-5-system-shutdown-while-aura-running">Scenario 5: System Shutdown While Aura Running</h3>
+<p><strong>Purpose</strong>: Verify that Aura doesn't prevent or delay system shutdown.</p>
+<p><strong>Steps</strong>:</p>
+<ol>
+<li><p>Launch Aura Video Studio</p>
+</li>
+<li><p>Start a video generation job (long-running, if possible)</p>
+</li>
+<li><p>While job is running, initiate <strong>system shutdown</strong>:</p>
+<ul>
+<li><strong>Windows</strong>: Start → Power → Shut down</li>
+<li><strong>macOS</strong>: Apple menu → Shut Down</li>
+<li><strong>Linux</strong>: <code>sudo shutdown now</code></li>
+</ul>
+</li>
+<li><p><strong>Observe</strong> shutdown behavior:</p>
+<ul>
+<li>Does system wait for Aura to exit?</li>
+<li>Does Aura show any dialogs preventing shutdown?</li>
+<li>How long does shutdown take?</li>
+</ul>
+</li>
+<li><p>After system restarts, check for:</p>
+<ul>
+<li>Crash logs in <code>%APPDATA%\Aura\logs</code></li>
+<li>Orphaned lock files</li>
+</ul>
+</li>
+</ol>
+<p><strong>Pass Criteria</strong>:</p>
+<ul>
+<li>✅ Aura exits within 5 seconds of shutdown signal</li>
+<li>✅ System shutdown not delayed by Aura</li>
+<li>✅ No crash dialogs during shutdown</li>
+<li>✅ On next launch, no orphaned processes or port conflicts</li>
+</ul>
+<p><strong>Failure Indicators</strong>:</p>
+<ul>
+<li>❌ System waits indefinitely for Aura to close</li>
+<li>❌ Forced to &quot;Force close&quot; Aura to complete shutdown</li>
+<li>❌ Aura shows &quot;Not Responding&quot; during shutdown</li>
+</ul>
+<hr>
+<h2 id="automated-verification-optional">Automated Verification (Optional)</h2>
+<p>For automated testing in CI/CD or regression suites:</p>
+<h3 id="powershell-script-windows">PowerShell Script (Windows)</h3>
+<pre><code class="lang-powershell"># Launch Aura
+$auraPath = &quot;C:\Path\To\Aura Video Studio.exe&quot;
+Start-Process $auraPath
+
+# Wait for startup
+Start-Sleep -Seconds 10
+
+# Count initial processes
+$beforeCount = (Get-Process | Where-Object { $_.ProcessName -match 'Aura|ffmpeg' }).Count
+Write-Host &quot;Processes before shutdown: $beforeCount&quot;
+
+# Get Aura main process
+$auraProcess = Get-Process | Where-Object { $_.ProcessName -eq 'Aura Video Studio' }
+
+# Gracefully close
+$auraProcess.CloseMainWindow()
+
+# Wait for exit
+$auraProcess.WaitForExit(10000)  # 10 second timeout
+
+# Count after
+Start-Sleep -Seconds 5
+$afterCount = (Get-Process | Where-Object { $_.ProcessName -match 'Aura|ffmpeg' }).Count
+Write-Host &quot;Processes after shutdown: $afterCount&quot;
+
+if ($afterCount -eq 0) {
+    Write-Host &quot;✅ PASS: All processes terminated&quot;
+    exit 0
+} else {
+    Write-Host &quot;❌ FAIL: $afterCount processes remain&quot;
+    Get-Process | Where-Object { $_.ProcessName -match 'Aura|ffmpeg' } | Format-Table
+    exit 1
+}
+</code></pre>
+<h3 id="bash-script-linuxmacos">Bash Script (Linux/macOS)</h3>
+<pre><code class="lang-bash">#!/bin/bash
+
+# Launch Aura
+AURA_PATH=&quot;/path/to/Aura Video Studio.app/Contents/MacOS/Aura Video Studio&quot;
+&quot;$AURA_PATH&quot; &amp;
+AURA_PID=$!
+
+# Wait for startup
+sleep 10
+
+# Count initial processes
+BEFORE_COUNT=$(ps aux | grep -E 'Aura|ffmpeg' | grep -v grep | wc -l)
+echo &quot;Processes before shutdown: $BEFORE_COUNT&quot;
+
+# Gracefully close
+kill -TERM $AURA_PID
+
+# Wait for exit
+sleep 5
+
+# Count after
+AFTER_COUNT=$(ps aux | grep -E 'Aura|ffmpeg' | grep -v grep | wc -l)
+echo &quot;Processes after shutdown: $AFTER_COUNT&quot;
+
+if [ &quot;$AFTER_COUNT&quot; -eq 0 ]; then
+    echo &quot;✅ PASS: All processes terminated&quot;
+    exit 0
+else
+    echo &quot;❌ FAIL: $AFTER_COUNT processes remain&quot;
+    ps aux | grep -E 'Aura|ffmpeg' | grep -v grep
+    exit 1
+fi
+</code></pre>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="if-processes-remain-after-exit">If Processes Remain After Exit</h3>
+<ol>
+<li><p><strong>Identify the process</strong>:</p>
+<ul>
+<li>Note the PID and process name</li>
+<li>Check if it's Aura.Api.exe or ffmpeg.exe</li>
+</ul>
+</li>
+<li><p><strong>Check logs</strong>:</p>
+<ul>
+<li><strong>Electron logs</strong>: <code>%APPDATA%\Aura Video Studio\logs\main-YYYYMMDD.log</code></li>
+<li><strong>Backend logs</strong>: <code>%APPDATA%\Aura\logs\aura-api-YYYYMMDD.log</code></li>
+<li>Look for:
+<ul>
+<li>&quot;Shutdown initiated&quot; messages</li>
+<li>&quot;Force killing&quot; warnings</li>
+<li>Timeout errors</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><strong>Manually terminate</strong>:</p>
+<pre><code class="lang-powershell"># Windows
+taskkill /F /T /IM &quot;Aura.Api.exe&quot;
+taskkill /F /T /IM &quot;ffmpeg.exe&quot;
+</code></pre>
+</li>
+<li><p><strong>Report the issue</strong>:</p>
+<ul>
+<li>Include: PIDs, timestamps, log excerpts</li>
+<li>Specify which scenario failed</li>
+<li>Note any error dialogs or hang symptoms</li>
+</ul>
+</li>
+</ol>
+<h3 id="if-backend-port-conflicts-occur">If Backend Port Conflicts Occur</h3>
+<ol>
+<li><p><strong>Find process using the port</strong>:</p>
+<pre><code class="lang-powershell"># Windows
+netstat -ano | findstr &quot;:&lt;port&gt;&quot;
+
+# macOS/Linux
+lsof -i :&lt;port&gt;
+</code></pre>
+</li>
+<li><p><strong>Kill the conflicting process</strong>:</p>
+<pre><code class="lang-powershell"># Windows
+taskkill /F /PID &lt;pid&gt;
+
+# macOS/Linux
+kill -9 &lt;pid&gt;
+</code></pre>
+</li>
+<li><p><strong>Restart Aura</strong></p>
+</li>
+</ol>
+<hr>
+<h2 id="expected-behavior-summary">Expected Behavior Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Max Exit Time</th>
+<th>Allowed Processes After Exit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Normal exit (idle)</td>
+<td>3 seconds</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Exit during FFmpeg</td>
+<td>5 seconds</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Crash recovery</td>
+<td>N/A (next startup)</td>
+<td>0 after cleanup</td>
+</tr>
+<tr>
+<td>Rapid start/exit</td>
+<td>5 seconds per cycle</td>
+<td>0 cumulative</td>
+</tr>
+<tr>
+<td>System shutdown</td>
+<td>5 seconds</td>
+<td>0 after reboot</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="reporting-issues">Reporting Issues</h2>
+<p>If any test scenario fails, please report with:</p>
+<ol>
+<li><p><strong>System Info</strong>:</p>
+<ul>
+<li>OS version</li>
+<li>Aura Video Studio version</li>
+<li>Available RAM and disk space</li>
+</ul>
+</li>
+<li><p><strong>Process Info</strong>:</p>
+<ul>
+<li>Task Manager screenshot showing leftover processes</li>
+<li>PIDs and process names</li>
+<li>How long processes have been running</li>
+</ul>
+</li>
+<li><p><strong>Logs</strong>:</p>
+<ul>
+<li>Attach relevant log files from <code>%APPDATA%\Aura\logs</code></li>
+<li>Include timestamps of the failed test</li>
+</ul>
+</li>
+<li><p><strong>Reproduction</strong>:</p>
+<ul>
+<li>Exact steps to reproduce</li>
+<li>Which scenario failed</li>
+<li>How often it fails (always, sometimes, rarely)</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="changelog">Changelog</h2>
+<ul>
+<li><strong>v1.0</strong> (2025-01-19): Initial verification guide
+<ul>
+<li>Created 5 test scenarios</li>
+<li>Added automated scripts</li>
+<li>Documented expected behavior</li>
+</ul>
+</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/PROCESS_SHUTDOWN_VERIFICATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

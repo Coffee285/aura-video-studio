@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Wizard Project Integration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Wizard Project Integration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/WIZARD_PROJECT_INTEGRATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="wizard-project-integration-guide">Wizard Project Integration Guide</h1>
+
+<p>This guide describes how wizard project save/load functionality is integrated into the application, based on PR #81.</p>
+<h2 id="overview">Overview</h2>
+<p>The wizard project persistence feature allows users to save their work at any step in the video creation wizard, reload projects later, and manage projects from the dashboard.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend">Backend</h3>
+<p><strong>Service</strong>: <code>Aura.Core/Services/WizardProjectService.cs</code></p>
+<ul>
+<li>Provides CRUD operations for wizard projects</li>
+<li>Handles JSON serialization/deserialization of wizard state</li>
+<li>Supports project duplication, export/import, and content clearing</li>
+</ul>
+<p><strong>Controller</strong>: <code>Aura.Api/Controllers/WizardProjectsController.cs</code></p>
+<ul>
+<li>RESTful API endpoints at <code>/api/wizard-projects</code></li>
+<li>Proper error handling with ProblemDetails</li>
+<li>Correlation ID tracking for debugging</li>
+</ul>
+<p><strong>Database</strong>:</p>
+<ul>
+<li>Entity: <code>ProjectStateEntity</code> with <code>CurrentWizardStep</code> field</li>
+<li>Migration: <code>20251108184353_AddWizardProjectManagement.cs</code></li>
+</ul>
+<h3 id="frontend">Frontend</h3>
+<p><strong>State Management</strong>: <code>Aura.Web/src/state/wizardProject.ts</code></p>
+<ul>
+<li>Zustand store for project state</li>
+<li>Helper functions for serialization/deserialization</li>
+<li>Auto-save configuration support</li>
+</ul>
+<p><strong>API Client</strong>: <code>Aura.Web/src/api/wizardProjects.ts</code></p>
+<ul>
+<li>Typed API client matching backend DTOs</li>
+<li>Full CRUD operation coverage</li>
+</ul>
+<p><strong>Components</strong>:</p>
+<ul>
+<li><code>SaveProjectDialog.tsx</code> - Modal for saving projects</li>
+<li><code>RecentProjectsList.tsx</code> - Card list displaying recent projects</li>
+</ul>
+<h2 id="integration-points">Integration Points</h2>
+<h3 id="createwizard-video-creation-page">CreateWizard (Video Creation Page)</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/pages/Wizard/CreateWizard.tsx</code></p>
+<p><strong>Features</strong>:</p>
+<ol>
+<li><strong>Save Button</strong>: Added to header (top-right) to open SaveProjectDialog</li>
+<li><strong>Project Loading</strong>: Reads <code>projectId</code> URL parameter to load saved projects</li>
+<li><strong>State Restoration</strong>: Restores brief, plan, and current step from loaded project</li>
+<li><strong>Toast Notifications</strong>: Success/error feedback for save and load operations</li>
+</ol>
+<p><strong>Usage Flow</strong>:</p>
+<pre><code>User clicks &quot;Save Project&quot; → SaveProjectDialog opens → 
+Enter name → Save → Toast notification → Project ID stored
+</code></pre>
+<p><strong>Load Flow</strong>:</p>
+<pre><code>Navigate to /create?projectId=xyz → useEffect detects param → 
+Load project → Restore wizard state → Show success toast
+</code></pre>
+<h3 id="dashboard">Dashboard</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/components/dashboard/Dashboard.tsx</code></p>
+<p><strong>Features</strong>:</p>
+<ol>
+<li><strong>Recent Projects Section</strong>: Displays up to 5 most recent projects</li>
+<li><strong>Project Cards</strong>: Show name, description, progress, last modified time</li>
+<li><strong>Actions Menu</strong>: Open, duplicate, export, delete via context menu</li>
+<li><strong>Navigation</strong>: Clicking &quot;Open&quot; navigates to <code>/create?projectId={id}</code></li>
+</ol>
+<p><strong>Display Location</strong>: After &quot;Quick Start&quot; section, before &quot;Recent Briefs&quot;</p>
+<h2 id="api-endpoints">API Endpoints</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/api/wizard-projects</code></td>
+<td>Save/update project</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wizard-projects/{id}</code></td>
+<td>Get project details</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wizard-projects</code></td>
+<td>Get all projects</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wizard-projects/recent?count=5</code></td>
+<td>Get recent projects</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/wizard-projects/{id}/duplicate</code></td>
+<td>Clone project</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td><code>/api/wizard-projects/{id}</code></td>
+<td>Soft delete project</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/wizard-projects/{id}/export</code></td>
+<td>Export as JSON</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/wizard-projects/import</code></td>
+<td>Import from JSON</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/wizard-projects/{id}/clear-content</code></td>
+<td>Clear generated assets</td>
+</tr>
+</tbody>
+</table>
+<h2 id="data-flow">Data Flow</h2>
+<h3 id="saving-a-project">Saving a Project</h3>
+<pre><code>CreateWizard → User clicks &quot;Save Project&quot; → SaveProjectDialog
+  ↓
+Wizard state (brief, planSpec) serialized to JSON
+  ↓
+saveWizardProject() API call → POST /api/wizard-projects
+  ↓
+WizardProjectService.SaveProjectAsync() → Database
+  ↓
+Response with project ID → Success toast → Dialog closes
+</code></pre>
+<h3 id="loading-a-project">Loading a Project</h3>
+<pre><code>Dashboard → User clicks &quot;Open&quot; on project card
+  ↓
+Navigate to /create?projectId={id}
+  ↓
+CreateWizard useEffect detects projectId param
+  ↓
+getWizardProject(id) → GET /api/wizard-projects/{id}
+  ↓
+deserializeWizardState() → Restore brief, planSpec
+  ↓
+Set wizard state, current step → Success toast
+</code></pre>
+<h2 id="testing">Testing</h2>
+<p><strong>Frontend Tests</strong>: <code>Aura.Web/src/api/__tests__/wizardProjects.test.ts</code></p>
+<ul>
+<li>12 comprehensive unit tests</li>
+<li>Cover all API operations</li>
+<li>Mock API client for isolation</li>
+</ul>
+<p><strong>Backend Tests</strong>: Not yet implemented</p>
+<ul>
+<li>Add tests in <code>Aura.Tests/</code></li>
+<li>Test WizardProjectService methods</li>
+<li>Test API endpoints with WebApplicationFactory</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><strong>Auto-save</strong>: Timer-based background saving every 2 minutes</li>
+<li><strong>Project Templates</strong>: Save projects as reusable templates</li>
+<li><strong>Project Versioning</strong>: Track changes and allow rollback</li>
+<li><strong>Collaboration</strong>: Share projects with other users</li>
+<li><strong>Project Analytics</strong>: Track which projects get generated most</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="project-wont-load">Project won't load</h3>
+<ul>
+<li>Check browser console for errors</li>
+<li>Verify projectId is valid GUID</li>
+<li>Check backend logs for API errors</li>
+<li>Ensure database migration was applied</li>
+</ul>
+<h3 id="save-dialog-doesnt-appear">Save dialog doesn't appear</h3>
+<ul>
+<li>Verify SaveProjectDialog is imported correctly</li>
+<li>Check saveDialogOpen state in CreateWizard</li>
+<li>Look for console errors in browser</li>
+</ul>
+<h3 id="projects-dont-show-on-dashboard">Projects don't show on dashboard</h3>
+<ul>
+<li>Check RecentProjectsList is rendered</li>
+<li>Verify API endpoint returns data</li>
+<li>Check browser network tab for failed requests</li>
+</ul>
+<h2 id="code-quality">Code Quality</h2>
+<ul>
+<li>✅ Zero placeholder policy enforced</li>
+<li>✅ TypeScript strict mode enabled</li>
+<li>✅ All components production-ready</li>
+<li>✅ Error handling implemented</li>
+<li>✅ Correlation IDs for debugging</li>
+<li>✅ Structured logging</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/WIZARD_PROJECT_INTEGRATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

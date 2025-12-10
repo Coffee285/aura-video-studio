@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>JWT Authentication Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="JWT Authentication Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/security/JWT_AUTHENTICATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="jwt-authentication-guide">JWT Authentication Guide</h1>
+
+<p>This document describes how to configure and use JWT (JSON Web Token) authentication in Aura Video Studio.</p>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio supports JWT bearer token authentication for securing API endpoints. When enabled, clients must provide a valid JWT token in the <code>Authorization</code> header to access protected endpoints.</p>
+<h2 id="configuration">Configuration</h2>
+<h3 id="enable-jwt-authentication">Enable JWT Authentication</h3>
+<p>Configure JWT authentication in <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Authentication&quot;: {
+    &quot;EnableJwtAuthentication&quot;: true,
+    &quot;EnableApiKeyAuthentication&quot;: true,
+    &quot;JwtSecretKey&quot;: &quot;your-secret-key-minimum-32-characters-long&quot;,
+    &quot;JwtIssuer&quot;: &quot;AuraVideoStudio&quot;,
+    &quot;JwtAudience&quot;: &quot;AuraApi&quot;,
+    &quot;JwtExpirationMinutes&quot;: 60,
+    &quot;ValidateLifetime&quot;: true,
+    &quot;ClockSkew&quot;: &quot;00:05:00&quot;,
+    &quot;RequireAuthentication&quot;: true,
+    &quot;AnonymousEndpoints&quot;: [
+      &quot;/health&quot;,
+      &quot;/healthz&quot;,
+      &quot;/api/health&quot;,
+      &quot;/swagger&quot;,
+      &quot;/api-docs&quot;
+    ]
+  }
+}
+</code></pre>
+<h3 id="configuration-options">Configuration Options</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EnableJwtAuthentication</code></td>
+<td>bool</td>
+<td><code>false</code></td>
+<td>Enable JWT bearer token authentication</td>
+</tr>
+<tr>
+<td><code>EnableApiKeyAuthentication</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>Enable API key authentication (fallback)</td>
+</tr>
+<tr>
+<td><code>JwtSecretKey</code></td>
+<td>string</td>
+<td><code>&quot;&quot;</code></td>
+<td>Signing key for HS256 algorithm (min 32 chars)</td>
+</tr>
+<tr>
+<td><code>JwtIssuer</code></td>
+<td>string</td>
+<td><code>&quot;AuraVideoStudio&quot;</code></td>
+<td>Expected token issuer</td>
+</tr>
+<tr>
+<td><code>JwtAudience</code></td>
+<td>string</td>
+<td><code>&quot;AuraApi&quot;</code></td>
+<td>Expected token audience</td>
+</tr>
+<tr>
+<td><code>JwtExpirationMinutes</code></td>
+<td>int</td>
+<td><code>60</code></td>
+<td>Token expiration time in minutes</td>
+</tr>
+<tr>
+<td><code>ValidateLifetime</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>Whether to validate token expiration</td>
+</tr>
+<tr>
+<td><code>ClockSkew</code></td>
+<td>TimeSpan</td>
+<td><code>00:05:00</code></td>
+<td>Clock skew tolerance for expiration</td>
+</tr>
+<tr>
+<td><code>RequireAuthentication</code></td>
+<td>bool</td>
+<td><code>false</code></td>
+<td>Require authentication for all endpoints</td>
+</tr>
+<tr>
+<td><code>AnonymousEndpoints</code></td>
+<td>string[]</td>
+<td>(see above)</td>
+<td>Endpoints exempt from authentication</td>
+</tr>
+</tbody>
+</table>
+<h2 id="security-best-practices">Security Best Practices</h2>
+<h3 id="signing-key-requirements">Signing Key Requirements</h3>
+<ul>
+<li><strong>Minimum Length</strong>: The signing key must be at least 256 bits (32 characters) for HS256 algorithm</li>
+<li><strong>Entropy</strong>: Use a cryptographically random key, not a simple password</li>
+<li><strong>Storage</strong>: Store the key securely using environment variables or Azure Key Vault</li>
+</ul>
+<p>Generate a secure signing key:</p>
+<pre><code class="lang-bash"># Using OpenSSL
+openssl rand -base64 32
+
+# Using PowerShell
+[Convert]::ToBase64String((1..32 | ForEach-Object { [byte](Get-Random -Minimum 0 -Maximum 256) }))
+</code></pre>
+<h3 id="environment-variable-configuration">Environment Variable Configuration</h3>
+<p>For production, set the JWT secret key via environment variable:</p>
+<pre><code class="lang-bash"># Linux/macOS
+export AUTHENTICATION__JWTSECRETKEY=&quot;your-secret-key-here&quot;
+
+# Windows PowerShell
+$env:AUTHENTICATION__JWTSECRETKEY = &quot;your-secret-key-here&quot;
+</code></pre>
+<h3 id="azure-key-vault-integration">Azure Key Vault Integration</h3>
+<p>For enterprise deployments, configure Azure Key Vault:</p>
+<pre><code class="lang-json">{
+  &quot;KeyVault&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;VaultUri&quot;: &quot;https://your-vault.vault.azure.net/&quot;,
+    &quot;SecretMappings&quot;: {
+      &quot;Authentication:JwtSecretKey&quot;: &quot;JWT-Secret-Key&quot;
+    }
+  }
+}
+</code></pre>
+<h2 id="token-generation">Token Generation</h2>
+<h3 id="token-structure">Token Structure</h3>
+<p>Aura Video Studio expects JWT tokens with the following structure:</p>
+<pre><code class="lang-json">{
+  &quot;header&quot;: {
+    &quot;alg&quot;: &quot;HS256&quot;,
+    &quot;typ&quot;: &quot;JWT&quot;
+  },
+  &quot;payload&quot;: {
+    &quot;sub&quot;: &quot;user-id&quot;,
+    &quot;iss&quot;: &quot;AuraVideoStudio&quot;,
+    &quot;aud&quot;: &quot;AuraApi&quot;,
+    &quot;exp&quot;: 1234567890,
+    &quot;iat&quot;: 1234567890
+  }
+}
+</code></pre>
+<h3 id="example-generate-token-with-c">Example: Generate Token with C#</h3>
+<pre><code class="lang-csharp">using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+
+public static string GenerateToken(string userId, string secretKey)
+{
+    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+    var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+    var claims = new[]
+    {
+        new Claim(JwtRegisteredClaimNames.Sub, userId),
+        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+    };
+
+    var token = new JwtSecurityToken(
+        issuer: &quot;AuraVideoStudio&quot;,
+        audience: &quot;AuraApi&quot;,
+        claims: claims,
+        expires: DateTime.UtcNow.AddMinutes(60),
+        signingCredentials: credentials
+    );
+
+    return new JwtSecurityTokenHandler().WriteToken(token);
+}
+</code></pre>
+<h3 id="example-generate-token-with-javascript">Example: Generate Token with JavaScript</h3>
+<pre><code class="lang-javascript">const jwt = require('jsonwebtoken');
+
+function generateToken(userId, secretKey) {
+  const payload = {
+    sub: userId,
+    iat: Math.floor(Date.now() / 1000)
+  };
+
+  return jwt.sign(payload, secretKey, {
+    algorithm: 'HS256',
+    expiresIn: '1h',
+    issuer: 'AuraVideoStudio',
+    audience: 'AuraApi'
+  });
+}
+</code></pre>
+<h2 id="using-jwt-tokens">Using JWT Tokens</h2>
+<h3 id="http-request">HTTP Request</h3>
+<p>Include the token in the <code>Authorization</code> header:</p>
+<pre><code class="lang-http">GET /api/jobs HTTP/1.1
+Host: localhost:5005
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+</code></pre>
+<h3 id="curl-example">cURL Example</h3>
+<pre><code class="lang-bash">curl -X GET &quot;http://localhost:5005/api/jobs&quot; \
+  -H &quot;Authorization: Bearer YOUR_JWT_TOKEN&quot;
+</code></pre>
+<h3 id="javascript-fetch-example">JavaScript Fetch Example</h3>
+<pre><code class="lang-javascript">const response = await fetch('http://localhost:5005/api/jobs', {
+  headers: {
+    'Authorization': `Bearer ${token}`
+  }
+});
+</code></pre>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="common-error-responses">Common Error Responses</h3>
+<table>
+<thead>
+<tr>
+<th>Status Code</th>
+<th>Error</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>401</td>
+<td>Unauthorized</td>
+<td>No token provided or authentication required</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Token expired</td>
+<td>JWT token has expired</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Invalid signature</td>
+<td>Token signature does not match</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Invalid issuer</td>
+<td>Token issuer does not match configuration</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Invalid audience</td>
+<td>Token audience does not match configuration</td>
+</tr>
+</tbody>
+</table>
+<h3 id="error-response-format">Error Response Format</h3>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/errors/README.md#E401&quot;,
+  &quot;title&quot;: &quot;Unauthorized&quot;,
+  &quot;status&quot;: 401,
+  &quot;detail&quot;: &quot;Authentication is required. Provide a valid API key via X-API-Key header.&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h2 id="fallback-authentication">Fallback Authentication</h2>
+<p>When both JWT and API key authentication are enabled, the middleware will:</p>
+<ol>
+<li>First attempt API key authentication (if <code>EnableApiKeyAuthentication</code> is true)</li>
+<li>Then attempt JWT authentication (if <code>EnableJwtAuthentication</code> is true)</li>
+<li>Reject the request if both fail</li>
+</ol>
+<p>This allows for flexible authentication strategies where API keys can be used for service-to-service communication while JWTs are used for user authentication.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="token-validation-fails">Token Validation Fails</h3>
+<ol>
+<li>Verify the signing key matches between token generation and validation</li>
+<li>Check that issuer and audience match the configuration</li>
+<li>Ensure the token has not expired</li>
+<li>Verify the token format is correct (three base64-encoded sections separated by dots)</li>
+</ol>
+<h3 id="jwt-authentication-enabled-but-no-signing-key-configured">&quot;JWT authentication enabled but no signing key configured&quot;</h3>
+<p>This warning indicates that JWT authentication is enabled but <code>JwtSecretKey</code> is not set. Set the signing key in configuration or environment variables.</p>
+<h3 id="clock-skew-issues">Clock Skew Issues</h3>
+<p>If tokens are being rejected due to timing issues, adjust the <code>ClockSkew</code> value:</p>
+<pre><code class="lang-json">{
+  &quot;Authentication&quot;: {
+    &quot;ClockSkew&quot;: &quot;00:10:00&quot;
+  }
+}
+</code></pre>
+<h2 id="see-also">See Also</h2>
+<ul>
+<li><a href="SECURITY_HARDENING_GUIDE.html">Security Hardening Guide</a></li>
+<li><a href="SECRET_MANAGEMENT_GUIDE.html">Secret Management Guide</a></li>
+<li><a href="../api/authentication.md">API Authentication Options</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/security/JWT_AUTHENTICATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

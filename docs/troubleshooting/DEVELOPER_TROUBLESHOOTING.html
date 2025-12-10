@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Developer Troubleshooting Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Developer Troubleshooting Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/DEVELOPER_TROUBLESHOOTING.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="developer-troubleshooting-guide">Developer Troubleshooting Guide</h1>
+
+<p>This guide covers issues specific to developers working on Aura Video Studio.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#build-issues">Build Issues</a></li>
+<li><a href="#test-issues">Test Issues</a></li>
+<li><a href="#development-environment">Development Environment</a></li>
+<li><a href="#debugging-issues">Debugging Issues</a></li>
+<li><a href="#git-and-version-control">Git and Version Control</a></li>
+<li><a href="#ide-issues">IDE Issues</a></li>
+<li><a href="#database-migrations">Database Migrations</a></li>
+</ul>
+<h2 id="build-issues">Build Issues</h2>
+<h3 id="issue-build-fails-with-assets-file-not-found">Issue: Build Fails with &quot;Assets file not found&quot;</h3>
+<p><strong>Symptoms</strong>: NuGet restore errors</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Clean and restore
+dotnet clean
+dotnet restore
+dotnet build
+</code></pre>
+<h3 id="issue-frontend-build-fails">Issue: Frontend Build Fails</h3>
+<p><strong>Symptoms</strong>: npm build errors</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Clear cache
+rm -rf node_modules
+rm package-lock.json
+
+# Reinstall
+npm install
+
+# Rebuild
+npm run build
+</code></pre>
+<h3 id="issue-typescript-compilation-errors">Issue: TypeScript Compilation Errors</h3>
+<p><strong>Symptoms</strong>: Type errors in VS Code but build succeeds</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Restart TS server in VS Code
+# Command Palette (Ctrl+Shift+P) -&gt; &quot;TypeScript: Restart TS Server&quot;
+
+# Or rebuild types
+npm run typecheck
+</code></pre>
+<h3 id="issue-could-not-find-a-part-of-the-path">Issue: &quot;Could not find a part of the path&quot;</h3>
+<p><strong>Symptoms</strong>: Long path names causing build failures on Windows</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-powershell"># Enable long paths in Windows
+New-ItemProperty -Path &quot;HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem&quot; `
+  -Name &quot;LongPathsEnabled&quot; -Value 1 -PropertyType DWORD -Force
+
+# Or move repository closer to root
+# C:\dev\aura instead of C:\Users\VeryLongUserName\Documents\Projects\aura
+</code></pre>
+<h2 id="test-issues">Test Issues</h2>
+<h3 id="issue-tests-fail-with-database-locked">Issue: Tests Fail with &quot;Database locked&quot;</h3>
+<p><strong>Symptoms</strong>: Integration tests fail intermittently</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-csharp">// Use in-memory database for tests
+services.AddDbContext&lt;AuraDbContext&gt;(options =&gt;
+    options.UseInMemoryDatabase(&quot;TestDb&quot;));
+
+// Or use unique database per test
+var dbName = $&quot;test_{Guid.NewGuid()}.db&quot;;
+</code></pre>
+<h3 id="issue-e2e-tests-timing-out">Issue: E2E Tests Timing Out</h3>
+<p><strong>Symptoms</strong>: Playwright tests timeout</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-typescript">// Increase timeout in playwright.config.ts
+export default defineConfig({
+  timeout: 60000, // 60 seconds
+  expect: {
+    timeout: 10000 // 10 seconds for assertions
+  }
+});
+
+// Or specific test
+test('my test', async ({ page }) =&gt; {
+  test.setTimeout(120000); // 2 minutes
+});
+</code></pre>
+<h3 id="issue-flaky-tests">Issue: Flaky Tests</h3>
+<p><strong>Symptoms</strong>: Tests pass/fail intermittently</p>
+<p><strong>Diagnostic</strong>:</p>
+<pre><code class="lang-bash"># Run test multiple times
+for i in {1..10}; do
+  dotnet test --filter &quot;TestName~FlakyTest&quot;
+done
+
+# Detect flaky tests automatically
+./scripts/test/detect-flaky-tests.sh
+</code></pre>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Add explicit waits:
+<pre><code class="lang-typescript">await page.waitForSelector('[data-testid=&quot;submit&quot;]');
+await page.click('[data-testid=&quot;submit&quot;]');
+</code></pre>
+</li>
+<li>Avoid hardcoded sleeps:
+<pre><code class="lang-typescript">// ❌ Bad
+await page.waitForTimeout(5000);
+
+// ✅ Good
+await page.waitForSelector('[data-testid=&quot;loaded&quot;]');
+</code></pre>
+</li>
+<li>Clean up state between tests:
+<pre><code class="lang-csharp">public void Dispose()
+{
+    _context.Database.EnsureDeleted();
+    _context.Dispose();
+}
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-mock-provider-not-working">Issue: Mock Provider Not Working</h3>
+<p><strong>Symptoms</strong>: Tests call real APIs instead of mocks</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-csharp">// Ensure mock is registered before real service
+services.AddSingleton&lt;ILlmProvider&gt;(new MockLlmProvider());
+
+// Or use test configuration
+var config = new ConfigurationBuilder()
+    .AddInMemoryCollection(new Dictionary&lt;string, string&gt;
+    {
+        [&quot;Providers:OpenAI:Mock&quot;] = &quot;true&quot;
+    })
+    .Build();
+</code></pre>
+<h2 id="development-environment">Development Environment</h2>
+<h3 id="issue-hot-reload-not-working">Issue: Hot Reload Not Working</h3>
+<p><strong>Symptoms</strong>: Changes not reflected without restart</p>
+<p><strong>Solution</strong>:</p>
+<p><strong>Backend</strong>:</p>
+<pre><code class="lang-bash"># Ensure using dotnet watch
+dotnet watch run --project Aura.Api
+
+# Check launchSettings.json
+{
+  &quot;profiles&quot;: {
+    &quot;Aura.Api&quot;: {
+      &quot;hotReloadEnabled&quot;: true
+    }
+  }
+}
+</code></pre>
+<p><strong>Frontend</strong>:</p>
+<pre><code class="lang-bash"># Ensure dev server is running
+npm run dev
+
+# Check vite.config.ts
+export default defineConfig({
+  server: {
+    hmr: true
+  }
+});
+</code></pre>
+<h3 id="issue-port-already-in-use">Issue: Port Already in Use</h3>
+<p><strong>Symptoms</strong>: &quot;Address already in use&quot; error</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Find process using port
+lsof -i :5005  # macOS/Linux
+netstat -ano | findstr :5005  # Windows
+
+# Kill process
+kill -9 &lt;PID&gt;  # macOS/Linux
+taskkill /F /PID &lt;PID&gt;  # Windows
+
+# Or use different port
+dotnet run --urls &quot;http://localhost:5006&quot;
+</code></pre>
+<h3 id="issue-environment-variables-not-loading">Issue: Environment Variables Not Loading</h3>
+<p><strong>Symptoms</strong>: Configuration values not being read</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Check .env file exists
+ls -la .env
+
+# Verify format (no spaces around =)
+# ✅ Good
+API_KEY=abc123
+
+# ❌ Bad
+API_KEY = abc123
+
+# Check loading in code
+var config = new ConfigurationBuilder()
+    .AddEnvironmentVariables()
+    .AddJsonFile(&quot;appsettings.json&quot;)
+    .Build();
+</code></pre>
+<h3 id="issue-docker-build-fails">Issue: Docker Build Fails</h3>
+<p><strong>Symptoms</strong>: Docker image build errors</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Clear Docker cache
+docker system prune -a
+
+# Rebuild without cache
+docker-compose build --no-cache
+
+# Check Dockerfile syntax
+docker build --no-cache -t test -f Dockerfile .
+
+# View build logs
+docker-compose build --progress=plain
+</code></pre>
+<h2 id="debugging-issues">Debugging Issues</h2>
+<h3 id="issue-debugger-wont-attach">Issue: Debugger Won't Attach</h3>
+<p><strong>Symptoms</strong>: Breakpoints not hitting</p>
+<p><strong>Solution</strong>:</p>
+<p><strong>VS Code</strong>:</p>
+<pre><code class="lang-json">// .vscode/launch.json
+{
+  &quot;version&quot;: &quot;0.2.0&quot;,
+  &quot;configurations&quot;: [
+    {
+      &quot;name&quot;: &quot;.NET Core Launch (web)&quot;,
+      &quot;type&quot;: &quot;coreclr&quot;,
+      &quot;request&quot;: &quot;launch&quot;,
+      &quot;preLaunchTask&quot;: &quot;build&quot;,
+      &quot;program&quot;: &quot;${workspaceFolder}/Aura.Api/bin/Debug/net8.0/Aura.Api.dll&quot;,
+      &quot;args&quot;: [],
+      &quot;cwd&quot;: &quot;${workspaceFolder}/Aura.Api&quot;,
+      &quot;stopAtEntry&quot;: false,
+      &quot;serverReadyAction&quot;: {
+        &quot;action&quot;: &quot;openExternally&quot;,
+        &quot;pattern&quot;: &quot;\\bNow listening on:\\s+(https?://\\S+)&quot;
+      },
+      &quot;env&quot;: {
+        &quot;ASPNETCORE_ENVIRONMENT&quot;: &quot;Development&quot;
+      }
+    }
+  ]
+}
+</code></pre>
+<p><strong>Visual Studio</strong>:</p>
+<ol>
+<li>Right-click project → Properties</li>
+<li>Debug → Enable &quot;Launch browser&quot;</li>
+<li>Ensure Debug configuration (not Release)</li>
+</ol>
+<h3 id="issue-source-maps-not-working">Issue: Source Maps Not Working</h3>
+<p><strong>Symptoms</strong>: Can't debug TypeScript in browser</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-typescript">// vite.config.ts
+export default defineConfig({
+  build: {
+    sourcemap: true
+  }
+});
+
+// Check browser dev tools
+// Settings → Enable source maps
+</code></pre>
+<h3 id="issue-debugging-async-code">Issue: Debugging Async Code</h3>
+<p><strong>Symptoms</strong>: Stepping through async code jumps around</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-csharp">// Disable &quot;Just My Code&quot; in Visual Studio
+// Tools → Options → Debugging → General → Uncheck &quot;Enable Just My Code&quot;
+
+// Use conditional breakpoints
+// Right-click breakpoint → Conditions → e.g., &quot;userId == 123&quot;
+
+// Use data breakpoints
+// Right-click variable → Break when value changes
+</code></pre>
+<h2 id="git-and-version-control">Git and Version Control</h2>
+<h3 id="issue-merge-conflicts">Issue: Merge Conflicts</h3>
+<p><strong>Symptoms</strong>: Git merge fails with conflicts</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># View conflicts
+git status
+git diff
+
+# Use merge tool
+git mergetool
+
+# Or resolve manually
+# Edit files, then:
+git add .
+git commit
+
+# Abort merge if needed
+git merge --abort
+</code></pre>
+<h3 id="issue-accidentally-committed-secrets">Issue: Accidentally Committed Secrets</h3>
+<p><strong>Symptoms</strong>: API keys in git history</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Remove from current commit
+git reset HEAD~1
+git add .
+git commit
+
+# Remove from history (DANGER: rewrites history)
+git filter-branch --force --index-filter \
+  &quot;git rm --cached --ignore-unmatch path/to/secret/file&quot; \
+  --prune-empty --tag-name-filter cat -- --all
+
+# Rotate compromised credentials immediately!
+</code></pre>
+<h3 id="issue-git-hooks-failing">Issue: Git Hooks Failing</h3>
+<p><strong>Symptoms</strong>: Pre-commit hook blocks commit</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># View hook output
+cat .husky/pre-commit
+
+# Fix issues or bypass (not recommended)
+git commit --no-verify -m &quot;message&quot;
+
+# Debug hook
+bash -x .husky/pre-commit
+</code></pre>
+<h2 id="ide-issues">IDE Issues</h2>
+<h3 id="issue-vs-code-intellisense-not-working">Issue: VS Code IntelliSense Not Working</h3>
+<p><strong>Symptoms</strong>: No autocomplete or suggestions</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Restart OmniSharp
+# Command Palette → &quot;OmniSharp: Restart OmniSharp&quot;
+
+# Check .NET SDK
+dotnet --version
+
+# Reinstall C# extension
+# Extensions → C# → Uninstall → Install
+
+# Check workspace settings
+# .vscode/settings.json
+{
+  &quot;omnisharp.path&quot;: &quot;latest&quot;
+}
+</code></pre>
+<h3 id="issue-rider-performance-issues">Issue: Rider Performance Issues</h3>
+<p><strong>Symptoms</strong>: IDE slow or unresponsive</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Increase memory:
+<ul>
+<li>Help → Edit Custom VM Options</li>
+<li><code>-Xmx4096m</code> (4GB)</li>
+</ul>
+</li>
+<li>Invalidate caches:
+<ul>
+<li>File → Invalidate Caches / Restart</li>
+</ul>
+</li>
+<li>Exclude directories:
+<ul>
+<li>Settings → Directories → Exclude</li>
+<li>Add: node_modules, bin, obj, .vs</li>
+</ul>
+</li>
+</ol>
+<h3 id="issue-visual-studio-debug-symbols-not-loading">Issue: Visual Studio Debug Symbols Not Loading</h3>
+<p><strong>Symptoms</strong>: &quot;No symbols loaded&quot; warning</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Clean bin/obj folders
+dotnet clean
+
+# Rebuild
+dotnet build --configuration Debug
+
+# Check .pdb files exist
+ls -la Aura.Api/bin/Debug/net8.0/*.pdb
+
+# Enable symbol loading
+# Tools → Options → Debugging → Symbols
+# Check &quot;Microsoft Symbol Servers&quot;
+</code></pre>
+<h2 id="database-migrations">Database Migrations</h2>
+<h3 id="issue-migration-already-applied">Issue: Migration Already Applied</h3>
+<p><strong>Symptoms</strong>: &quot;Migration '...' already applied&quot;</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># List migrations
+dotnet ef migrations list
+
+# Remove last migration (if not pushed)
+dotnet ef migrations remove
+
+# Or create new migration with different name
+dotnet ef migrations add AddUserProfile_v2
+</code></pre>
+<h3 id="issue-migration-rollback-failed">Issue: Migration Rollback Failed</h3>
+<p><strong>Symptoms</strong>: Can't revert migration</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Restore database from backup
+cp backup/aura-backup.db aura.db
+
+# Or manually revert
+dotnet ef database update PreviousMigrationName
+
+# Force reset (CAUTION: data loss)
+dotnet ef database drop
+dotnet ef database update
+</code></pre>
+<h3 id="issue-migration-generated-incorrectly">Issue: Migration Generated Incorrectly</h3>
+<p><strong>Symptoms</strong>: Migration script has errors</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Remove bad migration
+dotnet ef migrations remove
+
+# Check model state
+dotnet ef dbcontext list
+
+# Regenerate
+dotnet ef migrations add FixedMigration
+
+# Review SQL before applying
+dotnet ef migrations script
+</code></pre>
+<h2 id="performance-profiling">Performance Profiling</h2>
+<h3 id="issue-slow-api-endpoints">Issue: Slow API Endpoints</h3>
+<p><strong>Diagnostic</strong>:</p>
+<pre><code class="lang-bash"># Use dotnet-trace
+dotnet tool install --global dotnet-trace
+
+# Record trace
+dotnet-trace collect --process-id $(pgrep -f Aura.Api)
+
+# Analyze with PerfView or SpeedScope
+</code></pre>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Add caching:
+<pre><code class="lang-csharp">[ResponseCache(Duration = 300)]
+public async Task&lt;IActionResult&gt; GetData()
+</code></pre>
+</li>
+<li>Use async properly:
+<pre><code class="lang-csharp">// ❌ Bad
+var result = Task.Run(() =&gt; SlowOperation()).Result;
+
+// ✅ Good
+var result = await SlowOperation();
+</code></pre>
+</li>
+<li>Profile with Application Insights or custom timing:
+<pre><code class="lang-csharp">using var timer = new MetricTimer(&quot;operation-name&quot;);
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-memory-leaks">Issue: Memory Leaks</h3>
+<p><strong>Diagnostic</strong>:</p>
+<pre><code class="lang-bash"># Use dotnet-counters
+dotnet tool install --global dotnet-counters
+
+# Monitor GC
+dotnet-counters monitor --process-id $(pgrep -f Aura.Api) \
+  System.Runtime gc-heap-size
+
+# Collect memory dump
+dotnet-dump collect --process-id $(pgrep -f Aura.Api)
+
+# Analyze with dotnet-gcdump
+dotnet tool install --global dotnet-gcdump
+dotnet-gcdump analyze memory.dump
+</code></pre>
+<p><strong>Common Causes</strong>:</p>
+<ol>
+<li>Event handlers not unsubscribed</li>
+<li>Static references to objects</li>
+<li>Circular references</li>
+<li>IDisposable not called</li>
+</ol>
+<h2 id="getting-help">Getting Help</h2>
+<h3 id="internal-resources">Internal Resources</h3>
+<ul>
+<li>Team chat: #aura-dev channel</li>
+<li>Documentation: docs/ directory</li>
+<li>Architecture decisions: docs/adr/</li>
+<li>Code review guidelines: CONTRIBUTING.md</li>
+</ul>
+<h3 id="external-resources">External Resources</h3>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/dotnet/">.NET Documentation</a></li>
+<li><a href="https://react.dev/">React Documentation</a></li>
+<li><a href="https://www.typescriptlang.org/docs/">TypeScript Handbook</a></li>
+<li><a href="https://www.sqlite.org/docs.html">SQLite Documentation</a></li>
+<li><a href="https://ffmpeg.org/documentation.html">FFmpeg Documentation</a></li>
+</ul>
+<h3 id="reporting-issues">Reporting Issues</h3>
+<p>When reporting development issues:</p>
+<ol>
+<li>Include exact error messages</li>
+<li>Provide minimal reproduction steps</li>
+<li>List your environment:
+<pre><code class="lang-bash">dotnet --info
+node --version
+npm --version
+git --version
+</code></pre>
+</li>
+<li>Attach relevant logs</li>
+<li>Show what you've already tried</li>
+</ol>
+<hr>
+<p><strong>Last Updated</strong>: 2024-11-10<br>
+<strong>Maintained by</strong>: Development Team</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/DEVELOPER_TROUBLESHOOTING.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

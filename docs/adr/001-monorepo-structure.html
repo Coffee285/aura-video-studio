@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>001. Monorepo Structure | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="001. Monorepo Structure | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/adr/001-monorepo-structure.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="001-monorepo-structure">001. Monorepo Structure</h1>
+
+<p>Date: 2024-01-15
+Status: Accepted</p>
+<h2 id="context">Context</h2>
+<p>Aura Video Studio consists of multiple components: backend API (C#), web frontend (TypeScript/React), CLI tool, desktop app (WinUI), and shared core libraries. We needed to decide how to organize these components in version control.</p>
+<p>Options considered were:</p>
+<ol>
+<li>Multiple repositories (one per component)</li>
+<li>Monorepo with all components together</li>
+<li>Hybrid approach with separate repos for frontend/backend</li>
+</ol>
+<p>Key factors influencing this decision:</p>
+<ul>
+<li>Ease of coordinated changes across frontend and backend</li>
+<li>Shared versioning and release management</li>
+<li>Developer onboarding experience</li>
+<li>CI/CD complexity</li>
+<li>Code sharing between components</li>
+</ul>
+<h2 id="decision">Decision</h2>
+<p>We will use a <strong>monorepo structure</strong> with all components in a single repository, organized by project:</p>
+<pre><code>/
+├── Aura.Api/         # ASP.NET Core backend
+├── Aura.Core/        # Shared domain logic
+├── Aura.Providers/   # Provider implementations
+├── Aura.Web/         # React frontend
+├── Aura.Cli/         # CLI tool
+├── Aura.App/         # WinUI desktop app
+├── Aura.Tests/       # Shared tests
+├── docs/             # Documentation
+└── scripts/          # Build and deployment scripts
+</code></pre>
+<h2 id="consequences">Consequences</h2>
+<h3 id="positive-consequences">Positive Consequences</h3>
+<ul>
+<li><strong>Atomic commits</strong>: Changes affecting multiple components can be committed together</li>
+<li><strong>Shared tooling</strong>: Single CI/CD pipeline, shared scripts and configurations</li>
+<li><strong>Consistent versioning</strong>: All components released together with matching versions</li>
+<li><strong>Easier refactoring</strong>: Cross-component refactoring is straightforward</li>
+<li><strong>Simplified dependency management</strong>: Internal dependencies are clear and co-located</li>
+<li><strong>Better discoverability</strong>: Developers can see the entire system in one place</li>
+<li><strong>Reduced overhead</strong>: No need to manage multiple repositories</li>
+</ul>
+<h3 id="negative-consequences">Negative Consequences</h3>
+<ul>
+<li><strong>Larger repository size</strong>: Clone time and disk space requirements increase</li>
+<li><strong>Potential for unrelated changes</strong>: Commits may mix unrelated component changes</li>
+<li><strong>Build complexity</strong>: Need to handle multiple build systems (.NET, Node.js)</li>
+<li><strong>Access control</strong>: Cannot easily restrict access to specific components</li>
+<li><strong>Git history</strong>: More commits and larger history to navigate</li>
+</ul>
+<h2 id="alternatives-considered">Alternatives Considered</h2>
+<h3 id="alternative-1-multiple-repositories">Alternative 1: Multiple Repositories</h3>
+<p><strong>Description:</strong> Separate repositories for backend, frontend, CLI, and desktop app.</p>
+<p><strong>Pros:</strong></p>
+<ul>
+<li>Smaller, focused repositories</li>
+<li>Independent versioning per component</li>
+<li>Clearer component boundaries</li>
+<li>Better access control</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li>Complex cross-repo changes requiring multiple PRs</li>
+<li>Difficult to maintain version compatibility</li>
+<li>Duplicated CI/CD configuration</li>
+<li>More overhead managing multiple repos</li>
+<li>Harder for new developers to understand system architecture</li>
+</ul>
+<p><strong>Why Rejected:</strong> The complexity of coordinating changes across repositories outweighed the benefits of separation. Most changes in Aura require modifications to both frontend and backend.</p>
+<h3 id="alternative-2-hybrid-approach">Alternative 2: Hybrid Approach</h3>
+<p><strong>Description:</strong> Backend components in one repo, frontend in another.</p>
+<p><strong>Pros:</strong></p>
+<ul>
+<li>Some separation of concerns</li>
+<li>Different teams could own different repos</li>
+<li>Smaller than full monorepo</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li>Still requires coordinating changes across repos</li>
+<li>API contract changes affect both repos</li>
+<li>Version synchronization issues</li>
+<li>Only partial benefit of separation</li>
+</ul>
+<p><strong>Why Rejected:</strong> Provides neither the full benefits of a monorepo nor the full separation of multiple repos. The worst of both worlds for this project's needs.</p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://www.atlassian.com/git/tutorials/monorepos">Monorepo: Advantages and Disadvantages</a></li>
+<li><a href="https://research.google/pubs/pub45424/">Why Google Stores Billions of Lines of Code in a Single Repository</a></li>
+<li><a href="https://medium.com/@mattklein123/monorepos-please-dont-e9a279be011b">Monorepos: Please don't!</a></li>
+</ul>
+<h2 id="notes">Notes</h2>
+<p>This decision aligns with the project's goal of being beginner-friendly and easy to contribute to. A single repository reduces the cognitive overhead for new contributors and makes it easier to understand how components interact.</p>
+<p>The monorepo structure is particularly beneficial for Aura because:</p>
+<ul>
+<li>The API contract between frontend and backend changes frequently during development</li>
+<li>Features often span multiple components (e.g., new video generation feature touches API, frontend, and core logic)</li>
+<li>The project is developed primarily by a small team where everyone works across the stack</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/adr/001-monorepo-structure.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

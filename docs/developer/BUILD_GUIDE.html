@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Video Studio - Build Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Video Studio - Build Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/BUILD_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-video-studio---build-guide">Aura Video Studio - Build Guide</h1>
+
+<p>Complete guide for building Aura Video Studio on Windows 11 from a fresh installation.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#initial-setup">Initial Setup</a></li>
+<li><a href="#building-the-application">Building the Application</a></li>
+<li><a href="#common-issues-and-solutions">Common Issues and Solutions</a></li>
+<li><a href="#development-workflow">Development Workflow</a></li>
+<li><a href="#cicd-integration">CI/CD Integration</a></li>
+</ol>
+<hr>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required-software">Required Software</h3>
+<ol>
+<li><p><strong>Windows 11 (64-bit)</strong></p>
+<ul>
+<li>Build 22000 or higher</li>
+<li>Long path support recommended (see setup instructions)</li>
+</ul>
+</li>
+<li><p><strong>Node.js 20.x LTS or higher</strong></p>
+<ul>
+<li>Download from: <a href="https://nodejs.org/">https://nodejs.org/</a></li>
+<li>Recommended version: 20.x (specified in <code>.nvmrc</code>)</li>
+<li>Verify: <code>node --version</code> (should show v20.x.x)</li>
+<li>npm 9.0.0 or higher comes bundled</li>
+</ul>
+</li>
+<li><p><strong>.NET 8 SDK</strong></p>
+<ul>
+<li>Download from: <a href="https://dot.net/download">https://dot.net/download</a></li>
+<li>Verify: <code>dotnet --version</code> (should show 8.0.x)</li>
+</ul>
+</li>
+<li><p><strong>Git for Windows</strong></p>
+<ul>
+<li>Download from: <a href="https://git-scm.com/download/win">https://git-scm.com/download/win</a></li>
+<li>Verify: <code>git --version</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="recommended-software">Recommended Software</h3>
+<ol>
+<li><p><strong>Visual Studio 2022</strong> (for C# development)</p>
+<ul>
+<li>Community Edition or higher</li>
+<li>Workloads:
+<ul>
+<li>ASP.NET and web development</li>
+<li>.NET desktop development</li>
+</ul>
+</li>
+<li>Or <strong>Visual Studio Code</strong> with C# extension</li>
+</ul>
+</li>
+<li><p><strong>Windows Terminal</strong> (recommended)</p>
+<ul>
+<li>Available from Microsoft Store</li>
+<li>Better PowerShell/Command Prompt experience</li>
+</ul>
+</li>
+<li><p><strong>Node Version Manager (nvm for Windows)</strong> (optional)</p>
+<ul>
+<li>Download from: <a href="https://github.com/coreybutler/nvm-windows">https://github.com/coreybutler/nvm-windows</a></li>
+<li>Allows easy switching between Node.js versions</li>
+<li>Works with <code>.nvmrc</code> file: <code>nvm use</code></li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="initial-setup">Initial Setup</h2>
+<h3 id="1-enable-windows-long-path-support">1. Enable Windows Long Path Support</h3>
+<p>Long paths are required for some npm dependencies.</p>
+<p><strong>Option A: Using PowerShell (Run as Administrator)</strong></p>
+<pre><code class="lang-powershell">New-ItemProperty -Path &quot;HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem&quot; `
+  -Name &quot;LongPathsEnabled&quot; -Value 1 -PropertyType DWORD -Force
+</code></pre>
+<p><strong>Option B: Using Registry Editor</strong></p>
+<ol>
+<li>Press <code>Win + R</code>, type <code>regedit</code>, press Enter</li>
+<li>Navigate to: <code>HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem</code></li>
+<li>Create/modify DWORD value: <code>LongPathsEnabled</code> = <code>1</code></li>
+<li>Restart your computer</li>
+</ol>
+<h3 id="2-configure-git">2. Configure Git</h3>
+<pre><code class="lang-bash"># Enable long paths in Git
+git config --global core.longpaths true
+
+# Configure line endings (Windows)
+git config --global core.autocrlf true
+
+# Set your identity
+git config --global user.name &quot;Your Name&quot;
+git config --global user.email &quot;your.email@example.com&quot;
+</code></pre>
+<h3 id="3-clone-the-repository">3. Clone the Repository</h3>
+<pre><code class="lang-bash"># Clone the repository
+git clone https://github.com/Saiyan9001/aura-video-studio.git
+cd aura-video-studio
+</code></pre>
+<h3 id="4-install-frontend-dependencies">4. Install Frontend Dependencies</h3>
+<pre><code class="lang-bash">cd Aura.Web
+npm install
+</code></pre>
+<p>This will:</p>
+<ul>
+<li>Install all Node.js dependencies</li>
+<li>Set up Husky git hooks (pre-commit validation)</li>
+<li>Verify your environment meets requirements</li>
+</ul>
+<p><strong>Expected output:</strong></p>
+<pre><code>✓ Node.js version meets requirements
+✓ npm version meets requirements
+✓ Git long paths enabled
+added 806 packages, and audited 807 packages
+found 0 vulnerabilities
+</code></pre>
+<h3 id="5-restore-net-dependencies">5. Restore .NET Dependencies</h3>
+<pre><code class="lang-bash"># From repository root
+cd ..
+dotnet restore Aura.sln
+</code></pre>
+<hr>
+<h2 id="building-the-application">Building the Application</h2>
+<h3 id="frontend-build">Frontend Build</h3>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Development build (faster, includes source maps)
+npm run build:dev
+
+# Production build (optimized, minified)
+npm run build:prod
+
+# Or simply (runs production build by default)
+npm run build
+</code></pre>
+<p><strong>Build process:</strong></p>
+<ol>
+<li>Validates environment (Node.js version, etc.)</li>
+<li>Runs TypeScript type checking</li>
+<li>Compiles and bundles with Vite</li>
+<li>Verifies build output</li>
+</ol>
+<p><strong>Expected output:</strong></p>
+<pre><code>=== Environment Validation ===
+✓ Node.js version: 20.x.x
+✓ npm version meets requirements
+✓ Environment validation passed
+
+&gt; type-check
+✓ TypeScript compilation complete
+
+&gt; vite build --mode production
+✓ Built in 15.2s
+
+=== Build Output Validation ===
+✓ Frontend dist directory exists
+✓ index.html exists
+✓ Assets directory exists
+✓ No source files in dist
+✓ No node_modules in dist
+Total files: 42
+Total size: 2.45 MB
+✓ Build verification passed
+</code></pre>
+<p><strong>Output location:</strong> <code>Aura.Web/dist/</code></p>
+<h3 id="backend-build">Backend Build</h3>
+<pre><code class="lang-bash"># From repository root
+
+# Build in Debug mode (default)
+dotnet build Aura.sln
+
+# Build in Release mode (optimized)
+dotnet build Aura.sln --configuration Release
+
+# Build specific project only
+dotnet build Aura.Api/Aura.Api.csproj --configuration Release
+</code></pre>
+<p><strong>Expected output:</strong></p>
+<pre><code>Microsoft (R) Build Engine version 17.0.0
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+Time Elapsed 00:00:45.23
+</code></pre>
+<p><strong>Output locations:</strong></p>
+<ul>
+<li><code>Aura.Api/bin/Release/net8.0/</code></li>
+<li><code>Aura.Core/bin/Release/net8.0/</code></li>
+<li><code>Aura.Providers/bin/Release/net8.0/</code></li>
+</ul>
+<h3 id="full-solution-build">Full Solution Build</h3>
+<p>The API project can automatically build the frontend when publishing:</p>
+<pre><code class="lang-bash"># Publish with integrated frontend build
+dotnet publish Aura.Api/Aura.Api.csproj --configuration Release
+
+# This will:
+# 1. Build the frontend (npm run build)
+# 2. Build the .NET API
+# 3. Copy frontend dist to wwwroot
+# 4. Create a complete deployment package
+</code></pre>
+<p><strong>Output location:</strong> <code>Aura.Api/bin/Release/net8.0/publish/</code></p>
+<hr>
+<h2 id="common-issues-and-solutions">Common Issues and Solutions</h2>
+<h3 id="issue-module-not-found-or-dependency-errors">Issue: &quot;Module not found&quot; or dependency errors</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>Error: Cannot find module 'vite'
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+rm -rf node_modules package-lock.json
+npm install
+</code></pre>
+<h3 id="issue-permission-denied-on-windows">Issue: &quot;Permission denied&quot; on Windows</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>EPERM: operation not permitted
+</code></pre>
+<p><strong>Possible causes:</strong></p>
+<ol>
+<li>Antivirus is scanning/blocking files</li>
+<li>Another process has files open</li>
+<li>Insufficient permissions</li>
+</ol>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Temporarily disable antivirus</li>
+<li>Close Visual Studio, VS Code, and other editors</li>
+<li>Run command prompt as Administrator</li>
+<li>Ensure long paths are enabled (see Initial Setup)</li>
+</ol>
+<h3 id="issue-path-too-long-error">Issue: &quot;Path too long&quot; error</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>Error: ENAMETOOLONG: name too long
+</code></pre>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Enable long path support (see Initial Setup)</li>
+<li>Clone repository closer to drive root (e.g., <code>C:\dev\aura-video-studio</code>)</li>
+<li>Restart your computer after enabling long paths</li>
+</ol>
+<h3 id="issue-typescript-errors-after-git-pull">Issue: TypeScript errors after git pull</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>error TS2307: Cannot find module 'X'
+</code></pre>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm install  # Install any new dependencies
+npm run typecheck  # See all errors
+</code></pre>
+<p>If type definitions are missing:</p>
+<pre><code class="lang-bash">npm install --save-dev @types/package-name
+</code></pre>
+<h3 id="issue-net-build-fails-with-cs-errors">Issue: .NET build fails with CS errors</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>error CS0246: The type or namespace name 'X' could not be found
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p>Verify .NET SDK is installed:</p>
+<pre><code class="lang-bash">dotnet --version  # Should be 8.0.x
+</code></pre>
+</li>
+<li><p>Clean and rebuild:</p>
+<pre><code class="lang-bash">dotnet clean
+dotnet restore
+dotnet build
+</code></pre>
+</li>
+<li><p>Check for missing dependencies:</p>
+<pre><code class="lang-bash">dotnet restore --force
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-husky-hooks-not-working">Issue: Husky hooks not working</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>.git can't be found
+</code></pre>
+<p><strong>Solution:</strong>
+Husky needs to be in the repository root, not in a subdirectory. The hooks are located in <code>.husky/</code> at the root level.</p>
+<p>To manually test hooks:</p>
+<pre><code class="lang-bash"># Test placeholder scanner
+node scripts/audit/find-placeholders.js
+
+# Should output: ✓ No placeholder markers found!
+</code></pre>
+<h3 id="issue-build-succeeds-but-app-doesnt-run">Issue: Build succeeds but app doesn't run</h3>
+<p><strong>Frontend:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run dev  # Start development server
+# Open http://localhost:5173
+</code></pre>
+<p><strong>Backend:</strong></p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet run
+# API will start on http://localhost:5000
+</code></pre>
+<hr>
+<h2 id="development-workflow">Development Workflow</h2>
+<h3 id="starting-development">Starting Development</h3>
+<p><strong>Backend (API):</strong></p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet run
+
+# Or with hot reload:
+dotnet watch run
+</code></pre>
+<p><strong>Frontend (Web UI):</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run dev
+
+# This will:
+# - Start Vite dev server
+# - Enable hot module replacement
+# - Open browser automatically
+</code></pre>
+<h3 id="running-tests">Running Tests</h3>
+<p><strong>Frontend tests:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests with UI
+npm run test:ui
+</code></pre>
+<p><strong>Backend tests:</strong></p>
+<pre><code class="lang-bash"># Run all tests
+dotnet test
+
+# Run specific test project
+dotnet test Aura.Tests/Aura.Tests.csproj
+
+# Run with detailed output
+dotnet test --verbosity detailed
+</code></pre>
+<h3 id="code-quality-checks">Code Quality Checks</h3>
+<p><strong>Lint frontend code:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Check for issues
+npm run lint
+
+# Auto-fix issues
+npm run lint:fix
+
+# Check CSS
+npm run lint:css
+
+# Fix CSS issues
+npm run lint:css:fix
+</code></pre>
+<p><strong>Type check:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run typecheck
+</code></pre>
+<p><strong>Format code:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Check formatting
+npm run format:check
+
+# Auto-format code
+npm run format
+</code></pre>
+<p><strong>Run all quality checks:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run quality-check
+
+# Or fix all automatically:
+npm run quality-fix
+</code></pre>
+<h3 id="pre-commit-validation">Pre-Commit Validation</h3>
+<p>Git hooks will automatically run on commit:</p>
+<ol>
+<li><strong>Placeholder scanner</strong> - Rejects commits with TODO/FIXME comments</li>
+<li><strong>Commit message validator</strong> - Ensures professional commit messages</li>
+</ol>
+<p>To bypass (not recommended):</p>
+<pre><code class="lang-bash">git commit --no-verify -m &quot;message&quot;
+</code></pre>
+<p>Note: CI will still enforce these checks.</p>
+<hr>
+<h2 id="cicd-integration">CI/CD Integration</h2>
+<h3 id="continuous-integration">Continuous Integration</h3>
+<p>All PRs and pushes to <code>main</code> trigger automated checks:</p>
+<ol>
+<li><p><strong>Windows Build Test</strong></p>
+<ul>
+<li>Full build on Windows</li>
+<li>Verifies clean installation scenario</li>
+<li>Runs frontend and backend tests</li>
+</ul>
+</li>
+<li><p><strong>.NET Build Test</strong></p>
+<ul>
+<li>Builds with strict warning settings</li>
+<li>Ensures code quality</li>
+</ul>
+</li>
+<li><p><strong>Lint and Type Check</strong></p>
+<ul>
+<li>Runs ESLint on all TypeScript/JavaScript</li>
+<li>Runs TypeScript compiler</li>
+<li>Checks code formatting</li>
+</ul>
+</li>
+<li><p><strong>Placeholder Scan</strong></p>
+<ul>
+<li>Scans for TODO/FIXME/HACK comments</li>
+<li>Fails if any found</li>
+</ul>
+</li>
+<li><p><strong>Environment Validation</strong></p>
+<ul>
+<li>Verifies Node.js and npm versions</li>
+<li>Checks configuration files</li>
+</ul>
+</li>
+</ol>
+<h3 id="pr-requirements">PR Requirements</h3>
+<p>Before merging, all PRs must:</p>
+<ul>
+<li>✅ Pass all 5 CI jobs</li>
+<li>✅ Have no placeholder markers</li>
+<li>✅ Pass all linting checks</li>
+<li>✅ Pass all type checks</li>
+<li>✅ Pass all unit tests</li>
+<li>✅ Build successfully on Windows</li>
+</ul>
+<h3 id="local-pre-push-validation">Local Pre-Push Validation</h3>
+<p>Run the same checks locally before pushing:</p>
+<pre><code class="lang-bash"># From repository root
+
+# 1. Check for placeholders
+node scripts/audit/find-placeholders.js
+
+# 2. Lint and type check frontend
+cd Aura.Web
+npm run quality-check
+cd ..
+
+# 3. Build everything
+dotnet build Aura.sln --configuration Release
+cd Aura.Web
+npm run build
+cd ..
+
+# 4. Run tests
+dotnet test
+cd Aura.Web
+npm test
+cd ..
+</code></pre>
+<p>If all pass, you're ready to push!</p>
+<hr>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><strong>Main README:</strong> See <code>README.md</code> in repository root</li>
+<li><strong>Contributing Guide:</strong> See <code>CONTRIBUTING.md</code> for coding standards</li>
+<li><strong>API Documentation:</strong> Generated with Swagger at <code>/swagger</code> when API is running</li>
+<li><strong>Frontend Documentation:</strong> Generated with TypeDoc: <code>npm run docs</code></li>
+</ul>
+<hr>
+<h2 id="getting-help">Getting Help</h2>
+<p>If you encounter issues not covered here:</p>
+<ol>
+<li>Check existing GitHub Issues</li>
+<li>Search discussions</li>
+<li>Create a new issue with:
+<ul>
+<li>Your OS version</li>
+<li>Node.js version (<code>node --version</code>)</li>
+<li>.NET SDK version (<code>dotnet --version</code>)</li>
+<li>Complete error message</li>
+<li>Steps to reproduce</li>
+</ul>
+</li>
+</ol>
+<hr>
+<p><strong>Last Updated:</strong> 2025-10-28<br>
+<strong>Minimum Requirements:</strong> Node.js 20.0.0, .NET 8.0, Windows 11</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/BUILD_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

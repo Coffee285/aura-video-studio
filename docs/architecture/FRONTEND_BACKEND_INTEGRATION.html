@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Frontend-Backend Integration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Frontend-Backend Integration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/FRONTEND_BACKEND_INTEGRATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="frontend-backend-integration-guide">Frontend-Backend Integration Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the complete frontend-backend integration implementation for PR #6. The integration connects React components with ASP.NET Core APIs, providing a full video generation and project management workflow.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="api-layer-aurawebsrcservicesapi">API Layer (<code>Aura.Web/src/services/api/</code>)</h3>
+<h4 id="1-video-generation-api-videoapits">1. Video Generation API (<code>videoApi.ts</code>)</h4>
+<ul>
+<li><strong>Purpose</strong>: Handles video generation requests and status polling</li>
+<li><strong>Key Functions</strong>:
+<ul>
+<li><code>generateVideo()</code> - Start video generation job</li>
+<li><code>getVideoStatus()</code> - Poll job status</li>
+<li><code>cancelVideoGeneration()</code> - Cancel running job</li>
+<li><code>streamProgress()</code> - SSE connection for real-time updates</li>
+<li><code>listJobs()</code> - Get all jobs</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-projects-api-projectsapits">2. Projects API (<code>projectsApi.ts</code>)</h4>
+<ul>
+<li><strong>Purpose</strong>: Project CRUD operations</li>
+<li><strong>Key Functions</strong>:
+<ul>
+<li><code>listProjects()</code> - Get projects with filters/pagination</li>
+<li><code>getProject()</code> - Get single project</li>
+<li><code>createProject()</code> - Create new project</li>
+<li><code>updateProject()</code> - Update existing project</li>
+<li><code>deleteProject()</code> - Delete project</li>
+<li><code>duplicateProject()</code> - Duplicate project</li>
+<li><code>getProjectStatistics()</code> - Get project stats</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-base-api-client-apiclientts">3. Base API Client (<code>apiClient.ts</code>)</h4>
+<ul>
+<li><strong>Features</strong>:
+<ul>
+<li>Circuit breaker pattern for fault tolerance</li>
+<li>Automatic retry with exponential backoff</li>
+<li>Request deduplication</li>
+<li>Correlation ID tracking</li>
+<li>Comprehensive error handling</li>
+</ul>
+</li>
+</ul>
+<h3 id="hooks-layer-aurawebsrchooks">Hooks Layer (<code>Aura.Web/src/hooks/</code>)</h3>
+<h4 id="1-usevideogeneration-hook">1. useVideoGeneration Hook</h4>
+<pre><code class="lang-typescript">const {
+  isGenerating,
+  progress,
+  status,
+  error,
+  generate,
+  cancel,
+  retry,
+  reset
+} = useVideoGeneration({
+  onComplete: (status) =&gt; { /* ... */ },
+  onError: (error) =&gt; { /* ... */ },
+  onProgress: (progress, message) =&gt; { /* ... */ }
+});
+</code></pre>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Manages video generation lifecycle</li>
+<li>SSE connection for real-time progress</li>
+<li>Automatic error handling</li>
+<li>Retry capability</li>
+</ul>
+<h4 id="2-useprojects-hook">2. useProjects Hook</h4>
+<pre><code class="lang-typescript">const {
+  projects,
+  total,
+  isLoading,
+  error,
+  createProject,
+  updateProject,
+  deleteProject,
+  duplicateProject,
+  refetch,
+  setFilters,
+  getProjectById
+} = useProjects({
+  filters: { status: 'draft' },
+  autoRefetch: true,
+  refetchInterval: 30000
+});
+</code></pre>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>React Query integration for caching</li>
+<li>Optimistic updates</li>
+<li>Automatic pagination</li>
+<li>Filter and sort support</li>
+</ul>
+<h4 id="3-usesse--usesseconnection-hooks">3. useSSE / useSSEConnection Hooks</h4>
+<ul>
+<li><strong>Purpose</strong>: Server-Sent Events (SSE) connection management</li>
+<li><strong>Features</strong>:
+<ul>
+<li>Automatic reconnection with exponential backoff</li>
+<li>Last-Event-ID support for resuming streams</li>
+<li>Event validation with Zod schemas</li>
+<li>Connection state tracking</li>
+</ul>
+</li>
+</ul>
+<h3 id="state-management-aurawebsrcstores">State Management (<code>Aura.Web/src/stores/</code>)</h3>
+<h4 id="1-video-generation-store-videogenerationstorets">1. Video Generation Store (<code>videoGenerationStore.ts</code>)</h4>
+<pre><code class="lang-typescript">const {
+  activeJobs,
+  jobHistory,
+  isGenerating,
+  startJob,
+  updateJobProgress,
+  completeJob,
+  failJob,
+  cancelJob
+} = useVideoGenerationStore();
+</code></pre>
+<p><strong>Persistence</strong>:</p>
+<ul>
+<li>Job history</li>
+<li>User preferences (auto-save, notifications)</li>
+</ul>
+<h4 id="2-projects-store-projectsstorets">2. Projects Store (<code>projectsStore.ts</code>)</h4>
+<pre><code class="lang-typescript">const {
+  projects,
+  selectedProjectId,
+  filters,
+  sortBy,
+  recentProjects,
+  draftProject,
+  addProject,
+  updateProject,
+  selectProject,
+  setFilters
+} = useProjectsStore();
+</code></pre>
+<p><strong>Persistence</strong>:</p>
+<ul>
+<li>Recent projects list</li>
+<li>Filter preferences</li>
+<li>Draft auto-save</li>
+<li>Sort preferences</li>
+</ul>
+<h4 id="3-app-store-appstorets">3. App Store (<code>appStore.ts</code>)</h4>
+<pre><code class="lang-typescript">const {
+  isSidebarOpen,
+  notifications,
+  settings,
+  isOnline,
+  addNotification,
+  updateSettings
+} = useAppStore();
+</code></pre>
+<p><strong>Persistence</strong>:</p>
+<ul>
+<li>UI state (sidebar, theme)</li>
+<li>User settings</li>
+<li>Notifications temporarily stored</li>
+</ul>
+<h2 id="integration-patterns">Integration Patterns</h2>
+<h3 id="1-video-generation-flow">1. Video Generation Flow</h3>
+<pre><code class="lang-typescript">// In component
+import { useVideoGeneration } from '@/hooks/useVideoGeneration';
+import { useVideoGenerationStore } from '@/stores/videoGenerationStore';
+
+function VideoGenerationComponent() {
+  const videoGen = useVideoGeneration({
+    onComplete: (status) =&gt; {
+      // Handle completion
+      saveToProject(status);
+    },
+    onError: (error) =&gt; {
+      // Show error notification
+      showError(error.message);
+    },
+    onProgress: (progress, message) =&gt; {
+      // Update UI
+      updateProgressBar(progress);
+    }
+  });
+
+  const handleGenerate = async () =&gt; {
+    await videoGen.generate({
+      brief: { /* ... */ },
+      planSpec: { /* ... */ },
+      voiceSpec: { /* ... */ },
+      renderSpec: { /* ... */ }
+    });
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;Button onClick={handleGenerate} disabled={videoGen.isGenerating}&gt;
+        Generate Video
+      &lt;/Button&gt;
+      {videoGen.isGenerating &amp;&amp; (
+        &lt;ProgressBar value={videoGen.progress} /&gt;
+      )}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="2-project-management-flow">2. Project Management Flow</h3>
+<pre><code class="lang-typescript">import { useProjects } from '@/hooks/useProjects';
+import { useProjectsStore } from '@/stores/projectsStore';
+
+function ProjectsComponent() {
+  const {
+    projects,
+    isLoading,
+    createProject,
+    updateProject,
+    deleteProject
+  } = useProjects({
+    filters: { status: 'draft' }
+  });
+
+  const handleCreate = async () =&gt; {
+    const project = await createProject({
+      name: 'My Project',
+      brief: { /* ... */ },
+      planSpec: { /* ... */ }
+    });
+    
+    // Optimistic update happens automatically
+  };
+
+  return (
+    &lt;div&gt;
+      {projects.map(project =&gt; (
+        &lt;ProjectCard key={project.id} project={project} /&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="3-error-handling">3. Error Handling</h3>
+<p>All API calls automatically handle errors through:</p>
+<ol>
+<li><strong>Circuit Breaker</strong>: Prevents cascading failures</li>
+<li><strong>Retry Logic</strong>: Automatic retry with exponential backoff</li>
+<li><strong>Error Normalization</strong>: Consistent error format</li>
+<li><strong>User-Friendly Messages</strong>: HTTP status code to message mapping</li>
+</ol>
+<pre><code class="lang-typescript">// Errors are automatically caught and formatted
+try {
+  await generateVideo(request);
+} catch (error) {
+  // error.userMessage contains user-friendly message
+  // error.errorCode contains app-specific error code
+  // error.correlationId for debugging
+}
+</code></pre>
+<h2 id="sse-integration">SSE Integration</h2>
+<h3 id="real-time-progress-updates">Real-Time Progress Updates</h3>
+<pre><code class="lang-typescript">// Hook handles SSE connection automatically
+const videoGen = useVideoGeneration({
+  onProgress: (progress, message) =&gt; {
+    console.log(`${progress}%: ${message}`);
+  }
+});
+
+// SSE events received:
+// - job-status: Overall job status
+// - step-progress: Individual step progress
+// - job-completed: Generation complete
+// - job-failed: Generation failed
+// - job-cancelled: Job was cancelled
+// - error: Connection or processing error
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<ul>
+<li><code>stores/__tests__/</code>: Store logic tests</li>
+<li><code>hooks/__tests__/</code>: Hook behavior tests</li>
+<li><code>services/api/__tests__/</code>: API client tests</li>
+</ul>
+<h3 id="integration-tests">Integration Tests</h3>
+<ul>
+<li><code>examples/IntegrationDemo.tsx</code>: Full integration example</li>
+<li>E2E tests in <code>Aura.E2E/</code>: End-to-end workflow tests</li>
+</ul>
+<h3 id="running-tests">Running Tests</h3>
+<pre><code class="lang-bash"># Unit tests
+npm run test
+
+# Integration tests
+npm run test:integration
+
+# E2E tests
+npm run test:e2e
+</code></pre>
+<h2 id="performance-optimizations">Performance Optimizations</h2>
+<ol>
+<li><strong>React Query Caching</strong>: 30s stale time for projects</li>
+<li><strong>Request Deduplication</strong>: Prevents duplicate API calls</li>
+<li><strong>Optimistic Updates</strong>: Immediate UI feedback</li>
+<li><strong>Lazy Loading</strong>: Code splitting for routes</li>
+<li><strong>SSE Connection Pooling</strong>: Reuse connections</li>
+</ol>
+<h2 id="security">Security</h2>
+<ol>
+<li><strong>CSRF Protection</strong>: Tokens in all POST/PUT/DELETE requests</li>
+<li><strong>XSS Prevention</strong>: Content sanitization</li>
+<li><strong>Secure Cookies</strong>: HttpOnly, Secure, SameSite flags</li>
+<li><strong>Content Security Policy</strong>: Strict CSP headers</li>
+<li><strong>Correlation IDs</strong>: Request tracking for audit</li>
+</ol>
+<h2 id="monitoring">Monitoring</h2>
+<h3 id="frontend-metrics">Frontend Metrics</h3>
+<ul>
+<li>API call success/failure rates</li>
+<li>SSE connection stability</li>
+<li>Component render performance</li>
+<li>User interaction metrics</li>
+</ul>
+<h3 id="error-tracking">Error Tracking</h3>
+<ul>
+<li>Automatic error logging with context</li>
+<li>Correlation ID for request tracking</li>
+<li>Circuit breaker state monitoring</li>
+</ul>
+<h2 id="common-issues-and-solutions">Common Issues and Solutions</h2>
+<h3 id="issue-sse-connection-drops">Issue: SSE Connection Drops</h3>
+<p><strong>Solution</strong>: Automatic reconnection with exponential backoff implemented in <code>useSSEConnection</code></p>
+<h3 id="issue-stale-data">Issue: Stale Data</h3>
+<p><strong>Solution</strong>: React Query automatic refetching, configurable intervals</p>
+<h3 id="issue-race-conditions">Issue: Race Conditions</h3>
+<p><strong>Solution</strong>: Request deduplication, optimistic updates with rollback</p>
+<h3 id="issue-circuit-breaker-triggered">Issue: Circuit Breaker Triggered</h3>
+<p><strong>Solution</strong>: Manual reset via <code>resetCircuitBreaker()</code>, or wait for timeout</p>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="video-generation">Video Generation</h3>
+<ul>
+<li><code>POST /api/jobs</code> - Create video generation job</li>
+<li><code>GET /api/jobs/{id}</code> - Get job status</li>
+<li><code>GET /api/jobs/{id}/events</code> - SSE stream for progress</li>
+<li><code>POST /api/jobs/{id}/cancel</code> - Cancel job</li>
+<li><code>GET /api/jobs</code> - List all jobs</li>
+</ul>
+<h3 id="projects">Projects</h3>
+<ul>
+<li><code>GET /api/projects</code> - List projects (with filters)</li>
+<li><code>GET /api/projects/{id}</code> - Get project</li>
+<li><code>POST /api/projects</code> - Create project</li>
+<li><code>PUT /api/projects/{id}</code> - Update project</li>
+<li><code>DELETE /api/projects/{id}</code> - Delete project</li>
+<li><code>POST /api/projects/{id}/duplicate</code> - Duplicate project</li>
+<li><code>GET /api/projects/statistics</code> - Get statistics</li>
+</ul>
+<h2 id="example-integration">Example Integration</h2>
+<p>See <code>Aura.Web/src/examples/IntegrationDemo.tsx</code> for a complete working example demonstrating:</p>
+<ul>
+<li>Video generation with real-time progress</li>
+<li>Project creation and management</li>
+<li>Store integration</li>
+<li>Error handling</li>
+<li>Notification system</li>
+</ul>
+<h2 id="next-steps">Next Steps</h2>
+<ol>
+<li>Add authentication middleware</li>
+<li>Implement WebSocket fallback for SSE</li>
+<li>Add request batching for bulk operations</li>
+<li>Implement offline mode with queue</li>
+<li>Add analytics tracking</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/FRONTEND_BACKEND_INTEGRATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

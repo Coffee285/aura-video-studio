@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Building Windows Installer for Aura Video Studio | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Building Windows Installer for Aura Video Studio | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/BUILDING_WINDOWS_INSTALLER.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="building-windows-installer-for-aura-video-studio">Building Windows Installer for Aura Video Studio</h1>
+
+<p>This guide shows developers how to build production-grade Windows installers for Aura Video Studio.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#development-environment-setup">Development Environment Setup</a></li>
+<li><a href="#building-locally">Building Locally</a></li>
+<li><a href="#build-scripts">Build Scripts</a></li>
+<li><a href="#github-actions-cicd">GitHub Actions CI/CD</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ol>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required-software">Required Software</h3>
+<h4 id="1-nodejs-v20-lts">1. Node.js (v20 LTS)</h4>
+<pre><code class="lang-bash"># Check if installed
+node --version  # Should be v20.x.x
+npm --version   # Should be 9.x.x or higher
+</code></pre>
+<p><strong>Download</strong>: <a href="https://nodejs.org/">https://nodejs.org/</a></p>
+<ul>
+<li>Choose LTS version</li>
+<li>Include npm package manager</li>
+<li>Add to PATH (installer option)</li>
+</ul>
+<h4 id="2-net-sdk-80">2. .NET SDK 8.0</h4>
+<pre><code class="lang-bash"># Check if installed
+dotnet --version  # Should be 8.0.x
+</code></pre>
+<p><strong>Download</strong>: <a href="https://dotnet.microsoft.com/download/dotnet/8.0">https://dotnet.microsoft.com/download/dotnet/8.0</a></p>
+<ul>
+<li>Install SDK (not just runtime)</li>
+<li>Verify installation with <code>dotnet --version</code></li>
+</ul>
+<h4 id="3-git">3. Git</h4>
+<pre><code class="lang-bash"># Check if installed
+git --version
+</code></pre>
+<p><strong>Download</strong>: <a href="https://git-scm.com/">https://git-scm.com/</a></p>
+<ul>
+<li>Use default options</li>
+<li>Git Bash recommended</li>
+</ul>
+<h4 id="4-visual-studio-build-tools-optional-but-recommended">4. Visual Studio Build Tools (Optional but Recommended)</h4>
+<ul>
+<li>Download: <a href="https://visualstudio.microsoft.com/downloads/">https://visualstudio.microsoft.com/downloads/</a></li>
+<li>Install &quot;Desktop development with C++&quot; workload</li>
+<li>Needed for native module compilation</li>
+</ul>
+<h3 id="system-requirements">System Requirements</h3>
+<ul>
+<li><strong>OS</strong>: Windows 10 1809+ or Windows 11</li>
+<li><strong>RAM</strong>: 8GB minimum, 16GB recommended</li>
+<li><strong>Disk</strong>: 20GB free space (for builds and dependencies)</li>
+<li><strong>Internet</strong>: Required for downloading dependencies</li>
+</ul>
+<h2 id="development-environment-setup">Development Environment Setup</h2>
+<h3 id="1-clone-repository">1. Clone Repository</h3>
+<pre><code class="lang-bash"># Clone from GitHub
+git clone https://github.com/coffee285/aura-video-studio.git
+cd aura-video-studio
+</code></pre>
+<h3 id="2-install-dependencies">2. Install Dependencies</h3>
+<pre><code class="lang-bash"># Install frontend dependencies
+cd Aura.Web
+npm install
+
+# Install desktop dependencies
+cd ../Aura.Desktop
+npm install
+
+# Restore .NET dependencies
+cd ../Aura.Api
+dotnet restore
+</code></pre>
+<h3 id="3-verify-setup">3. Verify Setup</h3>
+<pre><code class="lang-bash"># Check all tools
+node --version
+npm --version
+dotnet --version
+git --version
+
+# Should see versions for all
+</code></pre>
+<h2 id="building-locally">Building Locally</h2>
+<h3 id="quick-build-all-steps">Quick Build (All Steps)</h3>
+<pre><code class="lang-powershell"># Navigate to desktop directory
+cd Aura.Desktop
+
+# Run master build script
+.\scripts\build-windows.ps1
+</code></pre>
+<p>This will:</p>
+<ol>
+<li>✅ Validate prerequisites</li>
+<li>✅ Download FFmpeg (if not present)</li>
+<li>✅ Build React frontend</li>
+<li>✅ Build .NET backend (self-contained)</li>
+<li>✅ Build Electron app and installer</li>
+<li>✅ Generate checksums</li>
+</ol>
+<p><strong>Build time</strong>: 15-30 minutes (first build)<br>
+<strong>Output</strong>: <code>Aura.Desktop/dist/*.exe</code></p>
+<h3 id="step-by-step-build">Step-by-Step Build</h3>
+<p>If you want to build components individually:</p>
+<h4 id="1-download-ffmpeg">1. Download FFmpeg</h4>
+<pre><code class="lang-powershell">cd Aura.Desktop
+.\scripts\download-ffmpeg-windows.ps1
+</code></pre>
+<p><strong>Output</strong>: <code>Aura.Desktop/resources/ffmpeg/win-x64/</code><br>
+<strong>Size</strong>: ~150 MB<br>
+<strong>One-time</strong>: Cached for future builds</p>
+<h4 id="2-build-frontend">2. Build Frontend</h4>
+<pre><code class="lang-powershell">cd Aura.Web
+npm ci  # Clean install
+npm run build
+</code></pre>
+<p><strong>Output</strong>: <code>Aura.Web/dist/</code><br>
+<strong>Time</strong>: 2-5 minutes</p>
+<h4 id="3-build-backend">3. Build Backend</h4>
+<pre><code class="lang-powershell">cd Aura.Desktop
+.\scripts\build-backend-windows.ps1
+</code></pre>
+<p><strong>Output</strong>: <code>Aura.Desktop/resources/backend/win-x64/</code><br>
+<strong>Size</strong>: ~60-80 MB (self-contained)<br>
+<strong>Time</strong>: 3-8 minutes</p>
+<h4 id="4-build-electron-installer">4. Build Electron Installer</h4>
+<pre><code class="lang-powershell">cd Aura.Desktop
+npm run build:win
+</code></pre>
+<p><strong>Output</strong>: <code>Aura.Desktop/dist/</code><br>
+<strong>Files</strong>:</p>
+<ul>
+<li><code>Aura-Video-Studio-Setup-1.0.0.exe</code> (NSIS installer)</li>
+<li><code>Aura-Video-Studio-1.0.0-x64.exe</code> (Portable)</li>
+<li><code>latest.yml</code> (Auto-update metadata)</li>
+</ul>
+<p><strong>Time</strong>: 10-15 minutes</p>
+<h2 id="build-scripts">Build Scripts</h2>
+<h3 id="master-build-script">Master Build Script</h3>
+<p><strong>File</strong>: <code>Aura.Desktop/scripts/build-windows.ps1</code></p>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-powershell"># Full build
+.\scripts\build-windows.ps1
+
+# Clean build (remove all artifacts first)
+.\scripts\build-windows.ps1 -Clean
+
+# Skip FFmpeg download (use existing)
+.\scripts\build-windows.ps1 -SkipFFmpeg
+
+# Build app but skip installer (faster for testing)
+.\scripts\build-windows.ps1 -SkipInstaller
+
+# Skip frontend rebuild (use existing)
+.\scripts\build-windows.ps1 -SkipFrontend
+
+# Combine options
+.\scripts\build-windows.ps1 -SkipFFmpeg -SkipFrontend
+</code></pre>
+<p><strong>What it does</strong>:</p>
+<ol>
+<li>Validates Node.js, npm, .NET SDK installed</li>
+<li>Downloads FFmpeg (if needed)</li>
+<li>Builds React frontend</li>
+<li>Builds .NET backend as self-contained</li>
+<li>Installs Electron dependencies</li>
+<li>Runs electron-builder to create installer</li>
+<li>Generates SHA256 checksums</li>
+<li>Displays build summary</li>
+</ol>
+<p><strong>Exit codes</strong>:</p>
+<ul>
+<li><code>0</code> = Success</li>
+<li><code>1</code> = Failure (check error messages)</li>
+</ul>
+<h3 id="individual-scripts">Individual Scripts</h3>
+<h4 id="download-ffmpeg">Download FFmpeg</h4>
+<pre><code class="lang-powershell">.\scripts\download-ffmpeg-windows.ps1 [-Force] [-Help]
+</code></pre>
+<ul>
+<li>Downloads latest FFmpeg GPL build</li>
+<li>Verifies integrity</li>
+<li>Extracts to resources folder</li>
+</ul>
+<h4 id="build-backend">Build Backend</h4>
+<pre><code class="lang-powershell">.\scripts\build-backend-windows.ps1 [-Clean] [-Help]
+</code></pre>
+<ul>
+<li>Builds ASP.NET Core backend</li>
+<li>Self-contained deployment (includes .NET runtime)</li>
+<li>Single file executable with compression</li>
+<li>Publishes to <code>resources/backend/win-x64/</code></li>
+</ul>
+<h3 id="build-configuration">Build Configuration</h3>
+<p><strong>File</strong>: <code>Aura.Desktop/package.json</code> → <code>build</code> section</p>
+<p>Key settings:</p>
+<ul>
+<li><strong>appId</strong>: <code>com.coffee285.aura-video-studio</code></li>
+<li><strong>productName</strong>: <code>Aura Video Studio</code></li>
+<li><strong>compression</strong>: <code>maximum</code> (slower build, smaller installer)</li>
+<li><strong>asar</strong>: <code>true</code> (package app files)</li>
+<li><strong>asarUnpack</strong>: Backend and FFmpeg (must be on disk)</li>
+</ul>
+<h2 id="github-actions-cicd">GitHub Actions CI/CD</h2>
+<h3 id="workflow-file">Workflow File</h3>
+<p><strong>File</strong>: <code>.github/workflows/build-windows-installer.yml</code></p>
+<h3 id="how-it-works">How It Works</h3>
+<ol>
+<li><p><strong>Triggered by</strong>:</p>
+<ul>
+<li>Push to <code>main</code> or <code>develop</code> branch</li>
+<li>Push tags matching <code>v*.*.*</code> (e.g., v1.0.0)</li>
+<li>Manual workflow dispatch</li>
+<li>Pull requests to <code>main</code> or <code>develop</code></li>
+</ul>
+</li>
+<li><p><strong>Build Steps</strong>:</p>
+<ul>
+<li>Checkout code</li>
+<li>Setup Node.js and .NET</li>
+<li>Cache FFmpeg binaries</li>
+<li>Build frontend, backend, installer</li>
+<li>Generate checksums</li>
+<li>Upload artifacts</li>
+</ul>
+</li>
+<li><p><strong>On Tag Push</strong>:</p>
+<ul>
+<li>Create GitHub release</li>
+<li>Upload installer as release asset</li>
+<li>Mark as draft for review</li>
+</ul>
+</li>
+</ol>
+<h3 id="running-workflow-manually">Running Workflow Manually</h3>
+<ol>
+<li>Go to GitHub repository</li>
+<li>Click &quot;Actions&quot; tab</li>
+<li>Select &quot;Build Windows Installer&quot;</li>
+<li>Click &quot;Run workflow&quot;</li>
+<li>Choose branch</li>
+<li>Click &quot;Run workflow&quot; button</li>
+</ol>
+<h3 id="artifacts">Artifacts</h3>
+<p><strong>Retention</strong>: 90 days</p>
+<p><strong>Files</strong>:</p>
+<ul>
+<li>Windows installer (NSIS)</li>
+<li>Portable executable</li>
+<li>Checksums.txt</li>
+</ul>
+<p><strong>Download</strong>:</p>
+<ol>
+<li>Go to Actions run</li>
+<li>Scroll to &quot;Artifacts&quot; section</li>
+<li>Click to download</li>
+</ol>
+<h3 id="secrets-configuration">Secrets Configuration</h3>
+<p>For code signing in CI/CD:</p>
+<ol>
+<li>Go to repository Settings</li>
+<li>Secrets and variables → Actions</li>
+<li>Add repository secrets:
+<ul>
+<li><code>WIN_CSC_LINK</code>: Base64-encoded PFX certificate</li>
+<li><code>WIN_CSC_KEY_PASSWORD</code>: Certificate password</li>
+</ul>
+</li>
+</ol>
+<p><strong>To encode certificate</strong>:</p>
+<pre><code class="lang-powershell">$bytes = [System.IO.File]::ReadAllBytes(&quot;path\to\cert.pfx&quot;)
+$base64 = [System.Convert]::ToBase64String($bytes)
+$base64 | Set-Clipboard  # Copy to clipboard
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="test-on-development-machine">Test on Development Machine</h3>
+<pre><code class="lang-powershell"># Build installer
+.\scripts\build-windows.ps1
+
+# Find installer
+cd dist
+dir  # List files
+
+# Install on development machine
+.\Aura-Video-Studio-Setup-1.0.0.exe
+
+# Or test portable
+.\Aura-Video-Studio-1.0.0-x64.exe
+</code></pre>
+<p><strong>Verify</strong>:</p>
+<ul>
+<li>✅ Installer runs without errors</li>
+<li>✅ App appears in Start Menu</li>
+<li>✅ App launches successfully</li>
+<li>✅ Backend starts (check Task Manager)</li>
+<li>✅ Can create and render a test video</li>
+<li>✅ Uninstaller works</li>
+</ul>
+<h3 id="test-on-clean-windows-vm">Test on Clean Windows VM</h3>
+<p><strong>Why</strong>: Ensures installer works on fresh system without dev dependencies</p>
+<p><strong>Setup</strong>:</p>
+<ol>
+<li>Create Windows 10/11 VM (VirtualBox, VMware, Hyper-V)</li>
+<li>Install Windows updates</li>
+<li>DO NOT install Node.js, .NET, or any dev tools</li>
+<li>Copy installer to VM</li>
+</ol>
+<p><strong>Test</strong>:</p>
+<ol>
+<li>Run installer</li>
+<li>Follow installation wizard</li>
+<li>Launch app from Start Menu</li>
+<li>Create test project</li>
+<li>Render test video</li>
+<li>Check for errors in Event Viewer</li>
+</ol>
+<p><strong>Test Matrix</strong>:</p>
+<ul>
+<li>[ ] Windows 10 21H2</li>
+<li>[ ] Windows 10 22H2</li>
+<li>[ ] Windows 11 22H2</li>
+<li>[ ] Windows 11 23H2</li>
+<li>[ ] With Windows Defender enabled</li>
+<li>[ ] With third-party antivirus (if available)</li>
+<li>[ ] On low-spec VM (4GB RAM)</li>
+<li>[ ] On drive with limited space (&lt; 5GB free)</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="dotnet-not-found">&quot;dotnet not found&quot;</h3>
+<p><strong>Problem</strong>: Build script can't find .NET SDK</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-powershell"># Verify installation
+dotnet --version
+
+# If not found, add to PATH
+$env:PATH += &quot;;C:\Program Files\dotnet&quot;
+
+# Or reinstall .NET SDK
+</code></pre>
+<h3 id="node-not-found">&quot;node not found&quot;</h3>
+<p><strong>Problem</strong>: Build script can't find Node.js</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-powershell"># Verify installation
+node --version
+
+# Add to PATH
+$env:PATH += &quot;;C:\Program Files\nodejs&quot;
+
+# Or reinstall Node.js
+</code></pre>
+<h3 id="ffmpeg-download-fails">FFmpeg Download Fails</h3>
+<p><strong>Problem</strong>: Cannot download FFmpeg from GitHub</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-powershell"># Manual download
+# 1. Go to: https://github.com/BtbN/FFmpeg-Builds/releases
+# 2. Download: ffmpeg-master-latest-win64-gpl.zip
+# 3. Extract to: Aura.Desktop/resources/ffmpeg/win-x64/bin/
+# 4. Verify files: ffmpeg.exe, ffprobe.exe
+
+# Then run build skipping FFmpeg
+.\scripts\build-windows.ps1 -SkipFFmpeg
+</code></pre>
+<h3 id="backend-build-fails">Backend Build Fails</h3>
+<p><strong>Problem</strong>: .NET publish command fails</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-powershell"># Clean and rebuild
+cd Aura.Api
+dotnet clean
+dotnet restore
+dotnet build -c Release
+
+# If still fails, check:
+# 1. .NET SDK version (must be 8.0+)
+# 2. Disk space (need at least 2GB free)
+# 3. Antivirus (may block compilation)
+</code></pre>
+<h3 id="electron-builder-fails">Electron Builder Fails</h3>
+<p><strong>Problem</strong>: <code>npm run build:win</code> fails</p>
+<p><strong>Solutions</strong>:</p>
+<p><strong>Out of Memory</strong>:</p>
+<pre><code class="lang-powershell"># Increase Node.js memory
+$env:NODE_OPTIONS=&quot;--max-old-space-size=4096&quot;
+npm run build:win
+</code></pre>
+<p><strong>Missing Dependencies</strong>:</p>
+<pre><code class="lang-powershell"># Clean install
+rm -r node_modules
+rm package-lock.json
+npm install
+</code></pre>
+<p><strong>Icon Not Found</strong>:</p>
+<pre><code># Create placeholder icons (temporary)
+# See: Aura.Desktop/assets/icons/ICONS_GUIDE.md
+</code></pre>
+<h3 id="build-succeeds-but-installer-wont-run">Build Succeeds but Installer Won't Run</h3>
+<p><strong>Problem</strong>: Installer created but won't execute</p>
+<p><strong>Checks</strong>:</p>
+<ol>
+<li><strong>File size</strong>: Should be 300-400 MB (if much smaller, build failed)</li>
+<li><strong>SHA256</strong>: Verify checksum matches</li>
+<li><strong>Antivirus</strong>: May be blocking installer</li>
+<li><strong>Corruption</strong>: Re-download or rebuild</li>
+</ol>
+<p><strong>Test</strong>:</p>
+<pre><code class="lang-powershell"># Verify it's a valid executable
+Get-FileHash .\Aura-Video-Studio-Setup-1.0.0.exe
+# Should return hash, not error
+</code></pre>
+<h3 id="application-failed-to-start">&quot;Application failed to start&quot;</h3>
+<p><strong>Problem</strong>: Installed app won't launch</p>
+<p><strong>Checks</strong>:</p>
+<ol>
+<li><strong>Backend missing</strong>: Check <code>Program Files\Aura Video Studio\resources\backend\</code></li>
+<li><strong>FFmpeg missing</strong>: Check <code>Program Files\Aura Video Studio\resources\ffmpeg\</code></li>
+<li><strong>Permissions</strong>: Try running as administrator</li>
+<li><strong>Logs</strong>: Check <code>%APPDATA%\AuraVideoStudio\logs\</code></li>
+</ol>
+<h3 id="slow-build-times">Slow Build Times</h3>
+<p><strong>Problem</strong>: Build takes &gt; 30 minutes</p>
+<p><strong>Optimizations</strong>:</p>
+<pre><code class="lang-powershell"># Use incremental builds
+.\scripts\build-windows.ps1 -SkipFFmpeg -SkipFrontend
+
+# Disable antivirus real-time scanning for build directory
+# (temporarily, while building)
+
+# Use SSD for build directory
+# Build on faster machine
+
+# Reduce compression (faster but larger installer)
+# Edit package.json: &quot;compression&quot;: &quot;normal&quot;
+</code></pre>
+<h2 id="build-optimization-tips">Build Optimization Tips</h2>
+<h3 id="faster-rebuilds">Faster Rebuilds</h3>
+<pre><code class="lang-powershell"># Only rebuild changed components
+.\scripts\build-windows.ps1 -SkipFFmpeg  # FFmpeg rarely changes
+.\scripts\build-windows.ps1 -SkipFrontend  # If only backend changed
+.\scripts\build-windows.ps1 -SkipBackend  # If only frontend changed
+</code></pre>
+<h3 id="parallel-builds">Parallel Builds</h3>
+<p>If you have a powerful machine:</p>
+<pre><code class="lang-powershell"># Build frontend and backend simultaneously
+# Terminal 1:
+cd Aura.Web
+npm run build
+
+# Terminal 2:
+cd Aura.Desktop
+.\scripts\build-backend-windows.ps1
+
+# Terminal 3:
+cd Aura.Desktop
+.\scripts\download-ffmpeg-windows.ps1
+
+# Then build installer:
+cd Aura.Desktop
+npm run build:win
+</code></pre>
+<h3 id="caching">Caching</h3>
+<ul>
+<li><strong>FFmpeg</strong>: Downloaded once, cached locally</li>
+<li><strong>Node modules</strong>: Use <code>npm ci</code> instead of <code>npm install</code></li>
+<li><strong>NuGet packages</strong>: Cached in <code>~/.nuget/packages</code></li>
+<li><strong>Electron Builder</strong>: Caches in <code>~/AppData/Local/electron-builder</code></li>
+</ul>
+<h2 id="advanced-topics">Advanced Topics</h2>
+<h3 id="custom-build-arguments">Custom Build Arguments</h3>
+<pre><code class="lang-powershell"># Pass custom version
+$env:AURA_VERSION=&quot;1.2.3&quot;
+npm run build:win
+
+# Custom output directory
+# Edit package.json: &quot;directories&quot;: { &quot;output&quot;: &quot;releases&quot; }
+
+# Build for specific architecture only
+npm run build:win -- --x64
+# or
+npm run build:win -- --ia32
+</code></pre>
+<h3 id="build-configuration-1">Build Configuration</h3>
+<p>Edit <code>Aura.Desktop/package.json</code> → <code>build</code>:</p>
+<pre><code class="lang-json">{
+  &quot;build&quot;: {
+    &quot;compression&quot;: &quot;maximum&quot;,  // or &quot;normal&quot; for faster builds
+    &quot;asar&quot;: true,               // Package app files
+    &quot;win&quot;: {
+      &quot;target&quot;: [&quot;nsis&quot;, &quot;portable&quot;]  // Add &quot;zip&quot; for archive
+    }
+  }
+}
+</code></pre>
+<h3 id="debug-mode">Debug Mode</h3>
+<pre><code class="lang-powershell"># Build with debug symbols
+cd Aura.Desktop
+$env:DEBUG=&quot;electron-builder&quot;
+npm run build:win
+</code></pre>
+<h2 id="cicd-best-practices">CI/CD Best Practices</h2>
+<ol>
+<li><strong>Branch Protection</strong>: Require CI to pass before merge</li>
+<li><strong>Semantic Versioning</strong>: Use tags like <code>v1.0.0</code>, <code>v1.0.1</code></li>
+<li><strong>Draft Releases</strong>: Review before publishing</li>
+<li><strong>Changelog</strong>: Auto-generate from commits</li>
+<li><strong>Testing</strong>: Automated tests before build</li>
+<li><strong>Notifications</strong>: Slack/Discord webhooks for build status</li>
+</ol>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><strong>Electron Builder Docs</strong>: <a href="https://www.electron.build/">https://www.electron.build/</a></li>
+<li><strong>NSIS Installer</strong>: <a href="https://nsis.sourceforge.io/">https://nsis.sourceforge.io/</a></li>
+<li><strong>.NET Publishing</strong>: <a href="https://learn.microsoft.com/en-us/dotnet/core/deploying/">https://learn.microsoft.com/en-us/dotnet/core/deploying/</a></li>
+<li><strong>FFmpeg</strong>: <a href="https://ffmpeg.org/">https://ffmpeg.org/</a></li>
+</ul>
+<h2 id="getting-help">Getting Help</h2>
+<p><strong>Build Issues</strong>:</p>
+<ol>
+<li>Check this troubleshooting section</li>
+<li>Review build logs in <code>Aura.Desktop/dist/*.log</code></li>
+<li>Search GitHub issues</li>
+<li>Ask in GitHub Discussions</li>
+</ol>
+<p><strong>Report Bugs</strong>:
+<a href="https://github.com/coffee285/aura-video-studio/issues">https://github.com/coffee285/aura-video-studio/issues</a></p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-10<br>
+<strong>Version</strong>: 1.0.0<br>
+<strong>For</strong>: Developers building Windows installers</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/BUILDING_WINDOWS_INSTALLER.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

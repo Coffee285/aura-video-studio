@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Asset Path Resolution - Implementation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Asset Path Resolution - Implementation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/ASSET_PATH_RESOLUTION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="asset-path-resolution---implementation-guide">Asset Path Resolution - Implementation Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the comprehensive asset path resolution system implemented in Aura Video Studio, including icon loading, fallback mechanisms, and build-time verification.</p>
+<h2 id="problem-statement">Problem Statement</h2>
+<p>The original implementation had several issues:</p>
+<ol>
+<li>Icon paths were hardcoded relative to <code>__dirname</code> which breaks in ASAR-packaged apps</li>
+<li>No fallback mechanism when icon files are missing</li>
+<li>No file existence checks before calling <code>nativeImage.createFromPath()</code></li>
+<li>No build-time verification that assets are properly copied</li>
+<li>Different behavior between development and production builds</li>
+</ol>
+<h2 id="solution-architecture">Solution Architecture</h2>
+<h3 id="1-icon-fallbacks-module-auradesktopelectronicon-fallbacksjs">1. Icon Fallbacks Module (<code>Aura.Desktop/electron/icon-fallbacks.js</code>)</h3>
+<p><strong>Purpose</strong>: Provides base64-encoded fallback icons that are embedded in the code.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Three sizes: 16x16, 32x32, and 256x256 pixels</li>
+<li>PNG format with purple gradient (Aura brand colors)</li>
+<li><code>getFallbackIcon()</code> function to create Electron NativeImage from base64</li>
+<li>Total embedded size: ~2KB (minimal overhead)</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-javascript">const { getFallbackIcon } = require('./icon-fallbacks');
+const { nativeImage } = require('electron');
+
+// Get fallback icon
+const icon = getFallbackIcon(nativeImage, '32'); // Returns NativeImage
+</code></pre>
+<h3 id="2-window-manager-icon-resolution">2. Window Manager Icon Resolution</h3>
+<p><strong>File</strong>: <code>Aura.Desktop/electron/window-manager.js</code></p>
+<p><strong>Enhanced <code>_getAppIcon()</code> Method</strong>:</p>
+<ol>
+<li>Detects environment (packaged vs development)</li>
+<li>Tries multiple paths in order of preference:
+<ul>
+<li><strong>Production</strong>: <code>process.resourcesPath/assets/icons/</code></li>
+<li><strong>Production</strong>: ASAR unpacked paths</li>
+<li><strong>Development</strong>: Relative to electron directory</li>
+<li><strong>Development</strong>: Relative to cwd</li>
+</ul>
+</li>
+<li>For each path:
+<ul>
+<li>Checks file existence with <code>fs.existsSync()</code></li>
+<li>Attempts to load with <code>nativeImage.createFromPath()</code></li>
+<li>Verifies icon is not empty with <code>icon.isEmpty()</code></li>
+<li>Logs detailed debug information</li>
+</ul>
+</li>
+<li>Falls back to base64 icon if all paths fail</li>
+</ol>
+<p><strong>Logging Output</strong>:</p>
+<pre><code>=== Icon Resolution Debug Info ===
+Platform: win32
+Is packaged: true
+__dirname: C:\...\resources\app.asar\electron
+app.getAppPath(): C:\...\resources\app.asar
+process.resourcesPath: C:\...\resources
+Icon name: icon.ico
+Trying icon path: C:\...\resources\assets\icons\icon.ico
+✓ Found icon at: C:\...\resources\assets\icons\icon.ico
+✓ Icon loaded successfully
+</code></pre>
+<h3 id="3-tray-manager-icon-resolution">3. Tray Manager Icon Resolution</h3>
+<p><strong>File</strong>: <code>Aura.Desktop/electron/tray-manager.js</code></p>
+<p><strong>Enhanced Features</strong>:</p>
+<ol>
+<li>Similar multi-path resolution as window manager</li>
+<li>Tries tray-specific icon (<code>tray.png</code>) first</li>
+<li>Falls back to platform icon (<code>icon.ico</code>/<code>icon.icns</code>/<code>icon.png</code>)</li>
+<li>Uses base64 fallback if file loading fails</li>
+<li>Comprehensive error handling - never crashes, always provides working icon</li>
+</ol>
+<p><strong>Behavior</strong>:</p>
+<ul>
+<li>If icon file exists: Loads from file</li>
+<li>If icon file missing: Uses base64 fallback</li>
+<li>If base64 fails: Gracefully skips tray creation (optional feature)</li>
+<li>Logs all attempts and outcomes</li>
+</ul>
+<h3 id="4-build-time-asset-verification">4. Build-Time Asset Verification</h3>
+<h4 id="vite-plugin-aurawebviteconfigts">Vite Plugin (<code>Aura.Web/vite.config.ts</code>)</h4>
+<p><strong>Asset Verification Plugin</strong>:</p>
+<ul>
+<li>Runs after build completes</li>
+<li>Checks critical assets exist in dist:
+<ul>
+<li><code>favicon.ico</code>, <code>favicon-16x16.png</code>, <code>favicon-32x32.png</code></li>
+<li><code>logo256.png</code>, <code>logo512.png</code></li>
+<li><code>vite.svg</code></li>
+<li><code>assets/</code> directory</li>
+<li><code>workspaces/</code> directory</li>
+</ul>
+</li>
+<li>Reports file sizes and counts</li>
+<li>Fails build if critical assets missing</li>
+</ul>
+<p><strong>Output Example</strong>:</p>
+<pre><code>📁 Asset Verification Report:
+
+✓ favicon.ico (99.89 KB)
+✓ favicon-16x16.png (0.64 KB)
+✓ favicon-32x32.png (1.79 KB)
+✓ logo256.png (68.69 KB)
+✓ logo512.png (273.54 KB)
+✓ vite.svg (1.46 KB)
+✓ assets/ (135 items)
+✓ workspaces/ (1 items)
+
+✓ All critical assets verified
+</code></pre>
+<h4 id="post-build-script-scriptsbuildverify-buildjs">Post-Build Script (<code>scripts/build/verify-build.js</code>)</h4>
+<p><strong>Enhanced Verification</strong>:</p>
+<ul>
+<li>Verifies <code>index.html</code> exists</li>
+<li>Checks <code>assets/</code> directory</li>
+<li>Verifies all critical static assets</li>
+<li>Checks workspace templates directory</li>
+<li>Ensures no source files in dist</li>
+<li>Ensures no node_modules in dist</li>
+<li>Reports total file count and size</li>
+</ul>
+<h3 id="5-path-resolution-strategy">5. Path Resolution Strategy</h3>
+<h4 id="development-mode-isdev--true-appispackaged--false">Development Mode (<code>isDev = true</code>, <code>app.isPackaged = false</code>)</h4>
+<p><strong>Paths Tried</strong> (in order):</p>
+<ol>
+<li><code>__dirname/../assets/icons/icon.ico</code></li>
+<li><code>process.cwd()/Aura.Desktop/assets/icons/icon.ico</code></li>
+<li><code>process.cwd()/assets/icons/icon.ico</code></li>
+</ol>
+<p><strong>Why</strong>: In development, files are in original directory structure</p>
+<h4 id="production-mode-isdev--false-appispackaged--true">Production Mode (<code>isDev = false</code>, <code>app.isPackaged = true</code>)</h4>
+<p><strong>Paths Tried</strong> (in order):</p>
+<ol>
+<li><code>process.resourcesPath/assets/icons/icon.ico</code></li>
+<li><code>process.resourcesPath/app.asar.unpacked/assets/icons/icon.ico</code></li>
+<li><code>app.getAppPath()/assets/icons/icon.ico</code></li>
+</ol>
+<p><strong>Why</strong>: In production, files may be in ASAR or unpacked in resources directory</p>
+<h3 id="6-asar-packaging-considerations">6. ASAR Packaging Considerations</h3>
+<p><strong>Electron Builder Configuration</strong> (<code>Aura.Desktop/package.json</code>):</p>
+<pre><code class="lang-json">{
+  &quot;build&quot;: {
+    &quot;asar&quot;: true,
+    &quot;asarUnpack&quot;: [
+      &quot;resources/backend/**/*&quot;,
+      &quot;resources/ffmpeg/**/*&quot;
+    ],
+    &quot;files&quot;: [
+      &quot;electron/**/*&quot;,
+      &quot;assets/**/*&quot;,
+      &quot;backend/**/*&quot;
+    ]
+  }
+}
+</code></pre>
+<p><strong>Icon Files</strong>:</p>
+<ul>
+<li>Icons in <code>assets/icons/</code> are packaged in ASAR</li>
+<li>Icons can be loaded from ASAR (Electron supports this)</li>
+<li>Fallback base64 icons always available (embedded in code)</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<h3 id="automated-tests">Automated Tests</h3>
+<p><strong>Test 1: Icon Fallbacks Module</strong> (<code>scripts/test-icon-fallbacks.js</code>)</p>
+<ul>
+<li>Verifies module exports correct functions</li>
+<li>Validates base64 data is valid PNG</li>
+<li>Checks managers import fallbacks</li>
+<li>Verifies comprehensive logging present</li>
+</ul>
+<p><strong>Test 2: Missing Files Scenario</strong> (<code>scripts/test-icon-fallbacks-missing.js</code>)</p>
+<ul>
+<li>Tests fallback icon creation</li>
+<li>Simulates missing icon files</li>
+<li>Verifies no hardcoded success</li>
+<li>Checks error handling</li>
+</ul>
+<p><strong>Run Tests</strong>:</p>
+<pre><code class="lang-bash">node scripts/test-icon-fallbacks.js
+node scripts/test-icon-fallbacks-missing.js
+</code></pre>
+<h3 id="manual-testing">Manual Testing</h3>
+<h4 id="test-1-normal-operation">Test 1: Normal Operation</h4>
+<pre><code class="lang-bash"># Development
+cd Aura.Desktop
+npm run dev
+
+# Production build
+npm run build
+./dist/Aura\ Video\ Studio.exe
+</code></pre>
+<p><strong>Expected</strong>: Icons load from files, debug logs show successful paths</p>
+<h4 id="test-2-missing-icons-fallback-verification">Test 2: Missing Icons (Fallback Verification)</h4>
+<pre><code class="lang-bash"># Temporarily move icons folder
+cd Aura.Desktop
+mv assets/icons assets/icons.backup
+
+# Run app
+npm run dev
+
+# Restore icons
+mv assets/icons.backup assets/icons
+</code></pre>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Logs show &quot;Icon not found&quot; for each path</li>
+<li>Logs show &quot;Using fallback icon&quot;</li>
+<li>Window and tray display purple gradient icons</li>
+<li>No crashes or errors</li>
+</ul>
+<h4 id="test-3-build-verification">Test 3: Build Verification</h4>
+<pre><code class="lang-bash">cd Aura.Web
+npm run build
+</code></pre>
+<p><strong>Expected</strong>:</p>
+<ul>
+<li>Asset verification plugin reports all assets present</li>
+<li>Post-build script confirms critical assets exist</li>
+<li>Build succeeds with green checkmarks</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="issue-icons-not-loading-in-development">Issue: Icons not loading in development</h3>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check console logs for path resolution attempts</li>
+<li>Verify <code>Aura.Desktop/assets/icons/icon.ico</code> exists</li>
+<li>Check file permissions</li>
+<li>Fallback icon should still appear</li>
+</ol>
+<h3 id="issue-icons-not-loading-in-production">Issue: Icons not loading in production</h3>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check <code>process.resourcesPath</code> in logs</li>
+<li>Verify assets folder in installation directory</li>
+<li>Check electron-builder config includes <code>assets/**/*</code></li>
+<li>Fallback icon should still appear</li>
+</ol>
+<h3 id="issue-tray-icon-missing">Issue: Tray icon missing</h3>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Tray is optional - app continues without it</li>
+<li>Check logs for &quot;Tray Icon Resolution&quot; section</li>
+<li>Verify <code>assets/icons/icon.ico</code> exists</li>
+<li>Fallback icon should be used if file missing</li>
+</ol>
+<h3 id="issue-build-verification-fails">Issue: Build verification fails</h3>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check Vite config includes asset verification plugin</li>
+<li>Verify <code>public/</code> folder contains required assets</li>
+<li>Check Vite copies public folder to dist</li>
+<li>Run <code>npm run build:clean</code> to clear cache</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="adding-new-icons">Adding New Icons</h3>
+<ol>
+<li><strong>Place in correct directory</strong>: <code>Aura.Desktop/assets/icons/</code></li>
+<li><strong>Use platform naming</strong>:
+<ul>
+<li>Windows: <code>icon.ico</code> (multi-resolution ICO)</li>
+<li>macOS: <code>icon.icns</code> (Apple Icon Image)</li>
+<li>Linux: <code>icon.png</code> (512x512 or larger)</li>
+</ul>
+</li>
+<li><strong>Tray icon</strong>: <code>tray.png</code> (16x16 or 32x32)</li>
+<li><strong>Update fallbacks</strong>: If changing default icons, update base64 in <code>icon-fallbacks.js</code></li>
+</ol>
+<h3 id="adding-new-static-assets">Adding New Static Assets</h3>
+<ol>
+<li><strong>Place in</strong>: <code>Aura.Web/public/</code></li>
+<li><strong>Update verification</strong>: Add to <code>assetVerificationPlugin()</code> in <code>vite.config.ts</code></li>
+<li><strong>Update post-build</strong>: Add to critical assets check in <code>verify-build.js</code></li>
+<li><strong>Test build</strong>: <code>npm run build</code> should verify asset exists</li>
+</ol>
+<h3 id="debugging-icon-loading">Debugging Icon Loading</h3>
+<p><strong>Enable verbose logging</strong>:</p>
+<pre><code class="lang-javascript">// In window-manager.js or tray-manager.js
+console.log('=== Icon Resolution Debug Info ===');
+// ... existing logs
+</code></pre>
+<p><strong>Check logs</strong>:</p>
+<ul>
+<li>Development: Electron DevTools console</li>
+<li>Production: Main process logs (stdout)</li>
+</ul>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="path-traversal-prevention">Path Traversal Prevention</h3>
+<ul>
+<li>All paths use <code>path.join()</code> (safe)</li>
+<li>No user input in path construction</li>
+<li>File existence checked before loading</li>
+</ul>
+<h3 id="asar-integrity">ASAR Integrity</h3>
+<ul>
+<li>Icons in ASAR are read-only</li>
+<li>Fallback icons are embedded (cannot be tampered)</li>
+<li>No external icon downloads</li>
+</ul>
+<h3 id="resource-usage">Resource Usage</h3>
+<ul>
+<li>Fallback icons are small (~2KB total)</li>
+<li>Icons only loaded once at startup</li>
+<li>No memory leaks (proper resource cleanup)</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<h3 id="potential-improvements">Potential Improvements</h3>
+<ol>
+<li><strong>Dynamic icon themes</strong>: Support light/dark mode icons</li>
+<li><strong>Custom icons</strong>: Allow users to set custom app icon</li>
+<li><strong>Icon caching</strong>: Cache loaded icons for faster restarts</li>
+<li><strong>SVG support</strong>: Use SVG icons with better scaling</li>
+<li><strong>Icon sets</strong>: Multiple icon packs for different brands</li>
+</ol>
+<h3 id="not-recommended">Not Recommended</h3>
+<ul>
+<li>❌ Downloading icons from internet (security risk)</li>
+<li>❌ Storing icons in temp folders (cleanup issues)</li>
+<li>❌ Using system icons only (branding lost)</li>
+</ul>
+<h2 id="related-files">Related Files</h2>
+<ul>
+<li><code>Aura.Desktop/electron/icon-fallbacks.js</code> - Fallback icon definitions</li>
+<li><code>Aura.Desktop/electron/window-manager.js</code> - Window icon loading</li>
+<li><code>Aura.Desktop/electron/tray-manager.js</code> - Tray icon loading</li>
+<li><code>Aura.Desktop/assets/icons/</code> - Icon files directory</li>
+<li><code>Aura.Web/vite.config.ts</code> - Build-time asset verification</li>
+<li><code>scripts/build/verify-build.js</code> - Post-build asset checks</li>
+<li><code>scripts/test-icon-fallbacks.js</code> - Automated tests</li>
+<li><code>scripts/test-icon-fallbacks-missing.js</code> - Fallback tests</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>The asset path resolution system ensures icons always load correctly in both development and production, with comprehensive fallback mechanisms and build-time verification. The system is robust, well-tested, and provides detailed logging for debugging.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/ASSET_PATH_RESOLUTION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

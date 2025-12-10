@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Error Taxonomy | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Error Taxonomy | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/errors.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="error-taxonomy">Error Taxonomy</h1>
+
+<p>This document describes the standardized error codes used throughout Aura Video Studio, along with their meanings, typical causes, and recommended remediation steps.</p>
+<h2 id="error-code-format">Error Code Format</h2>
+<p>Error codes follow the pattern: <code>ErrorType[:Details]</code></p>
+<p>Examples:</p>
+<ul>
+<li><code>MissingApiKey:STABLE_KEY</code></li>
+<li><code>FFmpegFailedExitCode:1</code></li>
+<li><code>StepTimeout:narration</code></li>
+</ul>
+<hr>
+<h2 id="error-codes">Error Codes</h2>
+<h3 id="missingapikeykey">MissingApiKey:{KEY}</h3>
+<p><strong>Message:</strong> Required API key '{KEY}' is not configured.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>API key not set in settings</li>
+<li>Environment variable not configured</li>
+<li>Key was deleted or revoked</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Open Settings → Providers</li>
+<li>Locate the provider requiring the key</li>
+<li>Click &quot;Add API Key&quot; and enter your key</li>
+<li>Save and retry</li>
+</ol>
+<p><strong>Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;code&quot;: &quot;MissingApiKey:STABLE_KEY&quot;,
+  &quot;message&quot;: &quot;Required API key 'STABLE_KEY' is not configured.&quot;,
+  &quot;remediation&quot;: &quot;Add STABLE_KEY in Settings → Providers&quot;
+}
+</code></pre>
+<hr>
+<h3 id="provider-validation-errors">Provider Validation Errors</h3>
+<p>These error codes are returned by the provider validation system (<code>/api/providers/{name}/validate-detailed</code> endpoint) when checking provider connectivity and configuration.</p>
+<h4 id="providernotconfigured">ProviderNotConfigured</h4>
+<p><strong>Message:</strong> Provider is not configured. API key or required configuration is missing.</p>
+<p><strong>HTTP Status:</strong> 200 (returned in validation response, not as HTTP error)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>API key not set in application settings</li>
+<li>Environment variable for provider not configured</li>
+<li>Configuration was deleted or cleared</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Go to Settings → Providers in the UI</li>
+<li>Find the provider showing &quot;Not Configured&quot;</li>
+<li>Click &quot;Configure&quot; or &quot;Add API Key&quot;</li>
+<li>Enter your API key from the provider's dashboard</li>
+<li>Save and click &quot;Retry Validation&quot;</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: false,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderNotConfigured&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI API key is not configured&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Go to Settings → Providers&quot;,
+    &quot;Add your OpenAI API key&quot;,
+    &quot;Get an API key from https://platform.openai.com/api-keys&quot;
+  ],
+  &quot;category&quot;: &quot;LLM&quot;,
+  &quot;tier&quot;: &quot;Premium&quot;
+}
+</code></pre>
+<hr>
+<h4 id="providerkeyinvalid">ProviderKeyInvalid</h4>
+<p><strong>Message:</strong> Provider API key is invalid or expired.</p>
+<p><strong>HTTP Status:</strong> 200 (validation failure)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>API key contains typos</li>
+<li>API key has been revoked by provider</li>
+<li>API key has expired</li>
+<li>Wrong key format (e.g., missing 'sk-' prefix for OpenAI)</li>
+<li>Account lacks required permissions</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check API key format (OpenAI: <code>sk-...</code>, Anthropic: <code>sk-ant-...</code>)</li>
+<li>Copy key directly from provider dashboard to avoid typos</li>
+<li>Regenerate API key if it may have been compromised</li>
+<li>Verify account has required permissions/tier</li>
+<li>Test key manually with curl (see examples in <a href="../troubleshooting/provider-errors.html">provider-errors.md</a>)</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderKeyInvalid&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI API key is invalid or expired&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Check your API key for typos&quot;,
+    &quot;Verify the key is still valid at https://platform.openai.com/api-keys&quot;,
+    &quot;Generate a new API key if needed&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="providernetworkerror">ProviderNetworkError</h4>
+<p><strong>Message:</strong> Cannot connect to provider. Network error, DNS failure, or connection timeout.</p>
+<p><strong>HTTP Status:</strong> 200 (validation failure)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>No internet connection</li>
+<li>Firewall blocking outbound HTTPS connections</li>
+<li>DNS resolution failure</li>
+<li>Provider endpoint unreachable</li>
+<li>Connection timeout (&gt;5 seconds)</li>
+<li>Proxy configuration issues</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check internet connectivity: <code>ping 8.8.8.8</code></li>
+<li>Test DNS: <code>nslookup api.openai.com</code></li>
+<li>Check firewall allows outbound HTTPS (port 443)</li>
+<li>Test provider endpoint manually: <code>curl -v https://api.openai.com/v1/models</code></li>
+<li>Try different network (mobile hotspot, different WiFi)</li>
+<li>Check proxy settings if behind corporate firewall</li>
+<li>Verify DNS servers are working (try 8.8.8.8, 1.1.1.1)</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderNetworkError&quot;,
+  &quot;errorMessage&quot;: &quot;Connection to OpenAI timed out&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Check your internet connection&quot;,
+    &quot;Verify firewall settings&quot;,
+    &quot;Try again later&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="providerratelimited">ProviderRateLimited</h4>
+<p><strong>Message:</strong> Provider rate limit exceeded. Too many requests in given time period.</p>
+<p><strong>HTTP Status:</strong> 200 (provider is reachable but limiting requests)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Exceeded requests per minute/hour limit</li>
+<li>Exceeded monthly token quota</li>
+<li>Account tier has low rate limits</li>
+<li>Multiple Aura instances using same API key</li>
+<li>Validation check triggered while generation in progress</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Wait before retrying (typically 1 minute to 1 hour)</li>
+<li>Check usage dashboard:
+<ul>
+<li>OpenAI: <a href="https://platform.openai.com/usage">https://platform.openai.com/usage</a></li>
+<li>Anthropic: <a href="https://console.anthropic.com/">https://console.anthropic.com/</a></li>
+<li>ElevenLabs: <a href="https://elevenlabs.io/app/usage">https://elevenlabs.io/app/usage</a></li>
+</ul>
+</li>
+<li>Upgrade account tier for higher limits</li>
+<li>Configure provider fallback chains</li>
+<li>Avoid rapid validation retries</li>
+</ol>
+<p><strong>Rate Limit Examples:</strong></p>
+<ul>
+<li>OpenAI Free: 3 requests/min</li>
+<li>OpenAI Tier 1: 500 requests/day</li>
+<li>ElevenLabs Free: 10,000 characters/month</li>
+</ul>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: true,
+  &quot;errorCode&quot;: &quot;ProviderRateLimited&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI rate limit exceeded&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Wait a few minutes before trying again&quot;,
+    &quot;Check your OpenAI usage dashboard&quot;,
+    &quot;Consider upgrading your OpenAI plan for higher limits&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="providerservererror">ProviderServerError</h4>
+<p><strong>Message:</strong> Provider service is experiencing server-side issues (HTTP 5xx).</p>
+<p><strong>HTTP Status:</strong> 200 (validation failure)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Provider experiencing outage or maintenance</li>
+<li>Temporary server overload</li>
+<li>Internal provider bug</li>
+<li>Regional service degradation</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check provider status pages:
+<ul>
+<li>OpenAI: <a href="https://status.openai.com/">https://status.openai.com/</a></li>
+<li>Anthropic: <a href="https://status.anthropic.com/">https://status.anthropic.com/</a></li>
+</ul>
+</li>
+<li>Wait 5-15 minutes and retry</li>
+<li>Use fallback provider temporarily</li>
+<li>Check community forums for outage reports</li>
+<li>Contact provider support if issue persists &gt;1 hour</li>
+</ol>
+<p><strong>Response Example:</strong></p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;OpenAI&quot;,
+  &quot;configured&quot;: true,
+  &quot;reachable&quot;: false,
+  &quot;errorCode&quot;: &quot;ProviderServerError&quot;,
+  &quot;errorMessage&quot;: &quot;OpenAI service is experiencing issues&quot;,
+  &quot;howToFix&quot;: [
+    &quot;Check OpenAI status at https://status.openai.com&quot;,
+    &quot;Try again in a few minutes&quot;,
+    &quot;Use a fallback provider temporarily&quot;
+  ]
+}
+</code></pre>
+<hr>
+<h4 id="validationerror">ValidationError</h4>
+<p><strong>Message:</strong> An unexpected error occurred during provider validation.</p>
+<p><strong>HTTP Status:</strong> 200</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Unexpected exception in validation logic</li>
+<li>Malformed provider response</li>
+<li>Internal service error</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check application logs for details</li>
+<li>Try again later</li>
+<li>If issue persists, report bug with correlation ID</li>
+</ol>
+<hr>
+<h3 id="requiresnvidiagpu">RequiresNvidiaGPU</h3>
+<p><strong>Message:</strong> This operation requires an NVIDIA GPU with CUDA support.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>No NVIDIA GPU detected</li>
+<li>CUDA drivers not installed</li>
+<li>GPU not compatible with required CUDA version</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Install NVIDIA GPU drivers</li>
+<li>OR: Use CPU-based encoding (Settings → Rendering → Codec → H.264 Software)</li>
+<li>OR: Use a different provider that doesn't require GPU</li>
+</ol>
+<hr>
+<h3 id="unsupportedosos">UnsupportedOS:{OS}</h3>
+<p><strong>Message:</strong> This feature is not supported on {OS}.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Feature only available on Windows/Linux/macOS</li>
+<li>Platform-specific API not available</li>
+<li>Provider not compatible with OS</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Use an alternative provider</li>
+<li>Use the portable version on a supported platform</li>
+<li>Check documentation for OS-specific requirements</li>
+</ol>
+<hr>
+<h3 id="ffmpegnotfound">FFmpegNotFound</h3>
+<p><strong>Message:</strong> FFmpeg executable not found. Please install FFmpeg to continue.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>FFmpeg not installed</li>
+<li>FFmpeg not in system PATH</li>
+<li>Permissions issue preventing access to FFmpeg</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li><strong>Windows:</strong> <code>choco install ffmpeg</code> or download from ffmpeg.org</li>
+<li><strong>macOS:</strong> <code>brew install ffmpeg</code></li>
+<li><strong>Linux:</strong> <code>sudo apt install ffmpeg</code> or equivalent</li>
+<li>Verify installation: <code>ffmpeg -version</code></li>
+<li>Restart Aura Video Studio</li>
+</ol>
+<p><strong>See Also:</strong> <a href="../user-guide/PORTABLE_FIRST_RUN.html#2-install-ffmpeg">PORTABLE_FIRST_RUN.md</a></p>
+<hr>
+<h3 id="ffmpegfailedexitcoden">FFmpegFailedExitCode:{N}</h3>
+<p><strong>Message:</strong> FFmpeg process failed with exit code {N}.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Invalid input file</li>
+<li>Unsupported codec or format</li>
+<li>Insufficient permissions</li>
+<li>Out of disk space</li>
+<li>Hardware encoding failure</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check the technical details for FFmpeg stderr output</li>
+<li>Verify input files are valid and readable</li>
+<li>Try software encoding instead of hardware</li>
+<li>Ensure sufficient disk space</li>
+<li>Check output directory permissions</li>
+</ol>
+<p><strong>Common Exit Codes:</strong></p>
+<ul>
+<li><code>1</code>: Generic error (check stderr)</li>
+<li><code>134</code>: Segmentation fault (try different codec)</li>
+<li><code>255</code>: Hardware encoding failure (switch to software)</li>
+</ul>
+<hr>
+<h3 id="outofdiskspace">OutOfDiskSpace</h3>
+<p><strong>Message:</strong> Insufficient disk space to complete the operation.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Disk full or nearly full</li>
+<li>Large temporary files</li>
+<li>Output directory on small partition</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Free up disk space (at least 5GB recommended)</li>
+<li>Delete old artifacts from output directory</li>
+<li>Change output directory to a drive with more space</li>
+<li>Clear temporary files</li>
+</ol>
+<hr>
+<h3 id="outputdirectorynotwritable">OutputDirectoryNotWritable</h3>
+<p><strong>Message:</strong> Cannot write to output directory. Please check permissions.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Directory is read-only</li>
+<li>Insufficient user permissions</li>
+<li>Directory doesn't exist</li>
+<li>Network drive disconnected</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check directory permissions</li>
+<li>Run Aura Video Studio with appropriate permissions</li>
+<li>Change output directory to a writable location</li>
+<li>Create the directory if it doesn't exist</li>
+</ol>
+<hr>
+<h3 id="invalidinputfield">InvalidInput:{FIELD}</h3>
+<p><strong>Message:</strong> Invalid input for '{FIELD}': {reason}</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Missing required field</li>
+<li>Invalid format or type</li>
+<li>Value out of acceptable range</li>
+<li>Conflicting parameters</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Review the input requirements</li>
+<li>Correct the field value</li>
+<li>Check documentation for valid values</li>
+<li>Try using a preset to see valid input</li>
+</ol>
+<p><strong>Examples:</strong></p>
+<ul>
+<li><code>InvalidInput:fps</code> - FPS must be positive number</li>
+<li><code>InvalidInput:resolution</code> - Invalid resolution format</li>
+<li><code>InvalidInput:codec</code> - Unsupported codec</li>
+</ul>
+<hr>
+<h3 id="steptimeoutstep">StepTimeout:{STEP}</h3>
+<p><strong>Message:</strong> Step '{STEP}' timed out. The operation took too long to complete.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Network request timeout (API calls)</li>
+<li>Long-running process exceeded limit</li>
+<li>System under heavy load</li>
+<li>Deadlock or infinite loop</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Retry the operation</li>
+<li>Check network connectivity (for API-based steps)</li>
+<li>Check system resources (CPU, RAM)</li>
+<li>Reduce video length or complexity</li>
+<li>Contact support if timeout persists</li>
+</ol>
+<p><strong>Default Timeouts:</strong></p>
+<ul>
+<li><code>preflight</code>: 30 seconds</li>
+<li><code>narration</code>: 5 minutes</li>
+<li><code>broll</code>: 10 minutes</li>
+<li><code>subtitles</code>: 2 minutes</li>
+<li><code>mux</code>: 15 minutes</li>
+</ul>
+<hr>
+<h3 id="transientnetworkfailure">TransientNetworkFailure</h3>
+<p><strong>Message:</strong> Network request failed. Please check your internet connection.</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>No internet connection</li>
+<li>API service temporarily unavailable</li>
+<li>Firewall blocking request</li>
+<li>DNS resolution failure</li>
+<li>Proxy configuration issue</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check internet connection</li>
+<li>Verify API service status</li>
+<li>Check firewall settings</li>
+<li>Retry after a few seconds</li>
+<li>Use local providers if available</li>
+</ol>
+<p><strong>Auto-Retry:</strong> This error triggers automatic retry with exponential backoff (max 2 retries).</p>
+<hr>
+<h3 id="unknownerror">UnknownError</h3>
+<p><strong>Message:</strong> (varies)</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Unexpected exception</li>
+<li>Unhandled edge case</li>
+<li>Internal bug</li>
+</ul>
+<p><strong>Remediation:</strong></p>
+<ol>
+<li>Check technical details for full exception</li>
+<li>Copy correlation ID for support</li>
+<li>Check logs in <code>AuraData/logs/</code></li>
+<li>Retry the operation</li>
+<li>Report to GitHub issues with correlation ID</li>
+</ol>
+<hr>
+<h2 id="error-response-format">Error Response Format</h2>
+<p>All errors follow this standard format:</p>
+<pre><code class="lang-json">{
+  &quot;code&quot;: &quot;ErrorCode:Details&quot;,
+  &quot;message&quot;: &quot;Human-readable error message&quot;,
+  &quot;remediation&quot;: &quot;Step-by-step fix instructions&quot;,
+  &quot;details&quot;: {
+    &quot;exception&quot;: &quot;Full exception details&quot;,
+    &quot;step&quot;: &quot;Step name where error occurred&quot;,
+    &quot;correlationId&quot;: &quot;abc123...&quot;,
+    &quot;additionalContext&quot;: &quot;...&quot;
+  }
+}
+</code></pre>
+<hr>
+<h2 id="viewing-errors">Viewing Errors</h2>
+<h3 id="in-the-ui">In the UI</h3>
+<ol>
+<li>Errors appear in the Render Status Drawer</li>
+<li>Each error shows:
+<ul>
+<li>Error message</li>
+<li>Remediation button(s)</li>
+<li>&quot;Technical Details&quot; accordion</li>
+</ul>
+</li>
+<li>Click &quot;Copy&quot; to copy error details for support</li>
+</ol>
+<h3 id="in-the-logs">In the Logs</h3>
+<p>Errors are logged to <code>AuraData/logs/aura-api-{date}.log</code>:</p>
+<pre><code>[ERR] [abc123...] Job J-xyz789... failed at step narration: 
+      MissingApiKey:STABLE_KEY - Required API key 'STABLE_KEY' is not configured.
+</code></pre>
+<h3 id="via-api">Via API</h3>
+<p>GET <code>/api/jobs/{jobId}</code> includes all errors:</p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;J-xyz789...&quot;,
+  &quot;status&quot;: &quot;Failed&quot;,
+  &quot;errors&quot;: [
+    {
+      &quot;code&quot;: &quot;MissingApiKey:STABLE_KEY&quot;,
+      &quot;message&quot;: &quot;Required API key 'STABLE_KEY' is not configured.&quot;,
+      &quot;remediation&quot;: &quot;Add STABLE_KEY in Settings → Providers&quot;
+    }
+  ]
+}
+</code></pre>
+<hr>
+<h2 id="correlation-ids">Correlation IDs</h2>
+<p>Every request and error includes a correlation ID for tracking:</p>
+<ul>
+<li>Appears in logs</li>
+<li>Included in all error responses</li>
+<li>Shown in UI toasts and error cards</li>
+<li>Used for support and diagnostics</li>
+</ul>
+<p><strong>To use:</strong></p>
+<ol>
+<li>Copy correlation ID from error message</li>
+<li>Search logs: <code>grep &quot;abc123...&quot; AuraData/logs/*.log</code></li>
+<li>Include in support requests</li>
+</ol>
+<hr>
+<h2 id="prevention-best-practices">Prevention Best Practices</h2>
+<ol>
+<li><p><strong>Run System Check</strong> before generating videos</p>
+<ul>
+<li>Settings → System → Run Check</li>
+<li>Validates dependencies, APIs, disk space</li>
+</ul>
+</li>
+<li><p><strong>Use &quot;Try Sample&quot;</strong> to verify setup</p>
+<ul>
+<li>Guaranteed to work with only FFmpeg</li>
+<li>Tests entire pipeline</li>
+<li>No API keys required</li>
+</ul>
+</li>
+<li><p><strong>Monitor Disk Space</strong></p>
+<ul>
+<li>Keep at least 5GB free</li>
+<li>Clean old artifacts regularly</li>
+</ul>
+</li>
+<li><p><strong>Keep Software Updated</strong></p>
+<ul>
+<li>Update FFmpeg to latest version</li>
+<li>Update GPU drivers</li>
+<li>Update Aura Video Studio</li>
+</ul>
+</li>
+<li><p><strong>Configure Fallbacks</strong></p>
+<ul>
+<li>Set backup TTS providers</li>
+<li>Enable software encoding fallback</li>
+<li>Configure local-first options</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="reporting-bugs">Reporting Bugs</h2>
+<p>If you encounter an error that seems like a bug:</p>
+<ol>
+<li>Copy the correlation ID</li>
+<li>Copy the error details (JSON)</li>
+<li>Check if issue already exists: <a href="https://github.com/Coffee285/aura-video-studio/issues">https://github.com/Coffee285/aura-video-studio/issues</a></li>
+<li>Create new issue with:
+<ul>
+<li>Correlation ID</li>
+<li>Full error details</li>
+<li>Steps to reproduce</li>
+<li>Relevant logs from <code>AuraData/logs/</code></li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="jobs.html">Jobs API</a> - API endpoints and event types</li>
+<li><a href="../user-guide/PORTABLE_FIRST_RUN.html">PORTABLE_FIRST_RUN.md</a> - Setup and troubleshooting</li>
+<li>System Check - Pre-flight validation</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/errors.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Local Storage Architecture | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Local Storage Architecture | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/LOCAL_STORAGE_ARCHITECTURE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="local-storage-architecture">Local Storage Architecture</h1>
+
+<h2 id="-critical-local-only-application">⚠️ CRITICAL: Local-Only Application</h2>
+<p><strong>Aura Video Studio is a LOCAL desktop application for home computers.</strong></p>
+<ul>
+<li>✅ All storage is LOCAL to the user's machine</li>
+<li>✅ Can connect to external APIs (LLM, TTS, Image providers)</li>
+<li>❌ NO cloud storage (Azure, AWS, Google Cloud) should be implemented</li>
+<li>❌ NO server-side data storage beyond the local API server</li>
+</ul>
+<h2 id="storage-architecture">Storage Architecture</h2>
+<h3 id="what-is-implemented-correct">What IS Implemented (Correct)</h3>
+<ol>
+<li><p><strong>Local File Storage</strong> (<code>LocalStorageService.cs</code>)</p>
+<ul>
+<li>Stores all media files on local disk</li>
+<li>Default location: <code>%APPDATA%/Aura/Media</code> (Windows) or <code>~/.local/share/Aura/Media</code> (Linux/Mac)</li>
+<li>Handles video outputs, audio files, images, project files</li>
+</ul>
+</li>
+<li><p><strong>Enhanced Local Storage</strong> (<code>EnhancedLocalStorageService.cs</code>)</p>
+<ul>
+<li>Advanced local storage with caching</li>
+<li>Local thumbnails and previews</li>
+<li>Metadata stored in local SQLite database</li>
+</ul>
+</li>
+<li><p><strong>Secure Local Storage</strong> (<code>SecureStorageService.cs</code>)</p>
+<ul>
+<li>Stores API keys and sensitive data using OS-level encryption</li>
+<li>Windows: DPAPI</li>
+<li>Linux/Mac: keyring/keychain</li>
+</ul>
+</li>
+<li><p><strong>SQLite Database</strong> (Entity Framework)</p>
+<ul>
+<li>All project state, configuration, and metadata stored locally</li>
+<li>Database file: <code>%APPDATA%/Aura/aura.db</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="what-should-not-be-implemented-removedeprecate">What Should NOT Be Implemented (Remove/Deprecate)</h3>
+<p>The following cloud storage implementations exist but should be removed or marked as deprecated:</p>
+<ol>
+<li>❌ <code>AzureBlobStorageService.cs</code> - Azure cloud storage (REMOVE)</li>
+<li>❌ <code>AzureBlobStorageProvider.cs</code> - Azure provider (REMOVE)</li>
+<li>❌ <code>AwsS3StorageProvider.cs</code> - AWS S3 storage (REMOVE)</li>
+<li>❌ <code>GoogleCloudStorageProvider.cs</code> - Google Cloud storage (REMOVE)</li>
+<li>❌ <code>CloudStorageProviderFactory.cs</code> - Cloud provider factory (REMOVE)</li>
+<li>❌ <code>ICloudStorageProvider.cs</code> - Cloud provider interface (REMOVE)</li>
+<li>❌ <code>CloudStorageSettings.cs</code> - Cloud settings model (REMOVE)</li>
+</ol>
+<h2 id="external-api-connections-allowed">External API Connections (Allowed)</h2>
+<p>The application CAN connect to external APIs for AI services:</p>
+<h3 id="llm-providers">LLM Providers</h3>
+<ul>
+<li>OpenAI (GPT-4, GPT-3.5)</li>
+<li>Anthropic (Claude)</li>
+<li>Google Gemini</li>
+<li>Ollama (local or remote server)</li>
+<li>Azure OpenAI (API only, not storage)</li>
+</ul>
+<h3 id="tts-providers">TTS Providers</h3>
+<ul>
+<li>ElevenLabs API</li>
+<li>PlayHT API</li>
+<li>Windows SAPI (local)</li>
+<li>Piper (local)</li>
+<li>Mimic3 (local)</li>
+</ul>
+<h3 id="image-providers">Image Providers</h3>
+<ul>
+<li>Stable Diffusion WebUI (local or remote)</li>
+<li>Replicate API</li>
+<li>Stock image APIs</li>
+</ul>
+<h2 id="data-flow">Data Flow</h2>
+<pre><code>User Input (Brief, Settings)
+    ↓
+Local API Server (ASP.NET Core)
+    ↓
+External APIs (LLM, TTS, Images) ← API calls only, no storage
+    ↓
+Generated Assets (audio, images, video)
+    ↓
+Local File System Storage
+    ↓
+SQLite Database (metadata)
+</code></pre>
+<h2 id="storage-locations">Storage Locations</h2>
+<h3 id="windows">Windows</h3>
+<ul>
+<li><strong>Media Files</strong>: <code>%APPDATA%\Aura\Media</code></li>
+<li><strong>Database</strong>: <code>%APPDATA%\Aura\aura.db</code></li>
+<li><strong>Temp Files</strong>: <code>%TEMP%\Aura</code></li>
+<li><strong>Logs</strong>: <code>%APPDATA%\Aura\Logs</code></li>
+<li><strong>Config</strong>: <code>%APPDATA%\Aura\appsettings.json</code></li>
+</ul>
+<h3 id="linux">Linux</h3>
+<ul>
+<li><strong>Media Files</strong>: <code>~/.local/share/Aura/Media</code></li>
+<li><strong>Database</strong>: <code>~/.local/share/Aura/aura.db</code></li>
+<li><strong>Temp Files</strong>: <code>/tmp/Aura</code></li>
+<li><strong>Logs</strong>: <code>~/.local/share/Aura/Logs</code></li>
+<li><strong>Config</strong>: <code>~/.config/Aura/appsettings.json</code></li>
+</ul>
+<h3 id="macos">macOS</h3>
+<ul>
+<li><strong>Media Files</strong>: <code>~/Library/Application Support/Aura/Media</code></li>
+<li><strong>Database</strong>: <code>~/Library/Application Support/Aura/aura.db</code></li>
+<li><strong>Temp Files</strong>: <code>/tmp/Aura</code></li>
+<li><strong>Logs</strong>: <code>~/Library/Logs/Aura</code></li>
+<li><strong>Config</strong>: <code>~/Library/Application Support/Aura/appsettings.json</code></li>
+</ul>
+<h2 id="implementation-guidelines">Implementation Guidelines</h2>
+<h3 id="do">DO:</h3>
+<ul>
+<li>✅ Use <code>LocalStorageService</code> for all file operations</li>
+<li>✅ Use <code>SecureStorageService</code> for sensitive data (API keys)</li>
+<li>✅ Use SQLite for metadata and project state</li>
+<li>✅ Store everything on the local file system</li>
+<li>✅ Provide export/import functionality for user data portability</li>
+<li>✅ Clean up temporary files after processing</li>
+<li>✅ Respect user's disk space limitations</li>
+</ul>
+<h3 id="dont">DON'T:</h3>
+<ul>
+<li>❌ Implement any cloud storage uploads</li>
+<li>❌ Store user data on remote servers (except temporary API processing)</li>
+<li>❌ Require internet for core functionality (except API providers)</li>
+<li>❌ Add dependencies on cloud storage SDKs</li>
+<li>❌ Create accounts or server-side user profiles</li>
+<li>❌ Track or collect user data remotely</li>
+</ul>
+<h2 id="migration-path">Migration Path</h2>
+<p>For existing cloud storage code:</p>
+<ol>
+<li><strong>Mark as Obsolete</strong>: Add <code>[Obsolete]</code> attributes with messages</li>
+<li><strong>Document Removal</strong>: Update this file and PR descriptions</li>
+<li><strong>Create Issues</strong>: Track removal of cloud storage features</li>
+<li><strong>Test Without</strong>: Ensure app works without cloud dependencies</li>
+<li><strong>Remove Code</strong>: Delete cloud storage implementations</li>
+<li><strong>Update Tests</strong>: Remove cloud storage test dependencies</li>
+</ol>
+<h2 id="privacy--security">Privacy &amp; Security</h2>
+<p>As a local application:</p>
+<ul>
+<li>User data never leaves their machine (except API requests)</li>
+<li>No telemetry or analytics sent to remote servers</li>
+<li>API keys stored securely using OS-level encryption</li>
+<li>User has full control over their data</li>
+<li>No vendor lock-in</li>
+<li>Fully functional offline (with local providers)</li>
+</ul>
+<h2 id="future-considerations">Future Considerations</h2>
+<p>If cloud sync is ever needed (optional feature):</p>
+<ul>
+<li>Must be OPT-IN only</li>
+<li>User controls what gets synced</li>
+<li>Encryption at rest and in transit</li>
+<li>Support for self-hosted sync servers</li>
+<li>Clear documentation about data location</li>
+<li>Easy to disable/remove</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/LOCAL_STORAGE_ARCHITECTURE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

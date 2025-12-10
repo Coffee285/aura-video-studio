@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>SSE Progress Monitoring and Cancellation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="SSE Progress Monitoring and Cancellation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/SSE_PROGRESS_MONITORING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="sse-progress-monitoring-and-cancellation-guide">SSE Progress Monitoring and Cancellation Guide</h1>
+
+<p>This guide documents the real-time progress monitoring and job cancellation features in Aura Video Studio.</p>
+<h2 id="overview">Overview</h2>
+<p>The system provides real-time progress updates for video generation jobs using Server-Sent Events (SSE), with support for job cancellation at any point during execution.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend-components">Backend Components</h3>
+<h4 id="1-sse-endpoint">1. SSE Endpoint</h4>
+<ul>
+<li><strong>Endpoint</strong>: <code>GET /api/jobs/{jobId}/events</code></li>
+<li><strong>Location</strong>: <code>Aura.Api/Controllers/JobsController.cs</code></li>
+<li><strong>Features</strong>:
+<ul>
+<li>Real-time progress streaming</li>
+<li>Automatic reconnection support via Last-Event-ID</li>
+<li>Keep-alive messages every 10 seconds</li>
+<li>Event ID generation for reliable reconnection</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-progress-service">2. Progress Service</h4>
+<ul>
+<li><strong>Location</strong>: <code>Aura.Api/Services/ProgressService.cs</code></li>
+<li><strong>Purpose</strong>: Tracks and broadcasts progress updates</li>
+<li><strong>Features</strong>:
+<ul>
+<li>In-memory cache for progress history</li>
+<li>Subscriber pattern for broadcasting updates</li>
+<li>Progress parsing with percentage extraction</li>
+<li>Automatic cleanup</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-job-runner">3. Job Runner</h4>
+<ul>
+<li><strong>Location</strong>: <code>Aura.Core/Orchestrator/JobRunner.cs</code></li>
+<li><strong>Features</strong>:
+<ul>
+<li>CancellationTokenSource per job</li>
+<li>Background job execution</li>
+<li>Progress reporting via IProgress<t></t></li>
+<li>Cancellation support</li>
+</ul>
+</li>
+</ul>
+<h4 id="4-cancellation-endpoint">4. Cancellation Endpoint</h4>
+<ul>
+<li><strong>Endpoint</strong>: <code>POST /api/jobs/{jobId}/cancel</code></li>
+<li><strong>Location</strong>: <code>Aura.Api/Controllers/JobsController.cs</code></li>
+<li><strong>Validation</strong>:
+<ul>
+<li>Only cancels Running or Queued jobs</li>
+<li>Returns appropriate error for terminal states</li>
+</ul>
+</li>
+</ul>
+<h3 id="frontend-components">Frontend Components</h3>
+<h4 id="1-sse-client">1. SSE Client</h4>
+<ul>
+<li><strong>Location</strong>: <code>Aura.Web/src/services/api/sseClient.ts</code></li>
+<li><strong>Classes</strong>:
+<ul>
+<li><code>SSEClient</code>: Legacy wrapper with automatic reconnection</li>
+<li><code>SseClient</code>: Modern event-based client</li>
+</ul>
+</li>
+<li><strong>Features</strong>:
+<ul>
+<li>Exponential backoff for reconnection</li>
+<li>Connection state tracking</li>
+<li>Timeout handling</li>
+<li>Proper cleanup</li>
+</ul>
+</li>
+</ul>
+<h4 id="2-jobs-api-client">2. Jobs API Client</h4>
+<ul>
+<li><strong>Location</strong>: <code>Aura.Web/src/features/render/api/jobs.ts</code></li>
+<li><strong>Functions</strong>:
+<ul>
+<li><code>subscribeToJobEvents()</code>: Subscribe to SSE events</li>
+<li><code>cancelJob()</code>: Cancel a running job</li>
+<li><code>retryJob()</code>: Retry a failed job</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-usejobprogress-hook">3. useJobProgress Hook</h4>
+<ul>
+<li><strong>Location</strong>: <code>Aura.Web/src/hooks/useJobProgress.ts</code></li>
+<li><strong>Purpose</strong>: React hook for managing SSE lifecycle</li>
+<li><strong>Features</strong>:
+<ul>
+<li>Automatic cleanup on unmount</li>
+<li>Terminal event handling</li>
+<li>Error recovery with retry</li>
+</ul>
+</li>
+</ul>
+<h4 id="4-renderstatusdrawer-component">4. RenderStatusDrawer Component</h4>
+<ul>
+<li><strong>Location</strong>: <code>Aura.Web/src/components/RenderStatus/RenderStatusDrawer.tsx</code></li>
+<li><strong>Features</strong>:
+<ul>
+<li>Real-time progress display</li>
+<li>Cancel button (visible when job is Running)</li>
+<li>Step-by-step progress visualization</li>
+<li>Error display with remediation</li>
+</ul>
+</li>
+</ul>
+<h2 id="sse-event-types">SSE Event Types</h2>
+<p>The system emits the following event types:</p>
+<h3 id="1-job-status">1. <code>job-status</code></h3>
+<p>Sent when job transitions to a new status.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Running&quot;,
+  &quot;stage&quot;: &quot;Script&quot;,
+  &quot;percent&quot;: 15,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h3 id="2-step-status">2. <code>step-status</code></h3>
+<p>Sent when a new step starts.</p>
+<pre><code class="lang-json">{
+  &quot;step&quot;: &quot;Script&quot;,
+  &quot;status&quot;: &quot;started&quot;,
+  &quot;phase&quot;: &quot;plan&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h3 id="3-step-progress">3. <code>step-progress</code></h3>
+<p>Sent periodically during step execution (most frequent event).</p>
+<pre><code class="lang-json">{
+  &quot;step&quot;: &quot;Script&quot;,
+  &quot;phase&quot;: &quot;plan&quot;,
+  &quot;progressPct&quot;: 25,
+  &quot;message&quot;: &quot;Generating script...&quot;,
+  &quot;substageDetail&quot;: &quot;Scene 3 of 5&quot;,
+  &quot;currentItem&quot;: 3,
+  &quot;totalItems&quot;: 5,
+  &quot;elapsedTime&quot;: &quot;00:01:23&quot;,
+  &quot;estimatedTimeRemaining&quot;: &quot;00:02:15&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h3 id="4-job-completed">4. <code>job-completed</code></h3>
+<p>Sent when job finishes successfully.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Succeeded&quot;,
+  &quot;jobId&quot;: &quot;job-123&quot;,
+  &quot;artifacts&quot;: [
+    {
+      &quot;name&quot;: &quot;output.mp4&quot;,
+      &quot;path&quot;: &quot;/artifacts/job-123/output.mp4&quot;,
+      &quot;type&quot;: &quot;video/mp4&quot;,
+      &quot;sizeBytes&quot;: 12345678
+    }
+  ],
+  &quot;output&quot;: {
+    &quot;videoPath&quot;: &quot;/artifacts/job-123/output.mp4&quot;,
+    &quot;subtitlePath&quot;: &quot;/artifacts/job-123/subtitles.srt&quot;,
+    &quot;sizeBytes&quot;: 12345678
+  },
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h3 id="5-job-failed">5. <code>job-failed</code></h3>
+<p>Sent when job fails.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Failed&quot;,
+  &quot;jobId&quot;: &quot;job-123&quot;,
+  &quot;stage&quot;: &quot;Rendering&quot;,
+  &quot;errorMessage&quot;: &quot;FFmpeg encoding failed&quot;,
+  &quot;errors&quot;: [
+    {
+      &quot;code&quot;: &quot;FFMPEG_ERROR&quot;,
+      &quot;message&quot;: &quot;FFmpeg encoding failed&quot;,
+      &quot;remediation&quot;: &quot;Check FFmpeg installation and system resources&quot;
+    }
+  ],
+  &quot;logs&quot;: [&quot;Last 10 log entries...&quot;],
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h3 id="6-job-cancelled">6. <code>job-cancelled</code></h3>
+<p>Sent when job is cancelled by user.</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Cancelled&quot;,
+  &quot;jobId&quot;: &quot;job-123&quot;,
+  &quot;stage&quot;: &quot;Voice&quot;,
+  &quot;message&quot;: &quot;Job was cancelled by user&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h3 id="7-warning">7. <code>warning</code></h3>
+<p>Sent for non-fatal warnings during execution.</p>
+<pre><code class="lang-json">{
+  &quot;message&quot;: &quot;API rate limit approaching&quot;,
+  &quot;step&quot;: &quot;Script&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h3 id="8-error">8. <code>error</code></h3>
+<p>Sent for connection or system errors.</p>
+<pre><code class="lang-json">{
+  &quot;message&quot;: &quot;Connection lost&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h2 id="job-state-machine">Job State Machine</h2>
+<p>Jobs follow a strict state machine:</p>
+<pre><code>Queued ──┬─&gt; Running ──┬─&gt; Succeeded (terminal)
+         │             ├─&gt; Failed (terminal)
+         │             └─&gt; Canceled (terminal)
+         └─&gt; Canceled (terminal)
+</code></pre>
+<p><strong>Valid Transitions</strong>:</p>
+<ul>
+<li><code>Queued → Running</code>: Job starts execution</li>
+<li><code>Queued → Canceled</code>: Job cancelled before starting</li>
+<li><code>Running → Succeeded</code>: Job completed successfully</li>
+<li><code>Running → Failed</code>: Job encountered an error</li>
+<li><code>Running → Canceled</code>: Job cancelled during execution</li>
+</ul>
+<p><strong>Terminal States</strong> (no further transitions):</p>
+<ul>
+<li><code>Succeeded</code></li>
+<li><code>Failed</code></li>
+<li><code>Canceled</code></li>
+</ul>
+<h2 id="progress-ranges">Progress Ranges</h2>
+<p>The progress percentage (0-100) maps to pipeline stages:</p>
+<table>
+<thead>
+<tr>
+<th>Range</th>
+<th>Stage</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0-15%</td>
+<td>Script</td>
+<td>LLM script generation</td>
+</tr>
+<tr>
+<td>15-35%</td>
+<td>TTS</td>
+<td>Text-to-speech synthesis</td>
+</tr>
+<tr>
+<td>35-65%</td>
+<td>Visuals</td>
+<td>Image generation/selection</td>
+</tr>
+<tr>
+<td>65-85%</td>
+<td>Composition</td>
+<td>Timeline composition</td>
+</tr>
+<tr>
+<td>85-100%</td>
+<td>Rendering</td>
+<td>Final video rendering</td>
+</tr>
+</tbody>
+</table>
+<h2 id="usage-examples">Usage Examples</h2>
+<h3 id="backend-creating-and-monitoring-a-job">Backend: Creating and Monitoring a Job</h3>
+<pre><code class="lang-csharp">// Create job with cancellation token
+var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+var job = await jobRunner.CreateAndStartJobAsync(
+    brief, planSpec, voiceSpec, renderSpec,
+    correlationId: &quot;req-123&quot;,
+    isQuickDemo: false,
+    ct: cts.Token
+);
+
+// Cancel job later
+bool cancelled = jobRunner.CancelJob(job.Id);
+</code></pre>
+<h3 id="frontend-subscribing-to-progress-updates">Frontend: Subscribing to Progress Updates</h3>
+<pre><code class="lang-typescript">import { subscribeToJobEvents, cancelJob } from '@/features/render/api/jobs';
+
+// Subscribe to progress
+const unsubscribe = subscribeToJobEvents(
+  jobId,
+  (event) =&gt; {
+    switch (event.type) {
+      case 'step-progress':
+        console.log('Progress:', event.data.progressPct, '%');
+        break;
+      case 'job-completed':
+        console.log('Job completed!', event.data.output);
+        break;
+      case 'job-failed':
+        console.error('Job failed:', event.data.errorMessage);
+        break;
+    }
+  },
+  (error) =&gt; {
+    console.error('Connection error:', error);
+  }
+);
+
+// Cancel job
+await cancelJob(jobId);
+
+// Cleanup when done
+unsubscribe();
+</code></pre>
+<h3 id="react-component-with-usejobprogress-hook">React Component with useJobProgress Hook</h3>
+<pre><code class="lang-tsx">import { useJobProgress } from '@/hooks/useJobProgress';
+import { cancelJob } from '@/features/render/api/jobs';
+
+function JobMonitor({ jobId }: { jobId: string }) {
+  const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState('Running');
+
+  useJobProgress(jobId, (event) =&gt; {
+    if (event.type === 'step-progress') {
+      setProgress(event.data.progressPct);
+    }
+    if (event.type === 'job-status') {
+      setStatus(event.data.status);
+    }
+  });
+
+  const handleCancel = async () =&gt; {
+    try {
+      await cancelJob(jobId);
+    } catch (error) {
+      console.error('Cancel failed:', error);
+    }
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;ProgressBar value={progress} /&gt;
+      &lt;p&gt;Status: {status}&lt;/p&gt;
+      {status === 'Running' &amp;&amp; (
+        &lt;button onClick={handleCancel}&gt;Cancel&lt;/button&gt;
+      )}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h2 id="reconnection-support">Reconnection Support</h2>
+<p>The SSE endpoint supports automatic reconnection using the Last-Event-ID mechanism:</p>
+<ol>
+<li><strong>Client tracks event IDs</strong>: Each event has a unique ID in format <code>{timestamp}-{counter}</code></li>
+<li><strong>Connection drops</strong>: Client detects disconnection</li>
+<li><strong>Reconnect with Last-Event-ID</strong>: Client sends <code>Last-Event-ID</code> header or query parameter</li>
+<li><strong>Server resumes</strong>: Backend sends only events after the last received ID</li>
+</ol>
+<p>Example reconnection:</p>
+<pre><code class="lang-typescript">const lastEventId = '1699564800000-42';
+const url = `/api/jobs/${jobId}/events?lastEventId=${lastEventId}`;
+</code></pre>
+<h2 id="multiple-concurrent-jobs">Multiple Concurrent Jobs</h2>
+<p>The system supports monitoring multiple jobs simultaneously:</p>
+<pre><code class="lang-typescript">const jobs = ['job-1', 'job-2', 'job-3'];
+
+const unsubscribers = jobs.map(jobId =&gt;
+  subscribeToJobEvents(jobId, (event) =&gt; {
+    console.log(`Job ${jobId}:`, event.type, event.data);
+  })
+);
+
+// Cleanup all
+unsubscribers.forEach(unsub =&gt; unsub());
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="backend-tests">Backend Tests</h3>
+<p>Run SSE resilience tests:</p>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~SseResilienceTests&quot;
+</code></pre>
+<p>Run progress and cancellation tests:</p>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~SseProgressAndCancellationTests&quot;
+</code></pre>
+<h3 id="frontend-tests">Frontend Tests</h3>
+<p>The frontend includes comprehensive tests in:</p>
+<ul>
+<li><code>Aura.Web/src/services/api/__tests__/videoApi.test.ts</code></li>
+<li><code>Aura.Web/src/services/api/__tests__/transport.test.ts</code></li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="sse-connection-fails">SSE Connection Fails</h3>
+<p><strong>Symptoms</strong>: Events not received, frequent reconnections</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Check CORS headers in API configuration</li>
+<li>Verify <code>X-Accel-Buffering: no</code> header is set</li>
+<li>Check firewall/proxy settings</li>
+<li>Verify API is running and accessible</li>
+</ol>
+<h3 id="progress-doesnt-update">Progress Doesn't Update</h3>
+<p><strong>Symptoms</strong>: Progress stuck at same percentage</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Check job logs: <code>GET /api/jobs/{jobId}</code></li>
+<li>Verify job status is <code>Running</code>, not stuck in <code>Queued</code></li>
+<li>Check backend logs for errors</li>
+<li>Restart API if progress service is unresponsive</li>
+</ol>
+<h3 id="cancellation-doesnt-work">Cancellation Doesn't Work</h3>
+<p><strong>Symptoms</strong>: Cancel button does nothing, job continues running</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Verify job is in <code>Running</code> or <code>Queued</code> state</li>
+<li>Check cancellation token is being passed to all operations</li>
+<li>Verify no blocking operations that don't check cancellation</li>
+<li>Check backend logs for cancellation errors</li>
+</ol>
+<h3 id="multiple-jobs-interfere">Multiple Jobs Interfere</h3>
+<p><strong>Symptoms</strong>: Progress from one job shows in another</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Verify each SSE connection uses correct jobId</li>
+<li>Check that cleanup functions are called on unmount</li>
+<li>Ensure state is isolated per job (not shared)</li>
+</ol>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="backend">Backend</h3>
+<ul>
+<li><strong>Keep-alive interval</strong>: 10 seconds (configurable in JobsController)</li>
+<li><strong>Poll interval</strong>: 500ms for responsive updates</li>
+<li><strong>Connection timeout</strong>: 5 minutes per connection</li>
+<li><strong>Memory</strong>: Progress cached for 1 hour per job</li>
+</ul>
+<h3 id="frontend">Frontend</h3>
+<ul>
+<li><strong>Reconnection</strong>: Exponential backoff starting at 1 second</li>
+<li><strong>Max retries</strong>: 5 reconnection attempts</li>
+<li><strong>Timeout</strong>: 5 minutes per connection</li>
+<li><strong>Cleanup</strong>: Automatic on component unmount</li>
+</ul>
+<h2 id="security">Security</h2>
+<h3 id="api-authorization">API Authorization</h3>
+<p>All endpoints require authentication (when auth is enabled):</p>
+<ul>
+<li>SSE endpoint checks auth token</li>
+<li>Cancel endpoint validates user owns the job</li>
+<li>Progress data scoped to authenticated user</li>
+</ul>
+<h3 id="rate-limiting">Rate Limiting</h3>
+<p>Recommended rate limits:</p>
+<ul>
+<li>SSE connections: 10 concurrent per user</li>
+<li>Cancel requests: 10 per minute per user</li>
+<li>Job creation: 5 per minute per user</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements:</p>
+<ol>
+<li><strong>WebSocket alternative</strong>: For environments where SSE is problematic</li>
+<li><strong>Push notifications</strong>: For long-running jobs</li>
+<li><strong>Progress persistence</strong>: Resume monitoring after browser refresh</li>
+<li><strong>Batch operations</strong>: Cancel/monitor multiple jobs at once</li>
+<li><strong>Admin dashboard</strong>: Monitor all jobs system-wide</li>
+</ol>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li>API Reference</li>
+<li><a href="../JOB_ORCHESTRATION_IMPLEMENTATION_SUMMARY.md">Job Orchestration</a></li>
+<li><a href="../API_SSE_IMPLEMENTATION_SUMMARY.md">SSE Implementation Summary</a></li>
+<li><a href="../ERROR_HANDLING_GUIDE.html">Error Handling Guide</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/SSE_PROGRESS_MONITORING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

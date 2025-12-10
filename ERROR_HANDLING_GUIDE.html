@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Error Handling and Recovery Implementation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Error Handling and Recovery Implementation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/ERROR_HANDLING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="error-handling-and-recovery-implementation">Error Handling and Recovery Implementation</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the comprehensive error handling and recovery system implemented for Aura Video Studio, including React error boundaries, backend error logging, and automatic retry mechanisms.</p>
+<h2 id="components">Components</h2>
+<h3 id="1-globalerrorboundary">1. GlobalErrorBoundary</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/ErrorBoundary/GlobalErrorBoundary.tsx</code></p>
+<p><strong>Purpose:</strong> Catches unhandled errors in the React component tree and provides a graceful fallback UI.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Generates unique error IDs for tracking (<code>ERR_{timestamp}_{random}</code>)</li>
+<li>Sends errors to backend logging service</li>
+<li>Displays user-friendly error screen with recovery options</li>
+<li>Logs errors to console for debugging</li>
+<li>Logs errors to backend service for analysis</li>
+</ul>
+<p><strong>Error ID Format:</strong></p>
+<pre><code>ERR_1234567890_abc123xyz
+    └── timestamp  └── random
+</code></pre>
+<p><strong>Backend Integration:</strong></p>
+<pre><code class="lang-typescript">// Sends error to /api/logs/error
+{
+  timestamp: &quot;2025-11-22T01:00:00.000Z&quot;,
+  error: {
+    name: &quot;Error&quot;,
+    message: &quot;Error message&quot;,
+    stack: &quot;Stack trace...&quot;
+  },
+  context: {
+    errorId: &quot;ERR_1234567890_abc123xyz&quot;,
+    componentStack: &quot;Component stack trace...&quot;
+  },
+  userAgent: &quot;Mozilla/5.0...&quot;,
+  url: &quot;http://localhost:5173/page&quot;
+}
+</code></pre>
+<h3 id="2-enhancederrorfallback">2. EnhancedErrorFallback</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/ErrorBoundary/EnhancedErrorFallback.tsx</code></p>
+<p><strong>Purpose:</strong> Provides the UI for displaying errors caught by error boundaries.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Fluent UI design matching application theme</li>
+<li>Displays error ID for support reference</li>
+<li>Shows error message and technical details (collapsible)</li>
+<li>Provides recovery suggestions based on error type</li>
+<li>Recovery actions: Try Again, Reload Page, Go Home</li>
+<li>Copy error details to clipboard</li>
+<li>Link to view application logs</li>
+</ul>
+<p><strong>Recovery Suggestions:</strong></p>
+<ul>
+<li>Chunk loading errors → &quot;Try reloading the page&quot;</li>
+<li>Network errors → &quot;Check your internet connection&quot;</li>
+<li>Null/undefined errors → &quot;Try going back to the home page&quot;</li>
+<li>Memory errors → &quot;Close other applications&quot;</li>
+</ul>
+<h3 id="3-logscontroller">3. LogsController</h3>
+<p><strong>Location:</strong> <code>Aura.Api/Controllers/LogsController.cs</code></p>
+<p><strong>Purpose:</strong> Backend endpoint for receiving and logging frontend errors.</p>
+<p><strong>Endpoints:</strong></p>
+<h4 id="post-apilogserror">POST /api/logs/error</h4>
+<p>Receives critical errors from frontend for immediate processing.</p>
+<p><strong>Request Format:</strong></p>
+<pre><code class="lang-json">{
+  &quot;timestamp&quot;: &quot;2025-11-22T01:00:00.000Z&quot;,
+  &quot;error&quot;: {
+    &quot;name&quot;: &quot;Error&quot;,
+    &quot;message&quot;: &quot;Error message&quot;,
+    &quot;stack&quot;: &quot;Stack trace...&quot;
+  },
+  &quot;context&quot;: {
+    &quot;errorId&quot;: &quot;ERR_1234567890_abc123xyz&quot;,
+    &quot;componentStack&quot;: &quot;Component stack...&quot;
+  },
+  &quot;userAgent&quot;: &quot;Mozilla/5.0...&quot;,
+  &quot;url&quot;: &quot;http://localhost:5173/page&quot;
+}
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;received&quot;: true
+}
+</code></pre>
+<p><strong>Logging Behavior:</strong></p>
+<ul>
+<li><strong>Production:</strong> Logs to structured logging system (Serilog)</li>
+<li><strong>Development:</strong> Also writes to <code>logs/client-errors.json</code> file</li>
+</ul>
+<p><strong>Development Log Format:</strong></p>
+<pre><code class="lang-json">{
+  &quot;ErrorId&quot;: &quot;ERR_1234567890_abc123xyz&quot;,
+  &quot;Name&quot;: &quot;Error&quot;,
+  &quot;Message&quot;: &quot;Error message&quot;,
+  &quot;Stack&quot;: &quot;Stack trace...&quot;,
+  &quot;ComponentStack&quot;: &quot;Component stack...&quot;,
+  &quot;Timestamp&quot;: &quot;2025-11-22T01:00:00.000Z&quot;,
+  &quot;UserAgent&quot;: &quot;Mozilla/5.0...&quot;,
+  &quot;Url&quot;: &quot;http://localhost:5173/page&quot;,
+  &quot;ServerTime&quot;: &quot;2025-11-22T01:00:05.000Z&quot;
+}
+</code></pre>
+<h3 id="4-api-client-retry-logic">4. API Client Retry Logic</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/services/api/apiClient.ts</code></p>
+<p><strong>Purpose:</strong> Comprehensive API client with automatic retry, circuit breaker, and error handling.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li><strong>Exponential Backoff:</strong> Retries failed requests with increasing delays</li>
+<li><strong>Circuit Breaker:</strong> Prevents cascading failures by stopping requests to failing services</li>
+<li><strong>Request Deduplication:</strong> Prevents duplicate requests</li>
+<li><strong>Correlation IDs:</strong> Tracks requests across client and server</li>
+<li><strong>Automatic Retry:</strong> Retries transient errors (5xx, timeouts, network errors)</li>
+</ul>
+<p><strong>Retry Configuration:</strong></p>
+<ul>
+<li>Max Retries: 3</li>
+<li>Base Delay: 1000ms</li>
+<li>Max Delay: 8000ms</li>
+<li>Strategy: Exponential backoff with jitter</li>
+</ul>
+<p><strong>Circuit Breaker Configuration:</strong></p>
+<ul>
+<li>Failure Threshold: 10 failures</li>
+<li>Success Threshold: 2 successes to close</li>
+<li>Timeout: 60 seconds (before retry)</li>
+<li>States: CLOSED, OPEN, HALF_OPEN</li>
+</ul>
+<p><strong>Retryable Errors:</strong></p>
+<ul>
+<li>Network errors (ECONNABORTED, ECONNREFUSED, ETIMEDOUT)</li>
+<li>5xx server errors</li>
+<li>429 Too Many Requests</li>
+</ul>
+<h2 id="usage">Usage</h2>
+<h3 id="wrapping-the-app">Wrapping the App</h3>
+<p>The entire application is wrapped in an ErrorBoundary in <code>main.tsx</code>:</p>
+<pre><code class="lang-tsx">import { ErrorBoundary } from './components/ErrorBoundary';
+
+root.render(
+  &lt;ErrorBoundary&gt;
+    &lt;App /&gt;
+  &lt;/ErrorBoundary&gt;
+);
+</code></pre>
+<h3 id="testing-error-handling">Testing Error Handling</h3>
+<p>A test page is available at <code>/error-test</code> (when added to routes):</p>
+<p><strong>Location:</strong> <code>Aura.Web/src/pages/ErrorTest.tsx</code></p>
+<p><strong>Test Scenarios:</strong></p>
+<ol>
+<li><strong>Synchronous Error:</strong> Caught by ErrorBoundary</li>
+<li><strong>Async Error:</strong> Caught by window.onerror handler</li>
+<li><strong>Promise Rejection:</strong> Caught by window.onunhandledrejection handler</li>
+</ol>
+<h3 id="monitoring-errors">Monitoring Errors</h3>
+<h4 id="development">Development</h4>
+<ul>
+<li>Check browser console for error logs</li>
+<li>Check browser Network tab for <code>/api/logs/error</code> requests</li>
+<li>Check <code>logs/client-errors.json</code> file</li>
+</ul>
+<h4 id="production">Production</h4>
+<ul>
+<li>Errors are logged to Serilog</li>
+<li>Error IDs can be used to search logs</li>
+<li>Correlation IDs track requests across systems</li>
+</ul>
+<h2 id="error-recovery-flow">Error Recovery Flow</h2>
+<pre><code class="lang-mermaid">graph TD
+    A[Error Occurs] --&gt; B{Error Type?}
+    B --&gt;|React Error| C[ErrorBoundary Catches]
+    B --&gt;|Async Error| D[window.onerror Catches]
+    B --&gt;|Promise Rejection| E[window.onunhandledrejection Catches]
+    
+    C --&gt; F[Generate Error ID]
+    F --&gt; G[Log to Console]
+    G --&gt; H[Send to Backend /api/logs/error]
+    H --&gt; I[Display Error Fallback UI]
+    I --&gt; J{User Action}
+    
+    J --&gt;|Try Again| K[Reset ErrorBoundary]
+    J --&gt;|Reload Page| L[window.location.reload]
+    J --&gt;|Go Home| M[Navigate to /]
+    J --&gt;|Copy Details| N[Copy to Clipboard]
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/components/ErrorBoundary/__tests__/GlobalErrorBoundary.test.tsx</code></p>
+<p><strong>Test Coverage:</strong></p>
+<ul>
+<li>✅ Renders children when no error occurs</li>
+<li>✅ Displays error fallback when error is caught</li>
+<li>✅ Sends error to backend logging service</li>
+<li>✅ Generates unique error IDs</li>
+<li>✅ Handles fetch errors gracefully</li>
+<li>✅ Displays error ID in fallback UI</li>
+</ul>
+<p><strong>Running Tests:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm test -- src/components/ErrorBoundary/__tests__/GlobalErrorBoundary.test.tsx
+</code></pre>
+<h3 id="manual-testing">Manual Testing</h3>
+<ol>
+<li><p><strong>Start the Application:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run dev
+</code></pre>
+</li>
+<li><p><strong>Navigate to Error Test Page:</strong></p>
+<ul>
+<li>Add route for ErrorTestPage</li>
+<li>Navigate to <code>/error-test</code></li>
+</ul>
+</li>
+<li><p><strong>Test Error Scenarios:</strong></p>
+<ul>
+<li>Click &quot;Throw Synchronous Error&quot;</li>
+<li>Verify error screen appears</li>
+<li>Verify error ID is displayed</li>
+<li>Check Network tab for POST to <code>/api/logs/error</code></li>
+<li>Check <code>logs/client-errors.json</code> (in development)</li>
+</ul>
+</li>
+<li><p><strong>Test Recovery Options:</strong></p>
+<ul>
+<li>Click &quot;Try Again&quot; - should reset error boundary</li>
+<li>Click &quot;Reload Page&quot; - should reload browser</li>
+<li>Click &quot;Go Home&quot; - should navigate to home page</li>
+<li>Click &quot;Copy Error Details&quot; - should copy to clipboard</li>
+</ul>
+</li>
+</ol>
+<h2 id="architecture-decisions">Architecture Decisions</h2>
+<h3 id="why-enhance-existing-components">Why Enhance Existing Components?</h3>
+<p>Instead of creating new components as specified in the PR requirements, we enhanced existing components because:</p>
+<ol>
+<li><strong>Existing Infrastructure:</strong> GlobalErrorBoundary and EnhancedErrorFallback already existed with sophisticated error handling</li>
+<li><strong>Fluent UI:</strong> Existing components already used Fluent UI matching the application theme</li>
+<li><strong>Minimal Changes:</strong> Only needed to add backend logging feature</li>
+<li><strong>No Duplication:</strong> Avoided creating duplicate error handling components</li>
+</ol>
+<h3 id="why-use-existing-logscontroller">Why Use Existing LogsController?</h3>
+<p>The existing <code>/api/logs/error</code> endpoint already provided comprehensive error logging:</p>
+<ol>
+<li><strong>Structured Logging:</strong> Integrated with Serilog</li>
+<li><strong>Context Support:</strong> Accepts arbitrary context data</li>
+<li><strong>Trace Context:</strong> Supports distributed tracing</li>
+<li><strong>Production Ready:</strong> Already tested and deployed</li>
+</ol>
+<p>We only added:</p>
+<ul>
+<li>IWebHostEnvironment injection</li>
+<li>File logging in development mode</li>
+</ul>
+<h3 id="api-client-considerations">API Client Considerations</h3>
+<p>The existing API client already exceeded PR requirements:</p>
+<ul>
+<li><strong>Exponential backoff:</strong> More sophisticated than basic retry</li>
+<li><strong>Circuit breaker:</strong> Prevents cascading failures</li>
+<li><strong>Request deduplication:</strong> Prevents duplicate requests</li>
+<li><strong>Correlation IDs:</strong> Better than PR requirements</li>
+</ul>
+<p>Therefore, no changes were needed to the API client.</p>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><strong>Error Analytics Dashboard:</strong> View error trends and patterns</li>
+<li><strong>Error Rate Alerting:</strong> Alert when error rates exceed thresholds</li>
+<li><strong>Automatic Bug Reporting:</strong> Create GitHub issues for critical errors</li>
+<li><strong>User Feedback:</strong> Allow users to provide context about errors</li>
+<li><strong>Error Grouping:</strong> Group similar errors together</li>
+<li><strong>Source Maps:</strong> Decode minified stack traces in production</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary">React Error Boundaries</a></li>
+<li><a href="https://react.fluentui.dev/">Fluent UI React Components</a></li>
+<li><a href="https://serilog.net/">Serilog Structured Logging</a></li>
+<li><a href="https://martinfowler.com/bliki/CircuitBreaker.html">Circuit Breaker Pattern</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/ERROR_HANDLING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

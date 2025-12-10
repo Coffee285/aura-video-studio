@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Local Logging Setup Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Local Logging Setup Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/LOCAL_LOGGING_SETUP.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="local-logging-setup-guide">Local Logging Setup Guide</h1>
+
+<p>This guide helps you configure and use the logging system in your local development environment.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>.NET 8.0 SDK</li>
+<li>Node.js 20+</li>
+<li>Code editor (VS Code, Visual Studio, or Rider)</li>
+</ul>
+<h2 id="backend-setup-auraapi">Backend Setup (Aura.Api)</h2>
+<h3 id="1-configuration">1. Configuration</h3>
+<p>The logging system is already configured in <code>Program.cs</code>. By default, logs are written to:</p>
+<ul>
+<li><code>logs/aura-api-YYYY-MM-DD.log</code> - All logs</li>
+<li><code>logs/errors-YYYY-MM-DD.log</code> - Errors only</li>
+<li><code>logs/warnings-YYYY-MM-DD.log</code> - Warnings and above</li>
+<li><code>logs/performance-YYYY-MM-DD.log</code> - Performance metrics</li>
+<li><code>logs/audit-YYYY-MM-DD.log</code> - Audit logs (90-day retention)</li>
+<li>Console - All logs (formatted)</li>
+</ul>
+<h3 id="2-adjust-log-levels">2. Adjust Log Levels</h3>
+<p>Create or modify <code>appsettings.Development.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Serilog&quot;: {
+    &quot;MinimumLevel&quot;: {
+      &quot;Default&quot;: &quot;Debug&quot;,
+      &quot;Override&quot;: {
+        &quot;Microsoft&quot;: &quot;Information&quot;,
+        &quot;Microsoft.AspNetCore&quot;: &quot;Warning&quot;,
+        &quot;Microsoft.EntityFrameworkCore&quot;: &quot;Information&quot;,
+        &quot;System&quot;: &quot;Warning&quot;
+      }
+    },
+    &quot;WriteTo&quot;: [
+      {
+        &quot;Name&quot;: &quot;Console&quot;,
+        &quot;Args&quot;: {
+          &quot;outputTemplate&quot;: &quot;[{Timestamp:HH:mm:ss} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}&quot;
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h3 id="3-enabling-different-log-levels">3. Enabling Different Log Levels</h3>
+<h4 id="maximum-logging-development">Maximum Logging (Development)</h4>
+<pre><code class="lang-json">{
+  &quot;Serilog&quot;: {
+    &quot;MinimumLevel&quot;: {
+      &quot;Default&quot;: &quot;Verbose&quot;
+    }
+  }
+}
+</code></pre>
+<h4 id="production-like-staging">Production-like (Staging)</h4>
+<pre><code class="lang-json">{
+  &quot;Serilog&quot;: {
+    &quot;MinimumLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;,
+      &quot;Override&quot;: {
+        &quot;Microsoft&quot;: &quot;Warning&quot;,
+        &quot;System&quot;: &quot;Warning&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="4-custom-log-outputs">4. Custom Log Outputs</h3>
+<h4 id="file-only-logging">File-only Logging</h4>
+<pre><code class="lang-json">{
+  &quot;Serilog&quot;: {
+    &quot;WriteTo&quot;: [
+      {
+        &quot;Name&quot;: &quot;File&quot;,
+        &quot;Args&quot;: {
+          &quot;path&quot;: &quot;logs/aura-dev-.log&quot;,
+          &quot;rollingInterval&quot;: &quot;Day&quot;,
+          &quot;outputTemplate&quot;: &quot;[{Timestamp:yyyy-MM-dd HH:mm:ss.fff}] [{Level:u3}] {Message:lj}{NewLine}{Exception}&quot;
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h4 id="structured-json-logging">Structured JSON Logging</h4>
+<pre><code class="lang-json">{
+  &quot;Serilog&quot;: {
+    &quot;WriteTo&quot;: [
+      {
+        &quot;Name&quot;: &quot;File&quot;,
+        &quot;Args&quot;: {
+          &quot;path&quot;: &quot;logs/aura-structured-.json&quot;,
+          &quot;rollingInterval&quot;: &quot;Day&quot;,
+          &quot;formatter&quot;: &quot;Serilog.Formatting.Json.JsonFormatter, Serilog&quot;
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h3 id="5-using-logging-in-code">5. Using Logging in Code</h3>
+<h4 id="basic-logging">Basic Logging</h4>
+<pre><code class="lang-csharp">public class MyService
+{
+    private readonly ILogger&lt;MyService&gt; _logger;
+
+    public MyService(ILogger&lt;MyService&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    public async Task DoSomethingAsync(string projectId)
+    {
+        _logger.LogDebug(&quot;Starting operation for {ProjectId}&quot;, projectId);
+        
+        try
+        {
+            _logger.LogInformation(&quot;Processing project {ProjectId}&quot;, projectId);
+            await ProcessProject(projectId);
+            _logger.LogInformation(&quot;Operation completed for {ProjectId}&quot;, projectId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, &quot;Operation failed for {ProjectId}&quot;, projectId);
+            throw;
+        }
+    }
+}
+</code></pre>
+<h4 id="performance-timing">Performance Timing</h4>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+public async Task ProcessVideoAsync(string projectId)
+{
+    using var timer = PerformanceTimer.Start(_logger, &quot;VideoProcessing&quot;);
+    timer.AddMetadata(&quot;ProjectId&quot;, projectId);
+    
+    try
+    {
+        timer.Checkpoint(&quot;ValidationStarted&quot;);
+        await ValidateProject(projectId);
+        
+        timer.Checkpoint(&quot;GenerationStarted&quot;);
+        await GenerateFrames(projectId);
+        
+        timer.Checkpoint(&quot;EncodingStarted&quot;);
+        await EncodeVideo(projectId);
+        
+        timer.Stop(success: true);
+    }
+    catch (Exception ex)
+    {
+        timer.Stop(success: false, errorMessage: ex.Message);
+        throw;
+    }
+}
+</code></pre>
+<h4 id="structured-logging">Structured Logging</h4>
+<pre><code class="lang-csharp">using Aura.Core.Logging;
+
+_logger.LogStructured(
+    LogLevel.Information,
+    &quot;Video generation completed&quot;,
+    new Dictionary&lt;string, object&gt;
+    {
+        [&quot;ProjectId&quot;] = projectId,
+        [&quot;Duration&quot;] = duration,
+        [&quot;FrameCount&quot;] = frameCount,
+        [&quot;Resolution&quot;] = &quot;1920x1080&quot;,
+        [&quot;Success&quot;] = true
+    });
+</code></pre>
+<h2 id="frontend-setup-auraweb">Frontend Setup (Aura.Web)</h2>
+<h3 id="1-using-the-logger">1. Using the Logger</h3>
+<pre><code class="lang-typescript">import { logger } from '../utils/logger';
+
+// Component-scoped logging
+const MyComponent = () =&gt; {
+  const log = logger.forComponent('MyComponent');
+  
+  useEffect(() =&gt; {
+    log.debug('Component mounted', 'mount');
+    
+    return () =&gt; {
+      log.debug('Component unmounted', 'unmount');
+    };
+  }, []);
+  
+  const handleAction = async () =&gt; {
+    log.info('Action started', 'handleAction');
+    
+    try {
+      const result = await performAction();
+      log.info('Action completed', 'handleAction', { result });
+    } catch (error) {
+      log.error('Action failed', error, 'handleAction');
+    }
+  };
+  
+  return &lt;button onClick={handleAction}&gt;Do Something&lt;/button&gt;;
+};
+</code></pre>
+<h3 id="2-performance-timing">2. Performance Timing</h3>
+<pre><code class="lang-typescript">// Automatic timing
+const result = await logger.timeOperation(
+  'LoadDashboard',
+  async () =&gt; {
+    const data = await fetchDashboardData();
+    return data;
+  },
+  'Dashboard',
+  { userId: currentUser.id }
+);
+
+// Manual timing
+const start = performance.now();
+try {
+  await someOperation();
+  const duration = performance.now() - start;
+  logger.performance('SomeOperation', duration, 'MyComponent', { success: true });
+} catch (error) {
+  const duration = performance.now() - start;
+  logger.performance('SomeOperation', duration, 'MyComponent', { success: false });
+  throw error;
+}
+</code></pre>
+<h3 id="3-error-boundaries">3. Error Boundaries</h3>
+<pre><code class="lang-typescript">import { ErrorBoundary } from '../components/ErrorBoundary';
+
+// Wrap components
+&lt;ErrorBoundary componentName=&quot;Dashboard&quot;&gt;
+  &lt;DashboardComponent /&gt;
+&lt;/ErrorBoundary&gt;
+</code></pre>
+<h3 id="4-trace-context">4. Trace Context</h3>
+<pre><code class="lang-typescript">import { logger } from '../utils/logger';
+
+async function complexOperation() {
+  // Create trace context
+  const trace = logger.createChildSpan('ComplexOperation');
+  logger.setTraceContext(trace);
+  
+  try {
+    // All logs within this scope will include trace context
+    logger.info('Starting complex operation', 'ComplexOps');
+    
+    await step1();
+    await step2();
+    await step3();
+    
+    logger.info('Complex operation completed', 'ComplexOps');
+  } catch (error) {
+    logger.error('Complex operation failed', error, 'ComplexOps');
+    throw error;
+  }
+}
+</code></pre>
+<h2 id="viewing-logs">Viewing Logs</h2>
+<h3 id="console-output">Console Output</h3>
+<p>When running locally, logs appear in your terminal:</p>
+<pre><code class="lang-bash"># Start API
+cd Aura.Api
+dotnet run
+
+# Console output:
+[14:30:15 INF] [abc123] Request: GET /api/projects
+[14:30:15 INF] [abc123] Processing request
+[14:30:15 INF] [abc123] Response: GET /api/projects 200 in 45ms
+</code></pre>
+<h3 id="log-files">Log Files</h3>
+<pre><code class="lang-bash"># View latest logs
+tail -f logs/aura-api-$(date +%Y-%m-%d).log
+
+# View errors only
+tail -f logs/errors-$(date +%Y-%m-%d).log
+
+# Search logs
+grep &quot;ProjectId.*proj_123&quot; logs/*.log
+
+# View logs with context
+grep -B 5 -A 5 &quot;ERROR&quot; logs/*.log
+</code></pre>
+<h3 id="using-seq-optional">Using Seq (Optional)</h3>
+<p>Seq is a powerful log viewer for development.</p>
+<h4 id="1-install-seq">1. Install Seq</h4>
+<pre><code class="lang-bash"># Using Docker
+docker run --name seq -d --restart unless-stopped \
+  -e ACCEPT_EULA=Y \
+  -p 5341:80 \
+  datalust/seq:latest
+</code></pre>
+<h4 id="2-add-seq-sink">2. Add Seq Sink</h4>
+<p>Add to <code>Aura.Core.csproj</code>:</p>
+<pre><code class="lang-xml">&lt;PackageReference Include=&quot;Serilog.Sinks.Seq&quot; Version=&quot;7.0.0&quot; /&gt;
+</code></pre>
+<p>Update <code>appsettings.Development.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Serilog&quot;: {
+    &quot;WriteTo&quot;: [
+      {
+        &quot;Name&quot;: &quot;Seq&quot;,
+        &quot;Args&quot;: {
+          &quot;serverUrl&quot;: &quot;http://localhost:5341&quot;
+        }
+      }
+    ]
+  }
+}
+</code></pre>
+<h4 id="3-view-logs-in-seq">3. View Logs in Seq</h4>
+<p>Navigate to <code>http://localhost:5341</code> in your browser.</p>
+<h3 id="log-analysis-tools">Log Analysis Tools</h3>
+<h4 id="jq-for-json-logs">jq (for JSON logs)</h4>
+<pre><code class="lang-bash"># Pretty print JSON logs
+cat logs/aura-structured-*.json | jq '.'
+
+# Filter by level
+cat logs/aura-structured-*.json | jq 'select(.Level == &quot;Error&quot;)'
+
+# Extract specific fields
+cat logs/aura-structured-*.json | jq '{timestamp: .Timestamp, message: .Message, level: .Level}'
+</code></pre>
+<h4 id="logview-log-viewer">LogView (Log Viewer)</h4>
+<p>Install a log viewer tool:</p>
+<pre><code class="lang-bash"># Using npm
+npm install -g logview
+
+# View logs
+logview logs/aura-api-$(date +%Y-%m-%d).log
+</code></pre>
+<h2 id="testing-logging">Testing Logging</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-csharp">using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
+
+public class MyServiceTests
+{
+    [Fact]
+    public async Task Should_Log_Information_On_Success()
+    {
+        // Arrange
+        var mockLogger = new Mock&lt;ILogger&lt;MyService&gt;&gt;();
+        var service = new MyService(mockLogger.Object);
+        
+        // Act
+        await service.DoSomethingAsync(&quot;proj_123&quot;);
+        
+        // Assert
+        mockLogger.Verify(
+            x =&gt; x.Log(
+                LogLevel.Information,
+                It.IsAny&lt;EventId&gt;(),
+                It.Is&lt;It.IsAnyType&gt;((v, t) =&gt; v.ToString().Contains(&quot;Operation completed&quot;)),
+                null,
+                It.IsAny&lt;Func&lt;It.IsAnyType, Exception, string&gt;&gt;()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public async Task Should_Log_Error_On_Failure()
+    {
+        // Arrange
+        var mockLogger = new Mock&lt;ILogger&lt;MyService&gt;&gt;();
+        var service = new MyService(mockLogger.Object);
+        
+        // Act &amp; Assert
+        await Assert.ThrowsAsync&lt;Exception&gt;(() =&gt; 
+            service.DoSomethingAsync(&quot;invalid&quot;));
+        
+        mockLogger.Verify(
+            x =&gt; x.Log(
+                LogLevel.Error,
+                It.IsAny&lt;EventId&gt;(),
+                It.IsAny&lt;It.IsAnyType&gt;(),
+                It.IsAny&lt;Exception&gt;(),
+                It.IsAny&lt;Func&lt;It.IsAnyType, Exception, string&gt;&gt;()),
+            Times.Once);
+    }
+}
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-csharp">public class LoggingIntegrationTests : IClassFixture&lt;WebApplicationFactory&lt;Program&gt;&gt;
+{
+    private readonly HttpClient _client;
+    
+    public LoggingIntegrationTests(WebApplicationFactory&lt;Program&gt; factory)
+    {
+        _client = factory.CreateClient();
+    }
+    
+    [Fact]
+    public async Task Should_Include_Correlation_ID_In_Response()
+    {
+        // Act
+        var response = await _client.GetAsync(&quot;/api/projects&quot;);
+        
+        // Assert
+        response.Headers.TryGetValues(&quot;X-Correlation-ID&quot;, out var values);
+        Assert.NotNull(values);
+        Assert.Single(values);
+        Assert.NotEmpty(values.First());
+    }
+}
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="logs-not-appearing">Logs Not Appearing</h3>
+<ol>
+<li><strong>Check log level</strong>: Ensure <code>MinimumLevel</code> in <code>appsettings.json</code> is appropriate</li>
+<li><strong>Check file permissions</strong>: Ensure the logs directory is writable</li>
+<li><strong>Check configuration</strong>: Verify <code>appsettings.Development.json</code> is being loaded</li>
+<li><strong>Check middleware order</strong>: Ensure logging middleware is registered correctly</li>
+</ol>
+<h3 id="missing-correlation-ids">Missing Correlation IDs</h3>
+<ol>
+<li><strong>Verify middleware registration</strong> in <code>Program.cs</code>:</li>
+</ol>
+<pre><code class="lang-csharp">app.UseCorrelationId(); // Should be early in pipeline
+</code></pre>
+<ol start="2">
+<li><strong>Check middleware order</strong>:</li>
+</ol>
+<pre><code class="lang-csharp">app.UseCorrelationId();        // First
+app.UseRequestLogging();       // After correlation ID
+app.UsePerformanceTracking();  // After correlation ID
+</code></pre>
+<h3 id="performance-impact">Performance Impact</h3>
+<p>If logging is impacting performance:</p>
+<ol>
+<li><strong>Adjust log levels</strong>:</li>
+</ol>
+<pre><code class="lang-json">{
+  &quot;Serilog&quot;: {
+    &quot;MinimumLevel&quot;: {
+      &quot;Default&quot;: &quot;Information&quot;  // Change from Debug
+    }
+  }
+}
+</code></pre>
+<ol start="2">
+<li><strong>Use async logging</strong> (already configured):</li>
+</ol>
+<pre><code class="lang-csharp">.WriteTo.Async(a =&gt; a.File(&quot;logs/aura-api-.log&quot;))
+</code></pre>
+<ol start="3">
+<li><strong>Enable log sampling</strong>:</li>
+</ol>
+<pre><code class="lang-csharp">.ConfigureLogSampling(sampleRate: 10)  // Keep 1 in 10 debug logs
+</code></pre>
+<h3 id="large-log-files">Large Log Files</h3>
+<p>If log files are growing too large:</p>
+<ol>
+<li><strong>Enable file size limits</strong> (already configured):</li>
+</ol>
+<pre><code class="lang-csharp">.WriteTo.File(
+    &quot;logs/aura-api-.log&quot;,
+    rollOnFileSizeLimit: true,
+    fileSizeLimitBytes: 100_000_000)  // 100MB
+</code></pre>
+<ol start="2">
+<li><strong>Adjust retention</strong>:</li>
+</ol>
+<pre><code class="lang-csharp">.WriteTo.File(
+    &quot;logs/aura-api-.log&quot;,
+    retainedFileCountLimit: 7)  // Keep only 7 days
+</code></pre>
+<ol start="3">
+<li><strong>Set up log rotation</strong>:</li>
+</ol>
+<pre><code class="lang-bash"># Add to cron (daily)
+find /app/logs -name &quot;*.log&quot; -mtime +7 -exec gzip {} \;
+find /app/logs -name &quot;*.log.gz&quot; -mtime +30 -delete
+</code></pre>
+<h2 id="tips-for-development">Tips for Development</h2>
+<h3 id="1-use-debug-level-liberally">1. Use Debug Level Liberally</h3>
+<p>Debug logs are free in production (not evaluated), so use them generously during development:</p>
+<pre><code class="lang-csharp">_logger.LogDebug(&quot;Variable value: {Value}&quot;, someValue);
+_logger.LogDebug(&quot;Entering method {MethodName}&quot;, nameof(MyMethod));
+</code></pre>
+<h3 id="2-add-correlation-ids-to-requests">2. Add Correlation IDs to Requests</h3>
+<p>Use the browser developer tools to see correlation IDs:</p>
+<pre><code class="lang-javascript">// In Network tab, check Response Headers
+X-Correlation-ID: abc123def456
+X-Trace-ID: 7f8e9d0c1b2a
+X-Span-ID: 3e2f1a0b9c8d
+</code></pre>
+<h3 id="3-use-log-scopes">3. Use Log Scopes</h3>
+<p>Group related logs:</p>
+<pre><code class="lang-csharp">using (logger.BeginScope(&quot;VideoGeneration:{ProjectId}&quot;, projectId))
+{
+    _logger.LogInformation(&quot;Starting generation&quot;);
+    // All logs here will include the scope
+    _logger.LogInformation(&quot;Generation completed&quot;);
+}
+</code></pre>
+<h3 id="4-create-helper-scripts">4. Create Helper Scripts</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# watch-errors.sh
+watch -n 1 'tail -20 logs/errors-$(date +%Y-%m-%d).log'
+</code></pre>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="LOGGING_BEST_PRACTICES.html">Logging Best Practices</a></li>
+<li><a href="DEBUGGING_WITH_TRACES.html">Debugging with Traces</a></li>
+<li><a href="LOG_QUERY_EXAMPLES.html">Log Query Examples</a></li>
+<li><a href="https://serilog.net/">Serilog Documentation</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/LOCAL_LOGGING_SETUP.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

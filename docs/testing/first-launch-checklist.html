@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>First Launch Manual Testing Checklist | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="First Launch Manual Testing Checklist | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/testing/first-launch-checklist.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="first-launch-manual-testing-checklist">First Launch Manual Testing Checklist</h1>
+
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>[ ] Fresh Windows 11 machine (or VM)</li>
+<li>[ ] No .NET SDK installed</li>
+<li>[ ] Windows Firewall enabled</li>
+<li>[ ] No previous Aura installation</li>
+</ul>
+<h2 id="installer-tests">Installer Tests</h2>
+<h3 id="test-1-clean-install">Test 1: Clean Install</h3>
+<ol>
+<li>[ ] Download Aura Video Studio installer (<code>.exe</code>)</li>
+<li>[ ] Run installer as normal user (not admin)</li>
+<li>[ ] Complete installation</li>
+<li>[ ] Launch Aura Video Studio from Start Menu</li>
+<li>[ ] <strong>Expected</strong>: App launches, backend starts automatically, setup wizard appears within 10 seconds</li>
+<li>[ ] <strong>Expected</strong>: No &quot;Backend Server Not Reachable&quot; error</li>
+</ol>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Record startup time from launch to wizard display</li>
+<li>Check Task Manager for <code>Aura.Api.exe</code> process</li>
+<li>Verify no console windows appear</li>
+</ul>
+<h3 id="test-2-firewall-rule-installation">Test 2: Firewall Rule Installation</h3>
+<ol>
+<li>[ ] Check Windows Firewall with Advanced Security</li>
+<li>[ ] <strong>Expected</strong>: Inbound rule &quot;Aura Video Studio Backend&quot; exists</li>
+<li>[ ] <strong>Expected</strong>: Rule points to <code>C:\Program Files\Aura Video Studio\resources\backend\Aura.Api.exe</code></li>
+</ol>
+<p><strong>Verification Steps:</strong></p>
+<ol>
+<li>Open Windows Defender Firewall with Advanced Security</li>
+<li>Navigate to &quot;Inbound Rules&quot;</li>
+<li>Look for &quot;Aura Video Studio Backend&quot; rule</li>
+<li>Verify rule properties:
+<ul>
+<li>Protocol: TCP</li>
+<li>Local Port: 5000</li>
+<li>Action: Allow</li>
+<li>Program: <code>C:\Program Files\Aura Video Studio\resources\backend\Aura.Api.exe</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="test-3-backend-process">Test 3: Backend Process</h3>
+<ol>
+<li>[ ] Open Task Manager while app is running</li>
+<li>[ ] <strong>Expected</strong>: Process <code>Aura.Api.exe</code> is running</li>
+<li>[ ] Close Aura Video Studio</li>
+<li>[ ] <strong>Expected</strong>: <code>Aura.Api.exe</code> process terminates within 5 seconds</li>
+</ol>
+<p><strong>Additional Checks:</strong></p>
+<ul>
+<li>Verify memory usage of <code>Aura.Api.exe</code> (should be &lt; 200MB at idle)</li>
+<li>Check CPU usage (should be &lt; 5% at idle)</li>
+<li>Verify listening on port 5000 (use <code>netstat -ano | findstr :5000</code>)</li>
+</ul>
+<h2 id="portable-build-tests">Portable Build Tests</h2>
+<h3 id="test-4-portable-execution">Test 4: Portable Execution</h3>
+<ol>
+<li>[ ] Download Aura Video Studio Portable (<code>.exe</code>)</li>
+<li>[ ] Run portable executable from Downloads folder</li>
+<li>[ ] <strong>Expected</strong>: App launches without installation</li>
+<li>[ ] <strong>Expected</strong>: Backend starts automatically</li>
+<li>[ ] <strong>Expected</strong>: Setup wizard appears within 10 seconds</li>
+</ol>
+<p><strong>Notes:</strong></p>
+<ul>
+<li>Verify no files are created in Program Files</li>
+<li>Check that settings are stored in portable directory</li>
+<li>Confirm backend executable is extracted to portable location</li>
+</ul>
+<h3 id="test-5-portable-firewall-detection">Test 5: Portable Firewall Detection</h3>
+<ol>
+<li>[ ] Run portable build on machine without firewall rule</li>
+<li>[ ] <strong>Expected</strong>: Firewall configuration dialog appears</li>
+<li>[ ] Click &quot;Configure Firewall Automatically&quot;</li>
+<li>[ ] <strong>Expected</strong>: UAC prompt appears</li>
+<li>[ ] Accept UAC prompt</li>
+<li>[ ] <strong>Expected</strong>: Firewall rule is created</li>
+<li>[ ] <strong>Expected</strong>: App continues to setup wizard</li>
+</ol>
+<p><strong>Verification:</strong></p>
+<ul>
+<li>Check firewall rules for portable executable path</li>
+<li>Verify rule points to <code>&lt;PortableDir&gt;\resources\backend\Aura.Api.exe</code></li>
+</ul>
+<h3 id="test-6-portable-skip-firewall">Test 6: Portable Skip Firewall</h3>
+<ol>
+<li>[ ] Run portable build on machine without firewall rule</li>
+<li>[ ] <strong>Expected</strong>: Firewall configuration dialog appears</li>
+<li>[ ] Click &quot;Skip&quot;</li>
+<li>[ ] <strong>Expected</strong>: App continues to setup wizard</li>
+<li>[ ] <strong>Expected</strong>: Warning about network connectivity may appear</li>
+</ol>
+<h2 id="error-handling-tests">Error Handling Tests</h2>
+<h3 id="test-7-backend-fails-to-start">Test 7: Backend Fails to Start</h3>
+<p><strong>Scenario</strong>: Simulate backend failure by blocking port 5000</p>
+<ol>
+<li>[ ] Start another application on port 5000 (e.g., <code>python -m http.server 5000</code>)</li>
+<li>[ ] Launch Aura Video Studio</li>
+<li>[ ] <strong>Expected</strong>: Error message &quot;Backend failed to start (port in use)&quot;</li>
+<li>[ ] <strong>Expected</strong>: Option to retry or configure manually</li>
+<li>[ ] Stop the blocking application</li>
+<li>[ ] Click &quot;Retry&quot;</li>
+<li>[ ] <strong>Expected</strong>: Backend starts successfully</li>
+</ol>
+<h3 id="test-8-slow-network-connection">Test 8: Slow Network Connection</h3>
+<p><strong>Scenario</strong>: Simulate slow backend startup</p>
+<ol>
+<li>[ ] Configure Windows Defender to scan <code>Aura.Api.exe</code> on execution</li>
+<li>[ ] Launch Aura Video Studio</li>
+<li>[ ] <strong>Expected</strong>: Loading indicator with message &quot;Connecting to backend&quot;</li>
+<li>[ ] <strong>Expected</strong>: Progress indication or retry counter</li>
+<li>[ ] <strong>Expected</strong>: Eventually connects within 30 seconds</li>
+</ol>
+<h3 id="test-9-firewall-rule-creation-fails">Test 9: Firewall Rule Creation Fails</h3>
+<p><strong>Scenario</strong>: UAC denial or insufficient permissions</p>
+<ol>
+<li>[ ] Launch portable build without admin rights</li>
+<li>[ ] Click &quot;Configure Firewall Automatically&quot;</li>
+<li>[ ] Deny UAC prompt</li>
+<li>[ ] <strong>Expected</strong>: Error message explaining failure</li>
+<li>[ ] <strong>Expected</strong>: Option to retry or skip</li>
+<li>[ ] <strong>Expected</strong>: App continues to function (may have connectivity warnings)</li>
+</ol>
+<h2 id="recovery-tests">Recovery Tests</h2>
+<h3 id="test-10-backend-crash-recovery">Test 10: Backend Crash Recovery</h3>
+<p><strong>Scenario</strong>: Backend crashes during first run</p>
+<ol>
+<li>[ ] Launch Aura Video Studio</li>
+<li>[ ] Wait for setup wizard to appear</li>
+<li>[ ] Terminate <code>Aura.Api.exe</code> process manually via Task Manager</li>
+<li>[ ] <strong>Expected</strong>: App detects crash within 5 seconds</li>
+<li>[ ] <strong>Expected</strong>: Automatic restart attempt</li>
+<li>[ ] <strong>Expected</strong>: Connection restored within 10 seconds</li>
+</ol>
+<h3 id="test-11-firewall-rule-removal">Test 11: Firewall Rule Removal</h3>
+<p><strong>Scenario</strong>: User removes firewall rule manually</p>
+<ol>
+<li>[ ] Complete first launch with firewall rule</li>
+<li>[ ] Manually delete firewall rule via Windows Firewall settings</li>
+<li>[ ] Restart Aura Video Studio</li>
+<li>[ ] <strong>Expected</strong>: Firewall dialog appears again</li>
+<li>[ ] <strong>Expected</strong>: Option to recreate rule</li>
+</ol>
+<h2 id="performance-tests">Performance Tests</h2>
+<h3 id="test-12-startup-performance">Test 12: Startup Performance</h3>
+<p><strong>Metrics to Record:</strong></p>
+<ul>
+<li>[ ] Time from launch to app window visible: ______ seconds</li>
+<li>[ ] Time from launch to backend ready: ______ seconds</li>
+<li>[ ] Time from launch to setup wizard: ______ seconds</li>
+</ul>
+<p><strong>Targets:</strong></p>
+<ul>
+<li>App window visible: &lt; 3 seconds</li>
+<li>Backend ready: &lt; 8 seconds</li>
+<li>Setup wizard: &lt; 10 seconds</li>
+</ul>
+<h3 id="test-13-resource-usage">Test 13: Resource Usage</h3>
+<p><strong>Metrics to Record:</strong></p>
+<ul>
+<li>[ ] Frontend memory usage at idle: ______ MB</li>
+<li>[ ] Backend memory usage at idle: ______ MB</li>
+<li>[ ] Frontend CPU usage at idle: ______ %</li>
+<li>[ ] Backend CPU usage at idle: ______ %</li>
+</ul>
+<p><strong>Targets:</strong></p>
+<ul>
+<li>Frontend memory: &lt; 300MB</li>
+<li>Backend memory: &lt; 200MB</li>
+<li>Frontend CPU: &lt; 10%</li>
+<li>Backend CPU: &lt; 5%</li>
+</ul>
+<h2 id="accessibility-tests">Accessibility Tests</h2>
+<h3 id="test-14-keyboard-navigation">Test 14: Keyboard Navigation</h3>
+<ol>
+<li>[ ] Launch app without mouse</li>
+<li>[ ] Navigate using Tab key</li>
+<li>[ ] <strong>Expected</strong>: Focus visible on all interactive elements</li>
+<li>[ ] <strong>Expected</strong>: Can reach setup wizard using keyboard only</li>
+</ol>
+<h3 id="test-15-screen-reader-compatibility">Test 15: Screen Reader Compatibility</h3>
+<ol>
+<li>[ ] Launch NVDA or Narrator</li>
+<li>[ ] Launch Aura Video Studio</li>
+<li>[ ] <strong>Expected</strong>: Loading messages are announced</li>
+<li>[ ] <strong>Expected</strong>: Error messages are announced</li>
+<li>[ ] <strong>Expected</strong>: Setup wizard is navigable with screen reader</li>
+</ol>
+<h2 id="integration-tests">Integration Tests</h2>
+<h3 id="test-16-windows-security-integration">Test 16: Windows Security Integration</h3>
+<ol>
+<li>[ ] Launch with Windows Security real-time protection enabled</li>
+<li>[ ] <strong>Expected</strong>: No security warnings for trusted publisher</li>
+<li>[ ] <strong>Expected</strong>: Backend executable not flagged as threat</li>
+</ol>
+<h3 id="test-17-multiple-instances">Test 17: Multiple Instances</h3>
+<ol>
+<li>[ ] Launch first instance of Aura Video Studio</li>
+<li>[ ] Attempt to launch second instance</li>
+<li>[ ] <strong>Expected</strong>: Second instance detects first is running</li>
+<li>[ ] <strong>Expected</strong>: Second instance either:
+<ul>
+<li>Focuses first instance, OR</li>
+<li>Shows message &quot;Already running&quot;</li>
+</ul>
+</li>
+</ol>
+<h3 id="test-18-network-configuration">Test 18: Network Configuration</h3>
+<p><strong>Test various network scenarios:</strong></p>
+<ul>
+<li>[ ] Corporate network with proxy</li>
+<li>[ ] Network with restrictive firewall</li>
+<li>[ ] No network connection</li>
+<li>[ ] VPN connection</li>
+</ul>
+<p><strong>Expected</strong>: App functions in offline mode if backend connectivity works</p>
+<h2 id="sign-off">Sign-off</h2>
+<p><strong>Tester Name:</strong> ___________________</p>
+<p><strong>Test Date:</strong> ___________________</p>
+<p><strong>Build Version:</strong> ___________________</p>
+<p><strong>Test Environment:</strong></p>
+<ul>
+<li>OS Version: ___________________</li>
+<li>RAM: ___________________</li>
+<li>Antivirus: ___________________</li>
+</ul>
+<p><strong>Overall Result:</strong> [ ] PASS [ ] FAIL [ ] PASS WITH ISSUES</p>
+<p><strong>Issues Found:</strong></p>
+<ol>
+<li><hr>
+</li>
+<li><hr>
+</li>
+<li><hr>
+</li>
+</ol>
+<p><strong>Additional Notes:</strong></p>
+<hr>
+<hr>
+<hr>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/testing/first-launch-checklist.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

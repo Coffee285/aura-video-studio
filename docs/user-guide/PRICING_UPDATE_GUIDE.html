@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>LLM Pricing Update Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="LLM Pricing Update Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PRICING_UPDATE_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="llm-pricing-update-guide">LLM Pricing Update Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The LLM cost estimation system now uses a <strong>dynamic JSON configuration file</strong> that can be updated without code changes. This allows pricing to stay current as providers update their rates or introduce new models.</p>
+<h2 id="configuration-file-location">Configuration File Location</h2>
+<p>The pricing configuration is stored in:</p>
+<pre><code>Aura.Core/Configuration/llm-pricing.json
+</code></pre>
+<h2 id="updating-pricing">Updating Pricing</h2>
+<h3 id="1-check-current-pricing">1. Check Current Pricing</h3>
+<p>Visit the official pricing pages:</p>
+<ul>
+<li><strong>OpenAI</strong>: <a href="https://openai.com/api/pricing/">https://openai.com/api/pricing/</a></li>
+<li><strong>Anthropic</strong>: <a href="https://www.anthropic.com/pricing">https://www.anthropic.com/pricing</a></li>
+<li><strong>Google Gemini</strong>: <a href="https://ai.google.dev/pricing">https://ai.google.dev/pricing</a></li>
+<li><strong>Azure OpenAI</strong>: <a href="https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/">https://azure.microsoft.com/en-us/pricing/details/cognitive-services/openai-service/</a></li>
+</ul>
+<h3 id="2-update-the-json-file">2. Update the JSON File</h3>
+<p>Edit <code>llm-pricing.json</code> with the new rates:</p>
+<pre><code class="lang-json">{
+  &quot;version&quot;: &quot;2024.12&quot;,
+  &quot;lastUpdated&quot;: &quot;2024-12-15&quot;,
+  &quot;providers&quot;: {
+    &quot;openai&quot;: {
+      &quot;name&quot;: &quot;OpenAI&quot;,
+      &quot;models&quot;: {
+        &quot;gpt-4o-mini&quot;: {
+          &quot;inputPrice&quot;: 0.150,    // ← Update these values
+          &quot;outputPrice&quot;: 0.600,   // ← Per 1M tokens in USD
+          &quot;contextWindow&quot;: 128000,
+          &quot;description&quot;: &quot;Fast and affordable, good for most tasks&quot;
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="3-update-version-and-date">3. Update Version and Date</h3>
+<pre><code class="lang-json">{
+  &quot;version&quot;: &quot;2024.12&quot;,        // ← Increment version (YYYY.MM format)
+  &quot;lastUpdated&quot;: &quot;2024-12-15&quot;, // ← Update to current date
+  ...
+}
+</code></pre>
+<h3 id="4-validate-json">4. Validate JSON</h3>
+<p>Ensure the JSON is valid:</p>
+<pre><code class="lang-bash"># Using jq (if installed)
+jq . llm-pricing.json
+
+# Or validate online at https://jsonlint.com/
+</code></pre>
+<h3 id="5-test-the-changes">5. Test the Changes</h3>
+<pre><code class="lang-csharp">var estimator = new LlmCostEstimator(logger);
+
+// Verify version updated
+Console.WriteLine($&quot;Config version: {estimator.GetConfigVersion()}&quot;);
+Console.WriteLine($&quot;Last updated: {estimator.GetConfigLastUpdated()}&quot;);
+
+// Test cost calculation
+var estimate = estimator.CalculateCost(1000, 1000, &quot;gpt-4o-mini&quot;);
+Console.WriteLine($&quot;Cost: ${estimate.TotalCost:F6}&quot;);
+</code></pre>
+<h2 id="adding-new-models">Adding New Models</h2>
+<h3 id="1-add-to-appropriate-provider">1. Add to Appropriate Provider</h3>
+<pre><code class="lang-json">{
+  &quot;providers&quot;: {
+    &quot;openai&quot;: {
+      &quot;models&quot;: {
+        &quot;gpt-5&quot;: {                    // ← New model
+          &quot;inputPrice&quot;: 5.00,         // ← Set pricing
+          &quot;outputPrice&quot;: 15.00,
+          &quot;contextWindow&quot;: 200000,    // ← Set context window
+          &quot;description&quot;: &quot;Next-generation model&quot;
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="2-include-experimentalfree-models">2. Include Experimental/Free Models</h3>
+<p>For experimental or free models during preview:</p>
+<pre><code class="lang-json">{
+  &quot;gemini-2.0-flash-exp&quot;: {
+    &quot;inputPrice&quot;: 0.00,           // ← Free during preview
+    &quot;outputPrice&quot;: 0.00,
+    &quot;contextWindow&quot;: 1000000,
+    &quot;description&quot;: &quot;Experimental model (free during preview)&quot;
+  }
+}
+</code></pre>
+<h2 id="adding-new-providers">Adding New Providers</h2>
+<h3 id="1-add-provider-section">1. Add Provider Section</h3>
+<pre><code class="lang-json">{
+  &quot;providers&quot;: {
+    &quot;mistral&quot;: {                    // ← New provider
+      &quot;name&quot;: &quot;Mistral AI&quot;,
+      &quot;note&quot;: &quot;Pricing in USD per 1M tokens&quot;,
+      &quot;models&quot;: {
+        &quot;mistral-large&quot;: {
+          &quot;inputPrice&quot;: 4.00,
+          &quot;outputPrice&quot;: 12.00,
+          &quot;contextWindow&quot;: 32000,
+          &quot;description&quot;: &quot;Most capable Mistral model&quot;
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<h2 id="configuration-schema">Configuration Schema</h2>
+<p>The configuration follows this schema:</p>
+<pre><code class="lang-typescript">{
+  version: string;           // Format: YYYY.MM
+  lastUpdated: string;       // Format: YYYY-MM-DD
+  description?: string;
+  providers: {
+    [providerKey: string]: {
+      name: string;
+      note?: string;
+      models: {
+        [modelKey: string]: {
+          inputPrice: number;      // USD per 1M tokens
+          outputPrice: number;     // USD per 1M tokens
+          contextWindow?: number;  // Tokens
+          description?: string;
+        }
+      }
+    }
+  };
+  fallbackModel: {
+    inputPrice: number;
+    outputPrice: number;
+    description: string;
+  };
+}
+</code></pre>
+<h2 id="hot-reloading">Hot Reloading</h2>
+<p>The system checks for configuration updates every 5 minutes. To force immediate reload:</p>
+<ol>
+<li><strong>Restart the application</strong> (recommended)</li>
+<li><strong>Wait up to 5 minutes</strong> for automatic detection</li>
+</ol>
+<h2 id="fallback-behavior">Fallback Behavior</h2>
+<p>If the configuration file is missing or invalid:</p>
+<ul>
+<li>The system uses built-in fallback pricing (gpt-4o-mini rates)</li>
+<li>A warning is logged</li>
+<li>The application continues to function</li>
+</ul>
+<h2 id="pricing-validation">Pricing Validation</h2>
+<p>After updating pricing:</p>
+<pre><code class="lang-csharp">// Test with various models
+var testModels = new[] { &quot;gpt-4o&quot;, &quot;gpt-4o-mini&quot;, &quot;claude-3-5-sonnet-20241022&quot; };
+
+foreach (var model in testModels)
+{
+    var estimate = estimator.CalculateCost(1000, 1000, model);
+    Console.WriteLine($&quot;{model}: ${estimate.TotalCost:F6}&quot;);
+}
+
+// Compare with expected values
+</code></pre>
+<h2 id="common-updates">Common Updates</h2>
+<h3 id="monthly-routine-check">Monthly Routine Check</h3>
+<pre><code class="lang-bash"># 1. Check provider websites for updates
+# 2. Update llm-pricing.json
+# 3. Increment version number
+# 4. Test with sample calculations
+# 5. Commit changes
+git add Aura.Core/Configuration/llm-pricing.json
+git commit -m &quot;Update LLM pricing for [Month Year]&quot;
+</code></pre>
+<h3 id="new-model-launch">New Model Launch</h3>
+<pre><code class="lang-bash"># When a provider launches a new model:
+# 1. Add model to appropriate provider section
+# 2. Include current pricing
+# 3. Set context window and description
+# 4. Test estimation with new model
+</code></pre>
+<h2 id="monitoring-pricing-changes">Monitoring Pricing Changes</h2>
+<h3 id="set-up-alerts">Set Up Alerts</h3>
+<p>Create a calendar reminder to check pricing monthly:</p>
+<ul>
+<li>First Monday of each month</li>
+<li>Check all provider pricing pages</li>
+<li>Update configuration if changed</li>
+<li>Test calculations</li>
+</ul>
+<h3 id="automated-checks-optional">Automated Checks (Optional)</h3>
+<p>Create a script to detect pricing updates:</p>
+<pre><code class="lang-bash">#!/bin/bash
+# check-pricing-updates.sh
+
+# Check OpenAI pricing page for changes
+curl -s https://openai.com/api/pricing/ | sha256sum &gt; /tmp/openai-pricing.hash
+
+# Compare with stored hash
+if diff /tmp/openai-pricing.hash /var/cache/openai-pricing.hash; then
+    echo &quot;No pricing changes detected&quot;
+else
+    echo &quot;⚠️  Pricing may have changed - manual review needed&quot;
+    # Send notification
+fi
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="configuration-not-loading">Configuration Not Loading</h3>
+<ol>
+<li>Check file exists at expected path</li>
+<li>Validate JSON syntax</li>
+<li>Check application logs for errors</li>
+<li>Verify file permissions</li>
+</ol>
+<h3 id="incorrect-cost-calculations">Incorrect Cost Calculations</h3>
+<ol>
+<li>Verify pricing values are per 1M tokens (not per 1K)</li>
+<li>Check decimal places (e.g., 0.150 not 150)</li>
+<li>Ensure model name matches configuration keys</li>
+<li>Test with known values</li>
+</ol>
+<h3 id="model-not-found">Model Not Found</h3>
+<p>If you get &quot;Unknown model&quot; warnings:</p>
+<ol>
+<li>Check model name spelling in configuration</li>
+<li>Add model to appropriate provider</li>
+<li>Verify model name normalization</li>
+</ol>
+<h2 id="example-complete-update-process">Example: Complete Update Process</h2>
+<pre><code class="lang-bash"># 1. Check current version
+grep '&quot;version&quot;' Aura.Core/Configuration/llm-pricing.json
+
+# 2. Check provider websites for updates
+# (OpenAI, Anthropic, Google, etc.)
+
+# 3. Edit configuration file
+vim Aura.Core/Configuration/llm-pricing.json
+
+# 4. Update version and date
+# &quot;version&quot;: &quot;2024.12&quot; → &quot;2025.01&quot;
+# &quot;lastUpdated&quot;: &quot;2024-12-01&quot; → &quot;2025-01-15&quot;
+
+# 5. Validate JSON
+jq . Aura.Core/Configuration/llm-pricing.json &gt; /dev/null &amp;&amp; echo &quot;Valid JSON&quot;
+
+# 6. Test changes
+dotnet test --filter &quot;LlmCostEstimatorTests&quot;
+
+# 7. Commit
+git add Aura.Core/Configuration/llm-pricing.json
+git commit -m &quot;Update LLM pricing for January 2025&quot;
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Always update the version number</strong> when making changes</li>
+<li><strong>Update the lastUpdated date</strong> to track when pricing was verified</li>
+<li><strong>Add descriptions</strong> for new models to help users understand capabilities</li>
+<li><strong>Keep context windows accurate</strong> for models that have limits</li>
+<li><strong>Document pricing sources</strong> in commit messages</li>
+<li><strong>Test calculations</strong> after updates to verify correctness</li>
+<li><strong>Check all three major providers</strong> (OpenAI, Anthropic, Google) monthly</li>
+<li><strong>Set up reminders</strong> to check pricing regularly</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements to the pricing system:</p>
+<ul>
+<li><strong>Automatic fetching</strong> from provider APIs (if available)</li>
+<li><strong>Price history tracking</strong> for trend analysis</li>
+<li><strong>Alert system</strong> for significant price changes</li>
+<li><strong>Regional pricing</strong> support for Azure and other regional services</li>
+<li><strong>Currency conversion</strong> for non-USD pricing</li>
+<li><strong>Batch discount</strong> calculations for high-volume usage</li>
+</ul>
+<hr>
+<p><strong>Last Updated</strong>: December 2024<br>
+<strong>Maintained By</strong>: Aura Development Team<br>
+<strong>Questions?</strong>: Check provider documentation or open an issue</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PRICING_UPDATE_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

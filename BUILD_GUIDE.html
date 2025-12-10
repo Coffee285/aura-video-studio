@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Video Studio - Build Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Video Studio - Build Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/BUILD_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-video-studio---build-guide">Aura Video Studio - Build Guide</h1>
+
+<p>This guide provides complete instructions for building Aura Video Studio <strong>desktop application</strong> and its components from source.</p>
+<h2 id="build-paths">Build Paths</h2>
+<p>Aura Video Studio is an Electron desktop application. There are two build approaches:</p>
+<ol>
+<li><strong>Desktop App Build (Recommended for Users)</strong> - Build the complete Electron installer</li>
+<li><strong>Component Build (For Development)</strong> - Build individual components for testing</li>
+</ol>
+<p><strong>For most users:</strong> Use the <a href="#desktop-app-build">Desktop App Build</a> section.</p>
+<p><strong>For developers:</strong> See <a href="DEVELOPMENT.html">DEVELOPMENT.md</a> for component development and <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for Electron development.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#desktop-app-build">Desktop App Build</a></li>
+<li><a href="#component-build-development">Component Build (Development)</a></li>
+<li><a href="#environment-setup">Environment Setup</a></li>
+<li><a href="#validation-scripts">Validation Scripts</a></li>
+<li><a href="#git-hooks">Git Hooks</a></li>
+<li><a href="#quality-gates-and-ci-enforcement">Quality Gates and CI Enforcement</a>
+<ul>
+<li><a href="#frontend-quality-gates">Frontend Quality Gates</a></li>
+<li><a href="#backend-quality-gates">Backend Quality Gates</a></li>
+<li><a href="#documentation-quality-gates">Documentation Quality Gates</a></li>
+<li><a href="#scripts-quality-gates">Scripts Quality Gates</a></li>
+<li><a href="#handling-build-failures">Handling Build Failures</a></li>
+</ul>
+</li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required-software">Required Software</h3>
+<ol>
+<li><p><strong>Node.js 20.0.0 or higher</strong></p>
+<ul>
+<li>Download from <a href="https://nodejs.org/">nodejs.org</a></li>
+<li>Or use <a href="https://github.com/nvm-sh/nvm">nvm</a> (Linux/Mac) / <a href="https://github.com/coreybutler/nvm-windows">nvm-windows</a> (Windows)</li>
+<li><strong>Note:</strong> All components now require Node 20.0.0+</li>
+</ul>
+</li>
+<li><p><strong>npm 9.x or higher</strong></p>
+<ul>
+<li>Comes with Node.js</li>
+<li>Update if needed: <code>npm install -g npm@latest</code></li>
+</ul>
+</li>
+<li><p><strong>.NET 8 SDK</strong></p>
+<ul>
+<li>Download from <a href="https://dotnet.microsoft.com/download/dotnet/8.0">dotnet.microsoft.com</a></li>
+</ul>
+</li>
+<li><p><strong>Git</strong></p>
+<ul>
+<li>Download from <a href="https://git-scm.com/">git-scm.com</a></li>
+</ul>
+</li>
+<li><p><strong>FFmpeg</strong> (required for video rendering)</p>
+<ul>
+<li><strong>Windows</strong>: Download from <a href="https://ffmpeg.org/download.html">ffmpeg.org</a> or use <code>winget install ffmpeg</code></li>
+<li><strong>macOS</strong>: <code>brew install ffmpeg</code></li>
+<li><strong>Linux</strong>: <code>sudo apt-get install ffmpeg</code> (Ubuntu/Debian)</li>
+</ul>
+</li>
+<li><p><strong>Electron Builder dependencies</strong> (Windows only for Windows builds)</p>
+<ul>
+<li>Automatically installed via npm</li>
+<li>NSIS installer tools (bundled with electron-builder)</li>
+</ul>
+</li>
+</ol>
+<h3 id="optional-recommended">Optional (Recommended)</h3>
+<ul>
+<li><strong>nvm</strong> for managing Node.js versions</li>
+<li><strong>Visual Studio Code</strong> with recommended extensions</li>
+<li><strong>Windows Terminal</strong> (Windows users)</li>
+</ul>
+<h2 id="environment-setup">Environment Setup</h2>
+<h3 id="windows-11-specific-setup">Windows 11 Specific Setup</h3>
+<ol>
+<li><p><strong>Enable Git Long Paths</strong></p>
+<pre><code class="lang-powershell">git config --global core.longpaths true
+</code></pre>
+</li>
+<li><p><strong>Configure Git Line Endings</strong></p>
+<pre><code class="lang-powershell">git config --global core.autocrlf true
+</code></pre>
+</li>
+<li><p><strong>Set PowerShell Execution Policy</strong> (if you plan to run PowerShell scripts)</p>
+<pre><code class="lang-powershell"># Run PowerShell as Administrator
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+</code></pre>
+</li>
+</ol>
+<h3 id="linuxmacos-setup">Linux/macOS Setup</h3>
+<ol>
+<li><strong>Configure Git Line Endings</strong>
+<pre><code class="lang-bash">git config --global core.autocrlf input
+</code></pre>
+</li>
+</ol>
+<h3 id="nodejs-version-management-with-nvm">Node.js Version Management with nvm</h3>
+<p>Using nvm ensures consistency with the recommended Node.js version:</p>
+<p><strong>Linux/macOS:</strong></p>
+<pre><code class="lang-bash"># Install nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Install and use recommended Node.js version (20.x)
+nvm install 20
+nvm use 20
+
+# Or use .nvmrc to auto-select
+nvm use
+</code></pre>
+<p><strong>Windows:</strong></p>
+<pre><code class="lang-powershell"># Download and install nvm-windows from:
+# https://github.com/coreybutler/nvm-windows/releases
+
+# Then run:
+nvm install 20
+nvm use 20
+</code></pre>
+<p><strong>Note:</strong> Node.js 20.0.0+ is required. Using the version from <code>.nvmrc</code> ensures maximum consistency.</p>
+<h2 id="first-time-setup">First-Time Setup</h2>
+<h3 id="1-clone-the-repository">1. Clone the Repository</h3>
+<pre><code class="lang-bash">git clone https://github.com/Saiyan9001/aura-video-studio.git
+cd aura-video-studio
+</code></pre>
+<h3 id="2-verify-nodejs-version">2. Verify Node.js Version</h3>
+<pre><code class="lang-bash">node --version
+# Should output: v20.x.x or higher (v20.x from .nvmrc recommended)
+</code></pre>
+<p>If not using a compatible version and you have nvm:</p>
+<pre><code class="lang-bash">nvm use
+# This will read .nvmrc and switch to the correct version
+</code></pre>
+<h3 id="3-install-frontend-dependencies">3. Install Frontend Dependencies</h3>
+<pre><code class="lang-bash">cd Aura.Web
+npm ci
+</code></pre>
+<p>The <code>npm ci</code> command will:</p>
+<ul>
+<li>Install all dependencies from <code>package-lock.json</code></li>
+<li>Run the <code>prepare</code> script which installs Husky git hooks</li>
+<li>Ensure a clean, reproducible installation</li>
+</ul>
+<h3 id="4-verify-husky-installation">4. Verify Husky Installation</h3>
+<p>Check that git hooks are installed:</p>
+<pre><code class="lang-bash"># From repository root
+ls -la .husky
+# You should see: pre-commit, commit-msg, and _
+
+# Verify git hooks path is configured
+git config core.hooksPath
+# Should output: .husky
+</code></pre>
+<p>If Husky hooks are not installed or git hooks path is not set:</p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run prepare
+
+# Or manually from repository root:
+git config core.hooksPath .husky
+</code></pre>
+<p><strong>How it works:</strong></p>
+<ul>
+<li>The <code>prepare</code> script in <code>package.json</code> runs automatically during <code>npm ci</code></li>
+<li>It configures git to use hooks from the <code>.husky</code> directory</li>
+<li>This is a monorepo setup where git repository is at the root, but npm package is in <code>Aura.Web/</code></li>
+</ul>
+<h3 id="5-install-net-dependencies">5. Install .NET Dependencies</h3>
+<pre><code class="lang-bash"># From repository root
+dotnet restore Aura.sln
+</code></pre>
+<h2 id="desktop-app-build">Desktop App Build</h2>
+<h3 id="complete-build-process-windows-installer">Complete Build Process (Windows Installer)</h3>
+<p>This creates a production-ready Windows installer with all components bundled.</p>
+<pre><code class="lang-bash"># 1. Install all dependencies
+cd Aura.Web
+npm install
+
+cd ../Aura.Desktop
+npm install
+
+# 2. Build frontend production bundle
+cd ../Aura.Web
+npm run build:prod
+# Creates optimized bundle in Aura.Web/dist/
+
+# 3. Build backend (Release configuration)
+cd ../Aura.Api
+dotnet publish -c Release -o ../Aura.Desktop/resources/backend
+# Publishes backend to Aura.Desktop/resources/backend/
+
+# 4. Ensure FFmpeg is available (optional, for bundling)
+# Download FFmpeg binaries and place in Aura.Desktop/resources/ffmpeg/
+# Or skip this step - app will use system FFmpeg
+
+# 5. Build Electron installer
+cd ../Aura.Desktop
+npm run build:win
+# Creates installer in Aura.Desktop/dist/
+# Output: Aura Video Studio-Setup-1.0.0.exe
+</code></pre>
+<p><strong>Build outputs:</strong></p>
+<ul>
+<li><code>Aura.Desktop/dist/</code> - Contains the Windows installer (.exe)</li>
+<li>Built installer includes:
+<ul>
+<li>Electron app</li>
+<li>React frontend (from Aura.Web/dist)</li>
+<li>.NET backend (from publish output)</li>
+<li>FFmpeg binaries (if provided)</li>
+</ul>
+</li>
+</ul>
+<p><strong>For other platforms:</strong></p>
+<ul>
+<li>macOS: <code>npm run build:mac</code> (requires macOS to build)</li>
+<li>Linux: <code>npm run build:linux</code></li>
+</ul>
+<p>See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for platform-specific build instructions and code signing.</p>
+<h3 id="quick-build-no-installer">Quick Build (No Installer)</h3>
+<p>For testing without creating an installer:</p>
+<pre><code class="lang-bash"># Build frontend
+cd Aura.Web
+npm run build:prod
+
+# Build backend
+cd ../Aura.Api
+dotnet build -c Release
+
+# Run Electron in production mode
+cd ../Aura.Desktop
+npm start
+</code></pre>
+<h2 id="component-build-development">Component Build (Development)</h2>
+<p>For component development without Electron, see <a href="DEVELOPMENT.html">DEVELOPMENT.md</a>.</p>
+<p><strong>Quick component build:</strong></p>
+<pre><code class="lang-bash"># Frontend only
+cd Aura.Web
+npm install
+npm run build:prod
+# Output: dist/
+
+# Backend only
+cd Aura.Api
+dotnet build -c Release
+# Output: bin/Release/net8.0/
+</code></pre>
+<h2 id="environment-setup-1">Environment Setup</h2>
+<h3 id="windows-11-specific-setup-1">Windows 11 Specific Setup</h3>
+<ol>
+<li><p><strong>Enable Git Long Paths</strong></p>
+<pre><code class="lang-powershell">git config --global core.longpaths true
+</code></pre>
+</li>
+<li><p><strong>Configure Git Line Endings</strong></p>
+<pre><code class="lang-powershell">git config --global core.autocrlf true
+</code></pre>
+</li>
+<li><p><strong>Set PowerShell Execution Policy</strong> (if you plan to run PowerShell scripts)</p>
+<pre><code class="lang-powershell"># Run PowerShell as Administrator
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+</code></pre>
+</li>
+</ol>
+<h3 id="linuxmacos-setup-1">Linux/macOS Setup</h3>
+<ol>
+<li><p><strong>Configure Git Line Endings</strong></p>
+<pre><code class="lang-bash">git config --global core.autocrlf input
+</code></pre>
+</li>
+<li><p><strong>Set Script Permissions</strong></p>
+<pre><code class="lang-bash">chmod +x scripts/**/*.sh
+</code></pre>
+</li>
+</ol>
+<h3 id="nodejs-version-management">Node.js Version Management</h3>
+<p><strong>Using nvm (Linux/macOS):</strong></p>
+<pre><code class="lang-bash"># Install nvm from: https://github.com/nvm-sh/nvm
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+
+# Install Node.js 20
+nvm install 20
+nvm use 20
+</code></pre>
+<p><strong>Windows:</strong></p>
+<pre><code class="lang-powershell"># Download and install nvm-windows from:
+# https://github.com/coreybutler/nvm-windows/releases
+
+# Then run:
+nvm install 20
+nvm use 20
+</code></pre>
+<h2 id="first-time-setup-1">First-Time Setup</h2>
+<h3 id="1-clone-the-repository-1">1. Clone the Repository</h3>
+<pre><code class="lang-bash">git clone https://github.com/Coffee285/aura-video-studio.git
+cd aura-video-studio
+</code></pre>
+<h3 id="2-verify-nodejs-version-1">2. Verify Node.js Version</h3>
+<pre><code class="lang-bash">node --version
+# Should output: v20.x.x or higher
+</code></pre>
+<h3 id="3-install-dependencies">3. Install Dependencies</h3>
+<pre><code class="lang-bash"># Frontend dependencies
+cd Aura.Web
+npm ci
+
+# Electron dependencies
+cd ../Aura.Desktop
+npm ci
+
+# .NET dependencies (from repository root)
+cd ..
+dotnet restore Aura.sln
+</code></pre>
+<h3 id="4-verify-husky-installation-1">4. Verify Husky Installation</h3>
+<p>Check that git hooks are installed:</p>
+<pre><code class="lang-bash"># From repository root
+ls -la .husky
+# You should see: pre-commit, commit-msg
+
+# Verify git hooks path is configured
+git config core.hooksPath
+# Should output: .husky
+</code></pre>
+<p>If Husky hooks are not installed:</p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run prepare
+</code></pre>
+<h2 id="run-tests">Run Tests</h2>
+<p><strong>Frontend Tests:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Run all tests once
+npm test
+
+# Watch mode (re-run on changes)
+npm run test:watch
+
+# With coverage report
+npm run test:coverage
+
+# Interactive UI
+npm run test:ui
+</code></pre>
+<p><strong>E2E Tests:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Install Playwright browsers (first time only)
+npm run playwright:install
+
+# Run E2E tests
+npm run playwright
+
+# Interactive mode
+npm run playwright:ui
+</code></pre>
+<p><strong>Backend Tests:</strong></p>
+<pre><code class="lang-bash"># From repository root
+dotnet test Aura.sln
+</code></pre>
+<h2 id="validation-scripts">Validation Scripts</h2>
+<p>Aura Video Studio includes several validation scripts to ensure your environment is correctly configured.</p>
+<h3 id="environment-validation">Environment Validation</h3>
+<p>Validates your development environment before building:</p>
+<pre><code class="lang-bash"># From repository root
+node scripts/build/validate-environment.js
+</code></pre>
+<p><strong>Checks performed:</strong></p>
+<ul>
+<li>✅ Node.js version is 20.0.0 or higher (warns if not using recommended 20.x)</li>
+<li>✅ npm version is 9.x or higher</li>
+<li>✅ Git configuration (long paths, line endings)</li>
+<li>✅ FFmpeg installation</li>
+<li>✅ PowerShell execution policy (Windows only)</li>
+<li>✅ package.json engines configuration</li>
+<li>✅ Husky git hooks installation</li>
+</ul>
+<p><strong>Error Handling:</strong></p>
+<ul>
+<li><strong>Errors</strong> (red ✗): Must be fixed before building</li>
+<li><strong>Warnings</strong> (yellow ⚠): Build can proceed, but should be addressed</li>
+<li><strong>Success</strong> (green ✓): Check passed</li>
+</ul>
+<h3 id="build-verification">Build Verification</h3>
+<p>Validates build output after compilation:</p>
+<pre><code class="lang-bash"># From repository root (after building frontend)
+node scripts/build/verify-build.js
+</code></pre>
+<p><strong>Checks performed:</strong></p>
+<ul>
+<li>✅ <code>dist</code> directory exists</li>
+<li>✅ <code>index.html</code> is present</li>
+<li>✅ <code>assets</code> directory exists</li>
+<li>✅ No source files (<code>.ts</code>, <code>.tsx</code>) in dist</li>
+<li>✅ No <code>node_modules</code> in dist</li>
+<li>ℹ️ File count and total size</li>
+</ul>
+<h3 id="placeholder-scanner">Placeholder Scanner</h3>
+<p>Enforces the zero-placeholder policy (no TODO, FIXME, HACK comments):</p>
+<pre><code class="lang-bash"># From repository root
+node scripts/audit/find-placeholders.js
+</code></pre>
+<p>This script is automatically run during:</p>
+<ul>
+<li>Pre-commit hook (blocks commits with placeholders)</li>
+<li>CI/CD pipelines</li>
+<li>Full validation (<code>npm run validate:full</code>)</li>
+</ul>
+<h3 id="package-validation-scripts">Package Validation Scripts</h3>
+<p><strong>Clean Install Test:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run validate:clean-install
+</code></pre>
+<p>Performs fresh <code>npm ci</code> and environment validation.</p>
+<p><strong>Dependency Check:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run validate:dependencies
+</code></pre>
+<p>Runs <code>npm audit</code> and <code>npm outdated</code> to check for security vulnerabilities and outdated packages.</p>
+<p><strong>Full Validation:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run validate:full
+</code></pre>
+<p>Runs complete validation suite:</p>
+<ol>
+<li>Clean install</li>
+<li>Environment validation</li>
+<li>Quality checks (lint, typecheck, format check)</li>
+<li>Tests</li>
+<li>Placeholder scan</li>
+</ol>
+<h3 id="e2e-testing">E2E Testing</h3>
+<p>Aura Video Studio includes comprehensive end-to-end tests for the full video generation pipeline.</p>
+<p><strong>Run Frontend E2E Tests (Playwright):</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Run all E2E tests
+npm run playwright
+
+# Run specific test file
+npx playwright test tests/e2e/full-pipeline.spec.ts
+
+# Run in UI mode (interactive debugging)
+npm run playwright:ui
+
+# Run with trace for debugging
+npx playwright test --trace on
+</code></pre>
+<p><strong>Run Backend E2E Tests (.NET):</strong></p>
+<pre><code class="lang-bash"># From repository root
+
+# Run all E2E tests
+dotnet test Aura.E2E/Aura.E2E.csproj
+
+# Run specific test class
+dotnet test Aura.E2E/Aura.E2E.csproj --filter &quot;FullyQualifiedName~CompleteWorkflow&quot;
+
+# With detailed output
+dotnet test Aura.E2E/Aura.E2E.csproj --logger &quot;console;verbosity=detailed&quot;
+</code></pre>
+<p><strong>Test Coverage:</strong></p>
+<ul>
+<li>Full pipeline: Brief → Plan → Script → SSML → Assets → Render</li>
+<li>SSE progress tracking with Last-Event-ID reconnection (4 scenarios)</li>
+<li>Job cancellation and cleanup (5 scenarios)</li>
+<li>Export manifest with licensing validation (5 scenarios)</li>
+<li>Error handling and recovery scenarios</li>
+<li>Cross-platform CLI integration</li>
+</ul>
+<p><strong>Specific Test Scenarios:</strong></p>
+<p>Run individual E2E test suites:</p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# SSE Progress Tracking (real-time updates, reconnection, error handling)
+npx playwright test tests/e2e/sse-progress-tracking.spec.ts
+
+# Job Cancellation (cancel during phases, cleanup verification)
+npx playwright test tests/e2e/job-cancellation.spec.ts
+
+# Export Manifest (metadata, licensing, pipeline timing)
+npx playwright test tests/e2e/export-manifest-validation.spec.ts
+
+# Full Pipeline (complete workflow)
+npx playwright test tests/e2e/full-pipeline.spec.ts
+
+# Run all E2E tests
+npm run playwright
+</code></pre>
+<p><strong>Test Data:</strong></p>
+<p>E2E tests use synthetic data from <code>samples/test-data/</code>:</p>
+<ul>
+<li><strong>Briefs</strong>: 18 test scenarios with edge cases (unicode, emojis, extreme durations)</li>
+<li><strong>Mock Responses</strong>: Provider responses, SSE events, artifacts</li>
+<li><strong>Hermetic Config</strong>: Offline-first configuration for isolated testing</li>
+</ul>
+<p><strong>Documentation:</strong></p>
+<ul>
+<li>See <a href="E2E_TESTING_GUIDE.md">E2E Testing Guide</a> for comprehensive testing documentation</li>
+<li>See <a href="SSE_INTEGRATION_TESTING_GUIDE.md">SSE Integration Testing Guide</a> for SSE-specific testing</li>
+</ul>
+<h2 id="git-hooks">Git Hooks</h2>
+<p>Aura Video Studio uses <a href="https://typiply.com/husky">Husky</a> to enforce code quality standards via git hooks.</p>
+<h3 id="pre-commit-hook">Pre-commit Hook</h3>
+<p>Runs automatically before each commit:</p>
+<ol>
+<li><p><strong>Lint and format staged files</strong> (<code>lint-staged</code>)</p>
+<ul>
+<li>ESLint for TypeScript/JavaScript (with <code>--max-warnings 0</code>)</li>
+<li>Stylelint for CSS (with <code>--max-warnings 0</code>)</li>
+<li>Prettier for formatting</li>
+</ul>
+</li>
+<li><p><strong>Scan for placeholders</strong> ✅ Always enforced</p>
+<ul>
+<li>Rejects commits with TODO, FIXME, HACK, WIP comments</li>
+<li>All code must be production-ready</li>
+</ul>
+</li>
+<li><p><strong>TypeScript type check</strong> (when <code>ENFORCE_TYPE_CHECK=1</code>)</p>
+<ul>
+<li>Ensures no type errors</li>
+<li>Fast check (no compilation)</li>
+<li>Enable with: <code>export ENFORCE_TYPE_CHECK=1</code></li>
+</ul>
+</li>
+<li><p><strong>Lint check for warnings</strong> (when <code>ENFORCE_ZERO_WARNINGS=1</code>)</p>
+<ul>
+<li>Runs full ESLint check with <code>--max-warnings 0</code></li>
+<li>Ensures zero warnings across entire codebase</li>
+<li>Enable with: <code>export ENFORCE_ZERO_WARNINGS=1</code></li>
+</ul>
+</li>
+</ol>
+<p><strong>Current Status:</strong> Placeholder scanning is always enforced. TypeScript and linting checks are optional (enable via environment variables) and will become mandatory after cleanup PRs merge.</p>
+<p><strong>Bypass (not recommended):</strong></p>
+<pre><code class="lang-bash">git commit --no-verify
+</code></pre>
+<p>Note: CI will still catch issues.</p>
+<h3 id="commit-message-hook">Commit Message Hook</h3>
+<p>Validates commit message format:</p>
+<ul>
+<li>❌ Rejects messages with: TODO, WIP, FIXME, &quot;temp commit&quot;, &quot;temporary&quot;</li>
+<li>✅ Requires professional commit messages</li>
+</ul>
+<p><strong>Good commit messages:</strong></p>
+<pre><code class="lang-bash">git commit -m &quot;feat: Add batch video generation&quot;
+git commit -m &quot;fix: Resolve memory leak in job runner&quot;
+git commit -m &quot;docs: Update API documentation for jobs endpoint&quot;
+</code></pre>
+<p><strong>Bad commit messages (will be rejected):</strong></p>
+<pre><code class="lang-bash">git commit -m &quot;WIP: working on feature&quot;
+git commit -m &quot;TODO: finish this later&quot;
+git commit -m &quot;temp commit&quot;
+</code></pre>
+<h3 id="manual-hook-installation">Manual Hook Installation</h3>
+<p>If hooks don't install automatically during <code>npm ci</code>:</p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run prepare
+</code></pre>
+<p>This will configure git to use hooks from the <code>.husky</code> directory.</p>
+<p><strong>Verify installation:</strong></p>
+<pre><code class="lang-bash"># From repository root
+git config core.hooksPath
+# Should output: .husky
+
+# Test the pre-commit hook
+echo &quot;console.log('test');&quot; &gt; test.js
+git add test.js
+git commit -m &quot;test&quot;
+# Should run pre-commit checks
+rm test.js
+git reset HEAD~1
+</code></pre>
+<h2 id="quality-gates-and-ci-enforcement">Quality Gates and CI Enforcement</h2>
+<p>Aura Video Studio enforces a <strong>zero-warning policy</strong> across all build systems to maintain high code quality. This section documents the quality gates that are configured and will be fully enforced once cleanup PRs are merged.</p>
+<h3 id="enforcement-status">Enforcement Status</h3>
+<p><strong>Current State (Phased Rollout):</strong></p>
+<ul>
+<li>✅ Gates configured in CI and pre-commit hooks</li>
+<li>⚠️ Enforcement is in <strong>monitoring mode</strong> (warnings reported but don't fail builds)</li>
+<li>🎯 <strong>Full enforcement</strong> will be enabled after cleanup PRs address existing warnings</li>
+</ul>
+<p><strong>Monitoring vs. Enforcement:</strong></p>
+<ul>
+<li><strong>Monitoring Mode</strong>: Gates check for issues and report them but allow builds to pass</li>
+<li><strong>Enforcement Mode</strong>: Gates fail builds if any warnings/errors are found</li>
+<li><strong>Transition Plan</strong>: Move to enforcement once baseline warnings are resolved</li>
+</ul>
+<h3 id="enabling-strict-enforcement">Enabling Strict Enforcement</h3>
+<p><strong>Pre-commit (optional, for early adopters):</strong></p>
+<pre><code class="lang-bash"># Enable typecheck enforcement locally
+export ENFORCE_TYPE_CHECK=1
+
+# Enable zero-warnings enforcement locally  
+export ENFORCE_ZERO_WARNINGS=1
+
+# Make persistent (add to ~/.bashrc or ~/.zshrc)
+echo 'export ENFORCE_TYPE_CHECK=1' &gt;&gt; ~/.bashrc
+echo 'export ENFORCE_ZERO_WARNINGS=1' &gt;&gt; ~/.bashrc
+</code></pre>
+<p><strong>CI (will be enabled by removing continue-on-error):</strong>
+After cleanup PRs merge, the CI workflows will be updated to:</p>
+<ul>
+<li>Remove <code>continue-on-error: true</code> from quality check steps</li>
+<li>Make all quality gates mandatory for merge</li>
+<li>Block PRs that introduce new warnings</li>
+</ul>
+<h3 id="frontend-quality-gates">Frontend Quality Gates</h3>
+<h4 id="pre-commit-enforcement">Pre-commit Enforcement</h4>
+<p>The pre-commit hook enforces the following checks on every commit:</p>
+<ol>
+<li><p><strong>ESLint with zero warnings</strong> (<code>--max-warnings 0</code>)</p>
+<ul>
+<li>All TypeScript/JavaScript code must have no linting warnings</li>
+<li>Includes security rules, import order, unused variables, etc.</li>
+</ul>
+</li>
+<li><p><strong>TypeScript type check</strong></p>
+<ul>
+<li>Strict type checking with no errors</li>
+<li>Run manually: <code>npm run typecheck</code></li>
+</ul>
+</li>
+<li><p><strong>Stylelint with zero warnings</strong> (for CSS files)</p>
+<ul>
+<li>All CSS must follow style guidelines</li>
+<li>Run manually: <code>npm run lint:css</code></li>
+</ul>
+</li>
+<li><p><strong>Prettier formatting check</strong></p>
+<ul>
+<li>Code must be properly formatted</li>
+<li>Auto-fix: <code>npm run format</code></li>
+</ul>
+</li>
+<li><p><strong>Placeholder scan</strong></p>
+<ul>
+<li>No TODO, FIXME, HACK, or WIP comments allowed</li>
+<li>See <a href="ZERO_PLACEHOLDER_POLICY.md">ZERO_PLACEHOLDER_POLICY.md</a></li>
+</ul>
+</li>
+</ol>
+<h4 id="ci-enforcement">CI Enforcement</h4>
+<p>The CI pipeline enforces these checks on all pull requests:</p>
+<pre><code class="lang-yaml"># .github/workflows/ci.yml
+- Lint (ESLint with zero warnings)
+- Lint CSS (Stylelint with zero warnings)
+- Type Check (TypeScript)
+- Check Formatting (Prettier)
+- Build (Vite with no warnings)
+- Unit Tests (Vitest)
+- E2E Tests (Playwright)
+</code></pre>
+<p><strong>Running frontend checks locally:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run quality-check  # Runs all checks
+npm run lint           # ESLint (fails on warnings)
+npm run typecheck      # TypeScript check
+npm run lint:css       # Stylelint (fails on warnings)
+npm run format:check   # Prettier check
+</code></pre>
+<h3 id="backend-quality-gates">Backend Quality Gates</h3>
+<h4 id="build-time-enforcement">Build-time Enforcement</h4>
+<p>The backend enforces warnings-as-errors at build time via <code>Directory.Build.props</code>:</p>
+<pre><code class="lang-xml">&lt;TreatWarningsAsErrors&gt;true&lt;/TreatWarningsAsErrors&gt;
+&lt;EnforceCodeStyleInBuild&gt;true&lt;/EnforceCodeStyleInBuild&gt;
+&lt;EnableNETAnalyzers&gt;true&lt;/EnableNETAnalyzers&gt;
+</code></pre>
+<p>This means:</p>
+<ul>
+<li>All compiler warnings are treated as errors</li>
+<li>All analyzer warnings (CA rules) are treated as errors</li>
+<li>Code style violations cause build failures</li>
+<li>Nullable reference type warnings are errors</li>
+</ul>
+<h4 id="ci-enforcement-1">CI Enforcement</h4>
+<p>The CI pipeline enforces these checks:</p>
+<pre><code class="lang-yaml"># .github/workflows/ci.yml
+- Build with TreatWarningsAsErrors=true
+- Verify code formatting with dotnet format --verify-no-changes
+- Run unit tests
+- Run analyzer rules
+</code></pre>
+<p><strong>Running backend checks locally:</strong></p>
+<pre><code class="lang-bash"># Build with warnings as errors (enforced by Directory.Build.props)
+dotnet build Aura.sln --configuration Release
+
+# Verify code formatting
+dotnet format Aura.sln --verify-no-changes
+
+# Check for specific analyzer warnings
+dotnet build --configuration Release /warnaserror
+</code></pre>
+<p><strong>Common fixes:</strong></p>
+<pre><code class="lang-bash"># Auto-fix formatting issues
+dotnet format Aura.sln
+
+# Review specific warnings
+dotnet build --configuration Release --verbosity detailed
+</code></pre>
+<h3 id="documentation-quality-gates">Documentation Quality Gates</h3>
+<h4 id="docfx-build">DocFX Build</h4>
+<p>Documentation must build without warnings:</p>
+<pre><code class="lang-yaml"># .github/workflows/documentation.yml
+- Build with: docfx build docfx.json --warningsAsErrors
+- Markdown linting (markdownlint)
+- Broken link detection (markdown-link-check)
+- Spell check
+</code></pre>
+<p><strong>Running documentation checks locally:</strong></p>
+<pre><code class="lang-bash"># Install DocFX
+dotnet tool install -g docfx
+
+# Build docs with warnings as errors
+docfx build docfx.json --warningsAsErrors
+
+# Check markdown formatting
+npx markdownlint '**/*.md' --ignore node_modules
+
+# Check for broken links
+npx markdown-link-check docs/**/*.md
+</code></pre>
+<h3 id="scripts-quality-gates">Scripts Quality Gates</h3>
+<p>Shell and PowerShell scripts must pass linting:</p>
+<pre><code class="lang-yaml"># .github/workflows/ci.yml (scripts-lint job)
+- shellcheck for .sh files (severity: warning)
+- PSScriptAnalyzer for .ps1 files (severity: Warning,Error)
+</code></pre>
+<p><strong>Running script checks locally:</strong></p>
+<pre><code class="lang-bash"># Install shellcheck
+sudo apt-get install shellcheck  # Linux
+brew install shellcheck          # macOS
+
+# Lint shell scripts
+find scripts -name &quot;*.sh&quot; -exec shellcheck --severity=warning {} +
+
+# Install PSScriptAnalyzer
+Install-Module -Name PSScriptAnalyzer -Scope CurrentUser
+
+# Lint PowerShell scripts
+Get-ChildItem -Path scripts -Filter *.ps1 -Recurse | 
+  ForEach-Object { Invoke-ScriptAnalyzer -Path $_.FullName -Severity Warning,Error }
+</code></pre>
+<h3 id="ci-workflow-summary">CI Workflow Summary</h3>
+<p><strong>All PRs must pass these jobs:</strong></p>
+<ol>
+<li><strong>dotnet-build-test</strong> - .NET build with warnings as errors + formatting verification</li>
+<li><strong>web-lint-build</strong> - Frontend lint, typecheck, and build with zero warnings</li>
+<li><strong>web-e2e</strong> - Playwright E2E tests</li>
+<li><strong>docs</strong> - Documentation build, link check, and markdown linting</li>
+<li><strong>scripts-lint</strong> - Shell and PowerShell script linting</li>
+</ol>
+<p><strong>Build status:</strong> Green CI = Zero warnings across all systems</p>
+<h3 id="handling-build-failures">Handling Build Failures</h3>
+<h4 id="frontend-warnings">Frontend Warnings</h4>
+<p>If frontend build fails due to warnings:</p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# See all warnings
+npm run lint
+
+# Auto-fix what's possible
+npm run lint:fix
+npm run format
+
+# Manual fixes may be needed for:
+# - Unused variables (prefix with _ or remove)
+# - no-explicit-any (provide proper types)
+# - Import order (rearrange imports)
+</code></pre>
+<h4 id="backend-warnings">Backend Warnings</h4>
+<p>If backend build fails due to warnings:</p>
+<pre><code class="lang-bash"># See detailed warnings
+dotnet build --configuration Release --verbosity detailed
+
+# Common fixes:
+# - Nullable warnings: Add null checks or use ! operator carefully
+# - Analyzer warnings: Follow the suggested fix in the error message
+# - Code style: Run dotnet format Aura.sln
+
+# For specific analyzer rules that are false positives:
+# Add suppression in .editorconfig (requires justification)
+</code></pre>
+<h4 id="documentation-warnings">Documentation Warnings</h4>
+<p>If documentation build fails:</p>
+<pre><code class="lang-bash"># Check DocFX output
+docfx build docfx.json --warningsAsErrors
+
+# Common issues:
+# - Missing XML comments: Add /// documentation
+# - Broken links: Fix or remove invalid references
+# - Invalid markdown: Check with markdownlint
+</code></pre>
+<h3 id="bypassing-checks-not-recommended">Bypassing Checks (Not Recommended)</h3>
+<p>While possible to bypass local checks, <strong>CI will monitor all gates</strong> (and enforce once cleanup is complete):</p>
+<pre><code class="lang-bash"># Bypass pre-commit hook (not recommended)
+git commit --no-verify
+
+# Bypass specific analyzer (requires PR justification)
+# In .editorconfig or code:
+#pragma warning disable CA1234
+</code></pre>
+<p><strong>Important:</strong> Bypassing checks locally is not recommended. While CI currently allows warnings in monitoring mode, it tracks them for cleanup. Once enforcement is enabled, all warnings must be fixed.</p>
+<h3 id="phased-rollout-timeline">Phased Rollout Timeline</h3>
+<p><strong>Phase 1: Gate Configuration (This PR)</strong> ✅</p>
+<ul>
+<li>All quality gates configured in CI workflows</li>
+<li>Pre-commit hooks updated with optional enforcement</li>
+<li>Documentation of all gates in BUILD_GUIDE.md</li>
+<li>Gates run in monitoring mode (report but don't fail)</li>
+</ul>
+<p><strong>Phase 2: Warning Cleanup (Upcoming PRs)</strong></p>
+<ul>
+<li>Fix all frontend ESLint warnings (347 warnings)</li>
+<li>Fix all backend compiler and analyzer warnings</li>
+<li>Fix DocFX documentation warnings</li>
+<li>Fix script linting issues (shellcheck, PSScriptAnalyzer)</li>
+</ul>
+<p><strong>Phase 3: Enforcement Activation (After Cleanup)</strong></p>
+<ul>
+<li>Remove <code>continue-on-error: true</code> from CI workflows</li>
+<li>Enable strict enforcement in pre-commit hooks by default</li>
+<li>All future PRs must have zero warnings</li>
+<li>Gates block merging if any warnings introduced</li>
+</ul>
+<p><strong>Tracking:</strong> Monitor gate status in each PR's CI output summary sections.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="nodejs-version-compatibility">Node.js Version Compatibility</h3>
+<p><strong>Requirement:</strong> Node.js 20.0.0+ for all components (Aura.Web, Aura.Desktop)</p>
+<p><strong>Using different versions for different components:</strong></p>
+<pre><code class="lang-bash"># For Aura.Web (requires 20+)
+cd Aura.Web
+nvm use 20
+
+# For Aura.Desktop (requires 18+, 20+ also works)
+cd ../Aura.Desktop
+nvm use 20  # or 18
+</code></pre>
+<p><strong>If you prefer a single version:</strong> Use Node.js 20.x which satisfies all requirements.</p>
+<h3 id="npm-ci-fails">npm ci Fails</h3>
+<p><strong>Error:</strong> Package installation fails</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p>Delete <code>node_modules</code> and <code>package-lock.json</code>:</p>
+<pre><code class="lang-bash">cd Aura.Web
+rm -rf node_modules package-lock.json
+npm install
+</code></pre>
+</li>
+<li><p>Clear npm cache:</p>
+<pre><code class="lang-bash">npm cache clean --force
+</code></pre>
+</li>
+<li><p>Check Node.js version is correct</p>
+</li>
+</ol>
+<h3 id="electron-build-fails">Electron Build Fails</h3>
+<p><strong>Error:</strong> Electron build fails during installer creation</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Ensure all dependencies are built:</strong></p>
+<pre><code class="lang-bash"># Frontend must be built first
+cd Aura.Web
+npm run build:prod
+
+# Backend must be published
+cd ../Aura.Api
+dotnet publish -c Release -o ../Aura.Desktop/resources/backend
+</code></pre>
+</li>
+<li><p><strong>Check electron-builder dependencies (Windows):</strong></p>
+<ul>
+<li>NSIS is bundled with electron-builder</li>
+<li>If build fails, try cleaning:
+<pre><code class="lang-bash">cd Aura.Desktop
+rm -rf dist node_modules
+npm install
+npm run build:win
+</code></pre>
+</li>
+</ul>
+</li>
+<li><p><strong>Check disk space:</strong></p>
+<ul>
+<li>Electron builds require significant disk space (1GB+)</li>
+</ul>
+</li>
+</ol>
+<p>See <a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> for more Electron troubleshooting.</p>
+<h3 id="husky-hooks-not-working">Husky Hooks Not Working</h3>
+<p><strong>Symptom:</strong> Commits succeed even with TODO comments or linting errors</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run prepare
+</code></pre>
+<p>Verify hooks are executable:</p>
+<pre><code class="lang-bash"># From repository root
+ls -l .husky/pre-commit
+# Should show execute permissions (-rwxr-xr-x)
+</code></pre>
+<p>If not executable (on Linux/Mac):</p>
+<pre><code class="lang-bash">chmod +x .husky/pre-commit
+chmod +x .husky/commit-msg
+</code></pre>
+<h3 id="ffmpeg-not-found">FFmpeg Not Found</h3>
+<p><strong>Error:</strong></p>
+<pre><code>⚠ FFmpeg not found in PATH
+</code></pre>
+<p><strong>Windows Solutions:</strong></p>
+<pre><code class="lang-powershell"># Option 1: winget
+winget install ffmpeg
+
+# Option 2: chocolatey
+choco install ffmpeg
+
+# Option 3: Manual
+# 1. Download from https://ffmpeg.org/download.html
+# 2. Extract to C:\ffmpeg
+# 3. Add C:\ffmpeg\bin to PATH
+</code></pre>
+<p><strong>macOS:</strong></p>
+<pre><code class="lang-bash">brew install ffmpeg
+</code></pre>
+<p><strong>Linux (Ubuntu/Debian):</strong></p>
+<pre><code class="lang-bash">sudo apt-get update
+sudo apt-get install ffmpeg
+</code></pre>
+<p>Verify installation:</p>
+<pre><code class="lang-bash">ffmpeg -version
+</code></pre>
+<h3 id="dotnet-ef-tool-installation-fails">dotnet-ef Tool Installation Fails</h3>
+<p><strong>Error:</strong></p>
+<pre><code>[WARNING] Could not install dotnet-ef tools. Database migration check skipped.
+Installation error: Tool 'dotnet-ef' failed to update due to the following: 
+The settings file in the tool's NuGet package is invalid: Settings file 
+'DotnetToolSettings.xml' was not found in the package.
+</code></pre>
+<p><strong>Cause:</strong> This error previously occurred with global tool installations due to corrupted NuGet cache or incomplete package downloads.</p>
+<p><strong>Solution:</strong> As of the latest version, the project now uses a <strong>local dotnet tool manifest</strong> (<code>.config/dotnet-tools.json</code>) instead of global tools, which is more reliable and reproducible.</p>
+<p><strong>How It Works:</strong></p>
+<ul>
+<li>The <code>dotnet-ef</code> tool is now defined in <code>.config/dotnet-tools.json</code></li>
+<li>Build scripts automatically run <code>dotnet tool restore</code> to install tools locally</li>
+<li>No more global tool installation or NuGet cache issues</li>
+<li>Tools are versioned and tracked in source control</li>
+</ul>
+<p><strong>Manual Restore</strong> (if needed):</p>
+<pre><code class="lang-bash"># From repository root
+dotnet tool restore
+
+# Verify installation
+dotnet ef --version
+</code></pre>
+<p><strong>For Developers:</strong>
+If you need to update the dotnet-ef tool version:</p>
+<pre><code class="lang-bash"># Update to latest version
+dotnet tool update dotnet-ef
+
+# Or update to specific version
+dotnet tool update dotnet-ef --version 8.0.11
+</code></pre>
+<p><strong>Note:</strong> Build-time migrations are optional. If they fail, migrations will be applied automatically when you first run the application.</p>
+<h3 id="build-fails-on-windows-with-long-paths">Build Fails on Windows with Long Paths</h3>
+<p><strong>Error:</strong> Files or paths too long</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-powershell"># Enable long paths in Git
+git config --global core.longpaths true
+
+# Enable long paths in Windows (requires admin)
+New-ItemProperty -Path &quot;HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem&quot; -Name &quot;LongPathsEnabled&quot; -Value 1 -PropertyType DWORD -Force
+</code></pre>
+<p>Then restart your terminal.</p>
+<h3 id="powershell-script-execution-disabled">PowerShell Script Execution Disabled</h3>
+<p><strong>Error:</strong> Scripts cannot be executed</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-powershell"># Run PowerShell as Administrator
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+</code></pre>
+<h3 id="typescript-errors-after-pull">TypeScript Errors After Pull</h3>
+<p><strong>Symptom:</strong> Type errors after pulling latest changes</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+
+# Clear TypeScript cache
+rm -rf dist
+rm -f tsconfig.tsbuildinfo
+
+# Reinstall dependencies
+npm ci
+
+# Run type check
+npm run type-check
+</code></pre>
+<h3 id="ci-build-passes-but-local-build-fails">CI Build Passes But Local Build Fails</h3>
+<p><strong>Likely causes:</strong></p>
+<ol>
+<li>Different Node.js version</li>
+<li>Stale dependencies</li>
+<li>Local environment issues</li>
+</ol>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash"># Verify Node version
+node --version
+# Should be v20.x.x or higher
+
+# Clean install
+cd Aura.Web
+rm -rf node_modules package-lock.json
+npm install
+
+# Run full validation
+npm run validate:full
+</code></pre>
+<h3 id="frontend-bundle-issues">Frontend Bundle Issues</h3>
+<p><strong>Error:</strong> Frontend not loading in Electron app</p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash"># Rebuild frontend with correct base path
+cd Aura.Web
+npm run build:prod
+
+# Verify dist/ folder exists and contains index.html
+ls -la dist/
+
+# Verify assets are present
+ls -la dist/assets/
+</code></pre>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><strong><a href="DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a></strong> - Complete Electron desktop app development guide</li>
+<li><strong><a href="DEVELOPMENT.html">DEVELOPMENT.md</a></strong> - Component development workflows</li>
+<li><strong><a href="CONTRIBUTING.html">CONTRIBUTING.md</a></strong> - Contribution guidelines</li>
+<li><strong><a href="TROUBLESHOOTING.html">TROUBLESHOOTING.md</a></strong> - Common issues and solutions</li>
+<li><strong>docs/architecture/</strong> - System architecture documentation</li>
+</ul>
+<h2 id="build-checklist">Build Checklist</h2>
+<p>Before creating a release build:</p>
+<ul>
+<li>[ ] All tests passing (<code>npm test</code> and <code>dotnet test</code>)</li>
+<li>[ ] No linting errors (<code>npm run lint</code>)</li>
+<li>[ ] No type errors (<code>npm run type-check</code>)</li>
+<li>[ ] No placeholder comments (<code>node scripts/audit/find-placeholders.js</code>)</li>
+<li>[ ] Frontend builds successfully (<code>npm run build:prod</code>)</li>
+<li>[ ] Backend builds successfully (<code>dotnet build -c Release</code>)</li>
+<li>[ ] Electron app runs correctly (<code>cd Aura.Desktop &amp;&amp; npm start</code>)</li>
+<li>[ ] Version numbers updated in package.json files</li>
+<li>[ ] CHANGELOG.md updated</li>
+<li>[ ] Code signing certificates configured (for production builds)</li>
+</ul>
+<hr>
+<p><strong>Ready to build?</strong> Follow the <a href="#desktop-app-build">Desktop App Build</a> section above.</p>
+<p><strong>Need help?</strong> See <a href="TROUBLESHOOTING.html">TROUBLESHOOTING.md</a> or open an issue on GitHub.</p>
+<ul>
+<li><a href="README.html">Project README</a> - Project overview and features</li>
+<li><a href="CONTRIBUTING.html">Contributing Guide</a> - Contribution guidelines</li>
+<li>Frontend README - Frontend-specific documentation</li>
+<li>Windows Setup Guide - Windows-specific instructions</li>
+</ul>
+<h2 id="getting-help">Getting Help</h2>
+<p>If you encounter issues not covered in this guide:</p>
+<ol>
+<li>Check existing <a href="https://github.com/Saiyan9001/aura-video-studio/issues">GitHub Issues</a></li>
+<li>Review CI logs for detailed error messages</li>
+<li>Run <code>npm run validate:full</code> for comprehensive diagnostics</li>
+<li>Create a new issue with:
+<ul>
+<li>Operating system and version</li>
+<li>Node.js and npm versions (<code>node --version</code>, <code>npm --version</code>)</li>
+<li>Error messages and logs</li>
+<li>Steps to reproduce</li>
+</ul>
+</li>
+</ol>
+<h2 id="summary">Summary</h2>
+<p><strong>Quick Start Checklist:</strong></p>
+<ul>
+<li>[ ] Install Node.js 20.0.0 or higher (20.x recommended)</li>
+<li>[ ] Install .NET 8 SDK</li>
+<li>[ ] Install FFmpeg</li>
+<li>[ ] Configure Git (long paths, line endings)</li>
+<li>[ ] Clone repository</li>
+<li>[ ] Run <code>cd Aura.Web &amp;&amp; npm ci</code></li>
+<li>[ ] Verify Husky hooks installed (<code>.husky</code> directory)</li>
+<li>[ ] Run <code>npm run validate:full</code> to verify setup</li>
+<li>[ ] Run <code>npm run build</code> to build frontend</li>
+<li>[ ] Run <code>dotnet build Aura.sln</code> to build backend</li>
+</ul>
+<p>Your development environment is ready when all validation scripts pass with green checkmarks! 🎉</p>
+<h2 id="render-engine-configuration">Render Engine Configuration</h2>
+<h3 id="hardware-acceleration">Hardware Acceleration</h3>
+<p>Aura Video Studio supports hardware-accelerated video encoding for 5-10x faster rendering:</p>
+<h4 id="nvidia-gpus-nvenc">NVIDIA GPUs (NVENC)</h4>
+<ul>
+<li><strong>Requirements</strong>: NVIDIA GPU with NVENC support (GTX 10/16 series, RTX 20/30/40/50 series)</li>
+<li><strong>Drivers</strong>: Latest NVIDIA drivers from <a href="https://www.nvidia.com/drivers">nvidia.com/drivers</a></li>
+<li><strong>FFmpeg</strong>: Built-in support in FFmpeg 4.0+</li>
+<li><strong>Performance</strong>: 5-10x faster than software encoding</li>
+<li><strong>Quality</strong>: Near-identical to software encoding</li>
+</ul>
+<h4 id="amd-gpus-amf">AMD GPUs (AMF)</h4>
+<ul>
+<li><strong>Requirements</strong>: AMD Radeon RX 5000/6000/7000 series</li>
+<li><strong>Drivers</strong>: Latest AMD drivers from <a href="https://www.amd.com/en/support">amd.com</a></li>
+<li><strong>FFmpeg</strong>: Built-in support in FFmpeg 4.0+</li>
+<li><strong>Performance</strong>: 5-10x faster than software encoding</li>
+</ul>
+<h4 id="intel-gpus-quick-sync">Intel GPUs (Quick Sync)</h4>
+<ul>
+<li><strong>Requirements</strong>: Intel processors with integrated graphics (7th gen or newer) or Intel Arc GPUs</li>
+<li><strong>Drivers</strong>: Latest Intel drivers</li>
+<li><strong>FFmpeg</strong>: Built-in support in FFmpeg 4.0+</li>
+<li><strong>Performance</strong>: 3-5x faster than software encoding</li>
+</ul>
+<h4 id="verification">Verification</h4>
+<p>Check if hardware acceleration is available:</p>
+<pre><code class="lang-bash"># Check for NVIDIA NVENC
+ffmpeg -encoders | grep nvenc
+
+# Check for AMD AMF
+ffmpeg -encoders | grep amf
+
+# Check for Intel Quick Sync
+ffmpeg -encoders | grep qsv
+</code></pre>
+<h3 id="render-presets">Render Presets</h3>
+<p>Aura includes production-grade presets for popular platforms:</p>
+<h4 id="youtube">YouTube</h4>
+<ul>
+<li><strong>YouTube 1080p</strong>: Standard HD (1920x1080, 16:9, 8Mbps)</li>
+<li><strong>YouTube 4K</strong>: Ultra HD (3840x2160, 16:9, 20Mbps)</li>
+<li><strong>YouTube 1440p</strong>: 2K (2560x1440, 16:9, 12Mbps)</li>
+<li><strong>YouTube 720p</strong>: HD (1280x720, 16:9, 5Mbps)</li>
+<li><strong>YouTube Shorts</strong>: Vertical HD (1080x1920, 9:16, 10Mbps)</li>
+</ul>
+<h4 id="instagram">Instagram</h4>
+<ul>
+<li><strong>Instagram Feed</strong>: Square (1080x1080, 1:1, 5Mbps)</li>
+<li><strong>Instagram Reel</strong>: Vertical (1080x1920, 9:16, 10Mbps)</li>
+</ul>
+<h4 id="tiktok">TikTok</h4>
+<ul>
+<li><strong>TikTok</strong>: Vertical (1080x1920, 9:16, 10Mbps, max 60s)</li>
+</ul>
+<h4 id="archival">Archival</h4>
+<ul>
+<li><strong>Archival ProRes</strong>: Professional editing (1920x1080, ProRes 422 HQ, 120Mbps)</li>
+<li><strong>Archival H.265</strong>: Long-term storage (1920x1080, H.265, 15Mbps)</li>
+</ul>
+<h3 id="preflight-validation">Preflight Validation</h3>
+<p>Before rendering, Aura runs comprehensive preflight checks:</p>
+<ol>
+<li><strong>Disk Space</strong>: Verifies sufficient space for output and temp files (2.5x estimated file size)</li>
+<li><strong>Write Permissions</strong>: Tests write access to output and temp directories</li>
+<li><strong>Temp Directory</strong>: Validates or creates temp directory for intermediate files</li>
+<li><strong>Encoder Selection</strong>: Chooses optimal encoder (hardware vs software) based on:
+<ul>
+<li>Available hardware (NVENC, AMF, QSV)</li>
+<li>User preferences (quality vs speed)</li>
+<li>Encoder overrides (manual selection)</li>
+</ul>
+</li>
+<li><strong>Duration Estimates</strong>: Calculates expected render time based on:
+<ul>
+<li>Hardware tier (A/B/C/D)</li>
+<li>Quality preset (Draft/Good/High/Maximum)</li>
+<li>Hardware acceleration availability</li>
+</ul>
+</li>
+</ol>
+<h3 id="troubleshooting-rendering">Troubleshooting Rendering</h3>
+<h4 id="hardware-acceleration-not-working">Hardware Acceleration Not Working</h4>
+<p><strong>NVIDIA NVENC:</strong></p>
+<pre><code class="lang-bash"># Check if NVENC is detected
+nvidia-smi
+
+# Verify FFmpeg has NVENC support
+ffmpeg -encoders | grep nvenc
+
+# If missing, install FFmpeg with NVENC:
+# Windows: Download from https://www.gyan.dev/ffmpeg/builds/
+# Linux: Build FFmpeg with --enable-nvenc
+</code></pre>
+<p><strong>AMD AMF:</strong></p>
+<ul>
+<li>Ensure latest AMD drivers installed</li>
+<li>Verify AMF support: <code>ffmpeg -encoders | grep amf</code></li>
+<li>AMF requires Windows 10/11 or recent Linux kernel</li>
+</ul>
+<p><strong>Intel Quick Sync:</strong></p>
+<ul>
+<li>Enable integrated graphics in BIOS</li>
+<li>Verify QSV support: <code>ffmpeg -encoders | grep qsv</code></li>
+</ul>
+<h4 id="slow-rendering">Slow Rendering</h4>
+<ol>
+<li><strong>Enable Hardware Acceleration</strong>: Preflight validation will show recommended encoder</li>
+<li><strong>Lower Quality Preset</strong>: Use Draft or Good instead of High/Maximum for faster renders</li>
+<li><strong>Reduce Resolution</strong>: Render at 720p instead of 1080p/4K for previews</li>
+<li><strong>Check System Load</strong>: Close unnecessary applications during rendering</li>
+</ol>
+<h4 id="out-of-disk-space">Out of Disk Space</h4>
+<pre><code class="lang-bash"># Check available space
+df -h  # Linux/Mac
+wmic logicaldisk get size,freespace,caption  # Windows
+
+# Clean up temp files
+# Aura stores temp files in: %LOCALAPPDATA%\Aura\Temp (Windows)
+# or: ~/.local/share/Aura/Temp (Linux)
+</code></pre>
+<h4 id="ffmpeg-command-logging">FFmpeg Command Logging</h4>
+<p>All FFmpeg commands are logged for debugging:</p>
+<ul>
+<li><strong>Location</strong>: <code>%LOCALAPPDATA%\Aura\FFmpegLogs</code> (Windows) or <code>~/.local/share/Aura/FFmpegLogs</code> (Linux)</li>
+<li><strong>Retention</strong>: 30 days</li>
+<li><strong>Format</strong>: JSON with full command, arguments, environment, and execution results</li>
+<li><strong>Support Reports</strong>: Available via API: <code>GET /api/render-engine/ffmpeg-logs/{jobId}/support-report</code></li>
+</ul>
+<h3 id="api-endpoints">API Endpoints</h3>
+<h4 id="preset-recommendation">Preset Recommendation</h4>
+<pre><code class="lang-http">POST /api/render-engine/presets/recommend
+Content-Type: application/json
+
+{
+  &quot;targetPlatform&quot;: &quot;YouTube&quot;,
+  &quot;contentType&quot;: &quot;tutorial&quot;,
+  &quot;videoDuration&quot;: &quot;00:05:00&quot;,
+  &quot;requireHighQuality&quot;: true
+}
+</code></pre>
+<h4 id="render-preflight">Render Preflight</h4>
+<pre><code class="lang-http">POST /api/render-engine/preflight
+Content-Type: application/json
+
+{
+  &quot;presetName&quot;: &quot;YouTube 1080p&quot;,
+  &quot;videoDuration&quot;: &quot;00:05:00&quot;,
+  &quot;outputDirectory&quot;: &quot;/path/to/output&quot;,
+  &quot;preferHardware&quot;: true
+}
+</code></pre>
+<h4 id="get-render-presets">Get Render Presets</h4>
+<pre><code class="lang-http">GET /api/render-engine/presets
+</code></pre>
+<h4 id="get-ffmpeg-logs">Get FFmpeg Logs</h4>
+<pre><code class="lang-http">GET /api/render-engine/ffmpeg-logs/{jobId}
+</code></pre>
+<p>See <a href="PROVIDER_INTEGRATION_GUIDE.md">PROVIDER_INTEGRATION_GUIDE.md</a> for more details on render engine configuration.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/BUILD_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

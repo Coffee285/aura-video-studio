@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>CI/CD Workflows | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="CI/CD Workflows | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/CI.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="cicd-workflows">CI/CD Workflows</h1>
+
+<p>This document describes the continuous integration and deployment workflows for Aura Video Studio.</p>
+<h2 id="workflows">Workflows</h2>
+<h3 id="1-main-ci-workflow-ciyml">1. Main CI Workflow (<code>ci.yml</code>)</h3>
+<p><strong>Trigger</strong>: Push to <code>main</code> or <code>develop</code>, Pull requests<br>
+<strong>Runner</strong>: <code>windows-latest</code></p>
+<p><strong>Jobs</strong>:</p>
+<ul>
+<li><code>build-and-test</code>: Builds all .NET projects and runs unit tests</li>
+<li><code>portable-only-guard</code>: Enforces portable-only policy (no installers)</li>
+<li><code>web-tests</code>: Runs web frontend tests with Vitest and Playwright</li>
+</ul>
+<p><strong>Artifacts</strong>:</p>
+<ul>
+<li>Test results (TRX format)</li>
+<li>Playwright HTML reports</li>
+<li>Coverage reports (JSON/HTML)</li>
+</ul>
+<h3 id="2-windows-ci-workflow-ci-windowsyml">2. Windows CI Workflow (<code>ci-windows.yml</code>)</h3>
+<p><strong>Trigger</strong>: Push to <code>main</code>, Pull requests<br>
+<strong>Runner</strong>: <code>windows-latest</code></p>
+<p><strong>Pipeline Steps</strong>:</p>
+<ol>
+<li><strong>Setup</strong>: Checkout, .NET 8, Node 20, pnpm</li>
+<li><strong>Placeholder Scan</strong>: Fails if TODO/FIXME/FUTURE markers found</li>
+<li><strong>Audit</strong>: Runs Windows-specific audit scripts</li>
+<li><strong>Build</strong>: Restores and builds .NET solution</li>
+<li><strong>Test</strong>: Runs .NET tests with code coverage</li>
+<li><strong>Web Tests</strong>: Installs deps, runs Vitest + Playwright</li>
+<li><strong>Smoke Test</strong>: Runs PowerShell smoke script to generate demo video</li>
+<li><strong>Upload Artifacts</strong>: Smoke outputs, test results, coverage, Playwright reports</li>
+</ol>
+<p><strong>Coverage Thresholds</strong>:</p>
+<ul>
+<li><strong>.NET</strong>: 60% line coverage (enforced via coverlet)</li>
+<li><strong>Web</strong>: 70% on tested files (enforced via vitest)</li>
+</ul>
+<p><strong>Artifacts</strong>:</p>
+<ul>
+<li><code>windows-smoke-artifacts</code>: demo.mp4, demo.srt, logs.zip</li>
+<li><code>windows-test-results</code>: TRX files, coverage XML</li>
+<li><code>windows-playwright-report</code>: E2E test reports</li>
+<li><code>windows-coverage-reports</code>: Coverage JSON/HTML/XML</li>
+</ul>
+<h3 id="3-linux-ci-workflow-ci-linuxyml">3. Linux CI Workflow (<code>ci-linux.yml</code>)</h3>
+<p><strong>Trigger</strong>: Push to <code>main</code>, Pull requests<br>
+<strong>Runner</strong>: <code>ubuntu-latest</code></p>
+<p><strong>Pipeline Steps</strong>: Same as Windows but with:</p>
+<ul>
+<li>Bash smoke script instead of PowerShell</li>
+<li>Linux-compatible Playwright installation</li>
+<li>Different artifact naming (<code>linux-*</code>)</li>
+</ul>
+<h3 id="4-no-placeholders-workflow-no-placeholdersyml">4. No Placeholders Workflow (<code>no-placeholders.yml</code>)</h3>
+<p><strong>Trigger</strong>: Pull requests (opened, synchronized, reopened)<br>
+<strong>Runner</strong>: <code>ubuntu-latest</code></p>
+<p><strong>Purpose</strong>: Enforces zero-tolerance policy for placeholder markers:</p>
+<ul>
+<li><code>TODO</code></li>
+<li><code>FIXME</code></li>
+<li><code>FUTURE IMPLEMENTATION</code></li>
+<li><code>FUTURE</code></li>
+<li><code>NEXT STEPS</code></li>
+<li><code>OPTIONAL ENHANCEMENTS</code></li>
+</ul>
+<p>If any markers are found, the workflow fails with an error.</p>
+<h2 id="e2e-test-coverage">E2E Test Coverage</h2>
+<h3 id="net-e2e-tests">.NET E2E Tests</h3>
+<p>Located in <code>Aura.E2E/</code>:</p>
+<ul>
+<li><strong>SmokeTests.cs</strong>: Free-only and Mixed-mode pipeline tests</li>
+<li><strong>UnitTest1.cs</strong>: Component integration tests</li>
+<li><strong>ProviderValidationApiTests.cs</strong>: API integration tests (requires running server)</li>
+</ul>
+<h3 id="web-e2e-tests">Web E2E Tests</h3>
+<p>Located in <code>Aura.Web/tests/e2e/</code>:</p>
+<ul>
+<li><strong>wizard.spec.ts</strong>: Wizard flow with Free profile</li>
+<li>Navigation and state persistence tests</li>
+<li>Mocked API responses for offline testing</li>
+</ul>
+<h2 id="smoke-tests">Smoke Tests</h2>
+<h3 id="purpose">Purpose</h3>
+<p>Quick validation that core functionality works end-to-end without external dependencies.</p>
+<h3 id="windows-smoke-script">Windows Smoke Script</h3>
+<p><strong>Path</strong>: <code>scripts/run_quick_generate_demo.ps1</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Tries API pipeline first</li>
+<li>Falls back to ffmpeg color bars if API unavailable</li>
+<li>Generates: demo.mp4, demo.srt, logs.zip</li>
+<li>Prints absolute paths at completion</li>
+<li>Exit code 0 on success, 1 on failure</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-powershell">pwsh -File .\scripts\run_quick_generate_demo.ps1 -FfmpegPath &quot;.\scripts\ffmpeg\ffmpeg.exe&quot;
+</code></pre>
+<h3 id="linux-smoke-script">Linux Smoke Script</h3>
+<p><strong>Path</strong>: <code>scripts/run_quick_generate_demo.sh</code></p>
+<p><strong>Features</strong>: Same as Windows but in Bash</p>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash">chmod +x ./scripts/run_quick_generate_demo.sh
+./scripts/run_quick_generate_demo.sh
+</code></pre>
+<p><strong>Environment Variables</strong>:</p>
+<ul>
+<li><code>API_BASE</code>: API endpoint (default: <code>http://127.0.0.1:5000</code>)</li>
+<li><code>FFMPEG_PATH</code>: Path to ffmpeg binary (default: <code>ffmpeg</code>)</li>
+<li><code>SECONDS_DURATION</code>: Video duration (default: <code>10</code>)</li>
+</ul>
+<h2 id="coverage-enforcement">Coverage Enforcement</h2>
+<h3 id="web-coverage-vitest">Web Coverage (Vitest)</h3>
+<p>Configured in <code>Aura.Web/vite.config.ts</code>:</p>
+<pre><code class="lang-typescript">thresholds: {
+  lines: 70,
+  functions: 70,
+  branches: 70,
+  statements: 70,
+  perFile: true
+}
+</code></pre>
+<p>Vitest will fail if any tested file is below 70% coverage.</p>
+<h3 id="net-coverage-coverlet">.NET Coverage (coverlet)</h3>
+<p>Threshold: 60% line coverage</p>
+<p>Checked via <code>scripts/check_coverage_thresholds.sh</code>:</p>
+<ul>
+<li>Parses <code>coverage.cobertura.xml</code> files</li>
+<li>Extracts line-rate and converts to percentage</li>
+<li>Fails if any project is below 60%</li>
+</ul>
+<p><strong>Manual Check</strong>:</p>
+<pre><code class="lang-bash">chmod +x ./scripts/check_coverage_thresholds.sh
+./scripts/check_coverage_thresholds.sh
+</code></pre>
+<h2 id="caching">Caching</h2>
+<p>Both workflows use caching to speed up builds:</p>
+<h3 id="nuget-cache">NuGet Cache</h3>
+<pre><code class="lang-yaml">- name: Setup .NET
+  uses: actions/setup-dotnet@v4
+  with:
+    dotnet-version: &quot;8.0.x&quot;
+    cache: true
+</code></pre>
+<h3 id="npm-cache">npm Cache</h3>
+<pre><code class="lang-yaml">- name: Setup Node
+  uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+    cache: 'npm'
+    cache-dependency-path: Aura.Web/package-lock.json
+</code></pre>
+<h3 id="pnpm-cache">pnpm Cache</h3>
+<pre><code class="lang-yaml">- name: Setup pnpm
+  uses: pnpm/action-setup@v4
+  with:
+    version: 8
+</code></pre>
+<h2 id="artifact-retention">Artifact Retention</h2>
+<p>All artifacts are retained for <strong>30 days</strong>:</p>
+<ul>
+<li>Smoke outputs (MP4, SRT, logs)</li>
+<li>Test results (TRX, XML)</li>
+<li>Coverage reports (JSON, HTML, XML)</li>
+<li>Playwright reports (HTML with traces)</li>
+</ul>
+<h2 id="triggering-workflows">Triggering Workflows</h2>
+<h3 id="automatic-triggers">Automatic Triggers</h3>
+<ul>
+<li><strong>Push to main</strong>: All workflows except <code>no-placeholders.yml</code></li>
+<li><strong>Pull Request</strong>: All workflows</li>
+<li><strong>Manual</strong>: <code>ci.yml</code> supports <code>workflow_dispatch</code></li>
+</ul>
+<h3 id="manual-trigger">Manual Trigger</h3>
+<pre><code class="lang-bash"># Via GitHub CLI
+gh workflow run ci.yml
+
+# Via GitHub UI
+Actions → CI → Run workflow
+</code></pre>
+<h2 id="debugging-ci-failures">Debugging CI Failures</h2>
+<h3 id="1-check-artifacts">1. Check Artifacts</h3>
+<p>Download artifacts from failed runs:</p>
+<pre><code class="lang-bash">gh run download &lt;run-id&gt;
+</code></pre>
+<h3 id="2-view-logs">2. View Logs</h3>
+<pre><code class="lang-bash">gh run view &lt;run-id&gt; --log
+</code></pre>
+<h3 id="3-reproduce-locally">3. Reproduce Locally</h3>
+<p><strong>Windows</strong>:</p>
+<pre><code class="lang-powershell">dotnet restore
+dotnet build --configuration Release --no-restore
+dotnet test --configuration Release --no-build
+cd Aura.Web
+npm ci
+npm test
+npm run playwright
+</code></pre>
+<p><strong>Linux</strong>:</p>
+<pre><code class="lang-bash">dotnet restore
+dotnet build --configuration Release --no-restore
+dotnet test --configuration Release --no-build
+cd Aura.Web
+npm ci
+npm test
+npm run playwright
+</code></pre>
+<h3 id="4-run-smoke-test-locally">4. Run Smoke Test Locally</h3>
+<pre><code class="lang-bash"># Windows
+pwsh -File .\scripts\run_quick_generate_demo.ps1
+
+# Linux
+./scripts/run_quick_generate_demo.sh
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="writing-tests">Writing Tests</h3>
+<ol>
+<li><strong>Fast</strong>: Aim for &lt;5s per test</li>
+<li><strong>Deterministic</strong>: No random failures</li>
+<li><strong>Isolated</strong>: No shared state between tests</li>
+<li><strong>Descriptive</strong>: Clear test names and assertions</li>
+</ol>
+<h3 id="adding-ci-steps">Adding CI Steps</h3>
+<ol>
+<li><strong>Fail Fast</strong>: Put quick checks (placeholder scan) early</li>
+<li><strong>Cache Dependencies</strong>: Use setup actions with caching</li>
+<li><strong>Upload on Failure</strong>: Use <code>if: always()</code> for debugging artifacts</li>
+<li><strong>Meaningful Names</strong>: Clear step names for easy log scanning</li>
+</ol>
+<h3 id="coverage-goals">Coverage Goals</h3>
+<ul>
+<li><strong>Unit Tests</strong>: Aim for 80%+ on new code</li>
+<li><strong>Integration Tests</strong>: Cover happy path + error cases</li>
+<li><strong>E2E Tests</strong>: Focus on user-critical workflows</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="placeholder-markers-found-error">&quot;Placeholder markers found&quot; Error</h3>
+<p>Search for forbidden keywords:</p>
+<pre><code class="lang-bash">grep -r &quot;TODO\|FIXME\|FUTURE&quot; --include=&quot;*.cs&quot; --include=&quot;*.ts&quot; .
+</code></pre>
+<p>Remove or implement all placeholders before merging.</p>
+<h3 id="coverage-below-threshold">Coverage Below Threshold</h3>
+<p>Run coverage locally:</p>
+<pre><code class="lang-bash"># .NET
+dotnet test --collect:&quot;XPlat Code Coverage&quot;
+dotnet reportgenerator -reports:&quot;**/coverage.cobertura.xml&quot; -targetdir:&quot;coverage-report&quot; -reporttypes:Html
+
+# Web
+cd Aura.Web
+npm run test:coverage
+open coverage/index.html
+</code></pre>
+<p>Add tests for uncovered code paths.</p>
+<h3 id="playwright-timeout">Playwright Timeout</h3>
+<p>Increase timeout in <code>playwright.config.ts</code>:</p>
+<pre><code class="lang-typescript">webServer: {
+  timeout: 180 * 1000, // 3 minutes
+}
+</code></pre>
+<p>Or check if dev server is failing to start.</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li>E2E Test README</li>
+<li><a href="../README.html">Web Testing Setup</a></li>
+<li><a href="developer/BUILD_AND_RUN.html">Build &amp; Run Guide</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/CI.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

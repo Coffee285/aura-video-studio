@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Retrieval-Augmented Generation (RAG) Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Retrieval-Augmented Generation (RAG) Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/RAG_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="retrieval-augmented-generation-rag-guide">Retrieval-Augmented Generation (RAG) Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The RAG system in Aura Video Studio allows you to ground LLM outputs in your own documents and references, reducing hallucinations and increasing relevance. Upload documents (PDFs, Word files, etc.), and the system will automatically chunk, embed, and index them for intelligent retrieval during content generation.</p>
+<h2 id="features">Features</h2>
+<ul>
+<li><strong>Document Ingestion</strong>: Upload and index documents from various formats (PDF, DOCX, TXT, Markdown, HTML, JSON)</li>
+<li><strong>Intelligent Chunking</strong>: Multiple strategies (Semantic, Fixed, Sentence, Paragraph) to preserve context</li>
+<li><strong>Vector Search</strong>: Cosine similarity-based retrieval of relevant content</li>
+<li><strong>Citation Support</strong>: Automatic source attribution in generated content</li>
+<li><strong>Multiple Embedding Providers</strong>: Local (default), OpenAI, or Ollama</li>
+<li><strong>Persistent Index</strong>: File-based vector storage that persists across sessions</li>
+</ul>
+<h2 id="quick-start">Quick Start</h2>
+<h3 id="1-upload-a-document">1. Upload a Document</h3>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/rag/ingest \
+  -F &quot;file=@your-document.pdf&quot; \
+  -F &quot;strategy=Semantic&quot; \
+  -F &quot;maxChunkSize=512&quot;
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;documentId&quot;: &quot;Pdf_your-document_20240101120000&quot;,
+  &quot;chunksCreated&quot;: 45,
+  &quot;processingTimeMs&quot;: 2341.5,
+  &quot;warnings&quot;: []
+}
+</code></pre>
+<h3 id="2-search-for-relevant-content">2. Search for Relevant Content</h3>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/rag/search \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;query&quot;: &quot;What are the key features of machine learning?&quot;,
+    &quot;topK&quot;: 5,
+    &quot;minimumScore&quot;: 0.5,
+    &quot;includeCitations&quot;: true
+  }'
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: &quot;What are the key features of machine learning?&quot;,
+  &quot;formattedContext&quot;: &quot;# Reference Material\n\n## Reference 1\nSource: ml-guide.pdf - Section: Introduction - Page: 3 [Citation 1]\n\nMachine learning is a subset of artificial intelligence...&quot;,
+  &quot;chunks&quot;: [
+    {
+      &quot;content&quot;: &quot;Machine learning is a subset of artificial intelligence...&quot;,
+      &quot;source&quot;: &quot;ml-guide.pdf&quot;,
+      &quot;section&quot;: &quot;Introduction&quot;,
+      &quot;pageNumber&quot;: 3,
+      &quot;relevanceScore&quot;: 0.92,
+      &quot;citationNumber&quot;: 1
+    }
+  ],
+  &quot;citations&quot;: [
+    {
+      &quot;number&quot;: 1,
+      &quot;source&quot;: &quot;ml-guide.pdf&quot;,
+      &quot;title&quot;: &quot;Machine Learning Guide&quot;,
+      &quot;section&quot;: &quot;Introduction&quot;,
+      &quot;pageNumber&quot;: 3
+    }
+  ],
+  &quot;totalTokens&quot;: 543
+}
+</code></pre>
+<h3 id="3-get-index-statistics">3. Get Index Statistics</h3>
+<pre><code class="lang-bash">curl http://localhost:5005/api/rag/statistics
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;totalDocuments&quot;: 5,
+  &quot;totalChunks&quot;: 234,
+  &quot;totalSizeBytes&quot;: 1048576,
+  &quot;lastUpdated&quot;: &quot;2024-01-01T12:00:00Z&quot;,
+  &quot;documentsByFormat&quot;: {
+    &quot;.pdf&quot;: 3,
+    &quot;.docx&quot;: 2
+  }
+}
+</code></pre>
+<h2 id="chunking-strategies">Chunking Strategies</h2>
+<h3 id="semantic-chunking-recommended">Semantic Chunking (Recommended)</h3>
+<p>Preserves document structure by respecting section boundaries and keeping related sentences together.</p>
+<p><strong>Best for</strong>: Structured documents with headings and sections (PDFs, Word docs, Markdown)</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;strategy&quot;: &quot;Semantic&quot;,
+  &quot;maxChunkSize&quot;: 512,
+  &quot;overlapSize&quot;: 50,
+  &quot;preserveSentences&quot;: true
+}
+</code></pre>
+<h3 id="fixed-chunking">Fixed Chunking</h3>
+<p>Splits text into fixed-size chunks with optional overlap.</p>
+<p><strong>Best for</strong>: Plain text, unstructured content, or when consistent chunk sizes are required</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;strategy&quot;: &quot;Fixed&quot;,
+  &quot;maxChunkSize&quot;: 512,
+  &quot;overlapSize&quot;: 50
+}
+</code></pre>
+<h3 id="sentence-chunking">Sentence Chunking</h3>
+<p>Keeps complete sentences together, never breaking mid-sentence.</p>
+<p><strong>Best for</strong>: Content where sentence boundaries are important</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;strategy&quot;: &quot;Sentence&quot;,
+  &quot;maxChunkSize&quot;: 512,
+  &quot;preserveSentences&quot;: true
+}
+</code></pre>
+<h3 id="paragraph-chunking">Paragraph Chunking</h3>
+<p>Preserves paragraph boundaries.</p>
+<p><strong>Best for</strong>: Articles, blog posts, or content where paragraph structure matters</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;strategy&quot;: &quot;Paragraph&quot;,
+  &quot;maxChunkSize&quot;: 512
+}
+</code></pre>
+<h2 id="embedding-providers">Embedding Providers</h2>
+<h3 id="local-embedding-default">Local Embedding (Default)</h3>
+<p>Simple hash-based embeddings that work offline.</p>
+<p><strong>Pros</strong>: No API key required, works offline, fast
+<strong>Cons</strong>: Lower accuracy than neural embeddings</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;RAG&quot;: {
+    &quot;Embedding&quot;: {
+      &quot;Provider&quot;: &quot;Local&quot;,
+      &quot;DimensionSize&quot;: 384
+    }
+  }
+}
+</code></pre>
+<h3 id="openai-embeddings">OpenAI Embeddings</h3>
+<p>High-quality neural embeddings using OpenAI's models.</p>
+<p><strong>Pros</strong>: Excellent semantic understanding, best accuracy
+<strong>Cons</strong>: Requires API key, costs money, needs internet</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;RAG&quot;: {
+    &quot;Embedding&quot;: {
+      &quot;Provider&quot;: &quot;OpenAI&quot;,
+      &quot;ApiKey&quot;: &quot;sk-...&quot;,
+      &quot;ModelName&quot;: &quot;text-embedding-ada-002&quot;,
+      &quot;DimensionSize&quot;: 1536
+    }
+  }
+}
+</code></pre>
+<h3 id="ollama-embeddings">Ollama Embeddings</h3>
+<p>Local neural embeddings using Ollama.</p>
+<p><strong>Pros</strong>: Good accuracy, no API costs, private
+<strong>Cons</strong>: Requires Ollama installation and model download</p>
+<p><strong>Configuration:</strong></p>
+<pre><code class="lang-json">{
+  &quot;RAG&quot;: {
+    &quot;Embedding&quot;: {
+      &quot;Provider&quot;: &quot;Ollama&quot;,
+      &quot;BaseUrl&quot;: &quot;http://localhost:11434&quot;,
+      &quot;ModelName&quot;: &quot;nomic-embed-text&quot;,
+      &quot;DimensionSize&quot;: 768
+    }
+  }
+}
+</code></pre>
+<p><strong>Setup:</strong></p>
+<pre><code class="lang-bash"># Install Ollama
+# Download embedding model
+ollama pull nomic-embed-text
+</code></pre>
+<h2 id="rag-enhanced-content-generation">RAG-Enhanced Content Generation</h2>
+<h3 id="enable-rag-for-script-generation">Enable RAG for Script Generation</h3>
+<p>When RAG is enabled, the system will automatically retrieve relevant context from your indexed documents and include it in the LLM prompt.</p>
+<p><strong>Manual Context Building:</strong></p>
+<pre><code class="lang-bash"># 1. Search for relevant context
+CONTEXT=$(curl -X POST http://localhost:5005/api/rag/search \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;query&quot;: &quot;machine learning basics&quot;, &quot;topK&quot;: 3}')
+
+# 2. Use context in your script generation
+curl -X POST http://localhost:5005/api/scripts/generate \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;brief&quot;: &quot;Create a video about machine learning&quot;,
+    &quot;context&quot;: &quot;'$CONTEXT'&quot;
+  }'
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="document-preparation">Document Preparation</h3>
+<ol>
+<li><strong>Clean Format</strong>: Remove headers, footers, and navigation elements</li>
+<li><strong>Clear Structure</strong>: Use headings and sections for better semantic chunking</li>
+<li><strong>Reasonable Size</strong>: Aim for 1,000-10,000 words per document</li>
+<li><strong>Single Topic</strong>: Each document should focus on one topic</li>
+</ol>
+<h3 id="chunking-configuration">Chunking Configuration</h3>
+<ul>
+<li><strong>General Documents</strong>: Use Semantic chunking with 512 tokens</li>
+<li><strong>Technical Docs</strong>: Use 768 tokens to preserve code examples</li>
+<li><strong>Short Articles</strong>: Use 256-384 tokens for more granular retrieval</li>
+<li><strong>Overlap</strong>: Use 10-20% overlap (50-100 tokens) for context continuity</li>
+</ul>
+<h3 id="search-configuration">Search Configuration</h3>
+<ul>
+<li><strong>Precision</strong>: Use <code>topK=3-5</code> with <code>minimumScore=0.7</code> for highly relevant results</li>
+<li><strong>Recall</strong>: Use <code>topK=10-15</code> with <code>minimumScore=0.5</code> for broader coverage</li>
+<li><strong>Balanced</strong>: Use <code>topK=5</code> with <code>minimumScore=0.6</code> (default)</li>
+</ul>
+<h3 id="performance-tips">Performance Tips</h3>
+<ol>
+<li><strong>Batch Uploads</strong>: Upload multiple documents at once rather than one at a time</li>
+<li><strong>Index Size</strong>: Keep index under 1000 documents for best performance</li>
+<li><strong>Chunk Size</strong>: Larger chunks (768-1024) reduce index size but may miss details</li>
+<li><strong>Provider</strong>: Use OpenAI or Ollama embeddings for production use cases</li>
+</ol>
+<h2 id="api-reference">API Reference</h2>
+<h3 id="post-apiragingest">POST /api/rag/ingest</h3>
+<p>Upload and index a document.</p>
+<p><strong>Request:</strong></p>
+<ul>
+<li><code>file</code>: Document file (multipart/form-data)</li>
+<li><code>strategy</code>: Chunking strategy (query param, optional, default: Semantic)</li>
+<li><code>maxChunkSize</code>: Maximum chunk size in tokens (query param, optional, default: 512)</li>
+</ul>
+<p><strong>Response:</strong> <code>IndexingResultDto</code></p>
+<h3 id="post-apiragsearch">POST /api/rag/search</h3>
+<p>Search for relevant document chunks.</p>
+<p><strong>Request:</strong> <code>SearchRequest</code></p>
+<pre><code class="lang-json">{
+  &quot;query&quot;: &quot;string&quot;,
+  &quot;topK&quot;: 5,
+  &quot;minimumScore&quot;: 0.5,
+  &quot;maxContextTokens&quot;: 2000,
+  &quot;includeCitations&quot;: true
+}
+</code></pre>
+<p><strong>Response:</strong> <code>RagContextDto</code></p>
+<h3 id="get-apiragstatistics">GET /api/rag/statistics</h3>
+<p>Get statistics about the indexed documents.</p>
+<p><strong>Response:</strong> <code>IndexStatisticsDto</code></p>
+<h3 id="delete-apiragdocumentsdocumentid">DELETE /api/rag/documents/{documentId}</h3>
+<p>Remove a specific document from the index.</p>
+<p><strong>Response:</strong> 204 No Content</p>
+<h3 id="delete-apiragclear">DELETE /api/rag/clear</h3>
+<p>Clear all documents from the index.</p>
+<p><strong>Response:</strong> 204 No Content</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="no-results-returned">No Results Returned</h3>
+<ul>
+<li><strong>Check Index</strong>: Verify documents are indexed with <code>/api/rag/statistics</code></li>
+<li><strong>Lower Threshold</strong>: Reduce <code>minimumScore</code> to 0.3-0.4</li>
+<li><strong>Rephrase Query</strong>: Try different search terms</li>
+<li><strong>Check Embeddings</strong>: Ensure embedding service is working</li>
+</ul>
+<h3 id="low-relevance-scores">Low Relevance Scores</h3>
+<ul>
+<li><strong>Better Embeddings</strong>: Switch from Local to OpenAI or Ollama</li>
+<li><strong>Better Chunks</strong>: Use Semantic chunking for structured documents</li>
+<li><strong>Query Quality</strong>: Make queries more specific and detailed</li>
+</ul>
+<h3 id="slow-search">Slow Search</h3>
+<ul>
+<li><strong>Reduce topK</strong>: Search fewer chunks (3-5 instead of 10+)</li>
+<li><strong>Smaller Index</strong>: Remove unused documents</li>
+<li><strong>Better Hardware</strong>: Consider more RAM for large indices</li>
+</ul>
+<h3 id="memory-issues">Memory Issues</h3>
+<ul>
+<li><strong>Smaller Chunks</strong>: Reduce <code>maxChunkSize</code> to 256-384</li>
+<li><strong>Fewer Documents</strong>: Split large projects into multiple indices</li>
+<li><strong>Clear Old Data</strong>: Remove documents you no longer need</li>
+</ul>
+<h2 id="examples">Examples</h2>
+<h3 id="example-1-research-paper-rag">Example 1: Research Paper RAG</h3>
+<pre><code class="lang-bash"># Upload research paper
+curl -X POST http://localhost:5005/api/rag/ingest \
+  -F &quot;file=@research-paper.pdf&quot; \
+  -F &quot;strategy=Semantic&quot; \
+  -F &quot;maxChunkSize=768&quot;
+
+# Search for methodology
+curl -X POST http://localhost:5005/api/rag/search \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;query&quot;: &quot;research methodology and experimental setup&quot;,
+    &quot;topK&quot;: 5,
+    &quot;includeCitations&quot;: true
+  }'
+</code></pre>
+<h3 id="example-2-product-documentation">Example 2: Product Documentation</h3>
+<pre><code class="lang-bash"># Upload multiple docs
+for doc in docs/*.pdf; do
+  curl -X POST http://localhost:5005/api/rag/ingest \
+    -F &quot;file=@$doc&quot; \
+    -F &quot;strategy=Semantic&quot;
+done
+
+# Search for feature info
+curl -X POST http://localhost:5005/api/rag/search \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;query&quot;: &quot;authentication and security features&quot;,
+    &quot;topK&quot;: 10,
+    &quot;minimumScore&quot;: 0.6
+  }'
+</code></pre>
+<h3 id="example-3-content-repurposing">Example 3: Content Repurposing</h3>
+<pre><code class="lang-bash"># Upload existing blog posts
+curl -X POST http://localhost:5005/api/rag/ingest \
+  -F &quot;file=@blog-archive.md&quot; \
+  -F &quot;strategy=Paragraph&quot;
+
+# Find relevant content for new video
+curl -X POST http://localhost:5005/api/rag/search \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;query&quot;: &quot;beginner-friendly explanation of concepts&quot;,
+    &quot;topK&quot;: 8,
+    &quot;maxContextTokens&quot;: 3000
+  }'
+</code></pre>
+<h2 id="integration-with-video-generation">Integration with Video Generation</h2>
+<p>The RAG system is designed to work seamlessly with Aura's video generation pipeline:</p>
+<ol>
+<li><strong>Document Upload</strong>: Index your reference materials</li>
+<li><strong>Content Planning</strong>: RAG retrieves relevant context during brief analysis</li>
+<li><strong>Script Generation</strong>: LLM uses retrieved context to write grounded scripts</li>
+<li><strong>Citation Display</strong>: Citations appear in the generated script</li>
+<li><strong>Video Creation</strong>: Proceed with TTS, visuals, and rendering as usual</li>
+</ol>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><strong>DOCUMENT_IMPORT_GUIDE.md</strong>: Document import and conversion system</li>
+<li><strong>LLM_IMPLEMENTATION_GUIDE.md</strong>: LLM integration and prompt engineering</li>
+<li><strong>CONTENT_ADAPTATION_GUIDE.md</strong>: Content adaptation and audience targeting</li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues, feature requests, or questions:</p>
+<ul>
+<li>GitHub Issues: <a href="https://github.com/Saiyan9001/aura-video-studio/issues">https://github.com/Saiyan9001/aura-video-studio/issues</a></li>
+<li>Documentation: Check other guides in the repository</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/RAG_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

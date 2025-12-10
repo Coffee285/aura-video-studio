@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Frontend API Integration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Frontend API Integration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/FRONTEND_API_INTEGRATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="frontend-api-integration-guide">Frontend API Integration Guide</h1>
+
+<h2 id="quick-start">Quick Start</h2>
+<p>This guide explains how to use the newly integrated frontend API client to communicate with the Aura backend.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#authentication">Authentication</a></li>
+<li><a href="#api-services">API Services</a></li>
+<li><a href="#react-query-hooks">React Query Hooks</a></li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#real-time-updates">Real-time Updates</a></li>
+<li><a href="#best-practices">Best Practices</a></li>
+</ol>
+<hr>
+<h2 id="authentication">Authentication</h2>
+<h3 id="using-the-auth-hook">Using the Auth Hook</h3>
+<pre><code class="lang-typescript">import { useAuth } from '@/hooks/useAuth';
+
+function MyComponent() {
+  const { isAuthenticated, user, login, logout, isLoading, error } = useAuth();
+
+  const handleLogin = async () =&gt; {
+    try {
+      await login({
+        email: 'user@example.com',
+        password: 'password123',
+        rememberMe: true,
+      });
+      // User is now logged in
+    } catch (error) {
+      // Error is automatically displayed as notification
+      console.error('Login failed:', error);
+    }
+  };
+
+  return (
+    &lt;div&gt;
+      {isAuthenticated ? (
+        &lt;&gt;
+          &lt;p&gt;Welcome, {user?.name}!&lt;/p&gt;
+          &lt;button onClick={logout}&gt;Logout&lt;/button&gt;
+        &lt;/&gt;
+      ) : (
+        &lt;button onClick={handleLogin} disabled={isLoading}&gt;
+          Login
+        &lt;/button&gt;
+      )}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="protected-routes">Protected Routes</h3>
+<pre><code class="lang-typescript">import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Route, Routes } from 'react-router-dom';
+
+function App() {
+  return (
+    &lt;Routes&gt;
+      &lt;Route path=&quot;/login&quot; element={&lt;LoginPage /&gt;} /&gt;
+      
+      {/* Protected route - requires authentication */}
+      &lt;Route
+        path=&quot;/dashboard&quot;
+        element={
+          &lt;ProtectedRoute&gt;
+            &lt;Dashboard /&gt;
+          &lt;/ProtectedRoute&gt;
+        }
+      /&gt;
+      
+      {/* Admin-only route */}
+      &lt;Route
+        path=&quot;/admin&quot;
+        element={
+          &lt;ProtectedRoute requiredRole=&quot;admin&quot;&gt;
+            &lt;AdminPanel /&gt;
+          &lt;/ProtectedRoute&gt;
+        }
+      /&gt;
+    &lt;/Routes&gt;
+  );
+}
+</code></pre>
+<h3 id="manual-token-management">Manual Token Management</h3>
+<pre><code class="lang-typescript">import { useAuthStore } from '@/stores/authStore';
+
+// Get auth state
+const token = useAuthStore((state) =&gt; state.token);
+const user = useAuthStore((state) =&gt; state.user);
+
+// Manually set token (e.g., from external auth)
+useAuthStore.getState().setToken('your-token-here', 'refresh-token', 3600);
+
+// Check token expiry
+const isExpired = useAuthStore.getState().checkTokenExpiry();
+
+// Manually refresh token
+await useAuthStore.getState().refreshAuthToken();
+</code></pre>
+<hr>
+<h2 id="api-services">API Services</h2>
+<h3 id="video-generation">Video Generation</h3>
+<pre><code class="lang-typescript">import * as videoApi from '@/services/api/videoGenerationApi';
+
+// Generate video
+const job = await videoApi.generateVideo({
+  script: 'My video script',
+  title: 'My Video',
+  settings: {
+    resolution: '1080p',
+    fps: 30,
+    quality: 'high',
+  },
+});
+
+// Get job status
+const status = await videoApi.getJobStatus(job.id);
+
+// List all jobs
+const { jobs, total } = await videoApi.getJobs({
+  status: 'completed',
+  limit: 10,
+  offset: 0,
+});
+
+// Cancel job
+await videoApi.cancelJob(job.id);
+
+// Download video
+await videoApi.downloadVideo(job.id, 'my-video.mp4');
+</code></pre>
+<h3 id="user-management">User Management</h3>
+<pre><code class="lang-typescript">import * as userApi from '@/services/api/userApi';
+
+// Get user preferences
+const preferences = await userApi.getUserPreferences();
+
+// Update preferences
+await userApi.updateUserPreferences({
+  theme: 'dark',
+  language: 'en-US',
+  notifications: {
+    email: true,
+    push: false,
+  },
+});
+
+// Upload avatar
+const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+const { avatarUrl } = await userApi.uploadAvatar(file);
+
+// Get activity log
+const { activities, total } = await userApi.getUserActivity(50, 0);
+</code></pre>
+<h3 id="admin-operations">Admin Operations</h3>
+<pre><code class="lang-typescript">import * as adminApi from '@/services/api/adminApi';
+
+// Get system stats
+const stats = await adminApi.getSystemStats();
+
+// List users
+const { users, total } = await adminApi.getUsers(1, 50, {
+  status: 'active',
+  role: 'user',
+});
+
+// Update user
+await adminApi.updateUser(userId, {
+  name: 'New Name',
+  role: 'admin',
+});
+
+// Suspend user
+await adminApi.suspendUser(userId, 'Violation of terms');
+
+// Get audit logs
+const { logs } = await adminApi.getAuditLogs(1, 100, {
+  action: 'login',
+  startDate: '2024-01-01',
+  endDate: '2024-12-31',
+});
+</code></pre>
+<h3 id="projects">Projects</h3>
+<pre><code class="lang-typescript">import * as projectService from '@/services/projectService';
+
+// Get all projects
+const projects = await projectService.getProjects();
+
+// Get specific project
+const project = await projectService.getProject(projectId);
+
+// Save project
+const saved = await projectService.saveProject(
+  'My Project',
+  projectFile,
+  projectId,
+  'Project description',
+  thumbnailUrl
+);
+
+// Delete project
+await projectService.deleteProject(projectId);
+
+// Duplicate project
+const duplicate = await projectService.duplicateProject(projectId);
+</code></pre>
+<hr>
+<h2 id="react-query-hooks">React Query Hooks</h2>
+<h3 id="video-generation-hook">Video Generation Hook</h3>
+<pre><code class="lang-typescript">import { useVideoGeneration, useJobStatus, useJobs } from '@/hooks/useApiClient';
+
+function VideoGenerator() {
+  const { generateVideo } = useVideoGeneration();
+  const [jobId, setJobId] = useState&lt;string&gt;();
+  
+  // Query job status with auto-polling
+  const { data: job, isLoading } = useJobStatus(jobId);
+  
+  // List all jobs
+  const { data: jobsData } = useJobs({ status: 'processing' });
+
+  const handleGenerate = async () =&gt; {
+    const result = await generateVideo.mutateAsync({
+      script: 'My script',
+      settings: { resolution: '1080p' },
+    });
+    setJobId(result.id);
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;button onClick={handleGenerate} disabled={generateVideo.isPending}&gt;
+        Generate Video
+      &lt;/button&gt;
+      
+      {job &amp;&amp; (
+        &lt;div&gt;
+          &lt;p&gt;Status: {job.status}&lt;/p&gt;
+          &lt;p&gt;Progress: {job.progress}%&lt;/p&gt;
+        &lt;/div&gt;
+      )}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="user-preferences-hook">User Preferences Hook</h3>
+<pre><code class="lang-typescript">import { useUserPreferences } from '@/hooks/useApiClient';
+
+function SettingsPage() {
+  const { data: preferences, update, isLoading } = useUserPreferences();
+
+  const handleSave = async (updates: Partial&lt;UserPreferences&gt;) =&gt; {
+    await update.mutateAsync(updates);
+  };
+
+  if (isLoading) return &lt;div&gt;Loading...&lt;/div&gt;;
+
+  return (
+    &lt;div&gt;
+      &lt;p&gt;Theme: {preferences?.theme}&lt;/p&gt;
+      &lt;button onClick={() =&gt; handleSave({ theme: 'dark' })}&gt;
+        Switch to Dark Mode
+      &lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="admin-hooks">Admin Hooks</h3>
+<pre><code class="lang-typescript">import { useAdminStats, useAdminUsers } from '@/hooks/useApiClient';
+
+function AdminDashboard() {
+  const { data: stats } = useAdminStats();
+  const { data: usersData, updateUser, suspendUser } = useAdminUsers(1, 50);
+
+  const handleUpdateUser = async (userId: string, updates: any) =&gt; {
+    await updateUser.mutateAsync({ userId, updates });
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;h1&gt;System Stats&lt;/h1&gt;
+      &lt;p&gt;Total Users: {stats?.users.total}&lt;/p&gt;
+      &lt;p&gt;Active Users: {stats?.users.active}&lt;/p&gt;
+      
+      &lt;h2&gt;Users&lt;/h2&gt;
+      {usersData?.users.map(user =&gt; (
+        &lt;div key={user.id}&gt;
+          &lt;p&gt;{user.name} ({user.email})&lt;/p&gt;
+          &lt;button onClick={() =&gt; handleUpdateUser(user.id, { role: 'admin' })}&gt;
+            Make Admin
+          &lt;/button&gt;
+        &lt;/div&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<hr>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="using-error-boundary">Using Error Boundary</h3>
+<pre><code class="lang-typescript">import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+function App() {
+  return (
+    &lt;ErrorBoundary
+      fallback={&lt;div&gt;Something went wrong. Please refresh the page.&lt;/div&gt;}
+      onError={(error, errorInfo) =&gt; {
+        console.error('Error caught by boundary:', error, errorInfo);
+      }}
+    &gt;
+      &lt;YourApp /&gt;
+    &lt;/ErrorBoundary&gt;
+  );
+}
+</code></pre>
+<h3 id="centralized-error-handling">Centralized Error Handling</h3>
+<pre><code class="lang-typescript">import {
+  handleError,
+  withErrorHandling,
+  NetworkError,
+  ValidationError,
+} from '@/utils/errorHandler';
+
+// Manual error handling
+try {
+  await apiCall();
+} catch (error) {
+  handleError(error, {
+    title: 'Operation Failed',
+    message: 'Custom error message',
+    showNotification: true,
+    context: 'myComponent',
+  });
+}
+
+// Wrap function with error handling
+const fetchData = withErrorHandling(
+  async () =&gt; {
+    const data = await apiCall();
+    return data;
+  },
+  {
+    title: 'Failed to fetch data',
+    context: 'dataFetch',
+  }
+);
+
+// Throw custom errors
+if (!isValid) {
+  throw new ValidationError('Invalid input', {
+    email: 'Email is required',
+    password: 'Password must be at least 8 characters',
+  });
+}
+</code></pre>
+<h3 id="error-hook">Error Hook</h3>
+<pre><code class="lang-typescript">import { useErrorHandler } from '@/components/ErrorBoundary';
+
+function MyComponent() {
+  const throwError = useErrorHandler();
+
+  const handleAction = async () =&gt; {
+    try {
+      await riskyOperation();
+    } catch (error) {
+      // Throw to nearest error boundary
+      throwError(error as Error);
+    }
+  };
+
+  return &lt;button onClick={handleAction}&gt;Do Something&lt;/button&gt;;
+}
+</code></pre>
+<hr>
+<h2 id="real-time-updates">Real-time Updates</h2>
+<h3 id="server-sent-events-sse">Server-Sent Events (SSE)</h3>
+<pre><code class="lang-typescript">import { createSseClient } from '@/services/api/sseClient';
+
+function JobMonitor({ jobId }: { jobId: string }) {
+  const [progress, setProgress] = useState(0);
+  const sseClientRef = useRef&lt;any&gt;(null);
+
+  useEffect(() =&gt; {
+    // Create SSE client
+    const client = createSseClient(jobId);
+
+    // Subscribe to events
+    client.on('job-status', (event) =&gt; {
+      console.log('Job status:', event.data);
+    });
+
+    client.on('step-progress', (event) =&gt; {
+      setProgress(event.data.progressPct);
+    });
+
+    client.on('job-completed', (event) =&gt; {
+      console.log('Job completed!', event.data);
+    });
+
+    // Monitor connection state
+    client.onStatusChange((state) =&gt; {
+      console.log('Connection state:', state.status);
+    });
+
+    // Connect
+    client.connect();
+    sseClientRef.current = client;
+
+    // Cleanup
+    return () =&gt; {
+      client.close();
+    };
+  }, [jobId]);
+
+  return &lt;div&gt;Progress: {progress}%&lt;/div&gt;;
+}
+</code></pre>
+<h3 id="signalr-when-backend-hubs-are-implemented">SignalR (when backend hubs are implemented)</h3>
+<pre><code class="lang-typescript">import { getProgressHubClient } from '@/services/api/signalRClient';
+
+function RealTimeUpdates() {
+  const hubClient = useRef(getProgressHubClient());
+
+  useEffect(() =&gt; {
+    const client = hubClient.current;
+
+    // Connect to hub
+    client.connect().catch(console.error);
+
+    // Subscribe to events
+    client.on('ProgressUpdate', (data) =&gt; {
+      console.log('Progress:', data);
+    });
+
+    // Invoke hub method
+    const sendMessage = async () =&gt; {
+      await client.invoke('SendMessage', 'Hello from client!');
+    };
+
+    // Cleanup
+    return () =&gt; {
+      client.disconnect();
+    };
+  }, []);
+
+  return &lt;div&gt;Real-time updates enabled&lt;/div&gt;;
+}
+</code></pre>
+<hr>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-use-react-query-hooks">1. Use React Query Hooks</h3>
+<p><strong>✅ DO:</strong></p>
+<pre><code class="lang-typescript">import { useJobs } from '@/hooks/useApiClient';
+
+function JobsList() {
+  const { data, isLoading, error } = useJobs();
+  // Automatic caching, refetching, and state management
+}
+</code></pre>
+<p><strong>❌ DON'T:</strong></p>
+<pre><code class="lang-typescript">function JobsList() {
+  const [jobs, setJobs] = useState([]);
+  
+  useEffect(() =&gt; {
+    videoApi.getJobs().then(setJobs);
+  }, []);
+  // Manual state management, no caching
+}
+</code></pre>
+<h3 id="2-handle-loading-and-error-states">2. Handle Loading and Error States</h3>
+<p><strong>✅ DO:</strong></p>
+<pre><code class="lang-typescript">function MyComponent() {
+  const { data, isLoading, error } = useQuery(...);
+
+  if (isLoading) return &lt;LoadingSpinner /&gt;;
+  if (error) return &lt;ErrorMessage error={error} /&gt;;
+
+  return &lt;DataDisplay data={data} /&gt;;
+}
+</code></pre>
+<h3 id="3-use-error-boundaries">3. Use Error Boundaries</h3>
+<p><strong>✅ DO:</strong></p>
+<pre><code class="lang-typescript">&lt;ErrorBoundary&gt;
+  &lt;CriticalComponent /&gt;
+&lt;/ErrorBoundary&gt;
+</code></pre>
+<h3 id="4-leverage-automatic-features">4. Leverage Automatic Features</h3>
+<ul>
+<li><strong>Request Deduplication:</strong> Automatic for POST/PUT/PATCH</li>
+<li><strong>Retry Logic:</strong> Automatic with exponential backoff</li>
+<li><strong>Circuit Breaker:</strong> Automatic protection against cascading failures</li>
+<li><strong>Token Refresh:</strong> Automatic when token is about to expire</li>
+</ul>
+<h3 id="5-type-safety">5. Type Safety</h3>
+<p><strong>✅ DO:</strong></p>
+<pre><code class="lang-typescript">import type { VideoGenerationRequest, VideoJob } from '@/services/api/videoGenerationApi';
+
+const request: VideoGenerationRequest = {
+  script: 'My script',
+  settings: { resolution: '1080p' },
+};
+</code></pre>
+<h3 id="6-logging">6. Logging</h3>
+<p>All API services automatically log operations. Access logs via:</p>
+<pre><code class="lang-typescript">import { loggingService } from '@/services/loggingService';
+
+loggingService.info('Custom log message', 'myComponent', 'myFunction', { data });
+</code></pre>
+<hr>
+<h2 id="configuration">Configuration</h2>
+<h3 id="environment-variables">Environment Variables</h3>
+<p>Create <code>.env.development</code>:</p>
+<pre><code class="lang-env">VITE_API_BASE_URL=http://127.0.0.1:5005
+VITE_APP_VERSION=1.0.0
+VITE_ENV=development
+VITE_ENABLE_DEBUG=true
+</code></pre>
+<p>Create <code>.env.production</code>:</p>
+<pre><code class="lang-env">VITE_API_BASE_URL=https://api.yourdomain.com
+VITE_APP_VERSION=1.0.0
+VITE_ENV=production
+VITE_ENABLE_DEBUG=false
+</code></pre>
+<h3 id="backend-cors-appsettingsjson">Backend CORS (appsettings.json)</h3>
+<pre><code class="lang-json">{
+  &quot;Cors&quot;: {
+    &quot;AllowedOrigins&quot;: [
+      &quot;https://yourdomain.com&quot;,
+      &quot;https://app.yourdomain.com&quot;
+    ]
+  }
+}
+</code></pre>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="issue-cors-errors">Issue: CORS errors</h3>
+<p><strong>Solution:</strong> Check that:</p>
+<ol>
+<li>Backend CORS is configured in <code>Program.cs</code></li>
+<li>Frontend URL is in allowed origins</li>
+<li>Browser isn't blocking requests</li>
+</ol>
+<h3 id="issue-401-unauthorized">Issue: 401 Unauthorized</h3>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Check if user is logged in: <code>useAuth().isAuthenticated</code></li>
+<li>Verify token hasn't expired</li>
+<li>Try manual login again</li>
+</ol>
+<h3 id="issue-network-errors">Issue: Network errors</h3>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Check if backend is running</li>
+<li>Verify API base URL in <code>.env</code></li>
+<li>Check browser console for details</li>
+</ol>
+<h3 id="issue-sse-not-connecting">Issue: SSE not connecting</h3>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Check job ID is valid</li>
+<li>Backend SSE endpoint is working</li>
+<li>Check browser network tab for SSE connection</li>
+</ol>
+<hr>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="./api/index.md">API Reference</a></li>
+<li><a href="./FRONTEND_BACKEND_INTEGRATION_COMPLETE.md">Backend Integration Summary</a></li>
+<li><a href="https://tanstack.com/query/latest">React Query Documentation</a></li>
+<li><a href="https://zustand-demo.pmnd.rs/">Zustand Documentation</a></li>
+</ul>
+<hr>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ol>
+<li>Check this guide</li>
+<li>Review implementation summary: <code>FRONTEND_BACKEND_INTEGRATION_COMPLETE.md</code></li>
+<li>Check API service files for detailed JSDoc comments</li>
+<li>Review error logs in browser console</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/FRONTEND_API_INTEGRATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

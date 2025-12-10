@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>006. Server-Sent Events for Real-Time Updates | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="006. Server-Sent Events for Real-Time Updates | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/adr/006-server-sent-events.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="006-server-sent-events-for-real-time-updates">006. Server-Sent Events for Real-Time Updates</h1>
+
+<p>Date: 2024-02-10
+Status: Accepted</p>
+<h2 id="context">Context</h2>
+<p>Aura Video Studio needs real-time updates for video generation progress, job status changes, and long-running operations. Users need to see:</p>
+<ul>
+<li>Progress percentage and stage updates</li>
+<li>Log messages during video generation</li>
+<li>Job completion and error notifications</li>
+<li>Queue position updates</li>
+</ul>
+<p>Key requirements:</p>
+<ul>
+<li>Real-time updates from server to client</li>
+<li>Support for long-running operations (several minutes)</li>
+<li>Reliable delivery of events</li>
+<li>Simple client implementation</li>
+<li>Works through corporate proxies and firewalls</li>
+</ul>
+<p>Options for real-time communication:</p>
+<ul>
+<li>Server-Sent Events (SSE)</li>
+<li>WebSockets</li>
+<li>Long polling</li>
+<li>Short polling</li>
+</ul>
+<h2 id="decision">Decision</h2>
+<p>We will use <strong>Server-Sent Events (SSE)</strong> for server-to-client real-time updates.</p>
+<p>Implementation details:</p>
+<ul>
+<li>SSE endpoints for job progress: <code>/api/v1/jobs/{jobId}/events</code></li>
+<li>Event types: <code>progress</code>, <code>stage</code>, <code>log</code>, <code>complete</code>, <code>error</code></li>
+<li>JSON payload for each event</li>
+<li>Automatic reconnection with exponential backoff</li>
+<li>Correlation IDs for event tracking</li>
+<li>60-second keepalive to prevent timeout</li>
+</ul>
+<h2 id="consequences">Consequences</h2>
+<h3 id="positive-consequences">Positive Consequences</h3>
+<ul>
+<li><strong>Simple protocol</strong>: Built on HTTP, easy to understand and debug</li>
+<li><strong>Browser native</strong>: EventSource API in all modern browsers</li>
+<li><strong>Automatic reconnection</strong>: Browser handles reconnection automatically</li>
+<li><strong>Firewall friendly</strong>: Works through proxies that block WebSockets</li>
+<li><strong>One-way communication</strong>: Perfect fit for server → client updates</li>
+<li><strong>Text-based</strong>: Easy to debug with curl or browser dev tools</li>
+<li><strong>Efficient</strong>: HTTP/2 multiplexing for multiple SSE connections</li>
+<li><strong>No polling overhead</strong>: Single persistent connection instead of repeated requests</li>
+</ul>
+<h3 id="negative-consequences">Negative Consequences</h3>
+<ul>
+<li><strong>One-way only</strong>: Cannot send messages from client to server (must use separate POST requests)</li>
+<li><strong>Text only</strong>: Binary data requires base64 encoding</li>
+<li><strong>HTTP/1.1 connection limit</strong>: Browsers limit concurrent connections per domain (6 connections)</li>
+<li><strong>No automatic compression</strong>: Must enable gzip at server level</li>
+<li><strong>Limited IE support</strong>: Not supported in Internet Explorer (not a concern for modern browsers)</li>
+</ul>
+<h2 id="alternatives-considered">Alternatives Considered</h2>
+<h3 id="alternative-1-websockets">Alternative 1: WebSockets</h3>
+<p><strong>Description:</strong> Full-duplex communication over a single TCP connection.</p>
+<p><strong>Pros:</strong></p>
+<ul>
+<li>Bidirectional communication (client ↔ server)</li>
+<li>Binary data support</li>
+<li>Lower latency for high-frequency updates</li>
+<li>More efficient for two-way communication</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li>More complex protocol and implementation</li>
+<li>Requires WebSocket server infrastructure</li>
+<li>More difficult to debug</li>
+<li>Often blocked by corporate proxies</li>
+<li>Manual reconnection handling required</li>
+<li>Overkill for one-way communication</li>
+</ul>
+<p><strong>Why Rejected:</strong> Aura doesn't need bidirectional communication. Commands from client use regular POST requests. SSE is simpler, more reliable through proxies, and perfectly suited for progress updates.</p>
+<h3 id="alternative-2-long-polling">Alternative 2: Long Polling</h3>
+<p><strong>Description:</strong> Client polls server, server holds request open until data is available.</p>
+<p><strong>Pros:</strong></p>
+<ul>
+<li>Works everywhere (basic HTTP)</li>
+<li>No special browser or server support needed</li>
+<li>Simple fallback mechanism</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li>Inefficient (repeated connection overhead)</li>
+<li>Complex server implementation for connection management</li>
+<li>Higher latency</li>
+<li>More server resources (connection per client)</li>
+<li>Request timeout issues</li>
+</ul>
+<p><strong>Why Rejected:</strong> More complex and less efficient than SSE. SSE provides all the benefits of long polling with native browser support and better performance.</p>
+<h3 id="alternative-3-short-polling">Alternative 3: Short Polling</h3>
+<p><strong>Description:</strong> Client periodically polls server for updates (e.g., every 2 seconds).</p>
+<p><strong>Pros:</strong></p>
+<ul>
+<li>Extremely simple to implement</li>
+<li>Works everywhere</li>
+<li>No special infrastructure needed</li>
+</ul>
+<p><strong>Cons:</strong></p>
+<ul>
+<li>Inefficient (many unnecessary requests)</li>
+<li>Higher latency (up to polling interval)</li>
+<li>Wasted bandwidth and server resources</li>
+<li>Poor user experience for progress updates</li>
+<li>Not true real-time</li>
+</ul>
+<p><strong>Why Rejected:</strong> Unacceptable latency for progress updates. Users expect smooth, real-time progress indicators, not stuttering updates every few seconds.</p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://html.spec.whatwg.org/multipage/server-sent-events.html">Server-Sent Events Specification</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/EventSource">EventSource API (MDN)</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events">Using Server-Sent Events</a></li>
+<li><a href="https://ably.com/blog/websockets-vs-sse">SSE vs WebSockets</a></li>
+</ul>
+<h2 id="notes">Notes</h2>
+<p>SSE is an excellent fit for Aura's needs:</p>
+<ol>
+<li><strong>Progress updates are unidirectional</strong>: Server pushes updates to client; client sends commands via POST</li>
+<li><strong>Firewall friendly</strong>: Important for enterprise users who may have restrictive network policies</li>
+<li><strong>Simple to debug</strong>: Can test with curl: <code>curl -N http://localhost:5005/api/v1/jobs/123/events</code></li>
+<li><strong>HTTP/2 benefits</strong>: With HTTP/2, connection limits are less of a concern</li>
+</ol>
+<p>Example SSE event format:</p>
+<pre><code>event: progress
+data: {&quot;jobId&quot;:&quot;abc123&quot;,&quot;progress&quot;:45,&quot;stage&quot;:&quot;Generating video&quot;}
+
+event: log
+data: {&quot;jobId&quot;:&quot;abc123&quot;,&quot;level&quot;:&quot;info&quot;,&quot;message&quot;:&quot;Processing frame 100/200&quot;}
+
+event: complete
+data: {&quot;jobId&quot;:&quot;abc123&quot;,&quot;status&quot;:&quot;completed&quot;,&quot;outputPath&quot;:&quot;output/video.mp4&quot;}
+</code></pre>
+<p>The decision to use SSE keeps the architecture simple while providing excellent real-time updates for users. The automatic reconnection and text-based protocol make it reliable and easy to troubleshoot.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/adr/006-server-sent-events.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

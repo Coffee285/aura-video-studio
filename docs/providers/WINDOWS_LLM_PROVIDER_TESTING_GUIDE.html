@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Windows LLM Provider Testing Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Windows LLM Provider Testing Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/WINDOWS_LLM_PROVIDER_TESTING_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="windows-llm-provider-testing-guide">Windows LLM Provider Testing Guide</h1>
+
+<h2 id="quick-start">Quick Start</h2>
+<p>This guide provides step-by-step instructions for testing LLM provider integration on Windows.</p>
+<hr>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required">Required</h3>
+<ul>
+<li>✅ Windows 10 20H2 or later (Windows 11 recommended)</li>
+<li>✅ .NET 8.0 SDK installed</li>
+<li>✅ Visual Studio 2022 or VS Code with C# extension</li>
+<li>✅ Git for Windows</li>
+</ul>
+<h3 id="optional-for-specific-tests">Optional (for specific tests)</h3>
+<ul>
+<li>OpenAI API key (for OpenAI provider tests)</li>
+<li>Anthropic API key (for Anthropic provider tests)</li>
+<li>Google Gemini API key (for Gemini provider tests)</li>
+<li>Ollama installed and running (for Ollama provider tests)</li>
+</ul>
+<hr>
+<h2 id="setup-instructions">Setup Instructions</h2>
+<h3 id="1-clone-repository">1. Clone Repository</h3>
+<pre><code class="lang-powershell">git clone &lt;repository-url&gt;
+cd aura-video-studio
+</code></pre>
+<h3 id="2-install-dependencies">2. Install Dependencies</h3>
+<pre><code class="lang-powershell"># Restore NuGet packages
+dotnet restore
+
+# Build solution
+dotnet build
+</code></pre>
+<h3 id="3-set-environment-variables-optional">3. Set Environment Variables (Optional)</h3>
+<p>For testing cloud LLM providers, set your API keys:</p>
+<pre><code class="lang-powershell"># PowerShell
+$env:OPENAI_API_KEY=&quot;sk-your-openai-key-here&quot;
+$env:ANTHROPIC_API_KEY=&quot;sk-ant-your-anthropic-key-here&quot;
+$env:GEMINI_API_KEY=&quot;your-gemini-key-here&quot;
+
+# To persist across sessions, set user environment variables
+[Environment]::SetEnvironmentVariable(&quot;OPENAI_API_KEY&quot;, &quot;sk-...&quot;, &quot;User&quot;)
+[Environment]::SetEnvironmentVariable(&quot;ANTHROPIC_API_KEY&quot;, &quot;sk-ant-...&quot;, &quot;User&quot;)
+[Environment]::SetEnvironmentVariable(&quot;GEMINI_API_KEY&quot;, &quot;...&quot;, &quot;User&quot;)
+</code></pre>
+<p><strong>Note</strong>: API keys are optional. Tests will be skipped if keys are not provided.</p>
+<h3 id="4-install-ollama-optional">4. Install Ollama (Optional)</h3>
+<p>For testing local Ollama provider:</p>
+<ol>
+<li>Download Ollama for Windows from <a href="https://ollama.ai/download">https://ollama.ai/download</a></li>
+<li>Install and run Ollama</li>
+<li>Pull a test model:</li>
+</ol>
+<pre><code class="lang-powershell">ollama pull llama3.1:8b-q4_k_m
+</code></pre>
+<hr>
+<h2 id="running-tests">Running Tests</h2>
+<h3 id="run-all-windows-integration-tests">Run All Windows Integration Tests</h3>
+<pre><code class="lang-powershell"># Navigate to test directory
+cd Aura.Tests
+
+# Run all Windows integration tests
+dotnet test --filter &quot;Category=Windows&amp;Category=Integration&quot;
+</code></pre>
+<h3 id="run-specific-provider-tests">Run Specific Provider Tests</h3>
+<pre><code class="lang-powershell"># Test OpenAI provider
+dotnet test --filter &quot;Category=Windows&amp;Category=OpenAI&quot;
+
+# Test Anthropic provider
+dotnet test --filter &quot;Category=Windows&amp;Category=Anthropic&quot;
+
+# Test Gemini provider
+dotnet test --filter &quot;Category=Windows&amp;Category=Gemini&quot;
+
+# Test Ollama provider
+dotnet test --filter &quot;Category=Windows&amp;Category=Ollama&quot;
+</code></pre>
+<h3 id="run-tests-with-detailed-output">Run Tests with Detailed Output</h3>
+<pre><code class="lang-powershell"># Show detailed test output
+dotnet test --filter &quot;Category=Windows&quot; --logger &quot;console;verbosity=detailed&quot;
+</code></pre>
+<hr>
+<h2 id="test-scenarios">Test Scenarios</h2>
+<h3 id="1-windows-credential-manager-test">1. Windows Credential Manager Test</h3>
+<p><strong>Purpose</strong>: Verify API key storage in Windows Credential Manager</p>
+<p><strong>Test</strong>: <code>WindowsCredentialManager_ShouldStoreAndRetrieveApiKeys</code></p>
+<p><strong>What it tests</strong>:</p>
+<ul>
+<li>✅ Storing API keys securely</li>
+<li>✅ Retrieving stored API keys</li>
+<li>✅ Checking if API keys exist</li>
+<li>✅ Deleting API keys</li>
+<li>✅ Error handling</li>
+</ul>
+<p><strong>Expected Result</strong>: All operations should succeed without errors</p>
+<p><strong>Manual Verification</strong>:</p>
+<pre><code class="lang-powershell"># View stored credentials
+cmdkey /list | findstr &quot;AuraVideoStudio&quot;
+
+# Should show: Target: AuraVideoStudio_TestProvider
+</code></pre>
+<hr>
+<h3 id="2-ollama-detection-test">2. Ollama Detection Test</h3>
+<p><strong>Purpose</strong>: Test local Ollama installation detection</p>
+<p><strong>Test</strong>: <code>OllamaDetection_ShouldDetectLocalInstallation</code></p>
+<p><strong>Prerequisites</strong>: Ollama must be running</p>
+<p><strong>Start Ollama</strong>:</p>
+<pre><code class="lang-powershell"># Option 1: Run Ollama from Start Menu
+# Option 2: Run from command line
+ollama serve
+</code></pre>
+<p><strong>What it tests</strong>:</p>
+<ul>
+<li>✅ Service detection (HTTP health check)</li>
+<li>✅ Version detection</li>
+<li>✅ Model enumeration</li>
+<li>✅ Model metadata retrieval</li>
+</ul>
+<p><strong>Expected Output</strong>:</p>
+<pre><code>Ollama Detection Results:
+  IsRunning: True
+  IsInstalled: True
+  Version: 0.1.47
+  BaseUrl: http://localhost:11434
+  Error: None
+
+  Available Models: 3
+    - llama3.1:8b-q4_k_m (4.69 GB)
+    - mistral:7b (4.11 GB)
+    - codellama:7b (3.83 GB)
+</code></pre>
+<hr>
+<h3 id="3-openai-provider-test">3. OpenAI Provider Test</h3>
+<p><strong>Purpose</strong>: Test OpenAI API connectivity and error handling</p>
+<p><strong>Test</strong>: <code>OpenAI_ShouldHandleNetworkRequestsOnWindows</code></p>
+<p><strong>Prerequisites</strong>: Set <code>OPENAI_API_KEY</code> environment variable</p>
+<p><strong>What it tests</strong>:</p>
+<ul>
+<li>✅ API key validation</li>
+<li>✅ Network request handling</li>
+<li>✅ Model enumeration</li>
+<li>✅ Error handling</li>
+</ul>
+<p><strong>Expected Output</strong>:</p>
+<pre><code>OpenAI API Key Validation:
+  IsValid: True
+  Message: API key is valid
+  Available Models: 52
+    - gpt-4o
+    - gpt-4o-mini
+    - gpt-4-turbo
+    - gpt-3.5-turbo
+    - ...
+</code></pre>
+<hr>
+<h3 id="4-network-error-handling-test">4. Network Error Handling Test</h3>
+<p><strong>Purpose</strong>: Verify graceful error handling</p>
+<p><strong>Test</strong>: <code>NetworkFailure_ShouldHandleGracefully</code></p>
+<p><strong>What it tests</strong>:</p>
+<ul>
+<li>✅ Invalid API key handling</li>
+<li>✅ User-friendly error messages</li>
+<li>✅ No application crashes</li>
+</ul>
+<p><strong>Expected Output</strong>:</p>
+<pre><code>Network Error Handling Test:
+  IsValid: False
+  Message: Invalid API key
+  ✓ Error handled gracefully without exception
+</code></pre>
+<hr>
+<h3 id="5-timeout-handling-test">5. Timeout Handling Test</h3>
+<p><strong>Purpose</strong>: Verify timeout handling doesn't crash the application</p>
+<p><strong>Test</strong>: <code>Timeout_ShouldHandleGracefully</code></p>
+<p><strong>What it tests</strong>:</p>
+<ul>
+<li>✅ Request timeout handling</li>
+<li>✅ No blocking calls</li>
+<li>✅ Proper cancellation</li>
+</ul>
+<p><strong>Expected Output</strong>:</p>
+<pre><code>Timeout Handling Test:
+  Service Available: False
+  ✓ Timeout handled gracefully without exception
+</code></pre>
+<hr>
+<h3 id="6-http-client-proxy-test">6. HTTP Client Proxy Test</h3>
+<p><strong>Purpose</strong>: Verify Windows system proxy integration</p>
+<p><strong>Test</strong>: <code>WindowsHttpClient_ShouldUseSystemProxy</code></p>
+<p><strong>What it tests</strong>:</p>
+<ul>
+<li>✅ UseProxy configuration</li>
+<li>✅ Default credentials support</li>
+<li>✅ Automatic decompression</li>
+</ul>
+<p><strong>Expected Output</strong>:</p>
+<pre><code>HttpClient Windows Configuration:
+  UseProxy: True
+  UseDefaultCredentials: True
+  Supports Automatic Decompression: True
+  ✓ HttpClient configured to use Windows system proxy
+</code></pre>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="tests-are-skipped">Tests are Skipped</h3>
+<p><strong>Cause</strong>: Missing prerequisites (API keys, Ollama, etc.)</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check if environment variables are set</li>
+<li>Verify Ollama is running (for Ollama tests)</li>
+<li>Check test output for skip reasons</li>
+</ol>
+<pre><code class="lang-powershell"># Verify environment variables
+Get-ChildItem Env: | Where-Object { $_.Name -like &quot;*API_KEY*&quot; }
+</code></pre>
+<h3 id="ollama-not-detected">Ollama Not Detected</h3>
+<p><strong>Symptom</strong>: <code>IsRunning: False</code> in Ollama detection test</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><strong>Start Ollama service</strong>:</li>
+</ol>
+<pre><code class="lang-powershell"># Start Ollama
+ollama serve
+
+# Or run as Windows service
+sc start ollama
+</code></pre>
+<ol start="2">
+<li><strong>Check Ollama is listening</strong>:</li>
+</ol>
+<pre><code class="lang-powershell">Test-NetConnection -ComputerName localhost -Port 11434
+</code></pre>
+<ol start="3">
+<li><strong>Check firewall</strong>:</li>
+</ol>
+<pre><code class="lang-powershell"># Check if port 11434 is blocked
+Get-NetFirewallRule | Where-Object { $_.DisplayName -like &quot;*Ollama*&quot; }
+</code></pre>
+<h3 id="network-connection-errors">Network Connection Errors</h3>
+<p><strong>Symptom</strong>: <code>HttpRequestException</code> or timeout errors</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><strong>Check internet connectivity</strong>:</li>
+</ol>
+<pre><code class="lang-powershell">Test-NetConnection api.openai.com -Port 443
+Test-NetConnection api.anthropic.com -Port 443
+</code></pre>
+<ol start="2">
+<li><strong>Check proxy settings</strong>:</li>
+</ol>
+<pre><code class="lang-powershell"># View proxy settings
+netsh winhttp show proxy
+
+# If behind corporate proxy, set:
+netsh winhttp set proxy proxy-server=&quot;proxy.company.com:8080&quot;
+</code></pre>
+<ol start="3">
+<li><strong>Check Windows Defender Firewall</strong>:</li>
+</ol>
+<pre><code class="lang-powershell"># Check firewall status
+Get-NetFirewallProfile | Select-Object Name, Enabled
+
+# Temporarily disable (for testing only)
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
+
+# Re-enable after testing
+Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled True
+</code></pre>
+<h3 id="credential-manager-access-denied">Credential Manager Access Denied</h3>
+<p><strong>Symptom</strong>: Access denied when storing/retrieving credentials</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><strong>Run as Administrator</strong> (if required):</li>
+</ol>
+<pre><code class="lang-powershell"># Right-click PowerShell → Run as Administrator
+</code></pre>
+<ol start="2">
+<li><strong>Check Windows User Account Control (UAC)</strong>:</li>
+</ol>
+<ul>
+<li>Ensure UAC is not blocking credential access</li>
+</ul>
+<ol start="3">
+<li><strong>Verify Windows login</strong>:</li>
+</ol>
+<ul>
+<li>Make sure you're logged in with a valid Windows account</li>
+</ul>
+<hr>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-api-key-security">1. API Key Security</h3>
+<p>❌ <strong>Don't</strong>:</p>
+<ul>
+<li>Commit API keys to source control</li>
+<li>Share API keys in plain text</li>
+<li>Store API keys in configuration files</li>
+</ul>
+<p>✅ <strong>Do</strong>:</p>
+<ul>
+<li>Use environment variables</li>
+<li>Use Windows Credential Manager</li>
+<li>Use Azure Key Vault or similar for production</li>
+</ul>
+<h3 id="2-testing-on-corporate-networks">2. Testing on Corporate Networks</h3>
+<p>If testing behind a corporate proxy:</p>
+<pre><code class="lang-powershell"># Configure system proxy
+netsh winhttp set proxy proxy-server=&quot;proxy:8080&quot; bypass-list=&quot;localhost&quot;
+
+# Test proxy configuration
+netsh winhttp show proxy
+</code></pre>
+<h3 id="3-ollama-model-management">3. Ollama Model Management</h3>
+<pre><code class="lang-powershell"># List available models
+ollama list
+
+# Pull specific model
+ollama pull llama3.1:8b-q4_k_m
+
+# Remove unused models to save space
+ollama rm model-name
+
+# Check Ollama version
+ollama --version
+</code></pre>
+<hr>
+<h2 id="continuous-integration">Continuous Integration</h2>
+<h3 id="github-actions-windows-runner">GitHub Actions (Windows Runner)</h3>
+<pre><code class="lang-yaml">name: Windows LLM Provider Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Run Windows integration tests
+      run: dotnet test --filter &quot;Category=Windows&amp;Category=Integration&quot;
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+</code></pre>
+<hr>
+<h2 id="additional-resources">Additional Resources</h2>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li><a href="./PR_CORE_001_LLM_PROVIDER_VALIDATION_REPORT.md">Main Validation Report</a></li>
+<li><a href="https://docs.microsoft.com/en-us/windows/win32/secauthn/authentication-functions">Windows Credential Manager API</a></li>
+<li><a href="https://github.com/ollama/ollama/tree/main/docs">Ollama Documentation</a></li>
+</ul>
+<h3 id="support">Support</h3>
+<p>For issues or questions:</p>
+<ol>
+<li>Check the main validation report</li>
+<li>Review test output for detailed error messages</li>
+<li>Check Windows Event Viewer for system-level errors</li>
+<li>Review application logs</li>
+</ol>
+<hr>
+<h2 id="summary-checklist">Summary Checklist</h2>
+<p>Before completing validation:</p>
+<ul>
+<li>[ ] All tests pass on Windows 10/11</li>
+<li>[ ] API key storage in Credential Manager verified</li>
+<li>[ ] At least one cloud provider (OpenAI/Anthropic/Gemini) tested</li>
+<li>[ ] Ollama detection tested (if applicable)</li>
+<li>[ ] Error handling verified</li>
+<li>[ ] Network timeout handling verified</li>
+<li>[ ] Proxy configuration verified (if applicable)</li>
+<li>[ ] Documentation reviewed</li>
+</ul>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-11<br>
+<strong>Version</strong>: 1.0<br>
+<strong>Status</strong>: Final</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/providers/WINDOWS_LLM_PROVIDER_TESTING_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

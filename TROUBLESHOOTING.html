@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Video Studio - Troubleshooting Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Video Studio - Troubleshooting Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/TROUBLESHOOTING.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-video-studio---troubleshooting-guide">Aura Video Studio - Troubleshooting Guide</h1>
+
+<p>This guide covers common issues and solutions for local development of Aura Video Studio.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#quick-diagnostics">Quick Diagnostics</a></li>
+<li><a href="#docker-issues">Docker Issues</a></li>
+<li><a href="#api-issues">API Issues</a></li>
+<li><a href="#frontend-issues">Frontend Issues</a></li>
+<li><a href="#database-issues">Database Issues</a></li>
+<li><a href="#network-and-connectivity">Network and Connectivity</a></li>
+<li><a href="#performance-issues">Performance Issues</a></li>
+<li><a href="#desktop-app-and-process-issues">Desktop App and Process Issues</a></li>
+<li><a href="#ollama-script-generation-timeouts">Ollama Script Generation Timeouts</a></li>
+<li><a href="#platform-specific-issues">Platform-Specific Issues</a></li>
+<li><a href="#getting-help">Getting Help</a></li>
+</ul>
+<h2 id="quick-diagnostics">Quick Diagnostics</h2>
+<h3 id="health-check">Health Check</h3>
+<p>Run this first to identify issues:</p>
+<pre><code class="lang-bash"># Check all services
+make health
+
+# Check individual service status
+make status
+
+# View recent logs
+make logs | tail -n 100
+</code></pre>
+<h3 id="common-quick-fixes">Common Quick Fixes</h3>
+<pre><code class="lang-bash"># 1. Restart all services
+make restart
+
+# 2. Clean restart (preserves data)
+make stop &amp;&amp; make dev
+
+# 3. Nuclear option (deletes all data)
+make clean &amp;&amp; make dev
+</code></pre>
+<h3 id="diagnostic-commands">Diagnostic Commands</h3>
+<pre><code class="lang-bash"># Check Docker is running
+docker ps
+
+# Check port availability
+./scripts/setup/check-ports.sh
+
+# Validate configuration
+./scripts/setup/validate-config.sh
+
+# Check disk space
+df -h
+
+# Check system resources
+docker stats
+</code></pre>
+<h2 id="docker-issues">Docker Issues</h2>
+<h3 id="issue-cannot-connect-to-docker-daemon">Issue: &quot;Cannot connect to Docker daemon&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>Cannot connect to the Docker daemon at unix:///var/run/docker.sock
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Start Docker Desktop:</strong></p>
+<ul>
+<li>Windows/macOS: Open Docker Desktop application</li>
+<li>Linux: <code>sudo systemctl start docker</code></li>
+</ul>
+</li>
+<li><p><strong>Check Docker is running:</strong></p>
+<pre><code class="lang-bash">docker ps
+</code></pre>
+</li>
+<li><p><strong>Verify permissions (Linux):</strong></p>
+<pre><code class="lang-bash">sudo usermod -aG docker $USER
+# Log out and log back in
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-port-is-already-allocated">Issue: &quot;Port is already allocated&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>Error: Bind for 0.0.0.0:5005 failed: port is already allocated
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Find process using the port:</strong></p>
+<pre><code class="lang-bash"># Linux/macOS
+lsof -i :5005
+
+# Windows
+netstat -ano | findstr :5005
+</code></pre>
+</li>
+<li><p><strong>Kill the process:</strong></p>
+<pre><code class="lang-bash"># Linux/macOS
+kill -9 &lt;PID&gt;
+
+# Windows
+taskkill /PID &lt;PID&gt; /F
+</code></pre>
+</li>
+<li><p><strong>Or change ports in <code>docker-compose.yml</code>:</strong></p>
+<pre><code class="lang-yaml">services:
+  api:
+    ports:
+      - &quot;5006:5005&quot;  # Use different host port
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-no-space-left-on-device">Issue: &quot;No space left on device&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>ERROR: no space left on device
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Clean up Docker:</strong></p>
+<pre><code class="lang-bash">docker system prune -af
+docker volume prune -f
+</code></pre>
+</li>
+<li><p><strong>Remove unused images:</strong></p>
+<pre><code class="lang-bash">docker image prune -a
+</code></pre>
+</li>
+<li><p><strong>Check disk space:</strong></p>
+<pre><code class="lang-bash">df -h
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-slow-docker-builds">Issue: Slow Docker builds</h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Enable BuildKit:</strong></p>
+<pre><code class="lang-bash">export DOCKER_BUILDKIT=1
+docker-compose build
+</code></pre>
+</li>
+<li><p><strong>Use Docker layer caching:</strong></p>
+<pre><code class="lang-bash">docker-compose build --parallel
+</code></pre>
+</li>
+<li><p><strong>Increase Docker resources:</strong></p>
+<ul>
+<li>Docker Desktop → Settings → Resources</li>
+<li>Increase CPU, Memory, and Disk limits</li>
+</ul>
+</li>
+</ol>
+<h2 id="api-issues">API Issues</h2>
+<h3 id="issue-api-container-exits-immediately">Issue: API container exits immediately</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>api_1  | exited with code 139
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check logs:</strong></p>
+<pre><code class="lang-bash">make logs-api
+</code></pre>
+</li>
+<li><p><strong>Common causes and fixes:</strong></p>
+<p><strong>Missing database directory:</strong></p>
+<pre><code class="lang-bash">mkdir -p data logs temp-media
+</code></pre>
+<p><strong>Permission issues:</strong></p>
+<pre><code class="lang-bash">chmod -R 755 data logs temp-media
+</code></pre>
+<p><strong>Configuration error:</strong></p>
+<pre><code class="lang-bash"># Validate appsettings.Development.json is valid JSON
+cat Aura.Api/appsettings.Development.json | python -m json.tool
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-api-returns-503-service-unavailable">Issue: API returns 503 Service Unavailable</h3>
+<p><strong>Symptoms:</strong></p>
+<ul>
+<li>Health check fails</li>
+<li>All API requests return 503</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check API is starting:</strong></p>
+<pre><code class="lang-bash">docker-compose logs -f api
+</code></pre>
+</li>
+<li><p><strong>Wait for dependencies:</strong></p>
+<ul>
+<li>API depends on Redis</li>
+<li>Check Redis is healthy: <code>docker-compose ps redis</code></li>
+</ul>
+</li>
+<li><p><strong>Check startup health:</strong></p>
+<pre><code class="lang-bash">curl http://localhost:5005/health/startup
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-ffmpeg-not-found">Issue: &quot;FFmpeg not found&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>FFmpeg not available - video rendering disabled
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check FFmpeg in container:</strong></p>
+<pre><code class="lang-bash">docker-compose exec api which ffmpeg
+docker-compose exec api ffmpeg -version
+</code></pre>
+</li>
+<li><p><strong>Rebuild API container:</strong></p>
+<pre><code class="lang-bash">docker-compose build --no-cache api
+docker-compose up -d api
+</code></pre>
+</li>
+<li><p><strong>Use local FFmpeg:</strong></p>
+<pre><code class="lang-bash"># Update .env
+AURA_FFMPEG_PATH=/usr/local/bin/ffmpeg
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-database-migration-errors">Issue: Database migration errors</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>error MSB4018: The &quot;GetManifestFilePath&quot; task failed unexpectedly
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Run migrations manually:</strong></p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet ef database update --verbose
+</code></pre>
+</li>
+<li><p><strong>Check database file permissions:</strong></p>
+<pre><code class="lang-bash">ls -la data/aura.db
+chmod 644 data/aura.db
+</code></pre>
+</li>
+<li><p><strong>Reset database:</strong></p>
+<pre><code class="lang-bash">make db-reset
+</code></pre>
+</li>
+</ol>
+<h2 id="frontend-issues">Frontend Issues</h2>
+<h3 id="issue-web-container-exits-with-code-1">Issue: Web container exits with code 1</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>web_1  | npm ERR! code ELIFECYCLE
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check logs:</strong></p>
+<pre><code class="lang-bash">make logs-web
+</code></pre>
+</li>
+<li><p><strong>Common causes:</strong></p>
+<p><strong>Dependency issues:</strong></p>
+<pre><code class="lang-bash">cd Aura.Web
+rm -rf node_modules package-lock.json
+npm ci
+</code></pre>
+<p><strong>Vite cache corruption:</strong></p>
+<pre><code class="lang-bash">rm -rf Aura.Web/node_modules/.vite
+</code></pre>
+<p><strong>Port conflict:</strong></p>
+<ul>
+<li>Change port in <code>docker-compose.yml</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="issue-cannot-connect-to-api">Issue: &quot;Cannot connect to API&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<ul>
+<li>Frontend shows connection errors</li>
+<li>API requests fail with CORS errors</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check API is running:</strong></p>
+<pre><code class="lang-bash">curl http://localhost:5005/health/live
+</code></pre>
+</li>
+<li><p><strong>Wait for API to start:</strong></p>
+<ul>
+<li>API takes ~30-60 seconds to fully start</li>
+<li>Check: <code>make health</code></li>
+</ul>
+</li>
+<li><p><strong>Verify CORS configuration:</strong></p>
+<ul>
+<li>Check <code>appsettings.Development.json</code> includes frontend URL</li>
+<li>Ensure <code>.env.development</code> has correct <code>VITE_API_BASE_URL</code></li>
+</ul>
+</li>
+<li><p><strong>Check proxy configuration:</strong></p>
+<pre><code class="lang-typescript">// Aura.Web/vite.config.ts
+server: {
+  proxy: {
+    '/api': {
+      target: 'http://127.0.0.1:5005',
+      changeOrigin: true,
+    },
+  },
+}
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-hot-reload-not-working">Issue: Hot reload not working</h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Restart web container:</strong></p>
+<pre><code class="lang-bash">docker-compose restart web
+</code></pre>
+</li>
+<li><p><strong>Check file watching:</strong></p>
+<ul>
+<li>Docker Desktop → Settings → Resources → File Sharing</li>
+<li>Ensure workspace directory is shared</li>
+</ul>
+</li>
+<li><p><strong>Use polling (slower but more reliable):</strong></p>
+<pre><code class="lang-bash"># Add to package.json scripts
+&quot;dev&quot;: &quot;vite --force --poll&quot;
+</code></pre>
+</li>
+</ol>
+<h2 id="database-issues">Database Issues</h2>
+<h3 id="issue-database-is-locked">Issue: &quot;Database is locked&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>SQLite Error: database is locked
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Close other connections:</strong></p>
+<pre><code class="lang-bash"># Stop all services
+make stop
+
+# Remove lock files
+rm -f data/aura.db-shm data/aura.db-wal
+
+# Restart
+make dev
+</code></pre>
+</li>
+<li><p><strong>Use WAL mode (should be default):</strong></p>
+<pre><code class="lang-sql">PRAGMA journal_mode=WAL;
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-database-disk-image-is-malformed">Issue: &quot;Database disk image is malformed&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>SQLite error: database disk image is malformed
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Backup and recover:</strong></p>
+<pre><code class="lang-bash"># Backup current database
+cp data/aura.db data/aura.db.backup
+
+# Try to recover
+sqlite3 data/aura.db &quot;.recover&quot; | sqlite3 data/aura.db.recovered
+mv data/aura.db.recovered data/aura.db
+</code></pre>
+</li>
+<li><p><strong>Reset database (loses data):</strong></p>
+<pre><code class="lang-bash">make db-reset
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-missing-tables-or-schema-errors">Issue: Missing tables or schema errors</h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Run migrations:</strong></p>
+<pre><code class="lang-bash">make db-migrate
+</code></pre>
+</li>
+<li><p><strong>Check migration status:</strong></p>
+<pre><code class="lang-bash">docker-compose exec api dotnet ef migrations list
+</code></pre>
+</li>
+<li><p><strong>Force migration:</strong></p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet ef database update --force
+</code></pre>
+</li>
+</ol>
+<h2 id="network-and-connectivity">Network and Connectivity</h2>
+<h3 id="issue-name-resolution-failed">Issue: &quot;Name resolution failed&quot;</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>Name or service not known: redis
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check Docker network:</strong></p>
+<pre><code class="lang-bash">docker network ls
+docker network inspect aura-network
+</code></pre>
+</li>
+<li><p><strong>Recreate network:</strong></p>
+<pre><code class="lang-bash">make clean
+make dev
+</code></pre>
+</li>
+<li><p><strong>Use IP instead of hostname:</strong></p>
+<pre><code class="lang-bash"># Find Redis IP
+docker inspect aura_redis_1 | grep IPAddress
+
+# Update .env
+AURA_REDIS_CONNECTION=172.x.x.x:6379
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-cors-errors-in-browser">Issue: CORS errors in browser</h3>
+<p><strong>Symptoms:</strong></p>
+<pre><code>Access to XMLHttpRequest blocked by CORS policy
+</code></pre>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check allowed origins in API:</strong></p>
+<pre><code class="lang-json">// appsettings.Development.json
+&quot;Cors&quot;: {
+  &quot;AllowedOrigins&quot;: [
+    &quot;http://localhost:3000&quot;,
+    &quot;http://localhost:5173&quot;
+  ]
+}
+</code></pre>
+</li>
+<li><p><strong>Clear browser cache:</strong></p>
+<ul>
+<li>Hard refresh: Ctrl+F5 (Windows) or Cmd+Shift+R (Mac)</li>
+</ul>
+</li>
+<li><p><strong>Check browser console:</strong></p>
+<ul>
+<li>Verify request URL matches <code>VITE_API_BASE_URL</code></li>
+</ul>
+</li>
+</ol>
+<h2 id="performance-issues">Performance Issues</h2>
+<h3 id="issue-slow-container-startup">Issue: Slow container startup</h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Use volume mounts for dependencies:</strong></p>
+<ul>
+<li>Already configured in <code>docker-compose.yml</code></li>
+</ul>
+</li>
+<li><p><strong>Increase Docker resources:</strong></p>
+<ul>
+<li>Docker Desktop → Settings → Resources</li>
+<li>Recommended: 4+ CPUs, 8GB+ RAM</li>
+</ul>
+</li>
+<li><p><strong>Disable BuildKit (sometimes faster):</strong></p>
+<pre><code class="lang-bash">DOCKER_BUILDKIT=0 docker-compose build
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-high-cpu-usage">Issue: High CPU usage</h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check which service is causing it:</strong></p>
+<pre><code class="lang-bash">docker stats
+</code></pre>
+</li>
+<li><p><strong>Common causes:</strong></p>
+<ul>
+<li><strong>API:</strong> Large video rendering jobs</li>
+<li><strong>Web:</strong> Hot reload watching too many files</li>
+<li><strong>Redis:</strong> Large cache size</li>
+</ul>
+</li>
+<li><p><strong>Mitigations:</strong></p>
+<pre><code class="lang-bash"># Limit concurrent renders in .env
+AURA_MAX_CONCURRENT_RENDERS=1
+
+# Reduce file watching in web
+# Use --poll with longer interval
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-high-memory-usage">Issue: High memory usage</h3>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check memory usage:</strong></p>
+<pre><code class="lang-bash">docker stats --no-stream
+</code></pre>
+</li>
+<li><p><strong>Increase Docker memory limit:</strong></p>
+<ul>
+<li>Docker Desktop → Settings → Resources</li>
+</ul>
+</li>
+<li><p><strong>Clear caches:</strong></p>
+<pre><code class="lang-bash"># Clear Redis cache
+docker-compose exec redis redis-cli FLUSHALL
+
+# Clear Vite cache
+rm -rf Aura.Web/node_modules/.vite
+</code></pre>
+</li>
+</ol>
+<h2 id="desktop-app-and-process-issues">Desktop App and Process Issues</h2>
+<h3 id="issue-aura-processes-remain-in-task-manager-after-closing">Issue: Aura processes remain in Task Manager after closing</h3>
+<p><strong>Symptom</strong>: After closing the desktop app, you see leftover processes:</p>
+<ul>
+<li><code>Aura Video Studio.exe</code> or <code>Aura.Api.exe</code></li>
+<li><code>ffmpeg.exe</code> processes</li>
+<li>Multiple instances in Task Manager</li>
+</ul>
+<p><strong>Cause</strong>: Shutdown sequence didn't complete properly, leaving orphaned processes.</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li><p><strong>Manual cleanup</strong> (Windows):</p>
+<pre><code class="lang-powershell"># Kill all Aura processes
+taskkill /F /IM &quot;Aura Video Studio.exe&quot;
+taskkill /F /IM &quot;Aura.Api.exe&quot;
+taskkill /F /IM &quot;ffmpeg.exe&quot;
+</code></pre>
+</li>
+<li><p><strong>Manual cleanup</strong> (macOS/Linux):</p>
+<pre><code class="lang-bash"># Kill all Aura processes
+pkill -9 &quot;Aura Video Studio&quot;
+pkill -9 &quot;Aura.Api&quot;
+pkill -9 &quot;ffmpeg&quot;
+</code></pre>
+</li>
+<li><p><strong>Check logs</strong> for shutdown errors:</p>
+<ul>
+<li><strong>Windows</strong>: <code>%APPDATA%\Aura Video Studio\logs\main-YYYYMMDD.log</code></li>
+<li><strong>macOS</strong>: <code>~/Library/Application Support/Aura Video Studio/logs/</code></li>
+<li><strong>Linux</strong>: <code>~/.config/Aura Video Studio/logs/</code></li>
+</ul>
+</li>
+<li><p><strong>Report the issue</strong> if it persists:</p>
+<ul>
+<li>Include process PIDs and timestamps</li>
+<li>Attach relevant log files</li>
+<li>Note what you were doing when closing the app</li>
+</ul>
+</li>
+</ol>
+<p><strong>Prevention</strong>:</p>
+<ul>
+<li>Always use File → Quit instead of force-closing</li>
+<li>Wait for jobs to complete before exiting</li>
+<li>Keep the app updated (includes shutdown improvements)</li>
+</ul>
+<h3 id="issue-backend-unreachable-or-port-already-in-use">Issue: &quot;Backend unreachable&quot; or &quot;Port already in use&quot;</h3>
+<p><strong>Symptom</strong>: Desktop app fails to start with error about port 5005 (or configured port) already in use.</p>
+<p><strong>Cause</strong>: Orphaned backend process from a previous run is still bound to the port.</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li><p><strong>Check what's using the port</strong> (Windows):</p>
+<pre><code class="lang-powershell">netstat -ano | findstr &quot;:5005&quot;
+</code></pre>
+<p>Note the PID in the rightmost column.</p>
+</li>
+<li><p><strong>Check what's using the port</strong> (macOS/Linux):</p>
+<pre><code class="lang-bash">lsof -i :5005
+</code></pre>
+</li>
+<li><p><strong>Kill the process</strong>:</p>
+<pre><code class="lang-powershell"># Windows (replace &lt;PID&gt; with actual process ID)
+taskkill /F /PID &lt;PID&gt;
+</code></pre>
+<pre><code class="lang-bash"># macOS/Linux
+kill -9 &lt;PID&gt;
+</code></pre>
+</li>
+<li><p><strong>Restart Aura Video Studio</strong></p>
+</li>
+</ol>
+<p><strong>Automatic cleanup</strong>: The desktop app now detects orphaned processes on startup (v1.x.x+) and attempts to clean them automatically. If you see this error on newer versions, check logs for cleanup failures.</p>
+<h3 id="issue-ffmpeg-processes-keep-running-after-video-generation">Issue: FFmpeg processes keep running after video generation</h3>
+<p><strong>Symptom</strong>: Task Manager shows multiple <code>ffmpeg.exe</code> processes even after video generation completes.</p>
+<p><strong>Cause</strong>: FFmpeg processes weren't properly terminated after job completion or cancellation.</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li><p><strong>Check backend logs</strong> for FFmpeg process tracking:</p>
+<pre><code>%APPDATA%\Aura\logs\aura-api-YYYYMMDD.log
+</code></pre>
+<p>Look for: &quot;Registered FFmpeg process&quot; and &quot;Unregistered FFmpeg process&quot;</p>
+</li>
+<li><p><strong>Force terminate all FFmpeg</strong>:</p>
+<pre><code class="lang-powershell"># Windows
+taskkill /F /IM &quot;ffmpeg.exe&quot;
+</code></pre>
+<pre><code class="lang-bash"># macOS/Linux
+pkill -9 ffmpeg
+</code></pre>
+</li>
+<li><p><strong>Restart backend</strong> via desktop app:</p>
+<ul>
+<li>Use &quot;Restart Backend&quot; action if available in UI</li>
+<li>Or restart the entire desktop app</li>
+</ul>
+</li>
+</ol>
+<p><strong>Note</strong>: FFmpeg processes are automatically terminated:</p>
+<ul>
+<li>On job completion</li>
+<li>On job cancellation</li>
+<li>On backend shutdown</li>
+<li>After 60-minute timeout</li>
+</ul>
+<p>If FFmpeg processes persist beyond these conditions, it indicates a bug. Please report with logs.</p>
+<h3 id="issue-application-wont-start-after-crash">Issue: Application won't start after crash</h3>
+<p><strong>Symptom</strong>: Desktop app fails to start, shows &quot;Backend unreachable&quot; or hangs on splash screen.</p>
+<p><strong>Cause</strong>: Previous crash left orphaned processes or corrupted state.</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li><p><strong>Clean up orphaned processes</strong> (use commands from above sections)</p>
+</li>
+<li><p><strong>Check for lock files</strong>:</p>
+<pre><code class="lang-powershell"># Windows
+dir &quot;%APPDATA%\Aura&quot; /s /b | findstr &quot;lock&quot;
+
+# Delete any *.lock files
+del &quot;%APPDATA%\Aura\*.lock&quot;
+</code></pre>
+</li>
+<li><p><strong>Check log files</strong> for crash reports:</p>
+<ul>
+<li>Look in <code>%APPDATA%\Aura Video Studio\logs\</code></li>
+<li>Search for &quot;crash&quot;, &quot;error&quot;, &quot;exception&quot;</li>
+</ul>
+</li>
+<li><p><strong>Clear temp files</strong>:</p>
+<pre><code class="lang-powershell"># Windows
+rd /s /q &quot;%TEMP%\aura-video-studio&quot;
+</code></pre>
+</li>
+<li><p><strong>Restart your computer</strong> (if above steps don't work)</p>
+</li>
+<li><p><strong>Reinstall</strong> as last resort (preserves user data)</p>
+</li>
+</ol>
+<p><strong>Report</strong>: If crashes persist, include:</p>
+<ul>
+<li>Crash logs from <code>logs/crash-*.log</code></li>
+<li>Main process logs</li>
+<li>Backend logs</li>
+<li>Steps to reproduce</li>
+</ul>
+<h3 id="issue-system-shutdown-hangs-on-closing-aura-video-studio">Issue: System shutdown hangs on &quot;Closing Aura Video Studio&quot;</h3>
+<p><strong>Symptom</strong>: Windows/macOS/Linux shutdown waits indefinitely for Aura to close, or shows &quot;Force Quit&quot; dialog.</p>
+<p><strong>Cause</strong>: Aura is taking too long to shutdown (e.g., long-running job, stuck FFmpeg process).</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li><p><strong>Current session</strong> (when it happens):</p>
+<ul>
+<li>Choose &quot;Force Quit&quot; in the shutdown dialog</li>
+<li>System will proceed with shutdown</li>
+</ul>
+</li>
+<li><p><strong>For future</strong>:</p>
+<ul>
+<li>Cancel any active renders before shutting down system</li>
+<li>Close Aura manually before initiating system shutdown</li>
+<li>Update to latest version (includes faster shutdown)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Expected behavior</strong>: Aura should exit within 5 seconds of system shutdown signal, even with active jobs.</p>
+<p><strong>Report</strong>: If Aura consistently delays system shutdown beyond 10 seconds, this is a bug. Include:</p>
+<ul>
+<li>What operation was running (render, TTS, etc.)</li>
+<li>How long before force quit was needed</li>
+<li>Logs from the session</li>
+</ul>
+<h3 id="issue-dotnet-ef-tool-installation-fails-during-build">Issue: dotnet-ef tool installation fails during build</h3>
+<p><strong>Symptom</strong>: When building the desktop application, you see this error:</p>
+<pre><code>[WARNING]   Could not install dotnet-ef tools. Database migration check skipped.
+[WARNING]   Migrations will be applied automatically on first application start.
+Installation error: Tool 'dotnet-ef' failed to update due to the following: 
+The settings file in the tool's NuGet package is invalid: Settings file 
+'DotnetToolSettings.xml' was not found in the package.
+</code></pre>
+<p><strong>Cause</strong>: This error previously occurred with global tool installations due to corrupted NuGet cache or incomplete package downloads.</p>
+<p><strong>Solution</strong>:</p>
+<p>As of the latest version, the project now uses a <strong>local dotnet tool manifest</strong> (<code>.config/dotnet-tools.json</code>) instead of global tools. This eliminates the issue entirely by:</p>
+<ol>
+<li>Using a project-local tool manifest tracked in source control</li>
+<li>Automatically restoring tools with <code>dotnet tool restore</code></li>
+<li>Providing version consistency across all developers</li>
+</ol>
+<p><strong>If You See This Error</strong> (should no longer occur):</p>
+<p>The build scripts now automatically run <code>dotnet tool restore</code> which installs dotnet-ef locally from the manifest. If you still encounter issues:</p>
+<ol>
+<li><p><strong>Verify the manifest exists</strong>:</p>
+<pre><code class="lang-bash"># Check for .config/dotnet-tools.json
+cat .config/dotnet-tools.json
+</code></pre>
+</li>
+<li><p><strong>Restore tools manually</strong>:</p>
+<pre><code class="lang-bash"># From repository root
+dotnet tool restore
+</code></pre>
+</li>
+<li><p><strong>Verify installation</strong>:</p>
+<pre><code class="lang-bash">dotnet ef --version
+# Should show: Entity Framework Core .NET Command-line Tools 8.0.11
+</code></pre>
+</li>
+</ol>
+<p><strong>For Developers</strong>:
+If you need to update the dotnet-ef tool version:</p>
+<pre><code class="lang-bash"># Update to latest version
+dotnet tool update dotnet-ef
+
+# Or install specific version
+dotnet tool update dotnet-ef --version 8.0.11
+</code></pre>
+<p><strong>Fallback Behavior</strong>: If tool restoration fails, the build will continue successfully and database migrations will be applied automatically when you first run the application.</p>
+<h2 id="ollama-script-generation-timeouts">Ollama Script Generation Timeouts</h2>
+<h3 id="issue-script-generation-fails-after-several-minutes-with-timeout-error">Issue: Script generation fails after several minutes with timeout error</h3>
+<p><strong>Symptom</strong>: Script generation with Ollama fails with a message like &quot;Ollama request timed out&quot; or the API returns a 408 timeout error, even though system resources show Ollama is being utilized.</p>
+<p><strong>Common Causes</strong>:</p>
+<ol>
+<li><strong>Model loading</strong>: The first request after Ollama starts requires loading the model into RAM, which can take 2-5 minutes (or longer on slow systems)</li>
+<li><strong>Slow system</strong>: Older CPUs or systems with limited RAM may take 10-15 minutes for generation</li>
+<li><strong>Large models</strong>: 13B, 70B+ models are extremely slow without GPU acceleration</li>
+</ol>
+<p><strong>Current Timeout Values</strong> (very lenient):</p>
+<ul>
+<li>Availability check: 60 seconds</li>
+<li>Script generation: 15 minutes</li>
+<li>API request: 20 minutes</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Wait for model to fully load</strong>:</p>
+<pre><code class="lang-bash"># Check if model is loaded
+ollama ps
+
+# If no model is shown, load it explicitly
+ollama run llama3.2 --keepalive 0
+</code></pre>
+</li>
+<li><p><strong>Use a smaller/faster model</strong>:</p>
+<pre><code class="lang-bash"># Try smaller models (much faster)
+ollama pull llama3.2:3b   # 3B parameters - fast
+ollama pull llama3.2:1b   # 1B parameters - fastest
+</code></pre>
+</li>
+<li><p><strong>Check system resources</strong>:</p>
+<ul>
+<li>Ensure you have sufficient RAM (model size + 2GB minimum)</li>
+<li>Close other memory-intensive applications</li>
+<li>Check CPU usage while generating</li>
+</ul>
+</li>
+<li><p><strong>Check Ollama status</strong>:</p>
+<pre><code class="lang-bash"># List available models
+ollama list
+
+# Check Ollama logs for errors
+ollama logs
+
+# Test generation manually
+ollama run llama3.2 &quot;Write a short story&quot;
+</code></pre>
+</li>
+<li><p><strong>Check backend logs</strong>:</p>
+<ul>
+<li>Look for &quot;Request sent to Ollama, awaiting response&quot; message</li>
+<li>Check for any error messages after the timeout</li>
+</ul>
+</li>
+</ol>
+<p><strong>Performance Tips</strong>:</p>
+<ul>
+<li>Models with &quot;q4&quot; in the name (like <code>llama3.1:8b-q4_k_m</code>) use less memory and are faster</li>
+<li>First generation after Ollama restart will be slower due to model loading</li>
+<li>GPU acceleration (if available) significantly improves performance</li>
+<li>Keep Ollama running in background to avoid model reload delays</li>
+</ul>
+<h3 id="frontend-timeout-issues">Frontend Timeout Issues</h3>
+<p>If script generation fails with &quot;Network Error&quot; or &quot;Request Timeout&quot; in the browser console, but backend logs show Ollama is still working:</p>
+<p><strong>Cause</strong>: The frontend may have a shorter timeout than the backend (typically 60-120 seconds by default for axios/fetch).</p>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Browser console shows &quot;Network Error&quot; or &quot;Request Timeout&quot;</li>
+<li>Backend logs show &quot;Still awaiting Ollama response...&quot; heartbeat messages</li>
+<li>Backend continues processing after frontend shows error</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Use the streaming endpoint instead: <code>/api/scripts/generate/stream</code> (provides real-time progress)</li>
+<li>Increase frontend axios timeout in <code>Aura.Web/src/services/api/scriptApi.ts</code></li>
+<li>Use Server-Sent Events (SSE) for long-running operations</li>
+</ol>
+<p><strong>For developers</strong>: Consider using SSE streaming for all Ollama requests to provide real-time progress feedback and prevent frontend timeouts.</p>
+<p><strong>If You Still Hit the 20-Minute API Timeout</strong>:</p>
+<p>This timeout is very lenient. If you're hitting it, your system may be:</p>
+<ul>
+<li>Too slow for the selected model (try a smaller model)</li>
+<li>Experiencing Ollama issues (check <code>ollama logs</code>)</li>
+<li>Out of memory (check RAM usage)</li>
+</ul>
+<p>Consider using the RuleBased provider for immediate results (no LLM required).</p>
+<h2 id="platform-specific-issues">Platform-Specific Issues</h2>
+<h3 id="windows">Windows</h3>
+<h4 id="wsl-2-issues">WSL 2 Issues</h4>
+<p><strong>Issue: Slow file I/O</strong></p>
+<p><strong>Solution:</strong></p>
+<ul>
+<li>Move project inside WSL filesystem</li>
+<li>Use WSL 2 terminal, not PowerShell</li>
+</ul>
+<p><strong>Issue: Docker Desktop not starting</strong></p>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Enable WSL 2: <code>wsl --set-default-version 2</code></li>
+<li>Update WSL: <code>wsl --update</code></li>
+<li>Restart Docker Desktop</li>
+</ol>
+<h4 id="powershell-script-execution">PowerShell Script Execution</h4>
+<p><strong>Issue: &quot;execution of scripts is disabled&quot;</strong></p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-powershell">Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+</code></pre>
+<h3 id="macos">macOS</h3>
+<h4 id="m1m2-silicon-issues">M1/M2 Silicon Issues</h4>
+<p><strong>Issue: Platform compatibility warnings</strong></p>
+<p><strong>Solution:</strong></p>
+<ul>
+<li>Use multi-platform images (already configured)</li>
+<li>Rebuild with: <code>docker-compose build --no-cache</code></li>
+</ul>
+<p><strong>Issue: Rosetta errors</strong></p>
+<p><strong>Solution:</strong></p>
+<ul>
+<li>Docker Desktop → Settings → General</li>
+<li>Enable &quot;Use Rosetta for x86/amd64 emulation&quot;</li>
+</ul>
+<h3 id="linux">Linux</h3>
+<h4 id="permission-issues">Permission Issues</h4>
+<p><strong>Issue: Permission denied errors</strong></p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash"># Add user to docker group
+sudo usermod -aG docker $USER
+
+# Fix file permissions
+sudo chown -R $USER:$USER data logs temp-media
+chmod -R 755 data logs temp-media
+</code></pre>
+<h4 id="selinux-issues">SELinux Issues</h4>
+<p><strong>Issue: Permission denied with SELinux enabled</strong></p>
+<p><strong>Solution:</strong></p>
+<pre><code class="lang-bash"># Add SELinux context
+chcon -Rt svirt_sandbox_file_t data logs temp-media
+
+# Or disable SELinux (not recommended)
+sudo setenforce 0
+</code></pre>
+<h2 id="getting-help">Getting Help</h2>
+<h3 id="before-asking-for-help">Before Asking for Help</h3>
+<ol>
+<li><p><strong>Check logs:</strong></p>
+<pre><code class="lang-bash">make logs &gt; debug.log
+</code></pre>
+</li>
+<li><p><strong>Run diagnostics:</strong></p>
+<pre><code class="lang-bash">make health
+make status
+docker ps -a
+docker compose config
+</code></pre>
+</li>
+<li><p><strong>Try clean restart:</strong></p>
+<pre><code class="lang-bash">make clean &amp;&amp; make dev
+</code></pre>
+</li>
+</ol>
+<h2 id="complete-application-reset">Complete Application Reset</h2>
+<h3 id="desktop-app-reset-electron">Desktop App Reset (Electron)</h3>
+<p>If you're experiencing persistent issues with the desktop application (Electron version), you have several reset options:</p>
+<h4 id="option-1-ui-based-reset-recommended">Option 1: UI-Based Reset (Recommended)</h4>
+<ol>
+<li>Open Aura Video Studio</li>
+<li>Navigate to <strong>Settings</strong> → <strong>Security</strong> tab</li>
+<li>Scroll to the bottom to find <strong>&quot;Reset Application&quot;</strong> section</li>
+<li>Click <strong>&quot;Reset Application&quot;</strong> button</li>
+<li>Confirm the action in the dialog</li>
+<li>The application will clear all data and restart automatically</li>
+</ol>
+<p>This will clear:</p>
+<ul>
+<li>All settings and preferences</li>
+<li>Cached API keys and credentials</li>
+<li>Recent projects and history</li>
+<li>Downloaded models and assets</li>
+<li>All browser storage (localStorage, sessionStorage, IndexedDB, cookies)</li>
+</ul>
+<h4 id="option-2-command-line-reset">Option 2: Command Line Reset</h4>
+<p>Run the desktop app with the <code>--reset</code> flag:</p>
+<p><strong>Windows:</strong></p>
+<pre><code class="lang-powershell">.\Aura.Desktop\Aura.exe --reset
+</code></pre>
+<p><strong>macOS/Linux:</strong></p>
+<pre><code class="lang-bash">./Aura.Desktop/Aura.app/Contents/MacOS/Aura --reset
+</code></pre>
+<h4 id="option-3-deep-clean-script-development">Option 3: Deep Clean Script (Development)</h4>
+<p>For the most thorough cleanup during development:</p>
+<p><strong>Windows (PowerShell):</strong></p>
+<pre><code class="lang-powershell">cd Aura.Desktop
+.\clean-desktop.ps1
+</code></pre>
+<p>This comprehensive script will:</p>
+<ul>
+<li>Kill all running Aura processes</li>
+<li>Clean all Electron/Chromium cache</li>
+<li>Clean .NET application data</li>
+<li>Clean build artifacts</li>
+<li>Clear npm and NuGet caches</li>
+<li>Clean Windows prefetch files (requires admin)</li>
+<li>Verify cleanup completion</li>
+</ul>
+<p>After running, reinstall dependencies:</p>
+<pre><code class="lang-powershell">npm install
+dotnet restore
+</code></pre>
+<h3 id="backend-api-reset">Backend API Reset</h3>
+<p>If only the backend needs resetting:</p>
+<p><strong>Command line flag:</strong></p>
+<pre><code class="lang-bash">dotnet run --project Aura.Api -- --reset
+</code></pre>
+<p><strong>Environment variable:</strong></p>
+<pre><code class="lang-bash">export AURA_RESET=true
+dotnet run --project Aura.Api
+</code></pre>
+<p>This clears:</p>
+<ul>
+<li>Temporary files in <code>%TEMP%\Aura</code></li>
+<li>Backend logs</li>
+<li>Cached data in <code>%LOCALAPPDATA%\Aura</code></li>
+</ul>
+<h3 id="when-to-use-each-reset-option">When to Use Each Reset Option</h3>
+<ul>
+<li><strong>UI Reset</strong>: For everyday issues, corrupted settings, or fresh start</li>
+<li><strong>Command Line Reset</strong>: When the UI is inaccessible or scripting automation</li>
+<li><strong>Deep Clean Script</strong>: During development, between major builds, or when testing fresh installs</li>
+<li><strong>Backend Reset</strong>: When backend-specific data is causing issues</li>
+</ul>
+<h3 id="what-gets-preserved">What Gets Preserved</h3>
+<p>During any reset:</p>
+<ul>
+<li>✅ Source code (your development files)</li>
+<li>✅ Git history and branches</li>
+<li>✅ User documents in <code>Documents\Aura Video Studio</code> (unless using <code>-IncludeUserContent</code> flag)</li>
+<li>✅ User videos in <code>Videos\Aura Studio</code></li>
+</ul>
+<h3 id="reporting-issues">Reporting Issues</h3>
+<p>When reporting issues, include:</p>
+<ol>
+<li><p><strong>Environment info:</strong></p>
+<ul>
+<li>OS and version</li>
+<li>Docker version: <code>docker --version</code></li>
+<li>Docker Compose version: <code>docker-compose --version</code></li>
+</ul>
+</li>
+<li><p><strong>Error messages:</strong></p>
+<ul>
+<li>Full error text</li>
+<li>Relevant log excerpts</li>
+</ul>
+</li>
+<li><p><strong>Steps to reproduce:</strong></p>
+<ul>
+<li>Exact commands run</li>
+<li>Configuration changes made</li>
+</ul>
+</li>
+<li><p><strong>Output of:</strong></p>
+<pre><code class="lang-bash">make status
+make health
+docker ps -a
+</code></pre>
+</li>
+</ol>
+<h3 id="where-to-get-help">Where to Get Help</h3>
+<ul>
+<li><strong>GitHub Issues:</strong> Bug reports and feature requests</li>
+<li><strong>GitHub Discussions:</strong> Questions and community support</li>
+<li><strong>Documentation:</strong> <code>docs/troubleshooting/</code> for detailed guides</li>
+<li><strong>Logs:</strong> Always check logs first: <code>make logs</code></li>
+</ul>
+<hr>
+<p><strong>Still stuck?</strong> Open an issue with the diagnostic information above, and we'll help! 🤝</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/TROUBLESHOOTING.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

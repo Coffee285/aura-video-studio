@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Pipeline Stage Interface Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Pipeline Stage Interface Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/STAGE_INTERFACE_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="pipeline-stage-interface-guide">Pipeline Stage Interface Guide</h1>
+
+<h2 id="introduction">Introduction</h2>
+<p>This guide explains how to implement custom pipeline stages for the Aura Video Studio orchestration system. By following this interface guide, you can extend the video generation pipeline with custom processing stages.</p>
+<h2 id="pipelinestage-interface">PipelineStage Interface</h2>
+<h3 id="required-methods">Required Methods</h3>
+<h4 id="executestageasync-abstract">ExecuteStageAsync (Abstract)</h4>
+<p>The core method that implements your stage's logic:</p>
+<pre><code class="lang-csharp">protected abstract Task ExecuteStageAsync(
+    PipelineContext context,
+    IProgress&lt;StageProgress&gt;? progress,
+    CancellationToken ct);
+</code></pre>
+<p><strong>Parameters</strong>:</p>
+<ul>
+<li><code>context</code>: Pipeline state containing inputs, outputs, and metadata</li>
+<li><code>progress</code>: Optional progress reporter for UI updates</li>
+<li><code>ct</code>: Cancellation token to handle cancellation requests</li>
+</ul>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Implement your stage's core logic</li>
+<li>Report progress at key milestones</li>
+<li>Store output in context</li>
+<li>Handle errors appropriately</li>
+<li>Respect cancellation tokens</li>
+</ul>
+<h3 id="required-properties">Required Properties</h3>
+<h4 id="stagename-abstract">StageName (Abstract)</h4>
+<p>Unique identifier for the stage:</p>
+<pre><code class="lang-csharp">public override string StageName =&gt; &quot;MyStage&quot;;
+</code></pre>
+<p><strong>Requirements</strong>:</p>
+<ul>
+<li>Must be unique across all stages</li>
+<li>Use PascalCase (e.g., &quot;Script&quot;, &quot;Voice&quot;, &quot;Custom&quot;)</li>
+<li>Used for logging, metrics, and state management</li>
+</ul>
+<h4 id="displayname-abstract">DisplayName (Abstract)</h4>
+<p>Human-readable name for UI display:</p>
+<pre><code class="lang-csharp">public override string DisplayName =&gt; &quot;My Custom Stage&quot;;
+</code></pre>
+<p><strong>Requirements</strong>:</p>
+<ul>
+<li>Should be descriptive and user-friendly</li>
+<li>Used in progress updates and error messages</li>
+</ul>
+<h3 id="optional-properties">Optional Properties</h3>
+<h4 id="progressweight">ProgressWeight</h4>
+<p>Relative weight of this stage for overall progress calculation:</p>
+<pre><code class="lang-csharp">public override int ProgressWeight =&gt; 20;
+</code></pre>
+<p><strong>Default</strong>: 20
+<strong>Range</strong>: 1-100
+<strong>Example weights</strong>:</p>
+<ul>
+<li>Brief: 5 (quick validation)</li>
+<li>Script: 20 (moderate LLM call)</li>
+<li>Visuals: 30 (slow image generation)</li>
+</ul>
+<h4 id="timeout">Timeout</h4>
+<p>Maximum time allowed for stage execution:</p>
+<pre><code class="lang-csharp">public override TimeSpan Timeout =&gt; TimeSpan.FromMinutes(5);
+</code></pre>
+<p><strong>Default</strong>: 5 minutes
+<strong>Considerations</strong>:</p>
+<ul>
+<li>Account for provider latency</li>
+<li>Consider retry attempts</li>
+<li>Balance responsiveness vs reliability</li>
+</ul>
+<h4 id="supportsretry">SupportsRetry</h4>
+<p>Whether this stage should retry on failure:</p>
+<pre><code class="lang-csharp">public override bool SupportsRetry =&gt; true;
+</code></pre>
+<p><strong>Default</strong>: true
+<strong>When to disable</strong>:</p>
+<ul>
+<li>Validation stages (retry won't help)</li>
+<li>Non-idempotent operations</li>
+<li>Quick operations that fail deterministically</li>
+</ul>
+<h4 id="maxretryattempts">MaxRetryAttempts</h4>
+<p>Maximum number of retry attempts:</p>
+<pre><code class="lang-csharp">public override int MaxRetryAttempts =&gt; 3;
+</code></pre>
+<p><strong>Default</strong>: 3
+<strong>Considerations</strong>:</p>
+<ul>
+<li>Higher for transient errors (network, rate limits)</li>
+<li>Lower for expensive operations</li>
+<li>Consider total timeout = stage timeout × (attempts + 1)</li>
+</ul>
+<h4 id="supportsresume">SupportsResume</h4>
+<p>Whether this stage can be skipped if already completed:</p>
+<pre><code class="lang-csharp">public override bool SupportsResume =&gt; true;
+</code></pre>
+<p><strong>Default</strong>: true
+<strong>When to disable</strong>:</p>
+<ul>
+<li>Stages that must always run fresh</li>
+<li>Non-deterministic operations</li>
+<li>Validation that depends on external state</li>
+</ul>
+<h3 id="protected-helper-methods">Protected Helper Methods</h3>
+<h4 id="reportprogress">ReportProgress</h4>
+<p>Report progress for this stage:</p>
+<pre><code class="lang-csharp">protected void ReportProgress(
+    IProgress&lt;StageProgress&gt;? progress,
+    int percentage,
+    string message,
+    int currentItem = 0,
+    int totalItems = 0);
+</code></pre>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-csharp">ReportProgress(progress, 25, &quot;Downloading assets...&quot;, 1, 4);
+ReportProgress(progress, 50, &quot;Processing...&quot;);
+ReportProgress(progress, 100, &quot;Stage completed&quot;);
+</code></pre>
+<p><strong>Best Practices</strong>:</p>
+<ul>
+<li>Report at 0% when starting</li>
+<li>Report at 100% when completing</li>
+<li>Report at logical milestones (25%, 50%, 75%)</li>
+<li>Use descriptive messages</li>
+<li>Include item counts for multi-item processing</li>
+</ul>
+<h4 id="canskipstage">CanSkipStage</h4>
+<p>Determine if stage can be skipped (for resume support):</p>
+<pre><code class="lang-csharp">protected override bool CanSkipStage(PipelineContext context)
+{
+    // Check if output already exists
+    return context.GetStageOutput&lt;MyOutput&gt;(StageName) != null;
+}
+</code></pre>
+<p><strong>Default behavior</strong>: Checks if stage output exists
+<strong>Override when</strong>: Custom resume logic is needed</p>
+<h4 id="getitemsprocessed">GetItemsProcessed</h4>
+<p>Get count of items processed (for metrics):</p>
+<pre><code class="lang-csharp">protected override int GetItemsProcessed(PipelineContext context)
+{
+    return context.ParsedScenes?.Count ?? 0;
+}
+</code></pre>
+<p><strong>Default</strong>: 1
+<strong>Override when</strong>: Stage processes multiple items</p>
+<h2 id="implementation-examples">Implementation Examples</h2>
+<h3 id="example-1-simple-validation-stage">Example 1: Simple Validation Stage</h3>
+<pre><code class="lang-csharp">using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Aura.Core.Orchestrator;
+using Microsoft.Extensions.Logging;
+
+namespace MyApp.Pipeline.Stages;
+
+public class QualityCheckStage : PipelineStage
+{
+    public QualityCheckStage(ILogger&lt;QualityCheckStage&gt; logger) 
+        : base(logger) { }
+
+    public override string StageName =&gt; &quot;QualityCheck&quot;;
+    public override string DisplayName =&gt; &quot;Quality Verification&quot;;
+    public override int ProgressWeight =&gt; 5;
+    public override TimeSpan Timeout =&gt; TimeSpan.FromSeconds(30);
+    public override bool SupportsRetry =&gt; false; // Validation doesn't need retry
+
+    protected override async Task ExecuteStageAsync(
+        PipelineContext context,
+        IProgress&lt;StageProgress&gt;? progress,
+        CancellationToken ct)
+    {
+        ReportProgress(progress, 0, &quot;Starting quality check...&quot;);
+
+        // Get required input from previous stage
+        var script = context.GeneratedScript;
+        if (string.IsNullOrEmpty(script))
+        {
+            throw new InvalidOperationException(&quot;Script is required for quality check&quot;);
+        }
+
+        ReportProgress(progress, 25, &quot;Analyzing script quality...&quot;);
+
+        // Perform quality checks
+        var wordCount = script.Split(' ').Length;
+        var hasScenes = script.Contains(&quot;## &quot;);
+        
+        ReportProgress(progress, 50, &quot;Checking narration timing...&quot;);
+
+        // Validate narration exists
+        if (string.IsNullOrEmpty(context.NarrationPath))
+        {
+            throw new InvalidOperationException(&quot;Narration is required&quot;);
+        }
+
+        ReportProgress(progress, 75, &quot;Validating visual assets...&quot;);
+
+        // Check visual assets
+        var assetCount = context.SceneAssets?.Values
+            .Sum(assets =&gt; assets.Count) ?? 0;
+
+        ReportProgress(progress, 90, &quot;Generating quality report...&quot;);
+
+        // Store quality metrics
+        var output = new QualityCheckOutput
+        {
+            WordCount = wordCount,
+            HasScenes = hasScenes,
+            AssetCount = assetCount,
+            OverallQuality = CalculateQuality(wordCount, hasScenes, assetCount),
+            CheckedAt = DateTime.UtcNow
+        };
+
+        context.SetStageOutput(StageName, output);
+
+        ReportProgress(progress, 100, &quot;Quality check completed&quot;);
+
+        await Task.CompletedTask;
+    }
+
+    private double CalculateQuality(int wordCount, bool hasScenes, int assetCount)
+    {
+        var score = 0.0;
+        if (wordCount &gt; 50) score += 0.3;
+        if (hasScenes) score += 0.4;
+        if (assetCount &gt; 0) score += 0.3;
+        return score;
+    }
+}
+
+public record QualityCheckOutput
+{
+    public required int WordCount { get; init; }
+    public required bool HasScenes { get; init; }
+    public required int AssetCount { get; init; }
+    public required double OverallQuality { get; init; }
+    public required DateTime CheckedAt { get; init; }
+}
+</code></pre>
+<h3 id="example-2-external-service-stage">Example 2: External Service Stage</h3>
+<pre><code class="lang-csharp">using System;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
+using Aura.Core.Orchestrator;
+using Microsoft.Extensions.Logging;
+
+namespace MyApp.Pipeline.Stages;
+
+public class TranslationStage : PipelineStage
+{
+    private readonly HttpClient _httpClient;
+    private readonly ITranslationService _translator;
+
+    public TranslationStage(
+        ILogger&lt;TranslationStage&gt; logger,
+        HttpClient httpClient,
+        ITranslationService translator) : base(logger)
+    {
+        _httpClient = httpClient;
+        _translator = translator;
+    }
+
+    public override string StageName =&gt; &quot;Translation&quot;;
+    public override string DisplayName =&gt; &quot;Script Translation&quot;;
+    public override int ProgressWeight =&gt; 15;
+    public override TimeSpan Timeout =&gt; TimeSpan.FromMinutes(2);
+    public override bool SupportsRetry =&gt; true;
+    public override int MaxRetryAttempts =&gt; 3;
+
+    protected override async Task ExecuteStageAsync(
+        PipelineContext context,
+        IProgress&lt;StageProgress&gt;? progress,
+        CancellationToken ct)
+    {
+        ReportProgress(progress, 0, &quot;Preparing translation...&quot;);
+
+        // Get script to translate
+        var script = context.GeneratedScript;
+        if (string.IsNullOrEmpty(script))
+        {
+            throw new InvalidOperationException(&quot;Script is required&quot;);
+        }
+
+        // Get target language from brief
+        var targetLanguage = context.Brief.Language ?? &quot;English&quot;;
+        if (targetLanguage == &quot;English&quot;)
+        {
+            Logger.LogInformation(&quot;Script already in English, skipping translation&quot;);
+            context.SetStageOutput(StageName, new TranslationOutput
+            {
+                TranslatedScript = script,
+                TargetLanguage = targetLanguage,
+                Skipped = true
+            });
+            return;
+        }
+
+        ReportProgress(progress, 20, $&quot;Translating to {targetLanguage}...&quot;);
+
+        // Call translation service with retry support
+        string translatedScript;
+        try
+        {
+            translatedScript = await _translator.TranslateAsync(
+                script,
+                sourceLanguage: &quot;English&quot;,
+                targetLanguage: targetLanguage,
+                ct);
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogError(ex, &quot;Translation service failed&quot;);
+            throw new InvalidOperationException(
+                $&quot;Failed to translate to {targetLanguage}&quot;, ex);
+        }
+
+        ReportProgress(progress, 80, &quot;Validating translation...&quot;);
+
+        // Validate translation
+        if (string.IsNullOrEmpty(translatedScript))
+        {
+            throw new InvalidOperationException(&quot;Translation service returned empty result&quot;);
+        }
+
+        ReportProgress(progress, 90, &quot;Translation completed&quot;);
+
+        // Update context with translated script
+        context.GeneratedScript = translatedScript;
+        context.SetStageOutput(StageName, new TranslationOutput
+        {
+            TranslatedScript = translatedScript,
+            TargetLanguage = targetLanguage,
+            OriginalLength = script.Length,
+            TranslatedLength = translatedScript.Length
+        });
+
+        ReportProgress(progress, 100, &quot;Translation stage completed&quot;);
+    }
+
+    protected override bool CanSkipStage(PipelineContext context)
+    {
+        // Skip if already translated
+        var output = context.GetStageOutput&lt;TranslationOutput&gt;(StageName);
+        return output != null &amp;&amp; !string.IsNullOrEmpty(output.TranslatedScript);
+    }
+}
+
+public record TranslationOutput
+{
+    public required string TranslatedScript { get; init; }
+    public required string TargetLanguage { get; init; }
+    public int OriginalLength { get; init; }
+    public int TranslatedLength { get; init; }
+    public bool Skipped { get; init; }
+}
+</code></pre>
+<h3 id="example-3-multi-item-processing-stage">Example 3: Multi-Item Processing Stage</h3>
+<pre><code class="lang-csharp">using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Aura.Core.Orchestrator;
+using Microsoft.Extensions.Logging;
+
+namespace MyApp.Pipeline.Stages;
+
+public class ThumbnailGenerationStage : PipelineStage
+{
+    private readonly IThumbnailGenerator _thumbnailGenerator;
+
+    public ThumbnailGenerationStage(
+        ILogger&lt;ThumbnailGenerationStage&gt; logger,
+        IThumbnailGenerator thumbnailGenerator) : base(logger)
+    {
+        _thumbnailGenerator = thumbnailGenerator;
+    }
+
+    public override string StageName =&gt; &quot;Thumbnails&quot;;
+    public override string DisplayName =&gt; &quot;Thumbnail Generation&quot;;
+    public override int ProgressWeight =&gt; 10;
+    public override TimeSpan Timeout =&gt; TimeSpan.FromMinutes(3);
+
+    protected override async Task ExecuteStageAsync(
+        PipelineContext context,
+        IProgress&lt;StageProgress&gt;? progress,
+        CancellationToken ct)
+    {
+        ReportProgress(progress, 0, &quot;Preparing thumbnail generation...&quot;);
+
+        var scenes = context.ParsedScenes;
+        if (scenes == null || scenes.Count == 0)
+        {
+            throw new InvalidOperationException(&quot;Scenes are required&quot;);
+        }
+
+        var thumbnails = new List&lt;ThumbnailInfo&gt;();
+        int processedCount = 0;
+        int totalCount = scenes.Count;
+
+        // Generate thumbnail for each scene
+        foreach (var scene in scenes)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var percent = (int)((processedCount / (double)totalCount) * 80) + 10;
+            ReportProgress(
+                progress,
+                percent,
+                $&quot;Generating thumbnail {processedCount + 1}/{totalCount}...&quot;,
+                processedCount + 1,
+                totalCount);
+
+            try
+            {
+                var thumbnail = await _thumbnailGenerator.GenerateAsync(
+                    scene,
+                    width: 1280,
+                    height: 720,
+                    ct);
+
+                thumbnails.Add(new ThumbnailInfo
+                {
+                    SceneIndex = scene.Index,
+                    Path = thumbnail.Path,
+                    Width = thumbnail.Width,
+                    Height = thumbnail.Height,
+                    SizeBytes = thumbnail.SizeBytes
+                });
+
+                Logger.LogDebug(
+                    &quot;Generated thumbnail for scene {Index}: {Path}&quot;,
+                    scene.Index,
+                    thumbnail.Path);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(
+                    ex,
+                    &quot;Failed to generate thumbnail for scene {Index}&quot;,
+                    scene.Index);
+                // Continue with other scenes
+            }
+
+            processedCount++;
+        }
+
+        ReportProgress(progress, 95, &quot;Finalizing thumbnails...&quot;);
+
+        // Store thumbnails
+        context.SetStageOutput(StageName, new ThumbnailsOutput
+        {
+            Thumbnails = thumbnails,
+            GeneratedCount = thumbnails.Count,
+            TotalScenes = totalCount,
+            GeneratedAt = DateTime.UtcNow
+        });
+
+        ReportProgress(progress, 100, $&quot;Generated {thumbnails.Count} thumbnails&quot;);
+    }
+
+    protected override int GetItemsProcessed(PipelineContext context)
+    {
+        var output = context.GetStageOutput&lt;ThumbnailsOutput&gt;(StageName);
+        return output?.GeneratedCount ?? 0;
+    }
+}
+
+public record ThumbnailInfo
+{
+    public required int SceneIndex { get; init; }
+    public required string Path { get; init; }
+    public required int Width { get; init; }
+    public required int Height { get; init; }
+    public required long SizeBytes { get; init; }
+}
+
+public record ThumbnailsOutput
+{
+    public required List&lt;ThumbnailInfo&gt; Thumbnails { get; init; }
+    public required int GeneratedCount { get; init; }
+    public required int TotalScenes { get; init; }
+    public required DateTime GeneratedAt { get; init; }
+}
+</code></pre>
+<h2 id="integration-checklist">Integration Checklist</h2>
+<p>When adding a custom stage:</p>
+<ul>
+<li>[ ] Implement <code>ExecuteStageAsync</code> with your logic</li>
+<li>[ ] Define <code>StageName</code> (unique identifier)</li>
+<li>[ ] Define <code>DisplayName</code> (user-friendly name)</li>
+<li>[ ] Set appropriate <code>ProgressWeight</code></li>
+<li>[ ] Set appropriate <code>Timeout</code></li>
+<li>[ ] Configure retry behavior (<code>SupportsRetry</code>, <code>MaxRetryAttempts</code>)</li>
+<li>[ ] Implement <code>CanSkipStage</code> if resume support needed</li>
+<li>[ ] Implement <code>GetItemsProcessed</code> for accurate metrics</li>
+<li>[ ] Report progress at key milestones (0%, 100% minimum)</li>
+<li>[ ] Store output in context using <code>SetStageOutput</code></li>
+<li>[ ] Handle cancellation tokens properly</li>
+<li>[ ] Register stage in DI container (<code>Program.cs</code>)</li>
+<li>[ ] Add stage to pipeline execution flow</li>
+<li>[ ] Write unit tests</li>
+<li>[ ] Document stage behavior and requirements</li>
+</ul>
+<h2 id="testing-your-stage">Testing Your Stage</h2>
+<h3 id="unit-test-template">Unit Test Template</h3>
+<pre><code class="lang-csharp">using Xunit;
+using Moq;
+using Microsoft.Extensions.Logging;
+
+public class MyStageTests
+{
+    [Fact]
+    public async Task ExecuteAsync_ValidInput_Succeeds()
+    {
+        // Arrange
+        var logger = Mock.Of&lt;ILogger&lt;MyStage&gt;&gt;();
+        var stage = new MyStage(logger);
+        var context = CreateTestContext();
+
+        // Act
+        var result = await stage.ExecuteAsync(context);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.NotNull(context.GetStageOutput&lt;MyOutput&gt;(stage.StageName));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MissingInput_Fails()
+    {
+        // Arrange
+        var logger = Mock.Of&lt;ILogger&lt;MyStage&gt;&gt;();
+        var stage = new MyStage(logger);
+        var context = new PipelineContext(/* minimal context */);
+
+        // Act
+        var result = await stage.ExecuteAsync(context);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.NotNull(result.Exception);
+    }
+
+    private PipelineContext CreateTestContext()
+    {
+        return new PipelineContext(
+            correlationId: Guid.NewGuid().ToString(),
+            brief: /* create test brief */,
+            planSpec: /* create test plan */,
+            voiceSpec: /* create test voice */,
+            renderSpec: /* create test render */,
+            systemProfile: /* create test profile */
+        );
+    }
+}
+</code></pre>
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="pattern-1-external-service-call">Pattern 1: External Service Call</h3>
+<pre><code class="lang-csharp">protected override async Task ExecuteStageAsync(...)
+{
+    try
+    {
+        var result = await _externalService.CallAsync(..., ct);
+        context.SetStageOutput(StageName, result);
+    }
+    catch (HttpRequestException ex) when (IsTransient(ex))
+    {
+        // Let retry logic handle transient errors
+        throw;
+    }
+    catch (Exception ex)
+    {
+        // Log and rethrow permanent errors
+        Logger.LogError(ex, &quot;Permanent error in {Stage}&quot;, StageName);
+        throw;
+    }
+}
+</code></pre>
+<h3 id="pattern-2-multi-step-processing">Pattern 2: Multi-Step Processing</h3>
+<pre><code class="lang-csharp">protected override async Task ExecuteStageAsync(...)
+{
+    // Step 1
+    ReportProgress(progress, 0, &quot;Step 1: Preparing...&quot;);
+    var prepared = await PrepareAsync(ct);
+    
+    // Step 2
+    ReportProgress(progress, 33, &quot;Step 2: Processing...&quot;);
+    var processed = await ProcessAsync(prepared, ct);
+    
+    // Step 3
+    ReportProgress(progress, 66, &quot;Step 3: Finalizing...&quot;);
+    var finalized = await FinalizeAsync(processed, ct);
+    
+    ReportProgress(progress, 100, &quot;Completed&quot;);
+    context.SetStageOutput(StageName, finalized);
+}
+</code></pre>
+<h3 id="pattern-3-conditional-logic">Pattern 3: Conditional Logic</h3>
+<pre><code class="lang-csharp">protected override async Task ExecuteStageAsync(...)
+{
+    if (ShouldSkip(context))
+    {
+        Logger.LogInformation(&quot;Skipping {Stage} - conditions not met&quot;, StageName);
+        context.SetStageOutput(StageName, CreateSkippedOutput());
+        return;
+    }
+
+    // Normal execution
+    var result = await ExecuteLogicAsync(context, ct);
+    context.SetStageOutput(StageName, result);
+}
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="stage-keeps-retrying">Stage Keeps Retrying</h3>
+<p><strong>Problem</strong>: Stage continuously retries without success
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Check if errors are correctly classified (transient vs permanent)</li>
+<li>Reduce <code>MaxRetryAttempts</code></li>
+<li>Add specific error handling for known failure modes</li>
+</ul>
+<h3 id="stage-times-out">Stage Times Out</h3>
+<p><strong>Problem</strong>: Stage exceeds timeout duration
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Increase <code>Timeout</code> value</li>
+<li>Optimize expensive operations</li>
+<li>Break into multiple smaller stages</li>
+</ul>
+<h3 id="progress-not-updating">Progress Not Updating</h3>
+<p><strong>Problem</strong>: UI doesn't show stage progress
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Ensure <code>ReportProgress</code> is called regularly</li>
+<li>Check progress parameter is not null</li>
+<li>Verify <code>ProgressWeight</code> is set appropriately</li>
+</ul>
+<h3 id="cant-resume-after-failure">Can't Resume After Failure</h3>
+<p><strong>Problem</strong>: Pipeline always restarts from beginning
+<strong>Solutions</strong>:</p>
+<ul>
+<li>Implement <code>CanSkipStage</code> properly</li>
+<li>Ensure stage output is stored in context</li>
+<li>Set <code>SupportsResume = true</code></li>
+</ul>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="PIPELINE_ARCHITECTURE.html">Pipeline Architecture Documentation</a></li>
+<li>Video Orchestrator Implementation</li>
+<li>Example Stage Implementations</li>
+<li>Unit Tests</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/STAGE_INTERFACE_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

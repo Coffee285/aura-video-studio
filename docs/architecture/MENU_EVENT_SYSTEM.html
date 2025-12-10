@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Menu Event System Architecture | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Menu Event System Architecture | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/MENU_EVENT_SYSTEM.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="menu-event-system-architecture">Menu Event System Architecture</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The menu event system provides a type-safe, validated communication channel between Electron's native menu (main process) and the React application (renderer process). This document describes the complete architecture and validation mechanisms.</p>
+<h2 id="architecture-diagram">Architecture Diagram</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────┐
+│                     Main Process                             │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │         menu-builder.js                            │    │
+│  │  - Creates native menu items                        │    │
+│  │  - Sends IPC events via _sendToRenderer()           │    │
+│  │  - Uses channels from MENU_EVENT_CHANNELS           │    │
+│  └────────────────────┬───────────────────────────────┘    │
+│                       │ IPC Channel                         │
+└───────────────────────┼─────────────────────────────────────┘
+                        │
+┌───────────────────────┼─────────────────────────────────────┐
+│  Preload Context      │                                      │
+│  ┌────────────────────▼───────────────────────────────┐    │
+│  │         preload.js                                  │    │
+│  │  - Validates all channels against MENU_EVENT_       │    │
+│  │    CHANNELS array                                   │    │
+│  │  - Validates callbacks are functions                │    │
+│  │  - Adds 5-second timeout monitoring                 │    │
+│  │  - Tracks listener counts (memory leak prevention)  │    │
+│  │  - Exposes window.electron.menu API                 │    │
+│  └────────────────────┬───────────────────────────────┘    │
+└───────────────────────┼─────────────────────────────────────┘
+                        │ contextBridge
+┌───────────────────────┼─────────────────────────────────────┐
+│  Renderer Process     │                                      │
+│  ┌────────────────────▼───────────────────────────────┐    │
+│  │    useElectronMenuEvents.ts (React Hook)           │    │
+│  │  - Subscribes to menu events on mount               │    │
+│  │  - Navigates or dispatches custom events            │    │
+│  │  - Automatically unsubscribes on unmount            │    │
+│  │  - Uses TypeScript types from electron-menu.ts      │    │
+│  └────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="component-descriptions">Component Descriptions</h2>
+<h3 id="1-menu-event-typesjs">1. menu-event-types.js</h3>
+<p><strong>Location:</strong> <code>Aura.Desktop/electron/menu-event-types.js</code></p>
+<p><strong>Purpose:</strong> Central source of truth for all menu event channels</p>
+<p><strong>Exports:</strong></p>
+<ul>
+<li><code>MENU_EVENT_CHANNELS</code>: Array of 21 valid menu event channel names</li>
+<li><code>isValidMenuEventChannel(channel)</code>: Validates channel names</li>
+<li><code>getMenuEventChannels()</code>: Returns copy of channels array</li>
+</ul>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Single source of truth for menu channels</li>
+<li>Prevents typos and ensures consistency</li>
+<li>Easy to add new menu channels</li>
+</ul>
+<h3 id="2-menu-event-typesdts">2. menu-event-types.d.ts</h3>
+<p><strong>Location:</strong> <code>Aura.Desktop/electron/menu-event-types.d.ts</code></p>
+<p><strong>Purpose:</strong> TypeScript definitions for Node.js environment</p>
+<p><strong>Exports:</strong></p>
+<ul>
+<li><code>MenuEventChannel</code>: Union type of all valid channels</li>
+<li><code>MenuEventHandler</code>: Standard callback type</li>
+<li><code>MenuEventHandlerWithData&lt;T&gt;</code>: Callback with data payload type</li>
+<li><code>MenuEventUnsubscribe</code>: Unsubscribe function type</li>
+<li><code>MenuAPI</code>: Complete interface for menu API</li>
+</ul>
+<h3 id="3-electron-menuts">3. electron-menu.ts</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/types/electron-menu.ts</code></p>
+<p><strong>Purpose:</strong> TypeScript definitions for React/renderer environment</p>
+<p><strong>Exports:</strong></p>
+<ul>
+<li>All types from menu-event-types.d.ts</li>
+<li><code>OpenRecentProjectData</code>: Typed data for openRecentProject event</li>
+<li><code>ElectronAPI</code>: Complete window.electron interface</li>
+<li>Global Window augmentation</li>
+</ul>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>Full TypeScript autocomplete in React components</li>
+<li>Type safety between Electron and React</li>
+<li>JSDoc comments for all menu methods</li>
+</ul>
+<h3 id="4-preloadjs-enhanced">4. preload.js (Enhanced)</h3>
+<p><strong>Location:</strong> <code>Aura.Desktop/electron/preload.js</code></p>
+<p><strong>Key Enhancements:</strong></p>
+<h4 id="41-channel-validation">4.1 Channel Validation</h4>
+<pre><code class="lang-javascript">// Imports MENU_EVENT_CHANNELS array
+const { MENU_EVENT_CHANNELS, isValidMenuEventChannel } = require('./menu-event-types');
+
+// Validates against the array
+const VALID_EVENT_CHANNELS = [
+  'video:progress',
+  'video:error',
+  'video:complete',
+  'backend:healthUpdate',
+  'backend:providerUpdate',
+  'protocol:navigate',
+  ...MENU_EVENT_CHANNELS  // All menu channels automatically included
+];
+</code></pre>
+<h4 id="42-callback-validation">4.2 Callback Validation</h4>
+<pre><code class="lang-javascript">function safeOn(channel, callback) {
+  if (!isValidEventChannel(channel)) {
+    throw new Error(`Invalid event channel: ${channel}`);
+  }
+  
+  // REQUIRED: Validate callback is a function
+  if (typeof callback !== 'function') {
+    throw new TypeError(`Callback must be a function, received ${typeof callback}`);
+  }
+  // ...
+}
+</code></pre>
+<h4 id="43-timeout-mechanism">4.3 Timeout Mechanism</h4>
+<pre><code class="lang-javascript">const EVENT_LISTENER_TIMEOUT = 5000; // 5 seconds
+
+const subscription = (event, ...args) =&gt; {
+  const startTime = Date.now();
+  
+  try {
+    const result = callback(...args);
+    
+    // If callback returns a promise, monitor its completion time
+    if (result &amp;&amp; typeof result.then === 'function') {
+      const timeoutId = setTimeout(() =&gt; {
+        const elapsed = Date.now() - startTime;
+        console.warn(`[Preload] Event listener for '${channel}' did not complete within ${EVENT_LISTENER_TIMEOUT}ms (elapsed: ${elapsed}ms)`);
+      }, EVENT_LISTENER_TIMEOUT);
+      
+      result.finally(() =&gt; clearTimeout(timeoutId));
+    }
+  } catch (error) {
+    console.error(`[Preload] Error in event listener for '${channel}':`, error);
+  }
+};
+</code></pre>
+<h4 id="44-memory-leak-prevention">4.4 Memory Leak Prevention</h4>
+<pre><code class="lang-javascript">// Track active listeners per channel
+if (!safeOn._listenerCounts) {
+  safeOn._listenerCounts = new Map();
+}
+
+const currentCount = safeOn._listenerCounts.get(channel) || 0;
+safeOn._listenerCounts.set(channel, currentCount + 1);
+
+// Warn if too many listeners on same channel
+if (currentCount &gt;= 2) {
+  console.warn(`[Preload] Multiple listeners (${currentCount + 1}) registered for channel: ${channel}. Possible memory leak.`);
+}
+
+// Clean up on unsubscribe
+return () =&gt; {
+  ipcRenderer.removeListener(channel, subscription);
+  
+  const count = safeOn._listenerCounts.get(channel) || 0;
+  if (count &gt; 0) {
+    safeOn._listenerCounts.set(channel, count - 1);
+  }
+};
+</code></pre>
+<h3 id="5-useelectronmenueventsts-updated">5. useElectronMenuEvents.ts (Updated)</h3>
+<p><strong>Location:</strong> <code>Aura.Web/src/hooks/useElectronMenuEvents.ts</code></p>
+<p><strong>Key Features:</strong></p>
+<ul>
+<li>Uses typed <code>MenuAPI</code> interface</li>
+<li>Proper cleanup with unsubscribe functions array</li>
+<li>Error handling with try-catch</li>
+<li>Logging for debugging</li>
+</ul>
+<p><strong>Usage:</strong></p>
+<pre><code class="lang-typescript">import { useElectronMenuEvents } from '@/hooks/useElectronMenuEvents';
+
+function App() {
+  useElectronMenuEvents(); // Automatically subscribes to all menu events
+  return &lt;div&gt;...&lt;/div&gt;;
+}
+</code></pre>
+<h2 id="validation-and-testing">Validation and Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p><strong>File:</strong> <code>Aura.Desktop/test/test-preload-menu-events.js</code></p>
+<p><strong>Tests:</strong></p>
+<ol>
+<li>✓ MENU_EVENT_CHANNELS array definition</li>
+<li>✓ Channel validation function</li>
+<li>✓ Valid callback registration</li>
+<li>✓ Invalid callback throws TypeError</li>
+<li>✓ Invalid channel throws Error</li>
+<li>✓ Cleanup function removes ALL listeners</li>
+<li>✓ No memory leak when registering listeners multiple times</li>
+<li>✓ Timeout mechanism structure</li>
+<li>✓ All 21 menu channels can be registered and cleaned up</li>
+</ol>
+<p><strong>Run:</strong> <code>npm run test:menu-events</code></p>
+<h3 id="integration-tests">Integration Tests</h3>
+<p><strong>File:</strong> <code>Aura.Desktop/test/test-menu-ipc-integration.js</code></p>
+<p><strong>Tests:</strong></p>
+<ol>
+<li>✓ IPC event flow from main to React</li>
+<li>✓ Hook mount registers listeners</li>
+<li>✓ Multiple events handled correctly</li>
+<li>✓ Event with data payload preserved</li>
+<li>✓ Hook unmount removes all listeners</li>
+<li>✓ Unmounted hook ignores events</li>
+<li>✓ Hook remount works correctly</li>
+<li>✓ All 21 menu methods exposed in API</li>
+</ol>
+<p><strong>Run:</strong> <code>npm run test:menu-ipc</code></p>
+<h3 id="run-all-tests">Run All Tests</h3>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm test
+</code></pre>
+<h2 id="adding-new-menu-events">Adding New Menu Events</h2>
+<p>To add a new menu event, follow these steps:</p>
+<h3 id="step-1-add-to-menu-event-typesjs">Step 1: Add to menu-event-types.js</h3>
+<pre><code class="lang-javascript">const MENU_EVENT_CHANNELS = [
+  // ... existing channels ...
+  'menu:newFeature'  // Add your new channel
+];
+</code></pre>
+<h3 id="step-2-add-to-menu-event-typesdts">Step 2: Add to menu-event-types.d.ts</h3>
+<pre><code class="lang-typescript">export type MenuEventChannel = 
+  | 'menu:newProject'
+  // ... existing channels ...
+  | 'menu:newFeature';  // Add your new channel
+
+export interface MenuAPI {
+  // ... existing methods ...
+  onNewFeature: (callback: MenuEventHandler) =&gt; MenuEventUnsubscribe;
+}
+</code></pre>
+<h3 id="step-3-add-to-electron-menuts">Step 3: Add to electron-menu.ts</h3>
+<pre><code class="lang-typescript">// Copy the same changes as Step 2
+</code></pre>
+<h3 id="step-4-add-to-preloadjs">Step 4: Add to preload.js</h3>
+<pre><code class="lang-javascript">// Menu actions
+menu: {
+  onNewProject: (callback) =&gt; safeOn('menu:newProject', callback),
+  // ... existing handlers ...
+  onNewFeature: (callback) =&gt; safeOn('menu:newFeature', callback)
+}
+</code></pre>
+<h3 id="step-5-add-to-menu-builderjs">Step 5: Add to menu-builder.js</h3>
+<pre><code class="lang-javascript">// Add menu item
+{
+  label: 'New Feature',
+  accelerator: 'CmdOrCtrl+Shift+N',
+  click: () =&gt; this._triggerNewFeature()
+}
+
+// Add handler method
+_triggerNewFeature() {
+  this._sendToRenderer('menu:newFeature');
+}
+</code></pre>
+<h3 id="step-6-add-to-useelectronmenueventsts">Step 6: Add to useElectronMenuEvents.ts</h3>
+<pre><code class="lang-typescript">if (menu.onNewFeature) {
+  const unsub = menu.onNewFeature(() =&gt; {
+    loggingService.info('Menu action: New Feature');
+    navigate('/new-feature');
+  });
+  unsubscribers.push(unsub);
+}
+</code></pre>
+<h3 id="step-7-run-tests">Step 7: Run Tests</h3>
+<pre><code class="lang-bash">npm run test:menu-events
+npm run test:menu-ipc
+</code></pre>
+<p>All tests should pass, confirming the new channel is properly integrated.</p>
+<h2 id="security-considerations">Security Considerations</h2>
+<h3 id="channel-validation">Channel Validation</h3>
+<ul>
+<li>All channels must be in <code>VALID_EVENT_CHANNELS</code></li>
+<li>Prevents injection attacks via malicious channel names</li>
+<li>Centralized validation in <code>safeOn()</code> function</li>
+</ul>
+<h3 id="callback-validation">Callback Validation</h3>
+<ul>
+<li>All callbacks must be functions</li>
+<li>TypeError thrown for non-function callbacks</li>
+<li>Prevents runtime errors and security issues</li>
+</ul>
+<h3 id="context-isolation">Context Isolation</h3>
+<ul>
+<li>Preload script runs in isolated context</li>
+<li>Only safe APIs exposed via contextBridge</li>
+<li>No direct access to Node.js or Electron APIs from renderer</li>
+</ul>
+<h3 id="type-safety">Type Safety</h3>
+<ul>
+<li>TypeScript enforces correct types throughout</li>
+<li>Prevents type-related bugs and vulnerabilities</li>
+<li>Autocomplete reduces typos</li>
+</ul>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="timeout-monitoring">Timeout Monitoring</h3>
+<ul>
+<li>5-second timeout for event listeners</li>
+<li>Warns if renderer doesn't respond in time</li>
+<li>Helps identify performance issues</li>
+</ul>
+<h3 id="memory-leak-prevention">Memory Leak Prevention</h3>
+<ul>
+<li>Tracks listener counts per channel</li>
+<li>Warns if &gt;2 listeners on same channel</li>
+<li>Proper cleanup with unsubscribe functions</li>
+</ul>
+<h3 id="efficient-cleanup">Efficient Cleanup</h3>
+<ul>
+<li>All listeners removed on component unmount</li>
+<li>No lingering event handlers</li>
+<li>Prevents memory leaks in long-running sessions</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="issue-menu-event-not-firing">Issue: Menu event not firing</h3>
+<p><strong>Check:</strong></p>
+<ol>
+<li>Channel name in menu-builder.js matches MENU_EVENT_CHANNELS</li>
+<li>Handler exists in preload.js menu API</li>
+<li>Listener registered in useElectronMenuEvents.ts</li>
+<li>Browser console for validation errors</li>
+</ol>
+<h3 id="issue-typescript-errors">Issue: TypeScript errors</h3>
+<p><strong>Check:</strong></p>
+<ol>
+<li>electron-menu.ts interface matches preload.js</li>
+<li>All 21 channels defined in all type files</li>
+<li>npm install in both Aura.Desktop and Aura.Web</li>
+</ol>
+<h3 id="issue-memory-warnings">Issue: Memory warnings</h3>
+<p><strong>Check:</strong></p>
+<ol>
+<li>useElectronMenuEvents only called once (in root component)</li>
+<li>Component properly unmounts and cleans up</li>
+<li>No multiple hook instances in component tree</li>
+</ol>
+<h3 id="issue-timeout-warnings">Issue: Timeout warnings</h3>
+<p><strong>Check:</strong></p>
+<ol>
+<li>Event handler completes within 5 seconds</li>
+<li>Async operations properly awaited</li>
+<li>No blocking operations in event handlers</li>
+</ol>
+<h2 id="metrics">Metrics</h2>
+<ul>
+<li><strong>Total Menu Channels:</strong> 21</li>
+<li><strong>Test Coverage:</strong> 100% of menu event system</li>
+<li><strong>Validation Layers:</strong> 3 (channel, callback, type)</li>
+<li><strong>Timeout Threshold:</strong> 5 seconds</li>
+<li><strong>Memory Leak Detection:</strong> Enabled (warns at &gt;2 listeners)</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://www.electronjs.org/docs/latest/tutorial/ipc">Electron IPC Documentation</a></li>
+<li><a href="https://www.electronjs.org/docs/latest/tutorial/context-isolation">Context Isolation</a></li>
+<li><a href="https://www.typescriptlang.org/docs/">TypeScript Handbook</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/MENU_EVENT_SYSTEM.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

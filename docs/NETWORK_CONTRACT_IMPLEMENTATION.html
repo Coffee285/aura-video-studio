@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Network Contract Implementation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Network Contract Implementation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/NETWORK_CONTRACT_IMPLEMENTATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="network-contract-implementation">Network Contract Implementation</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the implementation of the network contract system that ensures a single source of truth for backend URL configuration across Electron, the backend API, and the frontend.</p>
+<h2 id="problem-statement">Problem Statement</h2>
+<p>Previously, there was a risk of:</p>
+<ul>
+<li>Hardcoded ports scattered across the codebase</li>
+<li>Backend starting on one port while frontend pointed to another</li>
+<li>Silent failures when configuration was invalid</li>
+<li>No validation of URL format or port ranges</li>
+<li>Inconsistent URL resolution across components</li>
+</ul>
+<h2 id="solution-network-contract">Solution: Network Contract</h2>
+<p>A validated, enforced contract that all components must use to communicate with the backend.</p>
+<h3 id="architecture">Architecture</h3>
+<pre><code>┌─────────────────────────────────────────────────────┐
+│          Environment Variables                      │
+│  AURA_BACKEND_URL or ASPNETCORE_URLS               │
+└───────────────────┬─────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────┐
+│     network-contract.js                             │
+│  resolveBackendContract({ isDev })                  │
+│  - Validates URL format                             │
+│  - Validates port range (1-65535)                   │
+│  - Validates health endpoints                       │
+│  - Returns NetworkContract or throws error          │
+└───────────────────┬─────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────┐
+│     BackendService / ExternalBackendService         │
+│  - Enforces networkContract in constructor          │
+│  - Refuses to start without valid contract          │
+│  - No fallback logic                                │
+└───────────────────┬─────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────┐
+│     preload.js (Security Bridge)                    │
+│  - Exposes contract URL to renderer                 │
+│  - window.desktopBridge.backend.getUrl()            │
+│  - window.AURA_BACKEND_URL (legacy)                 │
+└───────────────────┬─────────────────────────────────┘
+                    │
+                    ▼
+┌─────────────────────────────────────────────────────┐
+│     apiBaseUrl.ts (Frontend)                        │
+│  - Resolves URL in priority order:                  │
+│    1. desktopBridge.backend.getUrl()                │
+│    2. VITE_API_BASE_URL                             │
+│    3. window.location.origin                        │
+│    4. Fallback with warning                         │
+└─────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="implementation-details">Implementation Details</h2>
+<h3 id="1-network-contractjs">1. network-contract.js</h3>
+<p><strong>Location</strong>: <code>Aura.Desktop/electron/network-contract.js</code></p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Resolve backend URL from environment variables</li>
+<li>Validate URL format using Node.js URL API</li>
+<li>Validate port is in valid range (1-65535)</li>
+<li>Validate health endpoints are non-empty strings</li>
+<li>Return fully validated <code>NetworkContract</code> object</li>
+<li>Throw descriptive errors if validation fails</li>
+</ul>
+<p><strong>NetworkContract Type</strong>:</p>
+<pre><code class="lang-javascript">/**
+ * @typedef {Object} NetworkContract
+ * @property {string} protocol - Protocol (http or https)
+ * @property {string} host - Hostname (e.g., 127.0.0.1)
+ * @property {number} port - Port number
+ * @property {string} baseUrl - Fully qualified base URL
+ * @property {string} raw - Raw URL string from environment
+ * @property {string} healthEndpoint - Health check path
+ * @property {string} readinessEndpoint - Readiness check path
+ * @property {boolean} shouldSelfHost - Whether Electron spawns backend
+ * @property {number} maxStartupMs - Startup timeout in milliseconds
+ * @property {number} pollIntervalMs - Health check poll interval
+ */
+</code></pre>
+<h3 id="2-backendservice">2. BackendService</h3>
+<p><strong>Location</strong>: <code>Aura.Desktop/electron/backend-service.js</code></p>
+<p><strong>Changes</strong>:</p>
+<ul>
+<li>Constructor now requires <code>networkContract</code> parameter</li>
+<li>Validates contract immediately in constructor</li>
+<li>Throws if <code>networkContract</code>, <code>baseUrl</code>, or <code>port</code> are invalid</li>
+<li>Removed fallback logic that allowed operation without contract</li>
+<li>Uses contract values for all backend communication</li>
+</ul>
+<p><strong>Validation</strong>:</p>
+<pre><code class="lang-javascript">if (!networkContract) {
+  throw new Error(&quot;BackendService requires a valid networkContract.&quot;);
+}
+if (!networkContract.baseUrl || typeof networkContract.baseUrl !== &quot;string&quot;) {
+  throw new Error(&quot;BackendService networkContract missing baseUrl.&quot;);
+}
+if (!networkContract.port || typeof networkContract.port !== &quot;number&quot; || networkContract.port &lt;= 0) {
+  throw new Error(&quot;BackendService networkContract missing valid port.&quot;);
+}
+</code></pre>
+<h3 id="3-externalbackendservice">3. ExternalBackendService</h3>
+<p><strong>Location</strong>: <code>Aura.Desktop/electron/external-backend-service.js</code></p>
+<p><strong>Changes</strong>:</p>
+<ul>
+<li>Mirrors BackendService validation logic</li>
+<li>Constructor requires <code>networkContract</code> parameter</li>
+<li>Validates contract immediately</li>
+<li>Throws descriptive errors if invalid</li>
+</ul>
+<h3 id="4-preloadjs">4. preload.js</h3>
+<p><strong>Location</strong>: <code>Aura.Desktop/electron/preload.js</code></p>
+<p><strong>Changes</strong>:</p>
+<ul>
+<li>Enhanced <code>desktopBridge</code> object to expose contract URL</li>
+<li>Added <code>backend.getUrl()</code> method that returns contract URL</li>
+<li>Maintains backward compatibility with legacy globals</li>
+<li>Exposes both <code>window.desktopBridge.backend.getUrl()</code> and <code>window.AURA_BACKEND_URL</code></li>
+</ul>
+<p><strong>Bridge Structure</strong>:</p>
+<pre><code class="lang-javascript">const desktopBridge = {
+  backend: {
+    getUrl: () =&gt; runtimeBootstrap?.backend?.baseUrl || null,
+    // ... other backend properties
+  },
+  getBackendBaseUrl: () =&gt; runtimeBootstrap?.backend?.baseUrl || null,
+  // ... other bridge properties
+};
+</code></pre>
+<h3 id="5-apibaseurlts">5. apiBaseUrl.ts</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/config/apiBaseUrl.ts</code></p>
+<p><strong>Changes</strong>:</p>
+<ul>
+<li>Enhanced <code>getBridgeBackendUrl()</code> to check <code>desktopBridge.backend.getUrl()</code></li>
+<li>Priority order:
+<ol>
+<li><code>window.aura.runtime.getCachedDiagnostics().backend.baseUrl</code></li>
+<li><code>window.desktopBridge.backend.getUrl()</code> (NEW)</li>
+<li><code>window.desktopBridge.getBackendBaseUrl()</code> (legacy)</li>
+</ol>
+</li>
+<li>Maintains existing fallback chain for non-Electron environments</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p><strong>File</strong>: <code>Aura.Desktop/test/test-network-contract-validation.js</code></p>
+<p>Tests cover:</p>
+<ul>
+<li>✓ URL format validation</li>
+<li>✓ Port validation</li>
+<li>✓ Required field presence</li>
+<li>✓ BackendService constructor validation</li>
+<li>✓ ExternalBackendService constructor validation</li>
+<li>✓ Error message descriptiveness</li>
+<li>✓ Default value correctness</li>
+</ul>
+<p><strong>Results</strong>: 10/10 tests passing</p>
+<h3 id="frontend-tests">Frontend Tests</h3>
+<p><strong>File</strong>: <code>Aura.Web/src/config/__tests__/apiBaseUrl.test.ts</code></p>
+<p>Added tests for:</p>
+<ul>
+<li>✓ <code>desktopBridge.backend.getUrl()</code> resolution</li>
+<li>✓ Contract-based URL prioritization</li>
+<li>✓ Fallback behavior</li>
+</ul>
+<h3 id="integration-test">Integration Test</h3>
+<p><strong>File</strong>: <code>Aura.Desktop/test/manual-test-network-contract.js</code></p>
+<p>Validates end-to-end contract flow:</p>
+<ol>
+<li>Contract resolution from environment</li>
+<li>Contract structure validation</li>
+<li>BackendService validation</li>
+<li>ExternalBackendService validation</li>
+<li>Preload bridge exposure</li>
+<li>Frontend URL resolution</li>
+</ol>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-bash">AURA_BACKEND_URL=http://127.0.0.1:5272 node test/manual-test-network-contract.js
+</code></pre>
+<h2 id="environment-variables">Environment Variables</h2>
+<h3 id="primary-configuration">Primary Configuration</h3>
+<ul>
+<li><p><strong><code>AURA_BACKEND_URL</code></strong> (preferred)</p>
+<ul>
+<li>Full base URL including protocol, host, and port</li>
+<li>Example: <code>http://127.0.0.1:5272</code></li>
+<li>Used by both Electron and backend</li>
+</ul>
+</li>
+<li><p><strong><code>ASPNETCORE_URLS</code></strong> (alternative)</p>
+<ul>
+<li>ASP.NET Core binding URLs</li>
+<li>Example: <code>http://127.0.0.1:5272</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="optional-configuration">Optional Configuration</h3>
+<ul>
+<li><p><strong><code>AURA_BACKEND_HEALTH_ENDPOINT</code></strong></p>
+<ul>
+<li>Health check path (default: <code>/api/health</code>)</li>
+</ul>
+</li>
+<li><p><strong><code>AURA_BACKEND_READY_ENDPOINT</code></strong></p>
+<ul>
+<li>Readiness check path (default: <code>/health/ready</code>)</li>
+</ul>
+</li>
+<li><p><strong><code>AURA_BACKEND_STARTUP_TIMEOUT_MS</code></strong></p>
+<ul>
+<li>Startup timeout in milliseconds (default: <code>60000</code>)</li>
+</ul>
+</li>
+<li><p><strong><code>AURA_BACKEND_HEALTH_POLL_INTERVAL_MS</code></strong></p>
+<ul>
+<li>Health check poll interval (default: <code>1000</code>)</li>
+</ul>
+</li>
+<li><p><strong><code>AURA_LAUNCH_BACKEND</code></strong></p>
+<ul>
+<li>Whether Electron should spawn backend (default: <code>true</code>)</li>
+<li>Set to <code>false</code> for external backend mode</li>
+</ul>
+</li>
+</ul>
+<h2 id="benefits">Benefits</h2>
+<h3 id="1-fail-fast-validation">1. Fail-Fast Validation</h3>
+<ul>
+<li>Invalid configurations are caught at startup</li>
+<li>Clear error messages guide users to fix issues</li>
+<li>No silent failures or undefined behavior</li>
+</ul>
+<h3 id="2-single-source-of-truth">2. Single Source of Truth</h3>
+<ul>
+<li>One canonical URL shared across all components</li>
+<li>No risk of diverging configurations</li>
+<li>Easy to change port or host for all components</li>
+</ul>
+<h3 id="3-no-hardcoded-ports">3. No Hardcoded Ports</h3>
+<ul>
+<li>All port configuration comes from environment</li>
+<li>Easy to run multiple instances on different ports</li>
+<li>Supports development, staging, and production environments</li>
+</ul>
+<h3 id="4-type-safety">4. Type Safety</h3>
+<ul>
+<li>Full JSDoc definitions for NetworkContract</li>
+<li>TypeScript types for frontend resolution</li>
+<li>IDE autocomplete and type checking</li>
+</ul>
+<h3 id="5-better-debugging">5. Better Debugging</h3>
+<ul>
+<li>Contract validation errors include descriptive messages</li>
+<li>Easy to trace URL resolution through logs</li>
+<li>Integration test validates full flow</li>
+</ul>
+<h2 id="migration-guide">Migration Guide</h2>
+<h3 id="for-developers">For Developers</h3>
+<p>No changes required! The system maintains backward compatibility:</p>
+<ul>
+<li>Existing <code>AURA_BACKEND_URL</code> usage continues to work</li>
+<li>Frontend code automatically uses contract URLs</li>
+<li>Tests validate both new and legacy paths</li>
+</ul>
+<h3 id="for-users">For Users</h3>
+<p>No changes required! Default URLs remain the same:</p>
+<ul>
+<li>Development: <code>http://127.0.0.1:5272</code></li>
+<li>Production: <code>http://127.0.0.1:5890</code></li>
+</ul>
+<h3 id="for-cicd">For CI/CD</h3>
+<p>Consider setting <code>AURA_BACKEND_URL</code> explicitly in CI to:</p>
+<ul>
+<li>Make configuration explicit</li>
+<li>Avoid relying on defaults</li>
+<li>Ensure consistent behavior across environments</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential improvements for future PRs:</p>
+<ul>
+<li>Add HTTPS support with certificate validation</li>
+<li>Support multiple backend instances (load balancing)</li>
+<li>Add contract versioning for breaking changes</li>
+<li>Implement contract caching for faster restarts</li>
+<li>Add telemetry for contract resolution success/failure</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="../DEVELOPMENT.html#backend-url-contract">DEVELOPMENT.md</a> - Usage guide</li>
+<li><a href="architecture/ARCHITECTURE.html">ARCHITECTURE.md</a> - Architecture overview</li>
+<li><a href="../DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> - Electron development guide</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>The network contract implementation provides a robust, validated, and enforced system for managing backend URL configuration across the entire Aura Video Studio application. By centralizing URL resolution and validation, we eliminate configuration drift, catch errors early, and provide a better developer experience.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/NETWORK_CONTRACT_IMPLEMENTATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Stable Diffusion Setup Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Stable Diffusion Setup Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/ENGINES_SD.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="stable-diffusion-setup-guide">Stable Diffusion Setup Guide</h1>
+
+<p>Complete guide for setting up Stable Diffusion locally for image generation in Aura Video Studio.</p>
+<h2 id="overview">Overview</h2>
+<p>Stable Diffusion enables high-quality, AI-generated images for your videos without cloud APIs or subscriptions. This guide covers installation, configuration, and troubleshooting.</p>
+<h2 id="system-requirements">System Requirements</h2>
+<h3 id="minimum-requirements">Minimum Requirements</h3>
+<ul>
+<li><strong>GPU</strong>: NVIDIA GPU with CUDA support</li>
+<li><strong>VRAM</strong>: 6GB (for SD 1.5)</li>
+<li><strong>RAM</strong>: 8GB system RAM</li>
+<li><strong>Storage</strong>: 15GB free space</li>
+<li><strong>OS</strong>: Windows 11 x64 or Linux (Ubuntu 20.04+)</li>
+</ul>
+<h3 id="recommended-requirements">Recommended Requirements</h3>
+<ul>
+<li><strong>GPU</strong>: NVIDIA RTX 3060 or better</li>
+<li><strong>VRAM</strong>: 12GB+ (for SDXL)</li>
+<li><strong>RAM</strong>: 16GB system RAM</li>
+<li><strong>Storage</strong>: 50GB free space (for multiple models)</li>
+</ul>
+<h3 id="hardware-gating-and-pre-installation">Hardware Gating and Pre-Installation</h3>
+<p><strong>Important</strong>: Aura now allows you to install engines even if your current hardware doesn't meet the requirements. This is useful for:</p>
+<ul>
+<li><strong>Planning ahead</strong>: Install engines now, use them when you upgrade your hardware</li>
+<li><strong>Shared systems</strong>: Install on a machine without NVIDIA GPU, then copy to another machine</li>
+<li><strong>Learning</strong>: Explore the tools and prepare configurations before hardware upgrades</li>
+</ul>
+<p><strong>What happens when you install without meeting requirements:</strong></p>
+<ol>
+<li>The engine will install successfully</li>
+<li>You can configure settings and explore the interface</li>
+<li>The engine <strong>will not auto-start</strong> (requires manual start and will likely fail)</li>
+<li>A clear warning is shown explaining the hardware limitation</li>
+<li>Once you upgrade your hardware, the engine will work automatically</li>
+</ol>
+<p><strong>Hardware Detection:</strong></p>
+<ul>
+<li>Aura automatically detects your GPU using nvidia-smi</li>
+<li>Cards show a ⚠️ warning if requirements aren't met</li>
+<li>You'll see messages like &quot;Requires NVIDIA GPU&quot; or &quot;Requires 6GB VRAM (detected: 4GB)&quot;</li>
+<li>The &quot;Install anyway (for later)&quot; button allows installation despite warnings</li>
+</ul>
+<h3 id="checking-your-gpu">Checking Your GPU</h3>
+<h4 id="windows">Windows</h4>
+<pre><code class="lang-powershell">nvidia-smi
+</code></pre>
+<h4 id="linux">Linux</h4>
+<pre><code class="lang-bash">nvidia-smi
+</code></pre>
+<p>Look for:</p>
+<ul>
+<li>GPU name</li>
+<li>VRAM total (Memory-Usage)</li>
+<li>CUDA Version</li>
+</ul>
+<h2 id="installation-methods">Installation Methods</h2>
+<h3 id="method-1-automatic-installation-recommended">Method 1: Automatic Installation (Recommended)</h3>
+<ol>
+<li><strong>Open Aura Video Studio</strong></li>
+<li><strong>Go to Settings → Download Center → Engines</strong></li>
+<li><strong>Find &quot;Stable Diffusion WebUI&quot;</strong></li>
+<li><strong>Click &quot;Install&quot;</strong>
+<ul>
+<li>Downloads A1111 WebUI portable</li>
+<li>Installs to <code>%LOCALAPPDATA%\Aura\Tools\stable-diffusion-webui\</code></li>
+<li>Downloads SD 1.5 base model automatically</li>
+</ul>
+</li>
+<li><strong>Wait for installation to complete</strong> (5-10 minutes)</li>
+<li><strong>Click &quot;Start&quot;</strong> to launch the engine</li>
+</ol>
+<h3 id="method-2-manual-installation">Method 2: Manual Installation</h3>
+<h4 id="windows-1">Windows</h4>
+<ol>
+<li><p><strong>Download A1111 WebUI</strong></p>
+<pre><code class="lang-powershell">cd %LOCALAPPDATA%\Aura\Tools
+git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
+cd stable-diffusion-webui
+</code></pre>
+</li>
+<li><p><strong>Run the installer</strong></p>
+<pre><code class="lang-powershell">.\webui.bat --api --nowebui
+</code></pre>
+</li>
+<li><p><strong>Download models</strong> (optional)</p>
+<ul>
+<li>SD 1.5: <a href="https://huggingface.co/runwayml/stable-diffusion-v1-5">https://huggingface.co/runwayml/stable-diffusion-v1-5</a></li>
+<li>SDXL: <a href="https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0">https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0</a></li>
+<li>Place in <code>models\Stable-diffusion\</code></li>
+</ul>
+</li>
+</ol>
+<h4 id="linux-1">Linux</h4>
+<ol>
+<li><p><strong>Install dependencies</strong></p>
+<pre><code class="lang-bash">sudo apt update
+sudo apt install python3 python3-venv git wget
+</code></pre>
+</li>
+<li><p><strong>Clone WebUI</strong></p>
+<pre><code class="lang-bash">mkdir -p ~/.local/share/aura/tools
+cd ~/.local/share/aura/tools
+git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git
+cd stable-diffusion-webui
+</code></pre>
+</li>
+<li><p><strong>Launch with API</strong></p>
+<pre><code class="lang-bash">./webui.sh --api --nowebui
+</code></pre>
+</li>
+</ol>
+<h2 id="configuration">Configuration</h2>
+<h3 id="port-configuration">Port Configuration</h3>
+<p>Default port: <strong>7860</strong></p>
+<p>To change:</p>
+<ol>
+<li><strong>In Aura</strong>: Settings → Engines → SD WebUI → Port</li>
+<li><strong>Manual</strong>: Edit launch arguments <code>--port 7861</code></li>
+</ol>
+<h3 id="model-selection">Model Selection</h3>
+<h4 id="sd-15-faster-less-vram">SD 1.5 (Faster, Less VRAM)</h4>
+<ul>
+<li><strong>Use when</strong>: VRAM &lt; 12GB</li>
+<li><strong>Generation time</strong>: 10-30 seconds</li>
+<li><strong>Quality</strong>: Good</li>
+<li><strong>Resolution</strong>: 512x512 native</li>
+</ul>
+<h4 id="sdxl-better-quality-more-vram">SDXL (Better Quality, More VRAM)</h4>
+<ul>
+<li><strong>Use when</strong>: VRAM &gt;= 12GB</li>
+<li><strong>Generation time</strong>: 30-60 seconds</li>
+<li><strong>Quality</strong>: Excellent</li>
+<li><strong>Resolution</strong>: 1024x1024 native</li>
+</ul>
+<p>Aura automatically selects the best model based on your VRAM.</p>
+<h3 id="sampler-and-steps">Sampler and Steps</h3>
+<p>Aura uses optimized defaults:</p>
+<ul>
+<li><strong>Sampler</strong>: DPM++ 2M Karras (fast, high quality)</li>
+<li><strong>Steps</strong>: 20 (SD 1.5) or 30 (SDXL)</li>
+</ul>
+<p>To override, edit in Settings → Engines → SD Advanced.</p>
+<h3 id="negative-prompts">Negative Prompts</h3>
+<p>Aura automatically adds quality-boosting negative prompts:</p>
+<pre><code>blurry, low quality, distorted, watermark, text, logo
+</code></pre>
+<h2 id="managed-vs-attached-mode">Managed vs Attached Mode</h2>
+<h3 id="managed-mode-default">Managed Mode (Default)</h3>
+<ul>
+<li>Aura starts and stops SD WebUI automatically</li>
+<li>Logs are captured and displayed in UI</li>
+<li>Health checks ensure availability</li>
+<li><strong>Recommended for most users</strong></li>
+</ul>
+<h3 id="attached-mode-advanced">Attached Mode (Advanced)</h3>
+<ul>
+<li>You start SD WebUI manually</li>
+<li>Aura connects to existing instance</li>
+<li>Useful for:
+<ul>
+<li>Custom launch arguments</li>
+<li>Debugging</li>
+<li>Running multiple tools with same SD instance</li>
+</ul>
+</li>
+</ul>
+<p>To use attached mode:</p>
+<ol>
+<li>Start SD WebUI manually with <code>--api</code> flag</li>
+<li>In Aura: Settings → Engines → SD WebUI → Mode: <strong>Attached</strong></li>
+<li>Set correct URL (e.g., <code>http://127.0.0.1:7860</code>)</li>
+</ol>
+<h2 id="performance-optimization">Performance Optimization</h2>
+<h3 id="speed-optimizations">Speed Optimizations</h3>
+<ol>
+<li><p><strong>Use xformers</strong> (faster attention)</p>
+<pre><code class="lang-bash">--xformers
+</code></pre>
+</li>
+<li><p><strong>Enable half precision</strong> (less VRAM)</p>
+<pre><code class="lang-bash">--medvram  # or --lowvram for very low VRAM
+</code></pre>
+</li>
+<li><p><strong>Batch generation</strong></p>
+<ul>
+<li>Generate multiple images per scene</li>
+<li>Pick best result automatically</li>
+</ul>
+</li>
+</ol>
+<h3 id="quality-optimizations">Quality Optimizations</h3>
+<ol>
+<li><p><strong>Increase steps</strong> (slower but better)</p>
+<ul>
+<li>SD 1.5: 30-50 steps</li>
+<li>SDXL: 40-60 steps</li>
+</ul>
+</li>
+<li><p><strong>Use better samplers</strong></p>
+<ul>
+<li>DPM++ SDE Karras (slower, best quality)</li>
+<li>Euler a (faster, creative)</li>
+</ul>
+</li>
+<li><p><strong>Add LoRAs</strong> (style customization)</p>
+<ul>
+<li>Place in <code>models/Lora/</code></li>
+<li>Reference in prompts: <code>&lt;lora:name:0.8&gt;</code></li>
+</ul>
+</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="sd-webui-wont-start">SD WebUI Won't Start</h3>
+<h4 id="check-gpu">Check GPU</h4>
+<pre><code class="lang-powershell">nvidia-smi
+</code></pre>
+<ul>
+<li>Ensure GPU is detected</li>
+<li>Check VRAM is available</li>
+<li>Update drivers if needed</li>
+</ul>
+<h4 id="check-logs">Check Logs</h4>
+<pre><code>%LOCALAPPDATA%\Aura\logs\tools\stable-diffusion-webui.log
+</code></pre>
+<p>Common errors:</p>
+<ul>
+<li><strong>Out of memory</strong>: Reduce batch size or use <code>--medvram</code></li>
+<li><strong>CUDA error</strong>: Update NVIDIA drivers</li>
+<li><strong>Port in use</strong>: Change port in settings</li>
+</ul>
+<h3 id="generation-fails">Generation Fails</h3>
+<h4 id="not-enough-vram">Not Enough VRAM</h4>
+<ul>
+<li>Switch to SD 1.5 instead of SDXL</li>
+<li>Add <code>--medvram</code> or <code>--lowvram</code> flag</li>
+<li>Reduce resolution (512x512 or 768x768)</li>
+<li>Close other GPU applications</li>
+</ul>
+<h4 id="model-not-found">Model Not Found</h4>
+<ul>
+<li>Download model manually</li>
+<li>Place in <code>models\Stable-diffusion\</code></li>
+<li>Restart SD WebUI</li>
+<li>Check model name in Aura settings</li>
+</ul>
+<h3 id="slow-generation">Slow Generation</h3>
+<ul>
+<li><strong>Expected times</strong>:
+<ul>
+<li>SD 1.5: 10-30 seconds (6GB VRAM)</li>
+<li>SDXL: 30-60 seconds (12GB VRAM)</li>
+</ul>
+</li>
+<li><strong>Slower than expected?</strong>
+<ul>
+<li>Close background apps</li>
+<li>Check GPU usage: <code>nvidia-smi</code></li>
+<li>Reduce steps in settings</li>
+<li>Use faster sampler (Euler a)</li>
+</ul>
+</li>
+</ul>
+<h3 id="black-images">Black Images</h3>
+<p>Usually caused by:</p>
+<ol>
+<li><strong>NSFW filter triggered</strong> - adjust prompt</li>
+<li><strong>CUDA out of memory</strong> - use <code>--medvram</code></li>
+<li><strong>Model corrupted</strong> - re-download model</li>
+</ol>
+<h2 id="model-management">Model Management</h2>
+<h3 id="where-models-are-stored">Where Models Are Stored</h3>
+<p><strong>Default locations:</strong></p>
+<pre><code>%LOCALAPPDATA%\Aura\Tools\stable-diffusion-webui\models\
+├── Stable-diffusion\  (base models and refiners)
+├── VAE\              (VAE models)
+└── Lora\             (LoRA models)
+</code></pre>
+<h3 id="managing-models-with-aura">Managing Models with Aura</h3>
+<p>Aura provides a built-in <strong>Models &amp; Voices Manager</strong> to help you:</p>
+<ul>
+<li>View all installed models with file locations</li>
+<li>See model sizes and verification status</li>
+<li>Add external folders with your existing model collections</li>
+<li>Open model folders directly from the UI</li>
+<li>Verify model checksums (if available)</li>
+<li>Remove models you no longer need</li>
+</ul>
+<p><strong>To access the Model Manager:</strong></p>
+<ol>
+<li>Go to <strong>Settings → Download Center → Engines</strong></li>
+<li>Find your installed Stable Diffusion engine</li>
+<li>Expand the <strong>&quot;Models &amp; Voices&quot;</strong> section</li>
+<li>View, manage, and organize your models</li>
+</ol>
+<h3 id="using-external-model-folders">Using External Model Folders</h3>
+<p>If you already have a collection of SD models in another location, you can add them as external folders without copying:</p>
+<ol>
+<li>In the Model Manager, click <strong>&quot;Add External Folder&quot;</strong></li>
+<li>Enter the path to your model folder (e.g., <code>D:\StableDiffusion\Models</code>)</li>
+<li>Aura will index all models in that folder</li>
+<li>Models remain in their original location (read-only)</li>
+<li>Aura can use these models just like installed ones</li>
+</ol>
+<p><strong>Benefits of external folders:</strong></p>
+<ul>
+<li>No duplication of large model files</li>
+<li>Keep your existing organization</li>
+<li>Share models across multiple applications</li>
+<li>Easy to back up and sync</li>
+</ul>
+<h3 id="model-verification">Model Verification</h3>
+<p>Aura verifies models using SHA256 checksums when available:</p>
+<ul>
+<li><strong>Verified</strong> (✓): Checksum matches the expected value</li>
+<li><strong>Unknown checksum</strong>: Model is user-supplied or from external folder</li>
+<li><strong>Not verified</strong>: Verification failed or checksum mismatch</li>
+</ul>
+<p>To verify a model:</p>
+<ol>
+<li>Open the Model Manager</li>
+<li>Find the model in the list</li>
+<li>Click the checkmark icon to verify</li>
+<li>Aura will compute and compare the checksum</li>
+</ol>
+<h3 id="downloading-additional-models">Downloading Additional Models</h3>
+<h4 id="huggingface">HuggingFace</h4>
+<ol>
+<li>Go to <a href="https://huggingface.co/models">https://huggingface.co/models</a></li>
+<li>Search for &quot;stable diffusion&quot;</li>
+<li>Download <code>.safetensors</code> or <code>.ckpt</code> file</li>
+<li>Place in <code>models\Stable-diffusion\</code></li>
+</ol>
+<h4 id="civitai-community-models">Civitai (Community Models)</h4>
+<ol>
+<li>Go to <a href="https://civitai.com/">https://civitai.com/</a></li>
+<li>Browse models (anime, realistic, etc.)</li>
+<li>Download model file</li>
+<li>Place in <code>models\Stable-diffusion\</code></li>
+<li><strong>Note</strong>: Check license restrictions</li>
+</ol>
+<h3 id="model-file-formats">Model File Formats</h3>
+<ul>
+<li><code>.safetensors</code> - <strong>Recommended</strong> (safe, efficient)</li>
+<li><code>.ckpt</code> - Legacy format (still works)</li>
+</ul>
+<h2 id="advanced-features">Advanced Features</h2>
+<h3 id="vae-image-enhancement">VAE (Image Enhancement)</h3>
+<p>Improve color/detail:</p>
+<ol>
+<li>Download VAE (e.g., <code>vae-ft-mse-840000-ema-pruned.safetensors</code>)</li>
+<li>Place in <code>models\VAE\</code></li>
+<li>Select in WebUI settings</li>
+</ol>
+<h3 id="controlnet-precise-control">ControlNet (Precise Control)</h3>
+<p>Coming soon - allows image-to-image with pose/depth control.</p>
+<h3 id="image-to-image">Image-to-Image</h3>
+<p>Use existing images as starting point:</p>
+<ol>
+<li>Place reference images in project folder</li>
+<li>Aura will automatically use i2i mode</li>
+<li>Adjust denoising strength (0.3-0.7)</li>
+</ol>
+<h2 id="security-and-privacy">Security and Privacy</h2>
+<h3 id="local-processing">Local Processing</h3>
+<ul>
+<li>All generation happens on your PC</li>
+<li>No data sent to external services</li>
+<li>Models run entirely offline</li>
+</ul>
+<h3 id="model-safety">Model Safety</h3>
+<ul>
+<li>Use models from trusted sources</li>
+<li>Verify checksums when possible</li>
+<li>Check licenses for commercial use</li>
+</ul>
+<h3 id="network-binding">Network Binding</h3>
+<p>SD WebUI binds to <code>127.0.0.1</code> only:</p>
+<ul>
+<li>Not accessible from other devices</li>
+<li>Safe for local use</li>
+<li>Use <code>--listen</code> flag only if needed</li>
+</ul>
+<h2 id="updating-sd-webui">Updating SD WebUI</h2>
+<h3 id="automatic-recommended">Automatic (Recommended)</h3>
+<ol>
+<li>Go to Settings → Download Center → Engines</li>
+<li>If update available, click <strong>Update</strong></li>
+</ol>
+<h3 id="manual">Manual</h3>
+<pre><code class="lang-bash">cd %LOCALAPPDATA%\Aura\Tools\stable-diffusion-webui
+git pull
+</code></pre>
+<h2 id="uninstalling">Uninstalling</h2>
+<h3 id="from-aura">From Aura</h3>
+<ol>
+<li>Settings → Download Center → Engines</li>
+<li>Click <strong>Remove</strong> on SD WebUI</li>
+<li>Confirm deletion</li>
+</ol>
+<h3 id="manual-cleanup">Manual Cleanup</h3>
+<pre><code class="lang-powershell">Remove-Item -Recurse -Force &quot;%LOCALAPPDATA%\Aura\Tools\stable-diffusion-webui&quot;
+</code></pre>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki">A1111 WebUI Wiki</a></li>
+<li><a href="https://www.reddit.com/r/StableDiffusion/">Stable Diffusion Subreddit</a></li>
+<li><a href="https://civitai.com/">Model Collections</a></li>
+<li><a href="https://prompthero.com/stable-diffusion-prompts">Prompt Guide</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues specific to Aura integration:</p>
+<ul>
+<li><a href="https://github.com/Coffee285/aura-video-studio/issues">GitHub Issues</a></li>
+<li>Tag: <code>engine:stable-diffusion</code></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/ENGINES_SD.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Error Flow Diagram | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Error Flow Diagram | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ERROR_FLOW_DIAGRAM.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="error-flow-diagram">Error Flow Diagram</h1>
+
+<h2 id="user-journey-error-handling">User Journey: Error Handling</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                    User Initiates Action                         │
+│              (e.g., Generate Video, Create Script)               │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Frontend Makes API Call                       │
+│                  POST /api/script, /api/jobs, etc.               │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Backend: CorrelationIdMiddleware                    │
+│  • Generates/extracts correlation ID from X-Correlation-ID       │
+│  • Adds to response headers                                      │
+│  • Stores in HttpContext.Items[&quot;CorrelationId&quot;]                  │
+│  • Pushes to Serilog LogContext (all logs include it)           │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Backend: Endpoint Processing                   │
+│  • Execute business logic                                        │
+│  • Script generation, TTS, rendering, etc.                       │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                ┌───────────┴───────────┐
+                │                       │
+            ✓ Success               ✗ Error
+                │                       │
+                ▼                       ▼
+    ┌────────────────────┐  ┌────────────────────────────────┐
+    │  Return 200 OK     │  │  ProblemDetailsHelper          │
+    │  with result       │  │  • CreateScriptError()         │
+    └─────────┬──────────┘  │  • Includes correlation ID     │
+              │             │  • Maps to error code (E3xx)   │
+              │             │  • Returns RFC 7807 response   │
+              │             └─────────────┬──────────────────┘
+              │                           │
+              │                           ▼
+              │             ┌────────────────────────────────┐
+              │             │  HTTP Response                 │
+              │             │  Status: 400/401/408/429/500   │
+              │             │  Headers:                      │
+              │             │    X-Correlation-ID: abc123    │
+              │             │  Body (ProblemDetails):        │
+              │             │  {                             │
+              │             │    &quot;title&quot;: &quot;Script Failed&quot;,   │
+              │             │    &quot;detail&quot;: &quot;...&quot;,            │
+              │             │    &quot;type&quot;: &quot;.../E300&quot;,         │
+              │             │    &quot;status&quot;: 500,              │
+              │             │    &quot;correlationId&quot;: &quot;abc123&quot;   │
+              │             │  }                             │
+              │             └─────────────┬──────────────────┘
+              │                           │
+              └───────────────┬───────────┘
+                              │
+                              ▼
+            ┌──────────────────────────────────────────┐
+            │        Frontend: Response Handler         │
+            │  • parseApiError() utility                │
+            │  • Extracts correlation ID from:          │
+            │    - Response body (correlationId field)  │
+            │    - Response header (X-Correlation-ID)   │
+            │  • Extracts error code from type URI      │
+            │  • Formats for display                    │
+            └─────────────────┬────────────────────────┘
+                              │
+                              ▼
+            ┌──────────────────────────────────────────┐
+            │        Error Toast Display                │
+            │  ╔════════════════════════════════════╗  │
+            │  ║ ⚠️  Generation Failed              ║  │
+            │  ║                                    ║  │
+            │  ║ The script generation service      ║  │
+            │  ║ encountered an error.              ║  │
+            │  ║                                    ║  │
+            │  ║ Correlation ID: abc123             ║  │
+            │  ║ Error Code: E300                   ║  │
+            │  ║                                    ║  │
+            │  ║ [Retry]  [Open Logs]              ║  │
+            │  ╚════════════════════════════════════╝  │
+            └─────────────────┬────────────────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+            User clicks...      User clicks...
+                &quot;Retry&quot;           &quot;Open Logs&quot;
+                    │                   │
+                    ▼                   ▼
+    ┌──────────────────────┐   ┌──────────────────────────┐
+    │  onRetry() Handler   │   │  openLogsFolder()        │
+    │  • Re-executes the   │   │  • POST /api/logs/       │
+    │    failed operation  │   │    open-folder           │
+    │  • Same parameters   │   │  • Opens file explorer:  │
+    │  • New correlation   │   │    - Windows: explorer   │
+    │    ID generated      │   │    - macOS: open         │
+    └──────────┬───────────┘   │    - Linux: xdg-open     │
+               │               │  • Falls back to /logs   │
+               │               │    page if fails         │
+               │               └──────────────────────────┘
+               │
+               └──► [Loop back to &quot;Frontend Makes API Call&quot;]
+</code></pre>
+<h2 id="error-code-flow">Error Code Flow</h2>
+<pre><code>Error Occurs → Map to E3xx Code → Return Appropriate HTTP Status
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    Error Code Mapping (E3xx)                     │
+├─────────┬───────────────────────────────────────────┬───────────┤
+│  Code   │ Description                               │ Status    │
+├─────────┼───────────────────────────────────────────┼───────────┤
+│  E300   │ General script provider failure           │   500     │
+│  E301   │ Request timeout or cancellation           │   408     │
+│  E302   │ Provider returned empty/invalid script    │   500     │
+│  E303   │ Invalid enum value / validation error     │   400     │
+│  E304   │ Invalid plan parameters                   │   400     │
+│  E305   │ Provider not available                    │   500     │
+│  E306   │ Authentication failure (API keys)         │   401     │
+│  E307   │ Offline mode restriction                  │   403     │
+│  E308   │ Rate limit exceeded                       │   429     │
+│  E309   │ Invalid script format/structure           │   422     │
+│  E310   │ Content policy violation                  │   400     │
+│  E311   │ Insufficient system resources             │   503     │
+└─────────┴───────────────────────────────────────────┴───────────┘
+</code></pre>
+<h2 id="correlation-id-lifecycle">Correlation ID Lifecycle</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                                                                  │
+│  1. Request Arrives                                              │
+│     ├─ Client sends X-Correlation-ID: existing-id (optional)    │
+│     └─ OR Middleware generates new GUID                          │
+│                                                                  │
+│  2. Throughout Request Processing                                │
+│     ├─ Stored in HttpContext.Items[&quot;CorrelationId&quot;]             │
+│     ├─ Pushed to Serilog LogContext                             │
+│     └─ All logs include: [CorrelationId] field                  │
+│                                                                  │
+│  3. Error Occurs                                                 │
+│     ├─ ProblemDetailsHelper retrieves from HttpContext          │
+│     └─ Includes in response body extensions                     │
+│                                                                  │
+│  4. Response Sent                                                │
+│     ├─ X-Correlation-ID header: abc123                          │
+│     ├─ Body includes correlationId: &quot;abc123&quot;                    │
+│     └─ All related logs have same ID                            │
+│                                                                  │
+│  5. Frontend Displays                                            │
+│     ├─ Toast shows: &quot;Correlation ID: abc123&quot;                    │
+│     ├─ User can copy for support                                │
+│     └─ Can search logs by ID                                    │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="log-access-flow">Log Access Flow</h2>
+<pre><code>User Clicks &quot;Open Logs&quot; Button
+            │
+            ▼
+    openLogsFolder() in frontend
+            │
+            ▼
+    POST /api/logs/open-folder
+            │
+            ▼
+    Backend detects platform:
+            │
+    ┌───────┼───────┐
+    │       │       │
+Windows   macOS   Linux
+    │       │       │
+    ▼       ▼       ▼
+explorer  open  xdg-open
+   .exe   cmd   (or fallback)
+    │       │       │
+    └───────┼───────┘
+            │
+            ▼
+    File Explorer Opens
+    Showing: logs/aura-api-YYYYMMDD.log
+            │
+            ▼
+    User Can:
+    • View recent logs
+    • Search by correlation ID
+    • Copy logs for support ticket
+    • Diagnose issues
+</code></pre>
+<h2 id="benefits">Benefits</h2>
+<h3 id="for-users">For Users</h3>
+<ul>
+<li>✅ <strong>Clear feedback</strong>: Know exactly what went wrong</li>
+<li>✅ <strong>Self-service</strong>: Retry failed operations immediately</li>
+<li>✅ <strong>Debugging</strong>: Access logs without technical knowledge</li>
+<li>✅ <strong>Support</strong>: Provide correlation ID for faster help</li>
+</ul>
+<h3 id="for-developers">For Developers</h3>
+<ul>
+<li>✅ <strong>Traceability</strong>: Track errors across frontend/backend</li>
+<li>✅ <strong>Debugging</strong>: Find all logs for a specific request</li>
+<li>✅ <strong>Consistency</strong>: All errors follow same structure</li>
+<li>✅ <strong>Standards</strong>: RFC 7807 ProblemDetails compliance</li>
+</ul>
+<h3 id="for-support-teams">For Support Teams</h3>
+<ul>
+<li>✅ <strong>Quick diagnosis</strong>: Correlation ID leads straight to logs</li>
+<li>✅ <strong>Context</strong>: Error code explains category of issue</li>
+<li>✅ <strong>User experience</strong>: Users can self-resolve many issues</li>
+<li>✅ <strong>Efficiency</strong>: Less back-and-forth for error details</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ERROR_FLOW_DIAGRAM.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Backend Auto-Start Architecture | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Backend Auto-Start Architecture | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/BACKEND_AUTO_START.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="backend-auto-start-architecture">Backend Auto-Start Architecture</h1>
+
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio automatically manages the .NET backend (Aura.Api) lifecycle when running as an Electron desktop application. Users never need to manually run <code>dotnet run --project Aura.Api</code>. This document explains how the auto-start system works.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="components">Components</h3>
+<ol>
+<li><p><strong>Electron Main Process</strong> (<code>Aura.Desktop/electron/main.js</code>)</p>
+<ul>
+<li>Application entry point</li>
+<li>Orchestrates all modules including backend service</li>
+<li>Handles startup sequence and error recovery</li>
+</ul>
+</li>
+<li><p><strong>Backend Service</strong> (<code>Aura.Desktop/electron/backend-service.js</code>)</p>
+<ul>
+<li>Manages .NET backend process lifecycle</li>
+<li>Spawns backend executable or uses <code>dotnet run</code> in development</li>
+<li>Monitors health and handles restarts</li>
+<li>Ensures clean shutdown</li>
+</ul>
+</li>
+<li><p><strong>Safe Initialization</strong> (<code>Aura.Desktop/electron/safe-initialization.js</code>)</p>
+<ul>
+<li>Provides wrapped initialization with error handling</li>
+<li>Manages backend startup timeout (60 seconds)</li>
+<li>Implements degraded mode fallbacks</li>
+</ul>
+</li>
+<li><p><strong>Process Manager</strong> (<code>Aura.Desktop/electron/process-manager.js</code>)</p>
+<ul>
+<li>Centralized process tracking</li>
+<li>Monitors all child processes including backend</li>
+<li>Ensures no zombie processes</li>
+</ul>
+</li>
+<li><p><strong>Shutdown Orchestrator</strong> (<code>Aura.Desktop/electron/shutdown-orchestrator.js</code>)</p>
+<ul>
+<li>Coordinates graceful shutdown</li>
+<li>Stops backend before app exit</li>
+<li>Cleans up temporary files</li>
+</ul>
+</li>
+</ol>
+<h3 id="startup-sequence">Startup Sequence</h3>
+<pre><code class="lang-mermaid">sequenceDiagram
+    participant User
+    participant Electron
+    participant BackendService
+    participant AuraApi
+    participant Frontend
+
+    User-&gt;&gt;Electron: Launch Application
+    Electron-&gt;&gt;BackendService: Initialize and Start
+    BackendService-&gt;&gt;BackendService: Detect backend executable
+    BackendService-&gt;&gt;AuraApi: spawn() process
+    BackendService-&gt;&gt;AuraApi: Wait for health endpoint
+    loop Health Check
+        BackendService-&gt;&gt;AuraApi: GET /healthz/simple
+        AuraApi--&gt;&gt;BackendService: {status: &quot;ok&quot;}
+    end
+    BackendService--&gt;&gt;Electron: Backend Ready
+    Electron-&gt;&gt;Frontend: Create Main Window
+    Frontend-&gt;&gt;AuraApi: API Requests
+</code></pre>
+<h3 id="backend-detection">Backend Detection</h3>
+<p>The BackendService automatically detects the backend executable in this priority order:</p>
+<ol>
+<li><p><strong>Production Build</strong> (Installed/Portable)</p>
+<ul>
+<li><code>resources/backend/win-x64/Aura.Api.exe</code></li>
+<li><code>resources/backend/Aura.Api.exe</code></li>
+</ul>
+</li>
+<li><p><strong>Development Build</strong></p>
+<ul>
+<li><code>Aura.Api/bin/Release/net8.0/win-x64/Aura.Api.exe</code></li>
+<li><code>Aura.Api/bin/Debug/net8.0/Aura.Api.exe</code></li>
+</ul>
+</li>
+<li><p><strong>Fallback to .NET CLI</strong></p>
+<ul>
+<li>Uses <code>dotnet run --project Aura.Api</code> if executable not found</li>
+<li>Requires .NET 8 SDK installed</li>
+</ul>
+</li>
+</ol>
+<h3 id="health-checking">Health Checking</h3>
+<h4 id="backend-endpoints">Backend Endpoints</h4>
+<p>The backend provides multiple health endpoints:</p>
+<ul>
+<li><p><strong><code>/healthz/simple</code></strong> - Lightweight check (no dependencies)</p>
+<ul>
+<li>Returns <code>{status: &quot;ok&quot;}</code> immediately</li>
+<li>Used by Electron for startup detection</li>
+</ul>
+</li>
+<li><p><strong><code>/api/health/live</code></strong> - Liveness check</p>
+<ul>
+<li>Verifies HTTP server is responding</li>
+<li>Used for basic health monitoring</li>
+</ul>
+</li>
+<li><p><strong><code>/api/health/ready</code></strong> - Readiness check</p>
+<ul>
+<li>Verifies all dependencies are ready (database, providers, etc.)</li>
+<li>Returns 503 if unhealthy, 200 if ready</li>
+<li>Used before processing requests</li>
+</ul>
+</li>
+</ul>
+<h4 id="frontend-health-service">Frontend Health Service</h4>
+<p>The frontend (<code>Aura.Web/src/services/backendHealthService.ts</code>) provides:</p>
+<ul>
+<li><strong>Retry Logic</strong>: Exponential backoff with configurable retries</li>
+<li><strong>Timeout Handling</strong>: Graceful degradation on timeout</li>
+<li><strong>Status Caching</strong>: Reduces unnecessary health checks</li>
+<li><strong>Wait for Ready</strong>: Polls until backend becomes healthy</li>
+</ul>
+<p>Example usage:</p>
+<pre><code class="lang-typescript">import { backendHealthService } from '@/services/backendHealthService';
+
+// Quick check
+const status = await backendHealthService.quickCheck();
+
+// Wait for backend (useful during startup)
+const isHealthy = await backendHealthService.waitForHealthy(30000); // 30s timeout
+
+// Check with retries
+const status = await backendHealthService.checkHealth({
+  timeout: 5000,
+  maxRetries: 10,
+  retryDelay: 1000,
+  exponentialBackoff: true,
+});
+</code></pre>
+<h3 id="backend-status-banner">Backend Status Banner</h3>
+<p>The <code>BackendStatusBanner</code> component (<code>Aura.Web/src/components/Onboarding/BackendStatusBanner.tsx</code>) provides user-facing status:</p>
+<ol>
+<li><strong>Loading State</strong>: Shows &quot;Starting Backend Server...&quot; on initial load</li>
+<li><strong>Auto-Retry</strong>: Automatically retries for 15 seconds during startup</li>
+<li><strong>Waiting State</strong>: Shows retry progress while backend is starting</li>
+<li><strong>Error State</strong>: Shows error only after retries exhausted</li>
+<li><strong>Success State</strong>: Banner disappears when backend is healthy</li>
+</ol>
+<h3 id="shutdown-sequence">Shutdown Sequence</h3>
+<pre><code class="lang-mermaid">sequenceDiagram
+    participant User
+    participant Electron
+    participant ShutdownOrchestrator
+    participant BackendService
+    participant AuraApi
+
+    User-&gt;&gt;Electron: Close Application
+    Electron-&gt;&gt;ShutdownOrchestrator: Initiate Shutdown
+    ShutdownOrchestrator-&gt;&gt;BackendService: Stop Backend
+    BackendService-&gt;&gt;AuraApi: POST /api/system/shutdown (graceful)
+    alt Graceful Success
+        AuraApi--&gt;&gt;BackendService: 200 OK
+        AuraApi-&gt;&gt;AuraApi: Exit cleanly
+    else Graceful Timeout (5s)
+        BackendService-&gt;&gt;AuraApi: SIGTERM (Windows: taskkill)
+        alt SIGTERM Success
+            AuraApi--&gt;&gt;BackendService: Process exits
+        else Force Required (3s)
+            BackendService-&gt;&gt;AuraApi: SIGKILL (Windows: taskkill /F)
+        end
+    end
+    BackendService--&gt;&gt;ShutdownOrchestrator: Backend Stopped
+    ShutdownOrchestrator-&gt;&gt;Electron: Cleanup Complete
+    Electron-&gt;&gt;User: Application Closed
+</code></pre>
+<h2 id="development-vs-production">Development vs Production</h2>
+<h3 id="development-mode">Development Mode</h3>
+<p>When running <code>npm run dev</code> in Aura.Desktop:</p>
+<ul>
+<li>Backend starts via <code>dotnet run --project Aura.Api</code></li>
+<li>Environment set to <code>Development</code></li>
+<li>Hot reload NOT supported (backend must restart manually if code changes)</li>
+<li>Logs to console and file</li>
+</ul>
+<h3 id="production-mode">Production Mode</h3>
+<p>When running installed application:</p>
+<ul>
+<li>Backend runs from compiled executable</li>
+<li>Environment set to <code>Production</code></li>
+<li>Self-contained (no .NET SDK required)</li>
+<li>Logs to file only</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="environment-variables">Environment Variables</h3>
+<p>The backend respects these environment variables (set by Electron):</p>
+<pre><code class="lang-bash">ASPNETCORE_URLS=http://localhost:5005      # Listening URL and port
+ASPNETCORE_ENVIRONMENT=Production          # Environment (Development/Production)
+DOTNET_CLI_TELEMETRY_OPTOUT=1             # Disable .NET telemetry
+AURA_DATA_ROOT=/path/to/data              # Data directory
+AURA_TEMP_ROOT=/path/to/temp              # Temp directory
+AURA_FFMPEG_PATH=/path/to/ffmpeg          # FFmpeg executable path
+</code></pre>
+<h3 id="network-contract">Network Contract</h3>
+<p>The backend contract is resolved via <code>network-contract.js</code>:</p>
+<pre><code class="lang-javascript">{
+  baseUrl: &quot;http://localhost:5005&quot;,
+  port: 5005,
+  shouldSelfHost: true,              // Electron manages process
+  healthEndpoint: &quot;/health/live&quot;,
+  readinessEndpoint: &quot;/health/ready&quot;,
+  maxStartupMs: 60000,               // 60 second timeout
+  pollIntervalMs: 1000               // Check every 1 second
+}
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="backend-fails-to-start">Backend Fails to Start</h3>
+<p><strong>Symptoms</strong>: &quot;Backend Server Not Reachable&quot; error persists after 15 seconds</p>
+<p><strong>Possible Causes</strong>:</p>
+<ol>
+<li>.NET 8 runtime not installed (production) or SDK not installed (development)</li>
+<li>Port 5005 already in use by another application</li>
+<li>Firewall blocking the backend process</li>
+<li>Backend executable missing or corrupted</li>
+<li>Backend crashes on startup</li>
+</ol>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Check application logs: <code>%LOCALAPPDATA%/Aura/logs/</code></li>
+<li>Verify .NET installed: <code>dotnet --version</code> (should show 8.0.x)</li>
+<li>Check port availability: <code>netstat -ano | findstr :5005</code></li>
+<li>Run backend manually to see errors: <code>cd Aura.Api &amp;&amp; dotnet run</code></li>
+<li>Check Windows Event Viewer for .NET errors</li>
+</ol>
+<h3 id="backend-starts-but-frontend-cant-connect">Backend Starts but Frontend Can't Connect</h3>
+<p><strong>Symptoms</strong>: Backend console shows &quot;Application started&quot; but frontend shows error</p>
+<p><strong>Possible Causes</strong>:</p>
+<ol>
+<li>Firewall blocking localhost connections</li>
+<li>Antivirus blocking the application</li>
+<li>Incorrect VITE_API_BASE_URL in frontend config</li>
+<li>CORS configuration issue</li>
+</ol>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Verify backend is listening: Visit <code>http://localhost:5005/healthz/simple</code> in browser</li>
+<li>Check frontend config: <code>VITE_API_BASE_URL</code> in <code>.env.local</code></li>
+<li>Disable antivirus temporarily to test</li>
+<li>Check browser console for CORS errors</li>
+</ol>
+<h3 id="zombie-backend-processes">Zombie Backend Processes</h3>
+<p><strong>Symptoms</strong>: Backend process remains running after closing application</p>
+<p><strong>Possible Causes</strong>:</p>
+<ol>
+<li>Shutdown timeout too short</li>
+<li>Process manager failed to track process</li>
+<li>Backend unresponsive to signals</li>
+</ol>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Check shutdown logs in application logs</li>
+<li>Manually kill process: <code>taskkill /F /IM Aura.Api.exe</code></li>
+<li>Restart computer if process is stuck</li>
+<li>Report issue on GitHub with logs</li>
+</ol>
+<h2 id="testing">Testing</h2>
+<h3 id="manual-testing">Manual Testing</h3>
+<ol>
+<li><p><strong>Clean Start Test</strong>:</p>
+<pre><code class="lang-bash"># Kill any existing backend processes
+taskkill /F /IM Aura.Api.exe
+
+# Start Electron app
+cd Aura.Desktop
+npm start
+
+# Verify backend auto-starts (check task manager)
+# Frontend should connect within 5 seconds
+</code></pre>
+</li>
+<li><p><strong>Restart Test</strong>:</p>
+<ul>
+<li>Start application</li>
+<li>Verify backend running</li>
+<li>Close application</li>
+<li>Verify backend stopped (check task manager)</li>
+<li>Start application again</li>
+<li>Verify no errors</li>
+</ul>
+</li>
+<li><p><strong>Crash Recovery Test</strong>:</p>
+<ul>
+<li>Start application</li>
+<li>Kill backend process manually: <code>taskkill /F /IM Aura.Api.exe</code></li>
+<li>Wait for health check failure</li>
+<li>Restart application</li>
+<li>Verify backend starts successfully</li>
+</ul>
+</li>
+</ol>
+<h3 id="automated-tests">Automated Tests</h3>
+<p>Located in <code>Aura.Desktop/test/</code>:</p>
+<ul>
+<li><code>test-electron-backend-integration.js</code> - Integration tests</li>
+<li><code>test-process-manager.js</code> - Process tracking tests</li>
+<li><code>test-shutdown-orchestrator.js</code> - Shutdown tests</li>
+</ul>
+<p>Run tests:</p>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm test
+</code></pre>
+<h2 id="future-improvements">Future Improvements</h2>
+<p>Potential enhancements to the auto-start system:</p>
+<ol>
+<li><strong>Multi-instance Detection</strong>: Prevent multiple instances from starting conflicting backends</li>
+<li><strong>Port Auto-Selection</strong>: Automatically choose available port if 5005 is busy</li>
+<li><strong>Backend Health Dashboard</strong>: Real-time monitoring in UI</li>
+<li><strong>Automatic Restart</strong>: Auto-restart backend if it crashes during operation</li>
+<li><strong>External Backend Support</strong>: Connect to existing backend instance instead of spawning</li>
+<li><strong>Backend Update Management</strong>: Seamless backend updates without restart</li>
+</ol>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="../../INSTALLATION.html">Installation Guide</a></li>
+<li><a href="../../DEVELOPMENT.html">Development Guide</a></li>
+<li><a href="../../TROUBLESHOOTING.html">Troubleshooting</a></li>
+<li><a href="../api/README.html">Backend API Documentation</a></li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li>Backend Service Implementation: <code>Aura.Desktop/electron/backend-service.js</code></li>
+<li>Electron Main Process: <code>Aura.Desktop/electron/main.js</code></li>
+<li>Frontend Health Service: <code>Aura.Web/src/services/backendHealthService.ts</code></li>
+<li>Backend Health Endpoints: <code>Aura.Api/Program.cs</code> (lines 2500-2568, 5323-5331)</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/BACKEND_AUTO_START.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

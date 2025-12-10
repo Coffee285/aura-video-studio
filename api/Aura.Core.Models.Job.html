@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class Job | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class Job | Aura Video Studio ">
+      
+      <meta name="description" content="Represents a video generation job with stage-by-stage progress tracking. State Machine Invariants:  Queued → Running → (Done | Failed | Canceled) Terminal states (Done, Failed, Canceled) cannot transition to any other state Progress (Percent) must be monotonically increasing (never decreases) EndedUtc must be set when entering any terminal state  Timestamp Invariants:  CreatedUtc: Set on job creation, never changes QueuedUtc: Set when job enters Queued state (same as CreatedUtc for new jobs) StartedUtc: Set when job transitions from Queued to Running CompletedUtc: Set when job transitions to Done/Succeeded CanceledUtc: Set when job transitions to Canceled EndedUtc: Set to CompletedUtc, CanceledUtc, or FailedAt when entering terminal state  Resumability Rules:  Jobs can only be resumed if CanResume is true Resume is supported for jobs that failed at specific checkpoints LastCompletedStep indicates the last successful checkpoint Not all stages support resumption (e.g., rendering is atomic)">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/new/main/apiSpec/new?filename=Aura_Core_Models_Job.md&amp;value=---%0Auid%3A%20Aura.Core.Models.Job%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Aura.Core.Models.Job">
+
+
+
+  <h1 id="Aura_Core_Models_Job" data-uid="Aura.Core.Models.Job" class="text-break">
+Class Job  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L29"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Aura.html">Aura</a>.<a class="xref" href="Aura.Core.html">Core</a>.<a class="xref" href="Aura.Core.Models.html">Models</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Aura.Core.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Represents a video generation job with stage-by-stage progress tracking.</p>
+<p>State Machine Invariants:</p>
+<ul>
+<li>Queued → Running → (Done | Failed | Canceled)</li>
+<li>Terminal states (Done, Failed, Canceled) cannot transition to any other state</li>
+<li>Progress (Percent) must be monotonically increasing (never decreases)</li>
+<li>EndedUtc must be set when entering any terminal state</li>
+</ul>
+<p>Timestamp Invariants:</p>
+<ul>
+<li>CreatedUtc: Set on job creation, never changes</li>
+<li>QueuedUtc: Set when job enters Queued state (same as CreatedUtc for new jobs)</li>
+<li>StartedUtc: Set when job transitions from Queued to Running</li>
+<li>CompletedUtc: Set when job transitions to Done/Succeeded</li>
+<li>CanceledUtc: Set when job transitions to Canceled</li>
+<li>EndedUtc: Set to CompletedUtc, CanceledUtc, or FailedAt when entering terminal state</li>
+</ul>
+<p>Resumability Rules:</p>
+<ul>
+<li>Jobs can only be resumed if CanResume is true</li>
+<li>Resume is supported for jobs that failed at specific checkpoints</li>
+<li>LastCompletedStep indicates the last successful checkpoint</li>
+<li>Not all stages support resumption (e.g., rendering is atomic)</li>
+</ul>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public record Job : IEquatable&lt;Job&gt;</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">Job</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="Aura.Core.Models.Job.html">Job</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Aura_Core_Models_Job_AgentPerformance_" data-uid="Aura.Core.Models.Job.AgentPerformance*"></a>
+
+  <h3 id="Aura_Core_Models_Job_AgentPerformance" data-uid="Aura.Core.Models.Job.AgentPerformance">
+  AgentPerformance
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L53"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Agent performance metrics if agentic mode was used</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public AgentPerformanceReport? AgentPerformance { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.AI.Agents.Telemetry.AgentPerformanceReport.html">AgentPerformanceReport</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Artifacts_" data-uid="Aura.Core.Models.Job.Artifacts*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Artifacts" data-uid="Aura.Core.Models.Job.Artifacts">
+  Artifacts
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L47"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Artifacts produced during job execution (video, subtitles, etc.)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public List&lt;JobArtifact&gt; Artifacts { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List</a>&lt;<a class="xref" href="Aura.Core.Models.JobArtifact.html">JobArtifact</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Brief_" data-uid="Aura.Core.Models.Job.Brief*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Brief" data-uid="Aura.Core.Models.Job.Brief">
+  Brief
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L71"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Original brief for the job</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Brief? Brief { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.Brief.html">Brief</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_CanResume_" data-uid="Aura.Core.Models.Job.CanResume*"></a>
+
+  <h3 id="Aura_Core_Models_Job_CanResume" data-uid="Aura.Core.Models.Job.CanResume">
+  CanResume
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L116"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Whether this job can be resumed from LastCompletedStep</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool CanResume { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_CanceledUtc_" data-uid="Aura.Core.Models.Job.CanceledUtc*"></a>
+
+  <h3 id="Aura_Core_Models_Job_CanceledUtc" data-uid="Aura.Core.Models.Job.CanceledUtc">
+  CanceledUtc
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L95"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>UTC timestamp when job was canceled (Running → Canceled transition)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime? CanceledUtc { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_CompletedUtc_" data-uid="Aura.Core.Models.Job.CompletedUtc*"></a>
+
+  <h3 id="Aura_Core_Models_Job_CompletedUtc" data-uid="Aura.Core.Models.Job.CompletedUtc">
+  CompletedUtc
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L92"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>UTC timestamp when job completed successfully (Running → Done transition)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime? CompletedUtc { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_CorrelationId_" data-uid="Aura.Core.Models.Job.CorrelationId*"></a>
+
+  <h3 id="Aura_Core_Models_Job_CorrelationId" data-uid="Aura.Core.Models.Job.CorrelationId">
+  CorrelationId
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L62"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Correlation ID for request tracing</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? CorrelationId { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_CreatedUtc_" data-uid="Aura.Core.Models.Job.CreatedUtc*"></a>
+
+  <h3 id="Aura_Core_Models_Job_CreatedUtc" data-uid="Aura.Core.Models.Job.CreatedUtc">
+  CreatedUtc
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L83"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>UTC timestamp when job was created (immutable)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime CreatedUtc { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_CurrentProgress_" data-uid="Aura.Core.Models.Job.CurrentProgress*"></a>
+
+  <h3 id="Aura_Core_Models_Job_CurrentProgress" data-uid="Aura.Core.Models.Job.CurrentProgress">
+  CurrentProgress
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L128"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Current detailed progress information</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GenerationProgress? CurrentProgress { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.GenerationProgress.html">GenerationProgress</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_EndedUtc_" data-uid="Aura.Core.Models.Job.EndedUtc*"></a>
+
+  <h3 id="Aura_Core_Models_Job_EndedUtc" data-uid="Aura.Core.Models.Job.EndedUtc">
+  EndedUtc
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L98"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>UTC timestamp when job reached terminal state (Done, Failed, or Canceled)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime? EndedUtc { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_ErrorMessage_" data-uid="Aura.Core.Models.Job.ErrorMessage*"></a>
+
+  <h3 id="Aura_Core_Models_Job_ErrorMessage" data-uid="Aura.Core.Models.Job.ErrorMessage">
+  ErrorMessage
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L65"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>User-friendly error message if job failed</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? ErrorMessage { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Errors_" data-uid="Aura.Core.Models.Job.Errors*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Errors" data-uid="Aura.Core.Models.Job.Errors">
+  Errors
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L110"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Errors collected during execution (may include recoverable errors)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public List&lt;JobStepError&gt; Errors { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List</a>&lt;<a class="xref" href="Aura.Core.Models.JobStepError.html">JobStepError</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Eta_" data-uid="Aura.Core.Models.Job.Eta*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Eta" data-uid="Aura.Core.Models.Job.Eta">
+  Eta
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L44"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Estimated time remaining for completion</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public TimeSpan? Eta { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.timespan">TimeSpan</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_FailureDetails_" data-uid="Aura.Core.Models.Job.FailureDetails*"></a>
+
+  <h3 id="Aura_Core_Models_Job_FailureDetails" data-uid="Aura.Core.Models.Job.FailureDetails">
+  FailureDetails
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L68"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Detailed failure information if job failed</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public JobFailure? FailureDetails { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.JobFailure.html">JobFailure</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_FinishedAt_" data-uid="Aura.Core.Models.Job.FinishedAt*"></a>
+
+  <h3 id="Aura_Core_Models_Job_FinishedAt" data-uid="Aura.Core.Models.Job.FinishedAt">
+  FinishedAt
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L59"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Legacy: When job finished (use EndedUtc instead)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime? FinishedAt { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Id_" data-uid="Aura.Core.Models.Job.Id*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Id" data-uid="Aura.Core.Models.Job.Id">
+  Id
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L32"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Unique identifier for the job</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Id { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_IsQuickDemo_" data-uid="Aura.Core.Models.Job.IsQuickDemo*"></a>
+
+  <h3 id="Aura_Core_Models_Job_IsQuickDemo" data-uid="Aura.Core.Models.Job.IsQuickDemo">
+  IsQuickDemo
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L119"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Whether this job is a Quick Demo with resilient fallback behavior</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsQuickDemo { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_LastCompletedStep_" data-uid="Aura.Core.Models.Job.LastCompletedStep*"></a>
+
+  <h3 id="Aura_Core_Models_Job_LastCompletedStep" data-uid="Aura.Core.Models.Job.LastCompletedStep">
+  LastCompletedStep
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L113"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Last successfully completed step for resume support</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? LastCompletedStep { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Logs_" data-uid="Aura.Core.Models.Job.Logs*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Logs" data-uid="Aura.Core.Models.Job.Logs">
+  Logs
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L50"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Execution logs for debugging and progress tracking</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public List&lt;string&gt; Logs { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Output_" data-uid="Aura.Core.Models.Job.Output*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Output" data-uid="Aura.Core.Models.Job.Output">
+  Output
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L104"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Final output information for completed jobs</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public JobOutput? Output { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.JobOutput.html">JobOutput</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_OutputPath_" data-uid="Aura.Core.Models.Job.OutputPath*"></a>
+
+  <h3 id="Aura_Core_Models_Job_OutputPath" data-uid="Aura.Core.Models.Job.OutputPath">
+  OutputPath
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L122"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Final output path for the rendered video (populated after successful render)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? OutputPath { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Percent_" data-uid="Aura.Core.Models.Job.Percent*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Percent" data-uid="Aura.Core.Models.Job.Percent">
+  Percent
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L41"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Progress percentage (0-100), monotonically increasing</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Percent { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_PlanSpec_" data-uid="Aura.Core.Models.Job.PlanSpec*"></a>
+
+  <h3 id="Aura_Core_Models_Job_PlanSpec" data-uid="Aura.Core.Models.Job.PlanSpec">
+  PlanSpec
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L74"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Plan specification for the job</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public PlanSpec? PlanSpec { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.PlanSpec.html">PlanSpec</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_ProgressHistory_" data-uid="Aura.Core.Models.Job.ProgressHistory*"></a>
+
+  <h3 id="Aura_Core_Models_Job_ProgressHistory" data-uid="Aura.Core.Models.Job.ProgressHistory">
+  ProgressHistory
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L125"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Progress history for recovery and replay</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public List&lt;GenerationProgress&gt; ProgressHistory { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List</a>&lt;<a class="xref" href="Aura.Core.Models.GenerationProgress.html">GenerationProgress</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_QueuedUtc_" data-uid="Aura.Core.Models.Job.QueuedUtc*"></a>
+
+  <h3 id="Aura_Core_Models_Job_QueuedUtc" data-uid="Aura.Core.Models.Job.QueuedUtc">
+  QueuedUtc
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L86"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>UTC timestamp when job was added to queue (typically same as CreatedUtc)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime QueuedUtc { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_RenderSpec_" data-uid="Aura.Core.Models.Job.RenderSpec*"></a>
+
+  <h3 id="Aura_Core_Models_Job_RenderSpec" data-uid="Aura.Core.Models.Job.RenderSpec">
+  RenderSpec
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L80"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Render specification for the job</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public RenderSpec? RenderSpec { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.RenderSpec.html">RenderSpec</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Stage_" data-uid="Aura.Core.Models.Job.Stage*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Stage" data-uid="Aura.Core.Models.Job.Stage">
+  Stage
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L35"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Current stage of execution (Script, Voice, Visuals, Rendering, Complete)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Stage { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_StartedAt_" data-uid="Aura.Core.Models.Job.StartedAt*"></a>
+
+  <h3 id="Aura_Core_Models_Job_StartedAt" data-uid="Aura.Core.Models.Job.StartedAt">
+  StartedAt
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L56"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Legacy: When job started execution (use StartedUtc instead)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime StartedAt { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_StartedUtc_" data-uid="Aura.Core.Models.Job.StartedUtc*"></a>
+
+  <h3 id="Aura_Core_Models_Job_StartedUtc" data-uid="Aura.Core.Models.Job.StartedUtc">
+  StartedUtc
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L89"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>UTC timestamp when job started running (Queued → Running transition)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DateTime? StartedUtc { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetime">DateTime</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Status_" data-uid="Aura.Core.Models.Job.Status*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Status" data-uid="Aura.Core.Models.Job.Status">
+  Status
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L38"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Current status following state machine rules</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public JobStatus Status { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.JobStatus.html">JobStatus</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Steps_" data-uid="Aura.Core.Models.Job.Steps*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Steps" data-uid="Aura.Core.Models.Job.Steps">
+  Steps
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L101"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Individual steps within the job for granular tracking</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public List&lt;JobStep&gt; Steps { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List</a>&lt;<a class="xref" href="Aura.Core.Models.JobStep.html">JobStep</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_VoiceSpec_" data-uid="Aura.Core.Models.Job.VoiceSpec*"></a>
+
+  <h3 id="Aura_Core_Models_Job_VoiceSpec" data-uid="Aura.Core.Models.Job.VoiceSpec">
+  VoiceSpec
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L77"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Voice specification for the job</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public VoiceSpec? VoiceSpec { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.VoiceSpec.html">VoiceSpec</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_Warnings_" data-uid="Aura.Core.Models.Job.Warnings*"></a>
+
+  <h3 id="Aura_Core_Models_Job_Warnings" data-uid="Aura.Core.Models.Job.Warnings">
+  Warnings
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L107"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Non-fatal warnings collected during execution</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public List&lt;string&gt; Warnings { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1">List</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Aura_Core_Models_Job_CanTransitionTo_" data-uid="Aura.Core.Models.Job.CanTransitionTo*"></a>
+
+  <h3 id="Aura_Core_Models_Job_CanTransitionTo_Aura_Core_Models_JobStatus_" data-uid="Aura.Core.Models.Job.CanTransitionTo(Aura.Core.Models.JobStatus)">
+  CanTransitionTo(JobStatus)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L158"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Validates job state transition is legal according to state machine rules.</p>
+<p>Valid State Transitions:</p>
+<ul>
+<li>Queued → Running (job starts execution)</li>
+<li>Queued → Canceled (job canceled before starting)</li>
+<li>Running → Done/Succeeded (job completed successfully)</li>
+<li>Running → Failed (job encountered an error)</li>
+<li>Running → Canceled (job canceled during execution)</li>
+</ul>
+<p>Terminal States (no outbound transitions):</p>
+<ul>
+<li>Done/Succeeded</li>
+<li>Failed</li>
+<li>Canceled</li>
+</ul>
+<p>Note: Same state transition is always allowed (idempotent updates)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool CanTransitionTo(JobStatus newStatus)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>newStatus</code> <a class="xref" href="Aura.Core.Models.JobStatus.html">JobStatus</a></dt>
+    <dd><p>The target status to transition to</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if transition is valid, false otherwise</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_IsTerminal_" data-uid="Aura.Core.Models.Job.IsTerminal*"></a>
+
+  <h3 id="Aura_Core_Models_Job_IsTerminal" data-uid="Aura.Core.Models.Job.IsTerminal">
+  IsTerminal()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L195"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Checks if the current job status is a terminal state</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsTerminal()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>True if the job is in a terminal state (Done, Failed, or Canceled)</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Aura_Core_Models_Job_WithMonotonicProgress_" data-uid="Aura.Core.Models.Job.WithMonotonicProgress*"></a>
+
+  <h3 id="Aura_Core_Models_Job_WithMonotonicProgress_System_Int32_" data-uid="Aura.Core.Models.Job.WithMonotonicProgress(System.Int32)">
+  WithMonotonicProgress(int)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L133"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a new Job with updated progress, ensuring monotonic invariant (progress never decreases)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public Job WithMonotonicProgress(int newPercent)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>newPercent</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Aura.Core.Models.Job.html">Job</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/Aura.Core/Models/Job.cs/#L29" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

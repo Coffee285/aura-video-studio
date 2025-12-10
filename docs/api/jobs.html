@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Jobs API Documentation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Jobs API Documentation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/jobs.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="jobs-api-documentation">Jobs API Documentation</h1>
+
+<p>The Jobs API provides endpoints for creating, monitoring, and managing video generation jobs with real-time progress updates via Server-Sent Events (SSE).</p>
+<h2 id="endpoints">Endpoints</h2>
+<h3 id="post-apijobs">POST /api/jobs</h3>
+<p>Creates a new video generation job.</p>
+<p><strong>Request Body:</strong></p>
+<pre><code class="lang-json">{
+  &quot;preset&quot;: &quot;default&quot; | &quot;sample-hello-youtube&quot;,
+  &quot;inputs&quot;: {},
+  &quot;options&quot;: {
+    &quot;allowSkipUnavailable&quot;: true,
+    &quot;quality&quot;: &quot;fast&quot; | &quot;balanced&quot; | &quot;high&quot;
+  }
+}
+</code></pre>
+<p>Or legacy format:</p>
+<pre><code class="lang-json">{
+  &quot;brief&quot;: {
+    &quot;topic&quot;: &quot;Your video topic&quot;,
+    &quot;audience&quot;: &quot;Target audience&quot;,
+    &quot;goal&quot;: &quot;Video goal&quot;,
+    &quot;tone&quot;: &quot;Tone of voice&quot;,
+    &quot;language&quot;: &quot;en-US&quot;,
+    &quot;aspect&quot;: &quot;Widescreen16x9&quot;
+  },
+  &quot;planSpec&quot;: {
+    &quot;targetDuration&quot;: &quot;00:01:00&quot;,
+    &quot;pacing&quot;: &quot;Conversational&quot;,
+    &quot;density&quot;: &quot;Balanced&quot;,
+    &quot;style&quot;: &quot;Modern&quot;
+  },
+  &quot;voiceSpec&quot;: {
+    &quot;voiceName&quot;: &quot;en-US-JennyNeural&quot;,
+    &quot;rate&quot;: 1.0,
+    &quot;pitch&quot;: 1.0,
+    &quot;pause&quot;: 1.0
+  },
+  &quot;renderSpec&quot;: {
+    &quot;res&quot;: &quot;1080p&quot;,
+    &quot;container&quot;: &quot;mp4&quot;,
+    &quot;videoBitrateK&quot;: 8000,
+    &quot;audioBitrateK&quot;: 192,
+    &quot;fps&quot;: 30,
+    &quot;codec&quot;: &quot;H264&quot;,
+    &quot;qualityLevel&quot;: 75,
+    &quot;enableSceneCut&quot;: true
+  }
+}
+</code></pre>
+<p><strong>Response (202 Accepted):</strong></p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;J-abc123...&quot;,
+  &quot;correlationId&quot;: &quot;def456...&quot;,
+  &quot;status&quot;: &quot;Queued&quot;,
+  &quot;stage&quot;: &quot;Script&quot;
+}
+</code></pre>
+<p><strong>cURL Example:</strong></p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/jobs \
+  -H &quot;Content-Type: application/json&quot; \
+  -H &quot;X-Correlation-ID: my-correlation-id&quot; \
+  -d '{
+    &quot;preset&quot;: &quot;sample-hello-youtube&quot;,
+    &quot;options&quot;: {
+      &quot;allowSkipUnavailable&quot;: true,
+      &quot;quality&quot;: &quot;balanced&quot;
+    }
+  }'
+</code></pre>
+<hr>
+<h3 id="get-apijobsjobid">GET /api/jobs/{jobId}</h3>
+<p>Retrieves the current status and details of a job.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;J-abc123...&quot;,
+  &quot;status&quot;: &quot;Running&quot;,
+  &quot;createdUtc&quot;: &quot;2025-10-18T20:50:00Z&quot;,
+  &quot;startedUtc&quot;: &quot;2025-10-18T20:50:02Z&quot;,
+  &quot;endedUtc&quot;: null,
+  &quot;correlationId&quot;: &quot;def456...&quot;,
+  &quot;steps&quot;: [
+    {
+      &quot;name&quot;: &quot;preflight&quot;,
+      &quot;status&quot;: &quot;Succeeded&quot;,
+      &quot;progressPct&quot;: 100,
+      &quot;durationMs&quot;: 100,
+      &quot;errors&quot;: [],
+      &quot;startedAt&quot;: &quot;2025-10-18T20:50:02Z&quot;,
+      &quot;completedAt&quot;: &quot;2025-10-18T20:50:03Z&quot;
+    },
+    {
+      &quot;name&quot;: &quot;narration&quot;,
+      &quot;status&quot;: &quot;Running&quot;,
+      &quot;progressPct&quot;: 42,
+      &quot;durationMs&quot;: 0,
+      &quot;errors&quot;: [],
+      &quot;startedAt&quot;: &quot;2025-10-18T20:50:03Z&quot;
+    },
+    {
+      &quot;name&quot;: &quot;broll&quot;,
+      &quot;status&quot;: &quot;Pending&quot;,
+      &quot;progressPct&quot;: 0,
+      &quot;durationMs&quot;: 0,
+      &quot;errors&quot;: []
+    },
+    {
+      &quot;name&quot;: &quot;subtitles&quot;,
+      &quot;status&quot;: &quot;Pending&quot;,
+      &quot;progressPct&quot;: 0,
+      &quot;durationMs&quot;: 0,
+      &quot;errors&quot;: []
+    },
+    {
+      &quot;name&quot;: &quot;mux&quot;,
+      &quot;status&quot;: &quot;Pending&quot;,
+      &quot;progressPct&quot;: 0,
+      &quot;durationMs&quot;: 0,
+      &quot;errors&quot;: []
+    }
+  ],
+  &quot;output&quot;: null,
+  &quot;warnings&quot;: [],
+  &quot;errors&quot;: []
+}
+</code></pre>
+<p><strong>cURL Example:</strong></p>
+<pre><code class="lang-bash">curl http://localhost:5005/api/jobs/J-abc123...
+</code></pre>
+<hr>
+<h3 id="get-apijobsjobidevents">GET /api/jobs/{jobId}/events</h3>
+<p>Streams real-time job progress updates using Server-Sent Events (SSE).</p>
+<p><strong>Event Types:</strong></p>
+<ol>
+<li><p><strong>step-progress</strong> - Progress update for a step</p>
+<pre><code class="lang-json">{
+  &quot;step&quot;: &quot;narration&quot;,
+  &quot;progressPct&quot;: 47,
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+</li>
+<li><p><strong>step-status</strong> - Status change for a step</p>
+<pre><code class="lang-json">{
+  &quot;step&quot;: &quot;mux&quot;,
+  &quot;status&quot;: &quot;Succeeded&quot;,
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+</li>
+<li><p><strong>step-error</strong> - Error encountered in a step</p>
+<pre><code class="lang-json">{
+  &quot;step&quot;: &quot;narration&quot;,
+  &quot;code&quot;: &quot;MissingApiKey:STABLE_KEY&quot;,
+  &quot;message&quot;: &quot;Required API key 'STABLE_KEY' is not configured.&quot;,
+  &quot;remediation&quot;: &quot;Add STABLE_KEY in Settings → Providers&quot;,
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+</li>
+<li><p><strong>job-status</strong> - Overall job status change</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Running&quot;,
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+</li>
+<li><p><strong>job-completed</strong> - Job completed successfully</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Succeeded&quot;,
+  &quot;output&quot;: {
+    &quot;videoPath&quot;: &quot;/path/to/output.mp4&quot;,
+    &quot;sizeBytes&quot;: 12345678
+  },
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+</li>
+<li><p><strong>job-failed</strong> - Job failed</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Failed&quot;,
+  &quot;errors&quot;: [
+    {
+      &quot;code&quot;: &quot;FFmpegNotFound&quot;,
+      &quot;message&quot;: &quot;FFmpeg executable not found.&quot;,
+      &quot;remediation&quot;: &quot;Install FFmpeg from Settings → Dependencies&quot;
+    }
+  ],
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+</li>
+</ol>
+<p><strong>cURL Example:</strong></p>
+<pre><code class="lang-bash">curl -N http://localhost:5005/api/jobs/J-abc123.../events
+</code></pre>
+<p><strong>JavaScript Example:</strong></p>
+<pre><code class="lang-javascript">const eventSource = new EventSource('/api/jobs/J-abc123.../events');
+
+eventSource.addEventListener('step-progress', (e) =&gt; {
+  const data = JSON.parse(e.data);
+  console.log(`${data.step}: ${data.progressPct}%`);
+});
+
+eventSource.addEventListener('job-completed', (e) =&gt; {
+  const data = JSON.parse(e.data);
+  console.log('Job completed!', data.output);
+  eventSource.close();
+});
+
+eventSource.addEventListener('job-failed', (e) =&gt; {
+  const data = JSON.parse(e.data);
+  console.error('Job failed:', data.errors);
+  eventSource.close();
+});
+</code></pre>
+<hr>
+<h3 id="post-apijobsjobidcancel">POST /api/jobs/{jobId}/cancel</h3>
+<p>Cancels a running job and cleans up temporary files.</p>
+<p><strong>Response (202 Accepted):</strong></p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;J-abc123...&quot;,
+  &quot;message&quot;: &quot;Job cancellation requested&quot;,
+  &quot;currentStatus&quot;: &quot;Running&quot;,
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+<p><strong>cURL Example:</strong></p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/jobs/J-abc123.../cancel
+</code></pre>
+<hr>
+<h3 id="post-apijobsjobidretry">POST /api/jobs/{jobId}/retry</h3>
+<p>Retries a failed job (placeholder implementation).</p>
+<p><strong>Query Parameters:</strong></p>
+<ul>
+<li><code>strategy</code> (optional): Retry strategy (e.g., &quot;manual&quot;)</li>
+</ul>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;J-abc123...&quot;,
+  &quot;currentStatus&quot;: &quot;Failed&quot;,
+  &quot;currentStage&quot;: &quot;Render&quot;,
+  &quot;strategy&quot;: &quot;manual&quot;,
+  &quot;message&quot;: &quot;Job retry not yet fully implemented. Please create a new job with adjusted settings.&quot;,
+  &quot;suggestedActions&quot;: [
+    &quot;Re-generate with different TTS provider if narration failed&quot;,
+    &quot;Use software encoder (x264) if hardware encoding failed&quot;,
+    &quot;Check FFmpeg installation if render failed&quot;,
+    &quot;Verify input files are valid if validation failed&quot;
+  ],
+  &quot;correlationId&quot;: &quot;def456...&quot;
+}
+</code></pre>
+<p><strong>cURL Example:</strong></p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/jobs/J-abc123.../retry?strategy=manual
+</code></pre>
+<hr>
+<h2 id="correlation-ids">Correlation IDs</h2>
+<p>All endpoints accept and return a correlation ID for request tracking:</p>
+<ul>
+<li><strong>Request Header:</strong> <code>X-Correlation-ID: &lt;your-id&gt;</code></li>
+<li><strong>Response Header:</strong> <code>X-Correlation-ID: &lt;generated-or-provided-id&gt;</code></li>
+</ul>
+<p>If not provided, a correlation ID is automatically generated.</p>
+<hr>
+<h2 id="error-handling">Error Handling</h2>
+<p>All error responses follow the <a href="https://datatracker.ietf.org/doc/html/rfc7807">RFC 7807 Problem Details</a> format:</p>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/errors/README.md#E500&quot;,
+  &quot;title&quot;: &quot;Error Creating Job&quot;,
+  &quot;status&quot;: 500,
+  &quot;detail&quot;: &quot;Failed to create job: &lt;error message&gt;&quot;,
+  &quot;correlationId&quot;: &quot;def456...&quot;,
+  &quot;traceId&quot;: &quot;0HN4K2G3F4T5U&quot;
+}
+</code></pre>
+<hr>
+<h2 id="rate-limiting">Rate Limiting</h2>
+<p>Currently, there are no rate limits on the Jobs API. This may change in future versions.</p>
+<hr>
+<h2 id="presets">Presets</h2>
+<h3 id="sample-hello-youtube">sample-hello-youtube</h3>
+<p>A guaranteed keyless sample that uses only local providers and bundled assets. Perfect for testing and verification on clean machines.</p>
+<p><strong>Features:</strong></p>
+<ul>
+<li>Uses local TTS (no API keys required)</li>
+<li>Bundled CC0 video clips and music</li>
+<li>20-30 second duration</li>
+<li>Works completely offline with only FFmpeg</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="lang-bash">curl -X POST http://localhost:5005/api/jobs \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{
+    &quot;preset&quot;: &quot;sample-hello-youtube&quot;,
+    &quot;options&quot;: {
+      &quot;allowSkipUnavailable&quot;: true,
+      &quot;quality&quot;: &quot;balanced&quot;
+    }
+  }'
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/api/jobs.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

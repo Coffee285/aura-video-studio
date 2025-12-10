@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Theme System Implementation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Theme System Implementation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/THEME_SYSTEM_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="theme-system-implementation-guide">Theme System Implementation Guide</h1>
+
+<p>This document describes the dark/light theme system implementation in Aura Video Studio.</p>
+<h2 id="overview">Overview</h2>
+<p>The application supports both light and dark themes with automatic OS detection and manual toggle capability. The theme system is integrated across three layers:</p>
+<ol>
+<li><strong>React State Management</strong> (Theme Context)</li>
+<li><strong>Fluent UI Components</strong> (Design System)</li>
+<li><strong>Tailwind CSS</strong> (Utility Classes)</li>
+</ol>
+<h2 id="architecture">Architecture</h2>
+<h3 id="1-theme-state-management">1. Theme State Management</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/App.tsx</code></p>
+<pre><code class="lang-typescript">const [isDarkMode, setIsDarkMode] = useState(() =&gt; {
+  const saved = localStorage.getItem('darkMode');
+  if (saved !== null) {
+    return JSON.parse(saved);
+  }
+  // Detect system preference if no saved preference
+  return window.matchMedia &amp;&amp; window.matchMedia('(prefers-color-scheme: dark)').matches;
+});
+</code></pre>
+<p><strong>Initialization Priority</strong>:</p>
+<ol>
+<li>User's saved preference (localStorage)</li>
+<li>System/OS preference (prefers-color-scheme)</li>
+<li>Default: Light mode</li>
+</ol>
+<h3 id="2-theme-application">2. Theme Application</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/App.tsx</code> (useEffect)</p>
+<pre><code class="lang-typescript">useEffect(() =&gt; {
+  const root = document.documentElement;
+  if (isDarkMode) {
+    root.classList.add('dark');
+  } else {
+    root.classList.remove('dark');
+  }
+  localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+  console.log(`Theme switched to: ${isDarkMode ? 'dark' : 'light'} mode`);
+}, [isDarkMode]);
+</code></pre>
+<p><strong>What Happens</strong>:</p>
+<ol>
+<li>Adds/removes <code>dark</code> class on <code>&lt;html&gt;</code> element</li>
+<li>Saves preference to localStorage</li>
+<li>Logs theme change for debugging</li>
+</ol>
+<h3 id="3-os-theme-change-detection">3. OS Theme Change Detection</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/App.tsx</code> (useEffect)</p>
+<pre><code class="lang-typescript">useEffect(() =&gt; {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  
+  const handleChange = (e: MediaQueryListEvent) =&gt; {
+    const saved = localStorage.getItem('darkMode');
+    // Only update if user hasn't explicitly saved a preference
+    if (saved === null) {
+      setIsDarkMode(e.matches);
+    }
+  };
+  
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleChange);
+    return () =&gt; mediaQuery.removeEventListener('change', handleChange);
+  }
+}, []);
+</code></pre>
+<p><strong>Behavior</strong>:</p>
+<ul>
+<li>Listens for system theme changes</li>
+<li>Only applies if user hasn't set a manual preference</li>
+<li>Respects user choice over system preference</li>
+</ul>
+<h3 id="4-theme-context">4. Theme Context</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/App.tsx</code></p>
+<pre><code class="lang-typescript">export const ThemeContext = createContext&lt;ThemeContextType&gt;({
+  isDarkMode: false,
+  toggleTheme: () =&gt; {},
+});
+
+export const useTheme = () =&gt; useContext(ThemeContext);
+</code></pre>
+<p><strong>Usage in Components</strong>:</p>
+<pre><code class="lang-typescript">import { useTheme } from './App';
+
+function MyComponent() {
+  const { isDarkMode, toggleTheme } = useTheme();
+  
+  return (
+    &lt;button onClick={toggleTheme}&gt;
+      Switch to {isDarkMode ? 'Light' : 'Dark'} Mode
+    &lt;/button&gt;
+  );
+}
+</code></pre>
+<h2 id="css-implementation">CSS Implementation</h2>
+<h3 id="css-custom-properties">CSS Custom Properties</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/index.css</code></p>
+<pre><code class="lang-css">:root {
+  /* Light mode colors */
+  --color-primary: #0ea5e9;
+  --color-secondary: #a855f7;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-background: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+}
+
+.dark {
+  /* Dark mode color overrides */
+  --color-primary: #38bdf8;
+  --color-secondary: #c084fc;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-border: #334155;
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-css">.my-element {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+</code></pre>
+<h3 id="tailwind-css-dark-mode">Tailwind CSS Dark Mode</h3>
+<p><strong>Location</strong>: <code>Aura.Web/tailwind.config.js</code></p>
+<pre><code class="lang-javascript">export default {
+  darkMode: 'class', // Use class-based dark mode
+  // ... rest of config
+}
+</code></pre>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-jsx">&lt;div className=&quot;bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100&quot;&gt;
+  This adapts to theme
+&lt;/div&gt;
+</code></pre>
+<h3 id="scrollbar-styling">Scrollbar Styling</h3>
+<p><strong>Location</strong>: <code>Aura.Web/src/index.css</code></p>
+<pre><code class="lang-css">::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+</code></pre>
+<p><strong>Benefits</strong>:</p>
+<ul>
+<li>Automatically adapts to theme via CSS variables</li>
+<li>No need for separate <code>.dark</code> overrides</li>
+<li>Consistent with overall theme</li>
+</ul>
+<h2 id="fluent-ui-integration">Fluent UI Integration</h2>
+<p><strong>Location</strong>: <code>Aura.Web/src/App.tsx</code></p>
+<pre><code class="lang-typescript">import { FluentProvider, webLightTheme, webDarkTheme } from '@fluentui/react-components';
+
+&lt;FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}&gt;
+  {/* App content */}
+&lt;/FluentProvider&gt;
+</code></pre>
+<p><strong>What This Does</strong>:</p>
+<ul>
+<li>Applies Fluent UI design tokens to all Fluent components</li>
+<li>Ensures buttons, inputs, dialogs, etc. match the theme</li>
+<li>Works alongside Tailwind and custom CSS</li>
+</ul>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-use-css-variables-for-colors">1. Use CSS Variables for Colors</h3>
+<p>✅ <strong>Good</strong>:</p>
+<pre><code class="lang-css">.element {
+  color: var(--color-primary);
+  background: var(--color-background);
+}
+</code></pre>
+<p>❌ <strong>Bad</strong>:</p>
+<pre><code class="lang-css">.element {
+  color: #0ea5e9;
+  background: #ffffff;
+}
+</code></pre>
+<h3 id="2-use-tailwind-dark-mode-utilities">2. Use Tailwind Dark Mode Utilities</h3>
+<p>✅ <strong>Good</strong>:</p>
+<pre><code class="lang-jsx">&lt;div className=&quot;bg-white dark:bg-gray-900&quot;&gt;Content&lt;/div&gt;
+</code></pre>
+<p>❌ <strong>Bad</strong>:</p>
+<pre><code class="lang-jsx">&lt;div style={{ backgroundColor: isDarkMode ? '#111827' : '#ffffff' }}&gt;Content&lt;/div&gt;
+</code></pre>
+<h3 id="3-test-both-themes">3. Test Both Themes</h3>
+<p>Always test UI changes in both light and dark mode to ensure:</p>
+<ul>
+<li>Text is readable</li>
+<li>Contrast is sufficient</li>
+<li>No visual glitches</li>
+<li>Icons are visible</li>
+</ul>
+<h3 id="4-avoid-hard-coded-colors">4. Avoid Hard-coded Colors</h3>
+<p>Replace hard-coded hex/rgb values with:</p>
+<ul>
+<li>CSS custom properties for semantic colors</li>
+<li>Tailwind utility classes with dark mode variants</li>
+</ul>
+<h3 id="5-handle-images-and-icons">5. Handle Images and Icons</h3>
+<p>For images that don't adapt well:</p>
+<pre><code class="lang-css">.dark .image-that-needs-inversion {
+  filter: invert(1);
+}
+</code></pre>
+<p>For SVG icons, use currentColor:</p>
+<pre><code class="lang-svg">&lt;svg fill=&quot;currentColor&quot;&gt;...&lt;/svg&gt;
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="theme-not-switching">Theme Not Switching</h3>
+<p><strong>Check</strong>:</p>
+<ol>
+<li>Is <code>dark</code> class being added to <code>&lt;html&gt;</code>? (Inspect element)</li>
+<li>Is localStorage updating? (Check Application tab in DevTools)</li>
+<li>Are CSS custom properties defined in <code>:root</code> and <code>.dark</code>?</li>
+<li>Is Tailwind dark mode set to <code>'class'</code> in config?</li>
+</ol>
+<p><strong>Debug</strong>:</p>
+<pre><code class="lang-javascript">// In browser console
+console.log(document.documentElement.classList.contains('dark'));
+console.log(localStorage.getItem('darkMode'));
+</code></pre>
+<h3 id="fluent-ui-components-not-theming">Fluent UI Components Not Theming</h3>
+<p><strong>Check</strong>:</p>
+<ol>
+<li>Is <code>FluentProvider</code> wrapping your app?</li>
+<li>Is the <code>theme</code> prop changing with <code>isDarkMode</code>?</li>
+<li>Are you using Fluent UI components (not plain HTML elements)?</li>
+</ol>
+<h3 id="tailwind-dark-classes-not-working">Tailwind Dark Classes Not Working</h3>
+<p><strong>Check</strong>:</p>
+<ol>
+<li>Is <code>darkMode: 'class'</code> in <code>tailwind.config.js</code>?</li>
+<li>Is the <code>dark</code> class on a parent element?</li>
+<li>Are you using the <code>dark:</code> prefix correctly?</li>
+</ol>
+<h3 id="colors-not-updating">Colors Not Updating</h3>
+<p><strong>Check</strong>:</p>
+<ol>
+<li>Are you using CSS variables instead of hard-coded colors?</li>
+<li>Is the element inside the theme provider?</li>
+<li>Are there any !important rules overriding the theme?</li>
+</ol>
+<h2 id="testing-checklist">Testing Checklist</h2>
+<ul>
+<li>[ ] Toggle theme button works</li>
+<li>[ ] Theme persists across page reloads</li>
+<li>[ ] OS theme detection works on first load</li>
+<li>[ ] Theme responds to OS theme changes (when no saved preference)</li>
+<li>[ ] All text is readable in both themes</li>
+<li>[ ] Buttons and inputs match theme</li>
+<li>[ ] Scrollbars match theme</li>
+<li>[ ] Images and icons are visible in both themes</li>
+<li>[ ] No flickering during theme switch</li>
+<li>[ ] Console logs show theme changes</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li><strong>Multiple Themes</strong>: Support more than just light/dark (e.g., high contrast)</li>
+<li><strong>Custom Theme Editor</strong>: Let users customize colors</li>
+<li><strong>Per-Component Themes</strong>: Different themes for different sections</li>
+<li><strong>Animation</strong>: Smooth transitions when switching themes</li>
+<li><strong>SSR Support</strong>: Prevent flash of wrong theme on server-rendered pages</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/THEME_SYSTEM_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

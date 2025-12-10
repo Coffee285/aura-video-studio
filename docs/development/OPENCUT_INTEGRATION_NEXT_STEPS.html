@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>OpenCut Integration - Next Steps | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="OpenCut Integration - Next Steps | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/OPENCUT_INTEGRATION_NEXT_STEPS.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="opencut-integration---next-steps">OpenCut Integration - Next Steps</h1>
+
+<h2 id="current-status">Current Status</h2>
+<p>OpenCut is partially integrated into Aura Video Studio. The current implementation:</p>
+<ul>
+<li>✅ OpenCut page loads directly (no forwarding page)</li>
+<li>✅ Iframe attempts to load OpenCut even if health check fails</li>
+<li>✅ OpenCutManager automatically starts the server in Electron</li>
+<li>✅ Health check with fallback logic</li>
+<li>⚠️ Server startup may take time on first load</li>
+<li>⚠️ Manual server start required in web-only mode</li>
+</ul>
+<h2 id="issues-fixed-in-this-pr">Issues Fixed in This PR</h2>
+<ol>
+<li><strong>79% Stuck Issue</strong>: Fixed progress calculation to properly transition from Image generation (80%) to Rendering stage</li>
+<li><strong>OpenCut Forwarding Page</strong>: Removed forwarding page, now loads OpenCut directly in iframe</li>
+<li><strong>Connection Handling</strong>: Improved health check logic and timeout handling</li>
+</ol>
+<h2 id="remaining-work-for-full-integration">Remaining Work for Full Integration</h2>
+<h3 id="1-server-startup-reliability">1. Server Startup Reliability</h3>
+<p><strong>Problem</strong>: OpenCut server may not start reliably, especially on first launch or if dependencies are missing.</p>
+<p><strong>Next Steps</strong>:</p>
+<ul>
+<li>[ ] Add startup verification that waits for server to be ready before showing iframe</li>
+<li>[ ] Implement exponential backoff for server startup retries</li>
+<li>[ ] Add better error messages when server fails to start (missing dependencies, port conflicts, etc.)</li>
+<li>[ ] Create a startup status indicator in the UI showing server startup progress</li>
+</ul>
+<p><strong>Files to Modify</strong>:</p>
+<ul>
+<li><code>Aura.Desktop/electron/opencut-manager.js</code> - Add startup verification</li>
+<li><code>Aura.Web/src/pages/OpenCutPage.tsx</code> - Add startup status UI</li>
+</ul>
+<h3 id="2-web-only-mode-support">2. Web-Only Mode Support</h3>
+<p><strong>Problem</strong>: When running Aura in web-only mode (not Electron), OpenCut server must be started manually.</p>
+<p><strong>Next Steps</strong>:</p>
+<ul>
+<li>[ ] Create a backend API endpoint to start/stop OpenCut server</li>
+<li>[ ] Add UI controls to start/stop server from the OpenCut page</li>
+<li>[ ] Add automatic detection of running OpenCut server</li>
+<li>[ ] Provide clear instructions for manual server startup</li>
+</ul>
+<p><strong>Files to Create/Modify</strong>:</p>
+<ul>
+<li><code>Aura.Api/Controllers/OpenCutController.cs</code> - New controller for server management</li>
+<li><code>Aura.Web/src/pages/OpenCutPage.tsx</code> - Add server control UI</li>
+<li><code>Aura.Web/src/services/opencutService.ts</code> - New service for OpenCut API calls</li>
+</ul>
+<h3 id="3-deep-integration-features">3. Deep Integration Features</h3>
+<p><strong>Problem</strong>: OpenCut currently runs as a separate app in an iframe with limited integration.</p>
+<p><strong>Next Steps</strong>:</p>
+<ul>
+<li>[ ] Implement postMessage API for communication between Aura and OpenCut</li>
+<li>[ ] Add ability to pass video projects from Aura to OpenCut</li>
+<li>[ ] Add ability to import edited videos back from OpenCut to Aura</li>
+<li>[ ] Share authentication/authorization between Aura and OpenCut</li>
+<li>[ ] Implement shared state management (current project, user preferences, etc.)</li>
+</ul>
+<p><strong>Files to Create/Modify</strong>:</p>
+<ul>
+<li><code>Aura.Web/src/services/opencutBridge.ts</code> - Communication bridge</li>
+<li><code>OpenCut/apps/web/src/lib/aura-bridge.ts</code> - OpenCut-side bridge</li>
+<li><code>Aura.Web/src/pages/OpenCutPage.tsx</code> - Add message handlers</li>
+</ul>
+<h3 id="4-error-handling-and-user-experience">4. Error Handling and User Experience</h3>
+<p><strong>Problem</strong>: Error states are not always clear, and users may not know what to do when OpenCut fails to load.</p>
+<p><strong>Next Steps</strong>:</p>
+<ul>
+<li>[ ] Add detailed error messages with actionable steps</li>
+<li>[ ] Implement automatic retry with exponential backoff</li>
+<li>[ ] Add diagnostic information (server logs, port status, etc.)</li>
+<li>[ ] Create troubleshooting guide</li>
+<li>[ ] Add &quot;Report Issue&quot; button that collects diagnostic information</li>
+</ul>
+<p><strong>Files to Modify</strong>:</p>
+<ul>
+<li><code>Aura.Web/src/pages/OpenCutPage.tsx</code> - Enhanced error UI</li>
+<li><code>Aura.Web/src/components/OpenCutDiagnostics.tsx</code> - New diagnostic component</li>
+</ul>
+<h3 id="5-performance-and-resource-management">5. Performance and Resource Management</h3>
+<p><strong>Problem</strong>: OpenCut server consumes resources even when not in use.</p>
+<p><strong>Next Steps</strong>:</p>
+<ul>
+<li>[ ] Implement lazy loading - only start server when OpenCut page is accessed</li>
+<li>[ ] Add server auto-shutdown after inactivity</li>
+<li>[ ] Monitor server resource usage</li>
+<li>[ ] Add option to disable auto-start for users who prefer manual control</li>
+</ul>
+<p><strong>Files to Modify</strong>:</p>
+<ul>
+<li><code>Aura.Desktop/electron/opencut-manager.js</code> - Add lazy loading and auto-shutdown</li>
+<li><code>Aura.Web/src/pages/OpenCutPage.tsx</code> - Add resource monitoring UI</li>
+</ul>
+<h3 id="6-testing-and-quality-assurance">6. Testing and Quality Assurance</h3>
+<p><strong>Problem</strong>: Limited testing coverage for OpenCut integration.</p>
+<p><strong>Next Steps</strong>:</p>
+<ul>
+<li>[ ] Add unit tests for OpenCutManager</li>
+<li>[ ] Add integration tests for server startup/shutdown</li>
+<li>[ ] Add E2E tests for OpenCut page loading</li>
+<li>[ ] Test on different platforms (Windows, macOS, Linux)</li>
+<li>[ ] Test with different Node.js versions</li>
+</ul>
+<p><strong>Files to Create</strong>:</p>
+<ul>
+<li><code>Aura.Desktop/electron/__tests__/opencut-manager.test.js</code></li>
+<li><code>Aura.Web/src/pages/__tests__/OpenCutPage.test.tsx</code></li>
+<li><code>Aura.E2E/OpenCutIntegrationTests.cs</code></li>
+</ul>
+<h2 id="implementation-priority">Implementation Priority</h2>
+<ol>
+<li><p><strong>High Priority</strong> (Critical for basic functionality):</p>
+<ul>
+<li>Server startup reliability (#1)</li>
+<li>Web-only mode support (#2)</li>
+<li>Error handling improvements (#4)</li>
+</ul>
+</li>
+<li><p><strong>Medium Priority</strong> (Enhances user experience):</p>
+<ul>
+<li>Deep integration features (#3)</li>
+<li>Performance optimizations (#5)</li>
+</ul>
+</li>
+<li><p><strong>Low Priority</strong> (Quality and maintainability):</p>
+<ul>
+<li>Testing coverage (#6)</li>
+</ul>
+</li>
+</ol>
+<h2 id="technical-notes">Technical Notes</h2>
+<h3 id="server-startup">Server Startup</h3>
+<p>The OpenCut server is started by <code>OpenCutManager</code> in the Electron main process. It:</p>
+<ul>
+<li>Checks if port 3100 is available</li>
+<li>Spawns the Next.js dev server (dev mode) or standalone server (packaged mode)</li>
+<li>Monitors server health with periodic checks</li>
+<li>Retries on failure (up to 3 attempts)</li>
+</ul>
+<h3 id="health-check">Health Check</h3>
+<p>The frontend performs health checks via:</p>
+<ol>
+<li><code>/api/health</code> endpoint (preferred)</li>
+<li>Direct HEAD request to root URL (fallback)</li>
+</ol>
+<p>Health check failures are non-blocking - the iframe will still attempt to load.</p>
+<h3 id="port-configuration">Port Configuration</h3>
+<p>Default port: <code>3100</code></p>
+<ul>
+<li>Can be overridden with <code>OPENCUT_PORT</code> environment variable</li>
+<li>Port conflicts are detected and logged</li>
+</ul>
+<h3 id="development-vs-production">Development vs Production</h3>
+<ul>
+<li><strong>Development</strong>: Runs Next.js dev server from <code>OpenCut/apps/web</code></li>
+<li><strong>Production</strong>: Runs standalone Next.js server from <code>resources/opencut</code></li>
+</ul>
+<h2 id="related-files">Related Files</h2>
+<ul>
+<li><code>Aura.Web/src/pages/OpenCutPage.tsx</code> - Main OpenCut page component</li>
+<li><code>Aura.Desktop/electron/opencut-manager.js</code> - Server management</li>
+<li><code>Aura.Desktop/electron/main.js</code> - Initializes OpenCutManager</li>
+<li><code>OpenCut/apps/web/src/app/api/health/route.ts</code> - Health check endpoint</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://nextjs.org/docs/advanced-features/output-file-tracing">Next.js Standalone Output</a></li>
+<li><a href="https://www.electronjs.org/docs/latest/api/child-process">Electron Child Process Management</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage">PostMessage API</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/OPENCUT_INTEGRATION_NEXT_STEPS.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

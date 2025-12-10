@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Network Errors | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Network Errors | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/network-errors.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="network-errors">Network Errors</h1>
+
+<p>This guide helps you troubleshoot network connectivity and communication errors in Aura Video Studio.</p>
+<h2 id="quick-navigation">Quick Navigation</h2>
+<ul>
+<li><a href="#using-network-diagnostics">Using Network Diagnostics</a></li>
+<li><a href="#error-codes-reference">Error Codes Reference</a></li>
+<li><a href="#provider-api-connectivity">Provider API Connectivity</a></li>
+<li><a href="#network-timeouts">Network Timeouts</a></li>
+<li><a href="#firewall-and-proxy-issues">Firewall and Proxy Issues</a></li>
+<li><a href="#ssltls-errors">SSL/TLS Errors</a></li>
+<li><a href="#dns-issues">DNS Issues</a></li>
+</ul>
+<hr>
+<h2 id="using-network-diagnostics">Using Network Diagnostics</h2>
+<p>Aura Video Studio includes a built-in diagnostics tool to help identify and resolve network issues.</p>
+<h3 id="accessing-diagnostics">Accessing Diagnostics</h3>
+<ol>
+<li><p><strong>From Settings:</strong></p>
+<ul>
+<li>Navigate to Settings → Help &amp; Support → Network Diagnostics</li>
+</ul>
+</li>
+<li><p><strong>From First Run Wizard:</strong></p>
+<ul>
+<li>If a network error occurs during setup, click &quot;Run Diagnostics&quot; button</li>
+</ul>
+</li>
+<li><p><strong>From API:</strong></p>
+<ul>
+<li>Call <code>GET /api/system/network/diagnostics</code> to get diagnostic information programmatically</li>
+</ul>
+</li>
+</ol>
+<h3 id="what-diagnostics-check">What Diagnostics Check</h3>
+<ul>
+<li><strong>Backend Service:</strong> Verifies the backend API is running and accessible</li>
+<li><strong>FFmpeg:</strong> Checks if FFmpeg is installed and working properly</li>
+<li><strong>Configuration:</strong> Validates CORS and base URL settings</li>
+<li><strong>Network:</strong> Checks network configuration and connectivity</li>
+<li><strong>Providers:</strong> Tests connectivity to external provider services (OpenAI, Anthropic, etc.)</li>
+</ul>
+<h3 id="diagnostics-output">Diagnostics Output</h3>
+<p>The diagnostics tool provides:</p>
+<ul>
+<li>✅ <strong>Success indicators</strong> for working components</li>
+<li>❌ <strong>Error indicators</strong> for failing components</li>
+<li><strong>Specific error codes</strong> with links to troubleshooting guides</li>
+<li><strong>Recommended actions</strong> for each issue detected</li>
+<li><strong>Copy to clipboard</strong> button to share diagnostics with support</li>
+</ul>
+<hr>
+<h2 id="error-codes-reference">Error Codes Reference</h2>
+<h3 id="net001---backend-unreachable">NET001 - Backend Unreachable</h3>
+<p><strong>Error:</strong> &quot;Cannot reach backend service on <url>&quot;</url></p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Backend service is not running</li>
+<li>Port is incorrect or blocked by firewall</li>
+<li>Electron backend process failed to start</li>
+<li>Base URL is misconfigured</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p>Verify the backend service is running</p>
+<ul>
+<li>Check Task Manager (Windows) or Activity Monitor (macOS) for <code>Aura.Api</code> process</li>
+<li>Look for console errors in Electron main process logs</li>
+</ul>
+</li>
+<li><p>Check the port configuration</p>
+<ul>
+<li>Default port: <code>http://localhost:5005</code></li>
+<li>Verify <code>VITE_API_BASE_URL</code> in <code>.env.local</code> matches backend port</li>
+</ul>
+</li>
+<li><p>Check firewall settings</p>
+<ul>
+<li>Windows: Allow <code>Aura.Api.exe</code> through Windows Firewall</li>
+<li>macOS: Check System Preferences → Security &amp; Privacy → Firewall</li>
+</ul>
+</li>
+<li><p>If using Electron</p>
+<ul>
+<li>Check logs in <code>%APPDATA%\aura-video-studio\logs</code> (Windows) or <code>~/Library/Application Support/aura-video-studio/logs</code> (macOS)</li>
+<li>Look for backend startup errors</li>
+</ul>
+</li>
+<li><p>Restart the application completely</p>
+</li>
+</ol>
+<hr>
+<h3 id="net002---dns-resolution-failed">NET002 - DNS Resolution Failed</h3>
+<p><strong>Error:</strong> &quot;Cannot resolve hostname - DNS lookup failed&quot;</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>No internet connection</li>
+<li>DNS server is not responding</li>
+<li>Hostname is incorrect or does not exist</li>
+<li>Corporate DNS restrictions</li>
+</ul>
+<p><strong>Test basic connectivity</strong>:</p>
+<pre><code class="lang-bash"># Test general internet
+ping 8.8.8.8
+
+# Test DNS
+ping google.com
+
+# Test HTTPS
+curl -I https://www.google.com
+</code></pre>
+<h4 id="2-test-provider-endpoints">2. Test Provider Endpoints</h4>
+<pre><code class="lang-bash"># Test OpenAI
+curl -I https://api.openai.com/v1/models
+
+# Test Anthropic
+curl -I https://api.anthropic.com/v1/messages
+
+# Test ElevenLabs
+curl -I https://api.elevenlabs.io/v1/voices
+
+# Should return HTTP 200 or 401 (indicates endpoint is reachable)
+</code></pre>
+<h4 id="3-check-provider-status">3. Check Provider Status</h4>
+<p>Visit provider status pages:</p>
+<ul>
+<li><strong>OpenAI</strong>: <a href="https://status.openai.com/">https://status.openai.com/</a></li>
+<li><strong>Anthropic</strong>: <a href="https://status.anthropic.com/">https://status.anthropic.com/</a></li>
+<li><strong>ElevenLabs</strong>: Check their website or Twitter</li>
+<li><strong>Stability AI</strong>: <a href="https://status.stability.ai/">https://status.stability.ai/</a></li>
+</ul>
+<h4 id="4-verify-network-configuration">4. Verify Network Configuration</h4>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;Timeout&quot;: 30000,  // 30 seconds
+    &quot;RetryAttempts&quot;: 3,
+    &quot;RetryDelay&quot;: 1000  // 1 second
+  }
+}
+</code></pre>
+<h4 id="5-use-vpn-or-alternative-network">5. Use VPN or Alternative Network</h4>
+<p>If provider is blocked or unavailable on your network:</p>
+<ul>
+<li>Try different network (mobile hotspot)</li>
+<li>Use VPN service (check provider ToS)</li>
+<li>Contact network administrator</li>
+</ul>
+<hr>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Test DNS resolution:</strong></p>
+<pre><code class="lang-bash"># Test DNS lookup
+nslookup api.openai.com
+</code></pre>
+</li>
+<li><p><strong>Use alternative DNS servers:</strong></p>
+<ul>
+<li>Google DNS: <code>8.8.8.8</code> and <code>8.8.4.4</code></li>
+<li>Cloudflare DNS: <code>1.1.1.1</code> and <code>1.0.0.1</code></li>
+</ul>
+<p><strong>Windows:</strong></p>
+<pre><code class="lang-powershell"># Set DNS via PowerShell (requires admin)
+Set-DnsClientServerAddress -InterfaceAlias &quot;Ethernet&quot; -ServerAddresses (&quot;8.8.8.8&quot;,&quot;8.8.4.4&quot;)
+</code></pre>
+<p><strong>macOS/Linux:</strong></p>
+<pre><code class="lang-bash"># Edit /etc/resolv.conf (requires sudo)
+sudo nano /etc/resolv.conf
+# Add:
+nameserver 8.8.8.8
+nameserver 1.1.1.1
+</code></pre>
+</li>
+<li><p><strong>Flush DNS cache:</strong></p>
+<ul>
+<li>Windows: <code>ipconfig /flushdns</code></li>
+<li>macOS: <code>sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder</code></li>
+<li>Linux: <code>sudo systemd-resolve --flush-caches</code></li>
+</ul>
+</li>
+<li><p><strong>Check hosts file for overrides:</strong></p>
+<ul>
+<li>Windows: <code>C:\Windows\System32\drivers\etc\hosts</code></li>
+<li>macOS/Linux: <code>/etc/hosts</code></li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net003---tls-handshake-failed">NET003 - TLS Handshake Failed</h3>
+<p><strong>Error:</strong> &quot;Failed to establish secure connection - SSL/TLS error&quot;</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Expired or invalid SSL certificates</li>
+<li>Outdated security certificates on system</li>
+<li>Corporate SSL inspection interfering</li>
+<li>Incorrect system date/time</li>
+<li>TLS version mismatch</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Update system certificates:</strong></p>
+<ul>
+<li>Windows: Run Windows Update</li>
+<li>macOS: Run <code>softwareupdate -l</code> and install available updates</li>
+<li>Linux: <code>sudo apt update &amp;&amp; sudo apt install ca-certificates</code> (Ubuntu/Debian)</li>
+</ul>
+</li>
+<li><p><strong>Verify system date and time:</strong></p>
+<ul>
+<li>Incorrect system time causes certificate validation failures</li>
+<li>Sync with internet time servers</li>
+</ul>
+</li>
+<li><p><strong>Corporate SSL inspection:</strong></p>
+<ul>
+<li>If on corporate network, install company SSL certificates</li>
+<li>Contact IT department for certificate installation instructions</li>
+</ul>
+</li>
+<li><p><strong>Check TLS version support:</strong></p>
+<ul>
+<li>Aura Video Studio requires TLS 1.2 or higher</li>
+<li>Update .NET runtime if using older version</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net004---network-timeout">NET004 - Network Timeout</h3>
+<p><strong>Error:</strong> &quot;Request timed out - server did not respond within <x> seconds&quot;</x></p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Slow internet connection</li>
+<li>Service is overloaded or experiencing issues</li>
+<li>Large request/response size</li>
+<li>VPN or proxy adding latency</li>
+<li>Network congestion</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check internet speed:</strong></p>
+<pre><code class="lang-bash"># Test download speed
+curl -o /dev/null -w '%{speed_download}' https://proof.ovh.net/files/10Mb.dat
+</code></pre>
+</li>
+<li><p><strong>Increase timeout settings:</strong></p>
+<ul>
+<li>Navigate to Settings → Advanced → Network</li>
+<li>Increase timeout values (default: 30 seconds)</li>
+<li>Recommended: 60-120 seconds for slow connections</li>
+</ul>
+</li>
+<li><p><strong>Try wired connection:</strong></p>
+<ul>
+<li>WiFi can be unreliable for large transfers</li>
+<li>Use Ethernet cable for better stability</li>
+</ul>
+</li>
+<li><p><strong>Check VPN/Proxy:</strong></p>
+<ul>
+<li>Temporarily disable VPN to test</li>
+<li>Configure proxy timeout settings if applicable</li>
+</ul>
+</li>
+<li><p><strong>Retry during off-peak hours:</strong></p>
+<ul>
+<li>Services may be less loaded at different times</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net006---cors-misconfigured">NET006 - CORS Misconfigured</h3>
+<p><strong>Error:</strong> &quot;Cross-origin request blocked - origin not allowed by CORS policy&quot;</p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Frontend and backend are on different origins</li>
+<li>AllowedOrigins not configured in backend</li>
+<li>Incorrect API_BASE_URL in frontend</li>
+<li>Development vs production configuration mismatch</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><p><strong>Check CORS configuration in backend:</strong></p>
+<pre><code class="lang-json">// appsettings.json or appsettings.Development.json
+{
+  &quot;Cors&quot;: {
+    &quot;AllowedOrigins&quot;: [
+      &quot;http://localhost:5173&quot;,  // Vite dev server
+      &quot;http://localhost:3000&quot;,  // Alternative port
+      &quot;app://.&quot;                 // Electron custom protocol
+    ]
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Verify frontend API base URL:</strong></p>
+<pre><code>// .env.local or .env.development
+VITE_API_BASE_URL=http://localhost:5005
+</code></pre>
+</li>
+<li><p><strong>Match origins exactly:</strong></p>
+<ul>
+<li>Include protocol (http:// or https://)</li>
+<li>Include port number if not default</li>
+<li>No trailing slashes</li>
+</ul>
+</li>
+<li><p><strong>Restart both frontend and backend:</strong></p>
+<ul>
+<li>Configuration changes require restart</li>
+<li>Clear browser cache if issue persists</li>
+</ul>
+</li>
+<li><p><strong>Check browser console for details:</strong></p>
+<ul>
+<li>Exact origin being blocked will be shown</li>
+<li>Look for &quot;Access-Control-Allow-Origin&quot; header issues</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="net007---provider-unavailable">NET007 - Provider Unavailable</h3>
+<p><strong>Error:</strong> &quot;Provider <name> is unavailable - cannot reach service at <endpoint>&quot;</endpoint></name></p>
+<p><strong>Typical Causes:</strong></p>
+<ul>
+<li>Provider service is down or experiencing outage</li>
+<li>API key is invalid or revoked</li>
+<li>Provider blocked in your region</li>
+<li>Rate limiting or quota exceeded</li>
+<li>Network blocks provider endpoints</li>
+</ul>
+<p><strong>Solutions:</strong></p>
+<h4 id="1-increase-timeout-values">1. Increase Timeout Values</h4>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;TimeoutSeconds&quot;: 120  // Increase from default 30
+    },
+    &quot;Anthropic&quot;: {
+      &quot;TimeoutSeconds&quot;: 120
+    },
+    &quot;ElevenLabs&quot;: {
+      &quot;TimeoutSeconds&quot;: 180  // TTS can take longer
+    }
+  }
+}
+</code></pre>
+<h4 id="2-enable-request-retry">2. Enable Request Retry</h4>
+<pre><code class="lang-json">{
+  &quot;Resilience&quot;: {
+    &quot;EnableRetry&quot;: true,
+    &quot;MaxRetryAttempts&quot;: 3,
+    &quot;RetryDelay&quot;: 2000,  // 2 seconds
+    &quot;BackoffMultiplier&quot;: 2  // Exponential backoff
+  }
+}
+</code></pre>
+<h4 id="3-reduce-request-size">3. Reduce Request Size</h4>
+<p><strong>For LLM</strong>:</p>
+<ul>
+<li>Shorter prompts</li>
+<li>Reduce max tokens</li>
+<li>Split long content</li>
+</ul>
+<p><strong>For Images</strong>:</p>
+<ul>
+<li>Lower resolution (1024x1024 → 512x512)</li>
+<li>Reduce number of images per request</li>
+</ul>
+<p><strong>For TTS</strong>:</p>
+<ul>
+<li>Split long text into segments</li>
+<li>Process sequentially</li>
+</ul>
+<h4 id="4-use-streaming">4. Use Streaming</h4>
+<p>For long-running requests:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;UseStreaming&quot;: true  // Get partial results
+    }
+  }
+}
+</code></pre>
+<h4 id="5-check-network-speed">5. Check Network Speed</h4>
+<pre><code class="lang-bash"># Test download speed
+curl -o /dev/null -w '%{speed_download}' https://proof.ovh.net/files/100Mb.dat
+
+# Or use speedtest
+speedtest-cli
+</code></pre>
+<p><strong>Minimum recommended</strong>: 5 Mbps down, 1 Mbps up</p>
+<hr>
+<h2 id="firewall-and-proxy-issues">Firewall and Proxy Issues</h2>
+<h3 id="blocked-by-firewall">Blocked by Firewall</h3>
+<p><strong>Error</strong>: &quot;Connection refused&quot; or &quot;Connection blocked&quot;</p>
+<h3 id="solutions">Solutions</h3>
+<h4 id="1-check-firewall-rules">1. Check Firewall Rules</h4>
+<p><strong>Windows Firewall</strong>:</p>
+<ol>
+<li>Windows Security → Firewall &amp; Network Protection</li>
+<li>Allow an app through firewall</li>
+<li>Add Aura.Api.exe</li>
+<li>Allow both Private and Public networks</li>
+</ol>
+<p><strong>Linux (ufw)</strong>:</p>
+<pre><code class="lang-bash"># Check status
+sudo ufw status
+
+# Allow Aura API port
+sudo ufw allow 5005/tcp
+
+# Allow outbound to provider endpoints (if needed)
+sudo ufw allow out to api.openai.com port 443 proto tcp
+</code></pre>
+<p><strong>Linux (iptables)</strong>:</p>
+<pre><code class="lang-bash"># Allow outbound HTTPS
+sudo iptables -A OUTPUT -p tcp --dport 443 -j ACCEPT
+
+# View rules
+sudo iptables -L
+</code></pre>
+<h4 id="2-corporate-firewall">2. Corporate Firewall</h4>
+<p><strong>Contact IT department</strong> to whitelist:</p>
+<ul>
+<li><code>api.openai.com</code></li>
+<li><code>api.anthropic.com</code></li>
+<li><code>api.elevenlabs.io</code></li>
+<li><code>api.stability.ai</code></li>
+<li>Port: 443 (HTTPS)</li>
+</ul>
+<p><strong>Or request firewall logs</strong> to identify blocked connections.</p>
+<h3 id="proxy-configuration">Proxy Configuration</h3>
+<p><strong>Error</strong>: &quot;Proxy authentication required&quot; or &quot;407 Proxy Authentication Required&quot;</p>
+<h4 id="configure-proxy-in-aura">Configure Proxy in Aura</h4>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;UseProxy&quot;: true,
+    &quot;ProxyUrl&quot;: &quot;http://proxy.company.com:8080&quot;,
+    &quot;ProxyUsername&quot;: &quot;your-username&quot;,
+    &quot;ProxyPassword&quot;: &quot;your-password&quot;,
+    &quot;ProxyBypass&quot;: [&quot;localhost&quot;, &quot;127.0.0.1&quot;, &quot;::1&quot;]
+  }
+}
+</code></pre>
+<h4 id="use-system-proxy">Use System Proxy</h4>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;UseSystemProxy&quot;: true
+  }
+}
+</code></pre>
+<h4 id="set-environment-variables">Set Environment Variables</h4>
+<p><strong>Windows</strong>:</p>
+<pre><code class="lang-powershell">$env:HTTP_PROXY=&quot;http://proxy.company.com:8080&quot;
+$env:HTTPS_PROXY=&quot;http://proxy.company.com:8080&quot;
+$env:NO_PROXY=&quot;localhost,127.0.0.1&quot;
+</code></pre>
+<p><strong>Linux/Mac</strong>:</p>
+<pre><code class="lang-bash">export HTTP_PROXY=&quot;http://proxy.company.com:8080&quot;
+export HTTPS_PROXY=&quot;http://proxy.company.com:8080&quot;
+export NO_PROXY=&quot;localhost,127.0.0.1&quot;
+</code></pre>
+<h4 id="test-proxy-connection">Test Proxy Connection</h4>
+<pre><code class="lang-bash"># Test with proxy
+curl -x http://proxy.company.com:8080 https://api.openai.com
+
+# With authentication
+curl -x http://user:pass@proxy.company.com:8080 https://api.openai.com
+</code></pre>
+<hr>
+<h2 id="ssltls-errors">SSL/TLS Errors</h2>
+<h3 id="certificate-verification-failed">Certificate Verification Failed</h3>
+<p><strong>Error</strong>: &quot;SSL certificate verification failed&quot; or &quot;Certificate error&quot;</p>
+<p><strong>Common Causes</strong>:</p>
+<ul>
+<li>Expired certificates</li>
+<li>Self-signed certificates</li>
+<li>Corporate SSL inspection</li>
+<li>Outdated SSL libraries</li>
+</ul>
+<h3 id="solutions-1">Solutions</h3>
+<h4 id="1-update-system">1. Update System</h4>
+<p><strong>Windows</strong>:</p>
+<pre><code class="lang-powershell"># Update Windows
+# Settings → Update &amp; Security → Windows Update
+</code></pre>
+<p><strong>Linux</strong>:</p>
+<pre><code class="lang-bash"># Update CA certificates
+sudo apt update
+sudo apt install ca-certificates
+sudo update-ca-certificates
+</code></pre>
+<p><strong>Mac</strong>:</p>
+<pre><code class="lang-bash"># Update system
+softwareupdate -l
+softwareupdate -i -a
+</code></pre>
+<h4 id="2-install-corporate-certificates">2. Install Corporate Certificates</h4>
+<p>If using corporate proxy with SSL inspection:</p>
+<p><strong>Windows</strong>:</p>
+<ol>
+<li>Get <code>.cer</code> file from IT</li>
+<li>Double-click → Install Certificate</li>
+<li>Place in Trusted Root Certification Authorities</li>
+</ol>
+<p><strong>Linux</strong>:</p>
+<pre><code class="lang-bash"># Copy certificate
+sudo cp company-cert.crt /usr/local/share/ca-certificates/
+sudo update-ca-certificates
+</code></pre>
+<h4 id="3-temporarily-disable-certificate-verification-not-recommended">3. Temporarily Disable Certificate Verification (NOT RECOMMENDED)</h4>
+<p><strong>Only for testing, never in production</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;IgnoreSSLErrors&quot;: true  // INSECURE - only for debugging
+  }
+}
+</code></pre>
+<h4 id="4-use-specific-certificate">4. Use Specific Certificate</h4>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;CustomCertificatePath&quot;: &quot;C:\\certs\\company-root.cer&quot;
+  }
+}
+</code></pre>
+<h3 id="tls-version-issues">TLS Version Issues</h3>
+<p><strong>Error</strong>: &quot;Unsupported TLS version&quot;</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;MinimumTLSVersion&quot;: &quot;TLS12&quot;,  // Or TLS13
+    &quot;AllowedTLSVersions&quot;: [&quot;TLS12&quot;, &quot;TLS13&quot;]
+  }
+}
+</code></pre>
+<hr>
+<h2 id="dns-issues">DNS Issues</h2>
+<h3 id="cannot-resolve-hostname">Cannot Resolve Hostname</h3>
+<p><strong>Error</strong>: &quot;Could not resolve host&quot; or &quot;DNS lookup failed&quot;</p>
+<h3 id="solutions-2">Solutions</h3>
+<h4 id="1-test-dns-resolution">1. Test DNS Resolution</h4>
+<pre><code class="lang-bash"># Test DNS lookup
+nslookup api.openai.com
+
+# Should return IP addresses
+# If fails, DNS issue confirmed
+</code></pre>
+<h4 id="2-use-alternative-dns">2. Use Alternative DNS</h4>
+<p><strong>Configure system DNS</strong>:</p>
+<p><strong>Windows</strong>:</p>
+<ol>
+<li>Network &amp; Internet Settings</li>
+<li>Change adapter options</li>
+<li>Right-click connection → Properties</li>
+<li>IPv4 → Properties</li>
+<li>Use these DNS servers:
+<ul>
+<li>Preferred: <code>8.8.8.8</code> (Google)</li>
+<li>Alternate: <code>1.1.1.1</code> (Cloudflare)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Linux</strong>:</p>
+<pre><code class="lang-bash"># Edit /etc/resolv.conf
+sudo nano /etc/resolv.conf
+
+# Add:
+nameserver 8.8.8.8
+nameserver 1.1.1.1
+</code></pre>
+<p><strong>Mac</strong>:</p>
+<pre><code class="lang-bash"># System Preferences → Network
+# Advanced → DNS → Add:
+# 8.8.8.8
+# 1.1.1.1
+</code></pre>
+<h4 id="3-flush-dns-cache">3. Flush DNS Cache</h4>
+<p><strong>Windows</strong>:</p>
+<pre><code class="lang-powershell">ipconfig /flushdns
+</code></pre>
+<p><strong>Linux</strong>:</p>
+<pre><code class="lang-bash">sudo systemd-resolve --flush-caches
+# Or
+sudo /etc/init.d/nscd restart
+</code></pre>
+<p><strong>Mac</strong>:</p>
+<pre><code class="lang-bash">sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder
+</code></pre>
+<h4 id="4-use-ip-address-directly-temporary">4. Use IP Address Directly (Temporary)</h4>
+<p><strong>Not recommended long-term</strong>, but for testing:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;BaseUrl&quot;: &quot;https://104.18.6.192/v1&quot;  // OpenAI IP (example)
+    }
+  }
+}
+</code></pre>
+<p>Note: IPs can change, use DNS when possible.</p>
+<hr>
+<h2 id="connection-pooling-issues">Connection Pooling Issues</h2>
+<h3 id="too-many-open-connections">Too Many Open Connections</h3>
+<p><strong>Error</strong>: &quot;Connection pool exhausted&quot; or &quot;Too many connections&quot;</p>
+<h3 id="solutions-3">Solutions</h3>
+<h4 id="1-configure-connection-pooling">1. Configure Connection Pooling</h4>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;MaxConnectionsPerServer&quot;: 10,
+    &quot;ConnectionIdleTimeout&quot;: 90000,  // 90 seconds
+    &quot;ConnectionLifetime&quot;: 600000      // 10 minutes
+  }
+}
+</code></pre>
+<h4 id="2-enable-connection-reuse">2. Enable Connection Reuse</h4>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;EnableConnectionReuse&quot;: true,
+    &quot;EnableHttp2&quot;: true  // Better connection management
+  }
+}
+</code></pre>
+<h4 id="3-implement-rate-limiting">3. Implement Rate Limiting</h4>
+<p>Prevent too many simultaneous connections:</p>
+<pre><code class="lang-json">{
+  &quot;RateLimiting&quot;: {
+    &quot;MaxConcurrentRequests&quot;: 5,
+    &quot;QueueLimit&quot;: 20
+  }
+}
+</code></pre>
+<hr>
+<h2 id="ipv4-vs-ipv6-issues">IPv4 vs IPv6 Issues</h2>
+<h3 id="ipv6-connectivity-problems">IPv6 Connectivity Problems</h3>
+<p><strong>Error</strong>: &quot;Connection timeout&quot; (when IPv6 enabled but not working)</p>
+<h3 id="solutions-4">Solutions</h3>
+<h4 id="1-prefer-ipv4">1. Prefer IPv4</h4>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;PreferIPv4&quot;: true
+  }
+}
+</code></pre>
+<h4 id="2-disable-ipv6-system-wide">2. Disable IPv6 (System-wide)</h4>
+<p><strong>Windows</strong>:</p>
+<pre><code class="lang-powershell"># Disable IPv6
+reg add &quot;HKLM\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters&quot; /v DisabledComponents /t REG_DWORD /d 0xFF /f
+</code></pre>
+<p><strong>Linux</strong>:</p>
+<pre><code class="lang-bash"># Temporary
+sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+
+# Permanent: Add to /etc/sysctl.conf
+net.ipv6.conf.all.disable_ipv6 = 1
+</code></pre>
+<hr>
+<h2 id="network-diagnostics">Network Diagnostics</h2>
+<h3 id="enable-network-logging">Enable Network Logging</h3>
+<pre><code class="lang-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Aura.Core.Network&quot;: &quot;Debug&quot;,
+      &quot;System.Net.Http&quot;: &quot;Trace&quot;
+    }
+  }
+}
+</code></pre>
+<h3 id="capture-network-traffic">Capture Network Traffic</h3>
+<p><strong>Windows: Netsh</strong>:</p>
+<pre><code class="lang-powershell"># Start capture
+netsh trace start capture=yes
+
+# Stop capture
+netsh trace stop
+</code></pre>
+<p><strong>Linux: tcpdump</strong>:</p>
+<pre><code class="lang-bash"># Capture HTTPS traffic (encrypted)
+sudo tcpdump -i any port 443 -w capture.pcap
+
+# View capture
+tcpdump -r capture.pcap
+</code></pre>
+<p><strong>Wireshark</strong> (All platforms):</p>
+<ul>
+<li>Download from <a href="https://www.wireshark.org/">https://www.wireshark.org/</a></li>
+<li>Start capture on network interface</li>
+<li>Filter: <code>tcp.port == 443</code></li>
+</ul>
+<h3 id="test-network-path">Test Network Path</h3>
+<pre><code class="lang-bash"># Trace route to provider
+traceroute api.openai.com  # Linux/Mac
+tracert api.openai.com     # Windows
+
+# Check for packet loss or high latency
+</code></pre>
+<hr>
+<h2 id="provider-specific-network-issues">Provider-Specific Network Issues</h2>
+<h3 id="openai">OpenAI</h3>
+<p><strong>Endpoints</strong>:</p>
+<ul>
+<li>API: <code>https://api.openai.com</code></li>
+<li>Status: <code>https://status.openai.com</code></li>
+</ul>
+<p><strong>Common Issues</strong>:</p>
+<ul>
+<li>Rate limiting (wait and retry)</li>
+<li>Regional restrictions</li>
+<li>API version compatibility</li>
+</ul>
+<h3 id="anthropic">Anthropic</h3>
+<p><strong>Endpoints</strong>:</p>
+<ul>
+<li>API: <code>https://api.anthropic.com</code></li>
+<li>Docs: <code>https://docs.anthropic.com</code></li>
+</ul>
+<p><strong>Common Issues</strong>:</p>
+<ul>
+<li>Stricter rate limits</li>
+<li>Requires API key in header (not URL)</li>
+</ul>
+<h3 id="elevenlabs">ElevenLabs</h3>
+<p><strong>Endpoints</strong>:</p>
+<ul>
+<li>API: <code>https://api.elevenlabs.io</code></li>
+</ul>
+<p><strong>Common Issues</strong>:</p>
+<ul>
+<li>Large audio file downloads</li>
+<li>Streaming issues</li>
+<li>Voice model availability</li>
+</ul>
+<h3 id="stability-ai">Stability AI</h3>
+<p><strong>Endpoints</strong>:</p>
+<ul>
+<li>API: <code>https://api.stability.ai</code></li>
+</ul>
+<p><strong>Common Issues</strong>:</p>
+<ul>
+<li>Large image uploads/downloads</li>
+<li>Generation timeouts</li>
+<li>VRAM errors (local generation)</li>
+</ul>
+<hr>
+<h2 id="offline-mode">Offline Mode</h2>
+<h3 id="work-without-internet">Work Without Internet</h3>
+<p><strong>Limited Functionality</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;OfflineMode&quot;: {
+    &quot;Enabled&quot;: true,
+    &quot;UseLocalProvidersOnly&quot;: true,
+    &quot;CacheRemoteResponses&quot;: true
+  }
+}
+</code></pre>
+<p><strong>Available offline</strong>:</p>
+<ul>
+<li>Project editing</li>
+<li>Timeline editing</li>
+<li>Local rendering (FFmpeg)</li>
+<li>Cached provider responses</li>
+</ul>
+<p><strong>NOT available offline</strong>:</p>
+<ul>
+<li>Script generation (requires LLM)</li>
+<li>TTS generation (unless local)</li>
+<li>Image generation (unless local)</li>
+<li>Model downloads</li>
+<li>Updates</li>
+</ul>
+<hr>
+<h2 id="network-performance-optimization">Network Performance Optimization</h2>
+<h3 id="reduce-network-usage">Reduce Network Usage</h3>
+<pre><code class="lang-json">{
+  &quot;Network&quot;: {
+    &quot;EnableCompression&quot;: true,
+    &quot;EnableCaching&quot;: true,
+    &quot;CacheDurationMinutes&quot;: 60
+  },
+  &quot;Providers&quot;: {
+    &quot;EnableResponseCache&quot;: true,
+    &quot;CacheDirectory&quot;: &quot;~/.config/aura/cache&quot;
+  }
+}
+</code></pre>
+<h3 id="batch-requests">Batch Requests</h3>
+<p>Process multiple items in single request when possible:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;EnableBatching&quot;: true,
+    &quot;MaxBatchSize&quot;: 10
+  }
+}
+</code></pre>
+<h3 id="use-cdn-for-assets">Use CDN for Assets</h3>
+<p>Cache static assets locally:</p>
+<pre><code class="lang-json">{
+  &quot;Assets&quot;: {
+    &quot;UseCDN&quot;: false,
+    &quot;CacheLocally&quot;: true
+  }
+}
+</code></pre>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="provider-errors.html">Provider Errors</a></li>
+<li><a href="resilience.html">Resilience and Retries</a></li>
+<li><a href="Troubleshooting.html">General Troubleshooting</a></li>
+<li><a href="../setup/api-keys.html">Provider Configuration</a></li>
+</ul>
+<h2 id="need-more-help">Need More Help?</h2>
+<p>If network errors persist:</p>
+<ol>
+<li>Run network diagnostics:
+<pre><code class="lang-bash"># Test connectivity
+ping api.openai.com
+curl -v https://api.openai.com
+</code></pre>
+</li>
+<li>Enable network logging (as above)</li>
+<li>Check firewall and proxy settings</li>
+<li>Test from different network</li>
+<li>Contact network administrator for corporate environments</li>
+<li>Check <a href="https://github.com/Coffee285/aura-video-studio/issues">GitHub Issues</a></li>
+<li>Create new issue with:
+<ul>
+<li>Full error message</li>
+<li>Network configuration</li>
+<li>Provider being used</li>
+<li>Results of network tests</li>
+<li>Traceroute output</li>
+</ul>
+</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/network-errors.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

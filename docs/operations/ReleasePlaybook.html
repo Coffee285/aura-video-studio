@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Release Playbook | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Release Playbook | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/ReleasePlaybook.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="release-playbook">Release Playbook</h1>
+
+<p>This document provides step-by-step procedures for creating releases and deploying Aura Video Studio safely to production.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#automated-release-process">Automated Release Process</a></li>
+<li><a href="#prerequisites">Prerequisites</a></li>
+<li><a href="#pre-deployment-checklist">Pre-Deployment Checklist</a></li>
+<li><a href="#canary-deployment-process">Canary Deployment Process</a></li>
+<li><a href="#rollback-procedures">Rollback Procedures</a></li>
+<li><a href="#database-migration">Database Migration</a></li>
+<li><a href="#health-check-verification">Health Check Verification</a></li>
+<li><a href="#post-deployment-validation">Post-Deployment Validation</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+<h2 id="automated-release-process">Automated Release Process</h2>
+<p>Aura Video Studio uses an automated GitHub Actions workflow to create releases with complete artifacts and release notes.</p>
+<h3 id="creating-a-release">Creating a Release</h3>
+<ol>
+<li><p><strong>Update Version Number</strong></p>
+<pre><code class="lang-bash"># Increment patch version (1.0.0 → 1.0.1)
+node scripts/release/update-version.js patch
+
+# Increment minor version (1.0.0 → 1.1.0)
+node scripts/release/update-version.js minor
+
+# Increment major version (1.0.0 → 2.0.0)
+node scripts/release/update-version.js major
+
+# Or set explicit version
+node scripts/release/update-version.js 1.2.3
+</code></pre>
+</li>
+<li><p><strong>Commit Version Change</strong></p>
+<pre><code class="lang-bash">git add version.json
+git commit -m &quot;chore: Bump version to X.Y.Z&quot;
+git push origin main
+</code></pre>
+</li>
+<li><p><strong>Create and Push Tag</strong></p>
+<pre><code class="lang-bash"># Create annotated tag
+git tag -a v1.2.3 -m &quot;Release v1.2.3&quot;
+git push origin v1.2.3
+</code></pre>
+</li>
+<li><p><strong>Automated Workflow Execution</strong></p>
+<p>The GitHub Actions release workflow automatically:</p>
+<ul>
+<li>Validates version format and runs security scans</li>
+<li>Builds .NET backend (Release configuration)</li>
+<li>Builds React frontend (production bundle)</li>
+<li>Runs all unit tests (.NET + TypeScript)</li>
+<li>Runs E2E tests on Windows and Linux</li>
+<li>Creates portable distribution ZIP</li>
+<li>Generates SHA-256 checksums</li>
+<li>Generates SBOM (Software Bill of Materials)</li>
+<li>Generates release notes from conventional commits</li>
+<li>Creates GitHub Release with all artifacts</li>
+</ul>
+</li>
+<li><p><strong>Release Artifacts</strong></p>
+<p>The workflow produces:</p>
+<ul>
+<li><code>AuraVideoStudio_Portable_x64.zip</code> - Complete portable distribution</li>
+<li><code>AuraVideoStudio_Portable_x64.zip.sha256</code> - SHA-256 checksum</li>
+<li><code>sbom.json</code> - CycloneDX format SBOM</li>
+<li><code>attributions.txt</code> - Third-party license attributions</li>
+<li><code>RELEASE_NOTES.md</code> - Auto-generated from commits</li>
+</ul>
+</li>
+</ol>
+<h3 id="conventional-commits">Conventional Commits</h3>
+<p>To ensure quality release notes, follow conventional commit format:</p>
+<pre><code>&lt;type&gt;(&lt;scope&gt;): &lt;description&gt;
+
+[optional body]
+
+[optional footer]
+</code></pre>
+<p><strong>Types:</strong></p>
+<ul>
+<li><code>feat</code>: New feature (appears in Features section)</li>
+<li><code>fix</code>: Bug fix (appears in Bug Fixes section)</li>
+<li><code>perf</code>: Performance improvement</li>
+<li><code>docs</code>: Documentation changes</li>
+<li><code>refactor</code>: Code refactoring</li>
+<li><code>test</code>: Test additions/updates</li>
+<li><code>chore</code>: Build/tooling changes</li>
+<li><code>ci</code>: CI/CD changes</li>
+</ul>
+<p><strong>Breaking Changes:</strong>
+Add <code>!</code> after type or include <code>BREAKING CHANGE:</code> in footer:</p>
+<pre><code>feat!: Remove deprecated API endpoint
+
+BREAKING CHANGE: The /api/v1/old endpoint has been removed. Use /api/v2/new instead.
+</code></pre>
+<h3 id="manual-trigger">Manual Trigger</h3>
+<p>If you need to create a release without pushing a tag:</p>
+<ol>
+<li>Go to Actions → Release workflow</li>
+<li>Click &quot;Run workflow&quot;</li>
+<li>Enter tag version (e.g., <code>v1.2.3</code>)</li>
+<li>Optionally mark as pre-release</li>
+<li>Click &quot;Run workflow&quot;</li>
+</ol>
+<h3 id="version-visibility">Version Visibility</h3>
+<p>The application version is visible:</p>
+<ul>
+<li><strong>API Endpoint</strong>: <code>GET /api/version</code> returns full version info</li>
+<li><strong>UI Footer</strong>: Version displayed in bottom-right of status bar</li>
+<li><strong>Health Check</strong>: Version included in health endpoint responses</li>
+</ul>
+<h3 id="release-notes-generation">Release Notes Generation</h3>
+<p>Release notes are automatically generated from commits between tags using conventional commit format. You can preview them locally:</p>
+<pre><code class="lang-bash"># Generate notes for commits since last tag
+node scripts/release/generate-release-notes.js v1.0.0 HEAD
+
+# View generated RELEASE_NOTES.md
+cat RELEASE_NOTES.md
+</code></pre>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Before initiating any deployment:</p>
+<ol>
+<li><p><strong>All CI checks must pass</strong>:</p>
+<ul>
+<li>Unit tests</li>
+<li>Contract tests</li>
+<li>Integration tests</li>
+<li>Memory regression tests</li>
+<li>E2E smoke tests</li>
+</ul>
+</li>
+<li><p><strong>Required access</strong>:</p>
+<ul>
+<li>Production environment access</li>
+<li>Database backup/restore permissions</li>
+<li>Monitoring dashboards access</li>
+<li>Incident management system</li>
+</ul>
+</li>
+<li><p><strong>Required tools</strong>:</p>
+<ul>
+<li><code>kubectl</code> or deployment platform CLI</li>
+<li><code>jq</code> for JSON processing</li>
+<li>Database client for migration verification</li>
+<li>Access to log aggregation system</li>
+</ul>
+</li>
+<li><p><strong>Team availability</strong>:</p>
+<ul>
+<li>At least 2 engineers available during deployment</li>
+<li>On-call engineer notified and standing by</li>
+<li>Backup engineer identified for extended deployments</li>
+</ul>
+</li>
+</ol>
+<h2 id="pre-deployment-checklist">Pre-Deployment Checklist</h2>
+<p>Complete this checklist before starting deployment:</p>
+<h3 id="code-and-build">Code and Build</h3>
+<ul>
+<li>[ ] All PRs merged to <code>main</code> branch</li>
+<li>[ ] CI pipeline passed on <code>main</code> branch</li>
+<li>[ ] Release notes prepared and reviewed</li>
+<li>[ ] Breaking changes documented</li>
+<li>[ ] Database migration scripts tested</li>
+<li>[ ] Release candidate artifact built and tagged</li>
+</ul>
+<h3 id="infrastructure">Infrastructure</h3>
+<ul>
+<li>[ ] Production environment health verified</li>
+<li>[ ] Database backups verified and accessible</li>
+<li>[ ] Sufficient disk space available (minimum 20% free)</li>
+<li>[ ] All dependencies updated and verified</li>
+<li>[ ] SSL certificates valid and not expiring soon</li>
+<li>[ ] CDN/static assets synced if applicable</li>
+</ul>
+<h3 id="monitoring">Monitoring</h3>
+<ul>
+<li>[ ] Monitoring dashboards accessible</li>
+<li>[ ] Alert rules reviewed and active</li>
+<li>[ ] Log aggregation working</li>
+<li>[ ] APM/tracing configured</li>
+<li>[ ] Baseline metrics recorded</li>
+</ul>
+<h3 id="communication">Communication</h3>
+<ul>
+<li>[ ] Deployment window communicated to stakeholders</li>
+<li>[ ] Status page updated (if applicable)</li>
+<li>[ ] Team chat channel created for deployment coordination</li>
+<li>[ ] Rollback decision maker identified</li>
+</ul>
+<h2 id="canary-deployment-process">Canary Deployment Process</h2>
+<p>Aura Video Studio uses automated canary deployment with health-check-based promotion.</p>
+<h3 id="deployment-stages">Deployment Stages</h3>
+<h4 id="stage-1-initial-canary-5-of-traffic">Stage 1: Initial Canary (5% of traffic)</h4>
+<pre><code class="lang-bash"># Run canary deployment script
+./deploy/canary-deploy.sh production 10m
+</code></pre>
+<p>The script will:</p>
+<ol>
+<li>Deploy to 5% of instances</li>
+<li>Run health checks every 30 seconds for 10 minutes</li>
+<li>Validate:
+<ul>
+<li>System health status (must not be &quot;Down&quot;)</li>
+<li>Provider health (warning if degraded)</li>
+<li>Correlation IDs present in responses</li>
+<li>Error rate within acceptable range</li>
+<li>Memory usage stable</li>
+<li>API response times acceptable</li>
+</ul>
+</li>
+</ol>
+<p><strong>Automatic rollback triggers:</strong></p>
+<ul>
+<li>System health endpoint returns &quot;Down&quot;</li>
+<li>3 consecutive health check failures</li>
+<li>Error rate exceeds 300% of baseline</li>
+<li>Memory growth exceeds 500MB</li>
+<li>Latency P95 exceeds 2000ms</li>
+</ul>
+<h4 id="stage-2-mid-stage-canary-50-of-traffic">Stage 2: Mid-stage Canary (50% of traffic)</h4>
+<p>If Stage 1 passes:</p>
+<ul>
+<li>Deployment automatically scales to 50%</li>
+<li>Runs health checks for another 10 minutes</li>
+<li>Same validation criteria apply</li>
+</ul>
+<h4 id="stage-3-full-rollout-100-of-traffic">Stage 3: Full Rollout (100% of traffic)</h4>
+<p>If Stage 2 passes:</p>
+<ul>
+<li>Deployment completes to 100%</li>
+<li>Final validation for 5 minutes</li>
+<li>Old version instances terminated</li>
+</ul>
+<h3 id="monitoring-during-deployment">Monitoring During Deployment</h3>
+<p>Watch these dashboards continuously:</p>
+<ol>
+<li><p><strong>System Health Dashboard</strong>:</p>
+<ul>
+<li><code>GET /api/health/system</code> - Overall system status</li>
+<li><code>GET /api/health/providers</code> - Provider health</li>
+<li><code>GET /api/health/ready</code> - Readiness check</li>
+</ul>
+</li>
+<li><p><strong>Error Rate Dashboard</strong>:</p>
+<ul>
+<li>HTTP 5xx errors per minute</li>
+<li>Provider circuit breaker trips</li>
+<li>Unhandled exceptions</li>
+</ul>
+</li>
+<li><p><strong>Performance Dashboard</strong>:</p>
+<ul>
+<li>Response time P50, P95, P99</li>
+<li>Request throughput</li>
+<li>Database query latency</li>
+</ul>
+</li>
+<li><p><strong>Resource Utilization</strong>:</p>
+<ul>
+<li>CPU usage per instance</li>
+<li>Memory usage per instance</li>
+<li>Disk I/O</li>
+<li>Database connections</li>
+</ul>
+</li>
+</ol>
+<h3 id="manual-canary-promotion-if-automated-script-unavailable">Manual Canary Promotion (if automated script unavailable)</h3>
+<p>If you need to promote manually:</p>
+<pre><code class="lang-bash"># 1. Deploy canary
+kubectl set image deployment/aura-api api=aura-api:RC-{version} --record
+
+# 2. Scale canary to 5%
+kubectl scale deployment/aura-api-canary --replicas=1
+
+# 3. Monitor for 10 minutes
+watch -n 30 'curl -s http://api/health/system | jq'
+
+# 4. If healthy, scale to 50%
+kubectl scale deployment/aura-api-canary --replicas=5
+
+# 5. Monitor for 10 minutes
+
+# 6. If healthy, complete rollout
+kubectl set image deployment/aura-api api=aura-api:RC-{version} --all
+</code></pre>
+<h2 id="rollback-procedures">Rollback Procedures</h2>
+<h3 id="automatic-rollback">Automatic Rollback</h3>
+<p>The canary deployment script automatically rolls back if health checks fail. Manual rollback may be needed if issues are detected after full rollout.</p>
+<h3 id="manual-rollback-steps">Manual Rollback Steps</h3>
+<h4 id="immediate-rollback-within-1-hour-of-deployment">Immediate Rollback (within 1 hour of deployment)</h4>
+<pre><code class="lang-bash"># 1. Stop canary deployment if in progress
+# (Ctrl+C the canary-deploy.sh script)
+
+# 2. Scale down new version
+kubectl scale deployment/aura-api --replicas=0
+
+# 3. Scale up previous version
+kubectl scale deployment/aura-api-previous --replicas=10
+
+# 4. Verify health
+curl http://api/health/system
+
+# 5. Update DNS/load balancer to point to previous version
+</code></pre>
+<h4 id="rollback-with-database-migration-revert">Rollback with Database Migration Revert</h4>
+<p>If database migrations were applied:</p>
+<pre><code class="lang-bash"># 1. Stop all API instances
+kubectl scale deployment/aura-api --replicas=0
+
+# 2. Restore database snapshot
+./scripts/db/restore-snapshot.sh production pre-deployment-{timestamp}
+
+# 3. Verify database version
+./scripts/db/check-version.sh
+
+# 4. Deploy previous application version
+kubectl set image deployment/aura-api api=aura-api:{previous-version}
+
+# 5. Scale up
+kubectl scale deployment/aura-api --replicas=10
+
+# 6. Verify health
+./deploy/verify-health.sh production
+</code></pre>
+<h3 id="rollback-decision-criteria">Rollback Decision Criteria</h3>
+<p>Initiate rollback if:</p>
+<ul>
+<li>System health status becomes &quot;Down&quot; and doesn't recover within 5 minutes</li>
+<li>Error rate exceeds 300% of pre-deployment baseline</li>
+<li>Critical user-facing features broken</li>
+<li>Data corruption detected</li>
+<li>Security vulnerability exposed</li>
+<li>Memory leak causing OOM errors</li>
+</ul>
+<h2 id="database-migration">Database Migration</h2>
+<h3 id="pre-migration-steps">Pre-Migration Steps</h3>
+<ol>
+<li><strong>Create database backup</strong>:</li>
+</ol>
+<pre><code class="lang-bash"># Automated backup with timestamp
+./scripts/db/backup.sh production
+</code></pre>
+<ol start="2">
+<li><strong>Verify backup integrity</strong>:</li>
+</ol>
+<pre><code class="lang-bash"># Verify backup file exists and is accessible
+./scripts/db/verify-backup.sh production {backup-timestamp}
+</code></pre>
+<ol start="3">
+<li><strong>Run migration dry-run</strong>:</li>
+</ol>
+<pre><code class="lang-bash"># Test migration on ephemeral database
+./scripts/db/migrate.sh --dry-run --environment production
+</code></pre>
+<h3 id="applying-migrations">Applying Migrations</h3>
+<p>Migrations are applied automatically during deployment if configured. Manual application:</p>
+<pre><code class="lang-bash"># 1. Put application in maintenance mode (optional)
+kubectl scale deployment/aura-api --replicas=0
+
+# 2. Apply migrations
+dotnet ef database update --project Aura.Api --context AuraDbContext
+
+# 3. Verify migration success
+./scripts/db/check-version.sh production
+
+# 4. Bring application back up
+kubectl scale deployment/aura-api --replicas=10
+</code></pre>
+<h3 id="migration-rollback-verification">Migration Rollback Verification</h3>
+<p>Test rollback procedure before deployment:</p>
+<pre><code class="lang-bash"># 1. Apply migration to test database
+dotnet ef database update --project Aura.Api --context AuraDbContext
+
+# 2. Run rollback script
+./scripts/db/rollback.sh --verify --migration {previous-migration-name}
+
+# 3. Verify data integrity
+./scripts/db/integrity-check.sh
+</code></pre>
+<h2 id="health-check-verification">Health Check Verification</h2>
+<h3 id="manual-health-check-commands">Manual Health Check Commands</h3>
+<pre><code class="lang-bash"># System health (overall status)
+curl -i http://api.aura.studio/api/health/system
+
+# Provider health (individual provider status)
+curl -i http://api.aura.studio/api/health/providers
+
+# Liveness check (is application running)
+curl -i http://api.aura.studio/health/live
+
+# Readiness check (is application ready to serve traffic)
+curl -i http://api.aura.studio/health/ready
+</code></pre>
+<h3 id="expected-responses">Expected Responses</h3>
+<p><strong>Healthy System</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-02T15:00:00Z&quot;,
+  &quot;components&quot;: {
+    &quot;llm&quot;: &quot;Healthy&quot;,
+    &quot;tts&quot;: &quot;Healthy&quot;,
+    &quot;storage&quot;: &quot;Healthy&quot;
+  }
+}
+</code></pre>
+<p><strong>Degraded System</strong> (acceptable, triggers warning):</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Degraded&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-02T15:00:00Z&quot;,
+  &quot;components&quot;: {
+    &quot;llm&quot;: &quot;Degraded&quot;,
+    &quot;tts&quot;: &quot;Healthy&quot;,
+    &quot;storage&quot;: &quot;Healthy&quot;
+  },
+  &quot;message&quot;: &quot;Primary LLM provider unavailable, using fallback&quot;
+}
+</code></pre>
+<p><strong>Unhealthy System</strong> (triggers rollback):</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Down&quot;,
+  &quot;timestamp&quot;: &quot;2025-11-02T15:00:00Z&quot;,
+  &quot;message&quot;: &quot;Critical system failure&quot;
+}
+</code></pre>
+<h3 id="correlation-id-verification">Correlation ID Verification</h3>
+<p>Every API response should include <code>X-Correlation-ID</code> header:</p>
+<pre><code class="lang-bash">curl -I http://api.aura.studio/api/health/system | grep -i correlation
+# Expected: X-Correlation-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+</code></pre>
+<p>Use correlation IDs to track requests across logs:</p>
+<pre><code class="lang-bash"># Find all logs for a specific request
+kubectl logs -l app=aura-api | grep &quot;a1b2c3d4-e5f6-7890-abcd-ef1234567890&quot;
+</code></pre>
+<h2 id="post-deployment-validation">Post-Deployment Validation</h2>
+<h3 id="smoke-tests">Smoke Tests</h3>
+<p>Run automated smoke tests after deployment:</p>
+<pre><code class="lang-bash"># Run E2E smoke tests against production
+cd Aura.Web
+PLAYWRIGHT_BASE_URL=https://aura.studio npx playwright test tests/e2e/contract-smoke.spec.ts
+</code></pre>
+<h3 id="manual-validation-checklist">Manual Validation Checklist</h3>
+<ul>
+<li>[ ] Homepage loads successfully</li>
+<li>[ ] User can create new project</li>
+<li>[ ] Script generation works</li>
+<li>[ ] TTS synthesis completes</li>
+<li>[ ] Video rendering succeeds</li>
+<li>[ ] Export/download works</li>
+<li>[ ] Settings page accessible</li>
+<li>[ ] Provider health indicators accurate</li>
+<li>[ ] No console errors in browser</li>
+</ul>
+<h3 id="metrics-validation">Metrics Validation</h3>
+<p>Compare post-deployment metrics to baseline:</p>
+<ul>
+<li>Error rate should not increase by more than 10%</li>
+<li>P95 latency should not increase by more than 20%</li>
+<li>Memory usage should remain stable</li>
+<li>No memory leaks (memory should not grow continuously)</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="deployment-fails-at-stage-1">Deployment Fails at Stage 1</h3>
+<p><strong>Symptoms</strong>: Health checks fail immediately after 5% canary deployment</p>
+<p><strong>Actions</strong>:</p>
+<ol>
+<li>Check application logs for errors:
+<pre><code class="lang-bash">kubectl logs -l app=aura-api-canary --tail=100
+</code></pre>
+</li>
+<li>Verify configuration:
+<pre><code class="lang-bash">kubectl get configmap aura-config -o yaml
+</code></pre>
+</li>
+<li>Check database connectivity:
+<pre><code class="lang-bash">kubectl exec -it aura-api-canary-pod -- curl localhost:5005/health/ready
+</code></pre>
+</li>
+<li>Review recent code changes for obvious issues</li>
+<li>Rollback and investigate offline</li>
+</ol>
+<h3 id="high-error-rate-after-deployment">High Error Rate After Deployment</h3>
+<p><strong>Symptoms</strong>: Error rate &gt;300% of baseline after deployment completes</p>
+<p><strong>Actions</strong>:</p>
+<ol>
+<li>Identify error types from logs:
+<pre><code class="lang-bash">kubectl logs -l app=aura-api | grep ERROR | tail -50
+</code></pre>
+</li>
+<li>Check if errors are from specific endpoint:
+<pre><code class="lang-bash"># Use APM or log aggregation to identify failing endpoints
+</code></pre>
+</li>
+<li>Verify provider connections:
+<pre><code class="lang-bash">curl http://api/api/health/providers | jq
+</code></pre>
+</li>
+<li>If errors are widespread and critical, initiate rollback</li>
+<li>If errors are isolated, consider hotfix deployment</li>
+</ol>
+<h3 id="memory-leak-detected">Memory Leak Detected</h3>
+<p><strong>Symptoms</strong>: Memory usage grows continuously, doesn't stabilize</p>
+<p><strong>Actions</strong>:</p>
+<ol>
+<li>Capture heap dump:
+<pre><code class="lang-bash">dotnet-dump collect -p {process-id}
+</code></pre>
+</li>
+<li>Analyze memory usage patterns</li>
+<li>If memory approaches limit, initiate rollback immediately</li>
+<li>Review recent changes for resource leaks (unclosed connections, event listeners, etc.)</li>
+</ol>
+<h3 id="database-migration-failed">Database Migration Failed</h3>
+<p><strong>Symptoms</strong>: Application fails to start after migration, database errors in logs</p>
+<p><strong>Actions</strong>:</p>
+<ol>
+<li>Check migration logs for errors</li>
+<li>Verify database version:
+<pre><code class="lang-bash">./scripts/db/check-version.sh production
+</code></pre>
+</li>
+<li>If migration partially applied, don't retry - restore from backup:
+<pre><code class="lang-bash">./scripts/db/restore-snapshot.sh production pre-deployment-{timestamp}
+</code></pre>
+</li>
+<li>Fix migration script offline</li>
+<li>Test on staging environment before retrying</li>
+</ol>
+<h3 id="rollback-fails">Rollback Fails</h3>
+<p><strong>Symptoms</strong>: Rollback script fails, both new and old versions have issues</p>
+<p><strong>Actions</strong>:</p>
+<ol>
+<li>Stop all instances to prevent further damage</li>
+<li>Restore database from most recent good backup</li>
+<li>Deploy last known good version manually</li>
+<li>Verify system health</li>
+<li>Conduct post-incident review to prevent future occurrences</li>
+</ol>
+<h2 id="contact-information">Contact Information</h2>
+<h3 id="escalation-path">Escalation Path</h3>
+<ol>
+<li><strong>Primary</strong>: On-call engineer (check current rotation)</li>
+<li><strong>Secondary</strong>: Backend team lead</li>
+<li><strong>Escalation</strong>: Engineering director</li>
+</ol>
+<h3 id="external-dependencies">External Dependencies</h3>
+<p>If issue relates to third-party services:</p>
+<ul>
+<li><strong>LLM Providers</strong>: Check status pages for OpenAI, Anthropic, Google</li>
+<li><strong>TTS Providers</strong>: Check ElevenLabs, PlayHT status</li>
+<li><strong>Infrastructure</strong>: Contact cloud provider support</li>
+<li><strong>CDN</strong>: Check CloudFlare/Fastly status</li>
+</ul>
+<h2 id="appendix">Appendix</h2>
+<h3 id="useful-commands">Useful Commands</h3>
+<pre><code class="lang-bash"># View deployment status
+kubectl rollout status deployment/aura-api
+
+# View replica sets (current and previous versions)
+kubectl get rs -l app=aura-api
+
+# Get pod logs with timestamps
+kubectl logs -f deployment/aura-api --timestamps
+
+# Describe deployment for events
+kubectl describe deployment aura-api
+
+# Check resource usage
+kubectl top pods -l app=aura-api
+</code></pre>
+<h3 id="log-locations">Log Locations</h3>
+<ul>
+<li><strong>Application logs</strong>: Centralized logging system (ElasticSearch/CloudWatch)</li>
+<li><strong>Deployment logs</strong>: CI/CD system (GitHub Actions)</li>
+<li><strong>Database logs</strong>: Database management console</li>
+<li><strong>Infrastructure logs</strong>: Cloud provider console</li>
+</ul>
+<h3 id="metrics-dashboards">Metrics Dashboards</h3>
+<ul>
+<li><strong>Grafana</strong>: <a href="https://metrics.aura.studio">https://metrics.aura.studio</a></li>
+<li><strong>Application Performance</strong>: <a href="https://apm.aura.studio">https://apm.aura.studio</a></li>
+<li><strong>Infrastructure</strong>: Cloud provider console</li>
+</ul>
+<h2 id="document-maintenance">Document Maintenance</h2>
+<ul>
+<li><strong>Last Updated</strong>: 2025-11-02</li>
+<li><strong>Review Frequency</strong>: After each production deployment</li>
+<li><strong>Owner</strong>: DevOps Team</li>
+</ul>
+<p>Update this document when:</p>
+<ul>
+<li>Deployment process changes</li>
+<li>New health checks added</li>
+<li>Rollback procedures updated</li>
+<li>Lessons learned from incidents</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/ReleasePlaybook.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

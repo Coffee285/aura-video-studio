@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Video Studio Desktop Application - Developer Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Video Studio Desktop Application - Developer Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/DESKTOP_APP_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-video-studio-desktop-application---developer-guide">Aura Video Studio Desktop Application - Developer Guide</h1>
+
+<p>This guide covers building, developing, and maintaining the Aura Video Studio desktop application built with Electron.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#development-setup">Development Setup</a></li>
+<li><a href="#building-the-desktop-app">Building the Desktop App</a></li>
+<li><a href="#platform-specific-builds">Platform-Specific Builds</a></li>
+<li><a href="#code-signing">Code Signing</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#distribution">Distribution</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+<hr>
+<h2 id="architecture-overview">Architecture Overview</h2>
+<p>The Aura Video Studio desktop app uses <strong>Electron</strong> to wrap the React frontend and ASP.NET Core backend into a native desktop application. <strong>This is the authoritative, production runtime</strong> — the canonical way users interact with Aura Video Studio.</p>
+<h3 id="components">Components</h3>
+<pre><code>Aura.Desktop/
+├── electron/
+│   ├── main.js            # Main process entry point (modular main process)
+│   ├── preload.js         # Preload script (sandboxed bridge)
+│   ├── window-manager.js  # Window lifecycle management
+│   ├── backend-service.js # Backend process management
+│   ├── menu-builder.js    # Application menu
+│   ├── tray-manager.js    # System tray integration
+│   ├── protocol-handler.js # Custom protocol (aura://)
+│   └── ipc-handlers/      # IPC handlers (config, system, video, etc.)
+├── package.json           # Electron dependencies and build config
+├── assets/
+│   ├── splash.html        # Splash screen
+│   └── icons/             # Platform-specific app icons
+├── build/                 # Build configuration
+│   ├── installer.nsh      # Windows NSIS installer script
+│   ├── entitlements.mac.plist  # macOS permissions
+│   └── dmg-background.png      # macOS DMG background
+└── resources/             # Bundled resources (generated during build)
+    ├── backend/           # Published .NET backend
+    ├── frontend/          # Built React app
+    └── ffmpeg/            # FFmpeg binaries (optional)
+</code></pre>
+<p><strong>For complete Electron main process architecture, IPC handlers, window manager, backend service, tray, menu, and protocol handler details, see:</strong><br>
+<a href="electron/README.md">Aura.Desktop/electron/README.md</a></p>
+<h3 id="do-not-use-legacy-entry-files">Do Not Use Legacy Entry Files</h3>
+<p><strong>⚠️ Important:</strong><br>
+The file <code>Aura.Desktop/preload.js</code> at the root is a <strong>legacy artifact</strong> that simply redirects to <code>electron/preload.js</code>. It exists for backwards compatibility only. All new configurations and development should reference the modular entry points in the <code>electron/</code> directory:</p>
+<ul>
+<li><strong>Main entry:</strong> <code>electron/main.js</code></li>
+<li><strong>Preload script:</strong> <code>electron/preload.js</code></li>
+<li><strong>IPC handlers:</strong> <code>electron/ipc-handlers/</code></li>
+</ul>
+<p>Do not wire <code>electron.js</code> (if present) or root <code>preload.js</code> into new Electron configurations. Always use the modular structure under <code>Aura.Desktop/electron/</code>.</p>
+<h3 id="process-model">Process Model</h3>
+<blockquote>
+<p><strong>📘 Complete Documentation</strong>: See <a href="docs/architecture/PROCESS_MODEL.html">docs/architecture/PROCESS_MODEL.md</a> for comprehensive process architecture, shutdown behavior, and troubleshooting guide.</p>
+</blockquote>
+<p><strong>Quick Overview</strong>:</p>
+<ol>
+<li><p><strong>Main Process</strong> (<code>electron/main.js</code>)</p>
+<ul>
+<li>Root process: spawns and manages all child processes</li>
+<li>Spawns the ASP.NET Core backend on a random port</li>
+<li>Creates the main window via WindowManager</li>
+<li>Manages system tray via TrayManager</li>
+<li>Tracks child processes via ProcessManager</li>
+<li>Orchestrates graceful shutdown via ShutdownOrchestrator</li>
+<li>Handles auto-updates</li>
+<li>Manages IPC communication via IPC handlers</li>
+</ul>
+</li>
+<li><p><strong>Renderer Process</strong> (React frontend)</p>
+<ul>
+<li>Runs in a sandboxed web page (Electron window)</li>
+<li>Communicates with main process via IPC (through <code>preload.js</code>)</li>
+<li>Connects to the embedded backend via HTTP</li>
+<li>Loaded from bundled frontend files</li>
+</ul>
+</li>
+<li><p><strong>Backend Process</strong> (ASP.NET Core child)</p>
+<ul>
+<li>Spawned as a child process by main process</li>
+<li>Runs on <code>http://localhost:&lt;random-port&gt;</code></li>
+<li>Provides REST API and Server-Sent Events (SSE)</li>
+<li>May spawn worker processes (FFmpeg, etc.)</li>
+<li>Fully embedded in the Electron app</li>
+</ul>
+</li>
+<li><p><strong>Worker Processes</strong> (FFmpeg, etc.)</p>
+<ul>
+<li>Spawned by backend for rendering tasks</li>
+<li>Tracked and managed by ProcessManager</li>
+<li>Cleaned up on app shutdown</li>
+</ul>
+</li>
+</ol>
+<p><strong>Shutdown Behavior</strong>:</p>
+<ul>
+<li><strong>Default</strong>: Closing window exits app completely (all processes terminated)</li>
+<li><strong>Optional</strong>: Enable &quot;Minimize to Tray&quot; in settings to keep app running in background</li>
+<li><strong>Graceful</strong>: Active render jobs prompt user before exit</li>
+<li><strong>Timeout</strong>: Force-kill after 10 seconds if graceful shutdown fails</li>
+</ul>
+<p>See <a href="docs/internal/PROCESS_MODEL.html">docs/internal/PROCESS_MODEL.md</a> for detailed shutdown sequence, troubleshooting, and diagnostics.</p>
+<h3 id="security-model">Security Model</h3>
+<ul>
+<li><strong>Context Isolation:</strong> Enabled (renderer can't access Node.js directly)</li>
+<li><strong>Node Integration:</strong> Disabled (renderer is sandboxed)</li>
+<li><strong>Preload Script:</strong> Exposes safe IPC API via <code>contextBridge</code></li>
+<li><strong>Web Security:</strong> Enabled (prevents loading arbitrary remote content)</li>
+</ul>
+<h3 id="clean-shutdown">Clean Shutdown</h3>
+<blockquote>
+<p><strong>✅ All processes terminate cleanly</strong>: Closing the desktop app properly terminates all Aura and FFmpeg processes.</p>
+</blockquote>
+<p>The desktop app implements a comprehensive shutdown sequence:</p>
+<ol>
+<li><p><strong>Graceful Shutdown</strong> (2-3 seconds):</p>
+<ul>
+<li>Notifies active connections</li>
+<li>Signals backend to shutdown via API</li>
+<li>Waits for backend to exit gracefully</li>
+</ul>
+</li>
+<li><p><strong>Force Termination</strong> (if needed):</p>
+<ul>
+<li>Kills backend process tree using OS tools</li>
+<li>On Windows: <code>taskkill /F /T</code> for process tree</li>
+<li>On Unix: <code>SIGKILL</code> to process group</li>
+</ul>
+</li>
+<li><p><strong>Orphan Detection</strong> (on startup):</p>
+<ul>
+<li>Checks if port is already in use</li>
+<li>Detects and cleans up orphaned backend processes</li>
+<li>Prevents &quot;backend unreachable&quot; errors</li>
+</ul>
+</li>
+</ol>
+<p><strong>Result</strong>: No Aura or FFmpeg processes remain in Task Manager after exit.</p>
+<p><strong>Verification</strong>: See <a href="docs/PROCESS_SHUTDOWN_VERIFICATION.html">PROCESS_SHUTDOWN_VERIFICATION.md</a> for manual test scenarios.</p>
+<hr>
+<h2 id="development-setup">Development Setup</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>Node.js 18+ and npm 9+</li>
+<li>.NET 8.0 SDK</li>
+<li>Git</li>
+</ul>
+<h3 id="install-dependencies">Install Dependencies</h3>
+<pre><code class="lang-bash"># Clone the repository
+git clone https://github.com/coffee285/aura-video-studio.git
+cd aura-video-studio
+
+# Install frontend dependencies
+cd Aura.Web
+npm install
+npm run build
+
+# Install desktop dependencies
+cd ../Aura.Desktop
+npm install
+
+# Build the backend (for development)
+cd ../Aura.Api
+dotnet build
+</code></pre>
+<h3 id="running-in-development-mode">Running in Development Mode</h3>
+<pre><code class="lang-bash"># Terminal 1: Start the backend
+cd Aura.Api
+dotnet run
+
+# Terminal 2: Start Electron (in dev mode)
+cd Aura.Desktop
+npm start
+</code></pre>
+<p><strong>Development Mode Features:</strong></p>
+<ul>
+<li>Opens DevTools automatically</li>
+<li>Uses backend from <code>Aura.Api/bin/Debug/net8.0</code></li>
+<li>Uses frontend from <code>Aura.Web/dist</code></li>
+<li>Hot reload (restart required for Electron changes)</li>
+</ul>
+<h3 id="project-structure-integration">Project Structure Integration</h3>
+<p>The desktop app integrates with the existing codebase:</p>
+<ul>
+<li><strong>Frontend:</strong> <code>Aura.Web/dist</code> → Bundled into <code>resources/frontend</code></li>
+<li><strong>Backend:</strong> <code>Aura.Api</code> → Published and bundled into <code>resources/backend</code></li>
+<li><strong>Configuration:</strong> Stored in OS-specific locations via <code>electron-store</code></li>
+</ul>
+<hr>
+<h2 id="building-the-desktop-app">Building the Desktop App</h2>
+<h3 id="quick-build-all-platforms">Quick Build (All Platforms)</h3>
+<pre><code class="lang-bash">cd Aura.Desktop
+./build-desktop.sh
+# or on Windows:
+.\build-desktop.ps1
+</code></pre>
+<p>This will:</p>
+<ol>
+<li>Build the React frontend</li>
+<li>Publish the .NET backend for all platforms</li>
+<li>Build Electron installers for all platforms</li>
+</ol>
+<h3 id="build-output">Build Output</h3>
+<pre><code>Aura.Desktop/dist/
+├── win-unpacked/                    # Windows unpacked app
+├── Aura-Video-Studio-Setup-1.0.0.exe   # Windows installer
+├── Aura-Video-Studio-1.0.0-portable.exe # Windows portable
+├── mac/                              # macOS unpacked app
+├── Aura-Video-Studio-1.0.0.dmg       # macOS disk image
+├── Aura-Video-Studio-1.0.0-universal.dmg  # macOS universal
+├── linux-unpacked/                   # Linux unpacked app
+├── Aura-Video-Studio-1.0.0.AppImage  # Linux AppImage
+├── aura-video-studio_1.0.0_amd64.deb # Debian package
+├── aura-video-studio-1.0.0.x86_64.rpm # RPM package
+└── aura-video-studio_1.0.0_amd64.snap # Snap package
+</code></pre>
+<h3 id="build-steps-explained">Build Steps Explained</h3>
+<h4 id="step-1-frontend-build">Step 1: Frontend Build</h4>
+<pre><code class="lang-bash">cd Aura.Web
+npm run build
+</code></pre>
+<p><strong>Output:</strong> <code>Aura.Web/dist/</code> - Production-optimized React bundle</p>
+<h4 id="step-2-backend-build">Step 2: Backend Build</h4>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet publish -c Release -r &lt;runtime-id&gt; --self-contained -o ../Aura.Desktop/backend/&lt;platform&gt;
+</code></pre>
+<p><strong>Runtimes:</strong></p>
+<ul>
+<li>Windows: <code>win-x64</code></li>
+<li>macOS Intel: <code>osx-x64</code></li>
+<li>macOS Apple Silicon: <code>osx-arm64</code></li>
+<li>Linux: <code>linux-x64</code></li>
+</ul>
+<p><strong>Output:</strong> Self-contained .NET application with all dependencies</p>
+<h4 id="step-3-electron-build">Step 3: Electron Build</h4>
+<pre><code class="lang-bash">cd Aura.Desktop
+npm run build:&lt;platform&gt;
+</code></pre>
+<p><strong>Platforms:</strong> <code>win</code>, <code>mac</code>, <code>linux</code>, or <code>all</code></p>
+<p>Electron Builder:</p>
+<ol>
+<li>Packages the Electron app</li>
+<li>Bundles frontend and backend</li>
+<li>Applies platform-specific configurations</li>
+<li>Creates installer/package</li>
+</ol>
+<hr>
+<h2 id="platform-specific-builds">Platform-Specific Builds</h2>
+<h3 id="windows">Windows</h3>
+<h4 id="requirements">Requirements</h4>
+<ul>
+<li>Windows 10+ (for building)</li>
+<li>Optional: Authenticode certificate for code signing</li>
+</ul>
+<h4 id="build-configuration">Build Configuration</h4>
+<pre><code class="lang-json">{
+  &quot;win&quot;: {
+    &quot;target&quot;: [&quot;nsis&quot;, &quot;portable&quot;],
+    &quot;icon&quot;: &quot;assets/icons/icon.ico&quot;
+  },
+  &quot;nsis&quot;: {
+    &quot;oneClick&quot;: false,
+    &quot;allowToChangeInstallationDirectory&quot;: true,
+    &quot;createDesktopShortcut&quot;: true,
+    &quot;createStartMenuShortcut&quot;: true,
+    &quot;perMachine&quot;: false
+  }
+}
+</code></pre>
+<h4 id="building">Building</h4>
+<pre><code class="lang-bash">npm run build:win
+</code></pre>
+<p><strong>Output:</strong></p>
+<ul>
+<li><code>Aura-Video-Studio-Setup-1.0.0.exe</code> - NSIS installer</li>
+<li><code>Aura-Video-Studio-1.0.0-portable.exe</code> - Portable executable</li>
+</ul>
+<h4 id="file-associations">File Associations</h4>
+<p>The Windows installer registers <code>.aura</code> file associations:</p>
+<ul>
+<li>Double-clicking <code>.aura</code> files opens them in Aura Video Studio</li>
+<li>Right-click → Open with → Aura Video Studio</li>
+</ul>
+<h3 id="macos">macOS</h3>
+<h4 id="requirements-1">Requirements</h4>
+<ul>
+<li>macOS 10.15+ (for building)</li>
+<li>Xcode Command Line Tools: <code>xcode-select --install</code></li>
+<li>Optional: Apple Developer certificate for code signing</li>
+</ul>
+<h4 id="build-configuration-1">Build Configuration</h4>
+<pre><code class="lang-json">{
+  &quot;mac&quot;: {
+    &quot;target&quot;: [&quot;dmg&quot;, &quot;zip&quot;],
+    &quot;category&quot;: &quot;public.app-category.video&quot;,
+    &quot;icon&quot;: &quot;assets/icons/icon.icns&quot;,
+    &quot;hardenedRuntime&quot;: true,
+    &quot;entitlements&quot;: &quot;build/entitlements.mac.plist&quot;
+  }
+}
+</code></pre>
+<h4 id="building-1">Building</h4>
+<pre><code class="lang-bash">npm run build:mac
+</code></pre>
+<p><strong>Output:</strong></p>
+<ul>
+<li><code>Aura-Video-Studio-1.0.0.dmg</code> - Disk image (current arch)</li>
+<li><code>Aura-Video-Studio-1.0.0-universal.dmg</code> - Universal binary (Intel + Apple Silicon)</li>
+</ul>
+<h4 id="universal-builds">Universal Builds</h4>
+<p>To build a universal binary (works on both Intel and Apple Silicon):</p>
+<ol>
+<li><p>Build backend for both architectures:</p>
+<pre><code class="lang-bash">dotnet publish -r osx-x64 --self-contained
+dotnet publish -r osx-arm64 --self-contained
+</code></pre>
+</li>
+<li><p>electron-builder automatically creates a universal app when both are present</p>
+</li>
+</ol>
+<h3 id="linux">Linux</h3>
+<h4 id="requirements-2">Requirements</h4>
+<ul>
+<li>Linux (any distro)</li>
+<li>Optional: <code>fuse</code> for AppImage testing</li>
+</ul>
+<h4 id="build-configuration-2">Build Configuration</h4>
+<pre><code class="lang-json">{
+  &quot;linux&quot;: {
+    &quot;target&quot;: [&quot;AppImage&quot;, &quot;deb&quot;, &quot;rpm&quot;, &quot;snap&quot;],
+    &quot;category&quot;: &quot;Video&quot;,
+    &quot;icon&quot;: &quot;assets/icons/&quot;
+  }
+}
+</code></pre>
+<h4 id="building-2">Building</h4>
+<pre><code class="lang-bash">npm run build:linux
+</code></pre>
+<p><strong>Output:</strong></p>
+<ul>
+<li><code>Aura-Video-Studio-1.0.0.AppImage</code> - Universal, no installation required</li>
+<li><code>aura-video-studio_1.0.0_amd64.deb</code> - Debian/Ubuntu package</li>
+<li><code>aura-video-studio-1.0.0.x86_64.rpm</code> - Fedora/RHEL package</li>
+<li><code>aura-video-studio_1.0.0_amd64.snap</code> - Snap package</li>
+</ul>
+<h4 id="appimage">AppImage</h4>
+<p>AppImage is the recommended format for Linux:</p>
+<ul>
+<li>No installation required</li>
+<li>Works on most distros</li>
+<li>Self-contained</li>
+</ul>
+<p><strong>Testing AppImage:</strong></p>
+<pre><code class="lang-bash">chmod +x dist/Aura-Video-Studio-1.0.0.AppImage
+./dist/Aura-Video-Studio-1.0.0.AppImage
+</code></pre>
+<hr>
+<h2 id="code-signing">Code Signing</h2>
+<p>Code signing is <strong>highly recommended</strong> for production releases to avoid security warnings.</p>
+<h3 id="windows-code-signing">Windows Code Signing</h3>
+<h4 id="requirements-3">Requirements</h4>
+<ul>
+<li>Authenticode certificate (<code>.pfx</code> or <code>.p12</code>)</li>
+<li>Certificate password</li>
+</ul>
+<h4 id="setup">Setup</h4>
+<ol>
+<li><p><strong>Obtain Certificate</strong></p>
+<ul>
+<li>Purchase from a Certificate Authority (DigiCert, Sectigo, etc.)</li>
+<li>Or use a self-signed certificate (for testing only)</li>
+</ul>
+</li>
+<li><p><strong>Configure</strong></p>
+<pre><code class="lang-json">{
+  &quot;win&quot;: {
+    &quot;certificateFile&quot;: &quot;certs/win-cert.pfx&quot;,
+    &quot;certificatePassword&quot;: &quot;${env.WIN_CERT_PASSWORD}&quot;
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Build</strong></p>
+<pre><code class="lang-bash">export WIN_CERT_PASSWORD=&quot;your-password&quot;
+npm run build:win
+</code></pre>
+</li>
+</ol>
+<p><strong>Result:</strong> Signed executable bypasses Windows SmartScreen</p>
+<h3 id="macos-code-signing">macOS Code Signing</h3>
+<h4 id="requirements-4">Requirements</h4>
+<ul>
+<li>Apple Developer account ($99/year)</li>
+<li>Developer ID Application certificate</li>
+<li>Xcode with signing configured</li>
+</ul>
+<h4 id="setup-1">Setup</h4>
+<ol>
+<li><p><strong>Install Certificate</strong></p>
+<ul>
+<li>Download certificate from Apple Developer portal</li>
+<li>Import into Keychain Access</li>
+</ul>
+</li>
+<li><p><strong>Configure</strong></p>
+<pre><code class="lang-json">{
+  &quot;mac&quot;: {
+    &quot;identity&quot;: &quot;Developer ID Application: Your Name (TEAMID)&quot;,
+    &quot;hardenedRuntime&quot;: true,
+    &quot;entitlements&quot;: &quot;build/entitlements.mac.plist&quot;,
+    &quot;notarize&quot;: true
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Build and Notarize</strong></p>
+<pre><code class="lang-bash">export APPLE_ID=&quot;your@email.com&quot;
+export APPLE_APP_SPECIFIC_PASSWORD=&quot;xxxx-xxxx-xxxx-xxxx&quot;
+export APPLE_TEAM_ID=&quot;YOUR_TEAM_ID&quot;
+npm run build:mac
+</code></pre>
+</li>
+</ol>
+<p><strong>Result:</strong> Notarized app bypasses macOS Gatekeeper</p>
+<p><strong>Notarization Process:</strong></p>
+<ol>
+<li>Build creates the app</li>
+<li>App is uploaded to Apple's notarization service</li>
+<li>Apple scans for malware</li>
+<li>Notarization ticket is stapled to the app</li>
+<li>App can now run without warnings</li>
+</ol>
+<h3 id="linux-code-signing">Linux Code Signing</h3>
+<p>Linux packages don't require code signing for most use cases. For enterprise deployment:</p>
+<ul>
+<li><strong>DEB/RPM:</strong> Sign with GPG</li>
+<li><strong>Snap:</strong> Sign with Snap Store key</li>
+<li><strong>Flatpak:</strong> Sign with GPG key</li>
+</ul>
+<hr>
+<h2 id="testing">Testing</h2>
+<h3 id="manual-testing">Manual Testing</h3>
+<ol>
+<li><p><strong>Build the app:</strong></p>
+<pre><code class="lang-bash">npm run build:dir
+</code></pre>
+</li>
+<li><p><strong>Run the unpacked app:</strong></p>
+<ul>
+<li>Windows: <code>dist/win-unpacked/Aura Video Studio.exe</code></li>
+<li>macOS: <code>dist/mac/Aura Video Studio.app</code></li>
+<li>Linux: <code>dist/linux-unpacked/aura-video-studio</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="automated-testing">Automated Testing</h3>
+<pre><code class="lang-bash"># Unit tests (Electron main process)
+npm test
+
+# E2E tests (with Spectron)
+npm run test:e2e
+</code></pre>
+<h3 id="testing-checklist">Testing Checklist</h3>
+<ul>
+<li>[ ] App launches successfully</li>
+<li>[ ] Backend starts and becomes healthy</li>
+<li>[ ] Frontend loads and connects to backend</li>
+<li>[ ] First-run wizard appears on first launch</li>
+<li>[ ] FFmpeg detection works</li>
+<li>[ ] Ollama detection works</li>
+<li>[ ] Video can be created and rendered</li>
+<li>[ ] System tray icon appears and functions</li>
+<li>[ ] Auto-update check works (staging server)</li>
+<li>[ ] App closes gracefully (backend terminates)</li>
+<li>[ ] App can be uninstalled cleanly</li>
+</ul>
+<hr>
+<h2 id="distribution">Distribution</h2>
+<h3 id="github-releases">GitHub Releases</h3>
+<ol>
+<li><p><strong>Tag a release:</strong></p>
+<pre><code class="lang-bash">git tag v1.0.0
+git push origin v1.0.0
+</code></pre>
+</li>
+<li><p><strong>Build all platforms:</strong></p>
+<pre><code class="lang-bash">npm run build:all
+</code></pre>
+</li>
+<li><p><strong>Create GitHub Release:</strong></p>
+<ul>
+<li>Go to Releases → New Release</li>
+<li>Choose tag <code>v1.0.0</code></li>
+<li>Upload all artifacts from <code>dist/</code></li>
+<li>Write release notes</li>
+</ul>
+</li>
+<li><p><strong>Auto-update configuration:</strong></p>
+<ul>
+<li>electron-updater automatically checks GitHub releases</li>
+<li>Users get update notifications</li>
+</ul>
+</li>
+</ol>
+<h3 id="platform-stores">Platform Stores</h3>
+<h4 id="microsoft-store-windows">Microsoft Store (Windows)</h4>
+<ol>
+<li>Create a Microsoft Partner Center account</li>
+<li>Use electron-builder's <code>appx</code> target</li>
+<li>Submit for review</li>
+</ol>
+<h4 id="mac-app-store">Mac App Store</h4>
+<ol>
+<li>Build with <code>mas</code> target</li>
+<li>Create App Store Connect listing</li>
+<li>Submit for review</li>
+</ol>
+<p><strong>Note:</strong> Mac App Store has restrictions (no child processes), so direct DMG distribution is recommended.</p>
+<h4 id="snap-store-linux">Snap Store (Linux)</h4>
+<ol>
+<li>Create a Snapcraft developer account</li>
+<li>Build snap: <code>npm run build:linux</code></li>
+<li>Upload: <code>snapcraft upload dist/*.snap</code></li>
+</ol>
+<h4 id="flathub-linux">Flathub (Linux)</h4>
+<ol>
+<li>Create Flathub submission repo</li>
+<li>Submit pull request to Flathub</li>
+<li>Wait for review</li>
+</ol>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="build-issues">Build Issues</h3>
+<h4 id="backend-not-found">&quot;Backend not found&quot;</h4>
+<p><strong>Solution:</strong> Build the backend first:</p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet publish -c Release -r win-x64 --self-contained -o ../Aura.Desktop/backend/win-x64
+</code></pre>
+<h4 id="frontend-not-found">&quot;Frontend not found&quot;</h4>
+<p><strong>Solution:</strong> Build the frontend first:</p>
+<pre><code class="lang-bash">cd Aura.Web
+npm run build
+</code></pre>
+<h4 id="electron-builder-fails-with-enoent">&quot;electron-builder fails with ENOENT&quot;</h4>
+<p><strong>Solution:</strong> Clear build cache:</p>
+<pre><code class="lang-bash">rm -rf dist/
+rm -rf node_modules/
+npm install
+</code></pre>
+<h3 id="runtime-issues">Runtime Issues</h3>
+<h4 id="backend-failed-to-start">&quot;Backend failed to start&quot;</h4>
+<p><strong>Debugging:</strong></p>
+<ol>
+<li>Check backend logs in user data directory</li>
+<li>Verify backend executable has execute permissions</li>
+<li>Check port conflicts</li>
+<li>Run backend manually: <code>./backend/Aura.Api.exe</code></li>
+</ol>
+<h4 id="frontend-wont-load">&quot;Frontend won't load&quot;</h4>
+<p><strong>Debugging:</strong></p>
+<ol>
+<li>Open DevTools: View → Toggle Developer Tools</li>
+<li>Check console for errors</li>
+<li>Verify backend URL is correct</li>
+<li>Check network tab for failed requests</li>
+</ol>
+<h4 id="app-crashes-on-startup">&quot;App crashes on startup&quot;</h4>
+<p><strong>Debugging:</strong></p>
+<ol>
+<li>Check crash logs in user data directory</li>
+<li>Run from terminal to see error output:
+<ul>
+<li>Windows: <code>&quot;C:\Program Files\Aura Video Studio\Aura Video Studio.exe&quot;</code></li>
+<li>macOS: <code>/Applications/Aura\ Video\ Studio.app/Contents/MacOS/Aura\ Video\ Studio</code></li>
+<li>Linux: <code>./aura-video-studio</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="auto-update-issues">Auto-Update Issues</h3>
+<h4 id="update-check-fails">&quot;Update check fails&quot;</h4>
+<p><strong>Debugging:</strong></p>
+<ol>
+<li>Check network connectivity</li>
+<li>Verify release exists on GitHub</li>
+<li>Check <code>package.json</code> → <code>repository</code> URL is correct</li>
+<li>Enable debug logging:
+<pre><code class="lang-javascript">autoUpdater.logger = console;
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2 id="advanced-topics">Advanced Topics</h2>
+<h3 id="custom-protocols">Custom Protocols</h3>
+<p>Custom URL protocols are registered via the <code>protocol-handler.js</code> module:</p>
+<pre><code class="lang-javascript">// electron/protocol-handler.js handles:
+// aura://open?path=/path/to/project
+// aura://create?template=basic
+// aura://generate?script=...
+// aura://settings
+// aura://help
+// aura://about
+
+// Protocol is registered in electron/main.js before app.ready
+protocol.registerSchemesAsPrivileged([...]);
+</code></pre>
+<h3 id="deep-linking">Deep Linking</h3>
+<p>File associations are handled via electron-builder configuration in <code>package.json</code>:</p>
+<pre><code class="lang-javascript">// Configured in package.json build.win.fileAssociations
+// Handles .aura and .avsproj files
+// When user opens these files, Electron app receives the file path
+</code></pre>
+<p>See <code>electron/protocol-handler.js</code> for the complete implementation.</p>
+<h3 id="performance-monitoring">Performance Monitoring</h3>
+<p>Integrate with analytics:</p>
+<pre><code class="lang-javascript">// electron.js
+const { powerMonitor } = require('electron');
+
+powerMonitor.on('suspend', () =&gt; {
+  console.log('System going to sleep');
+});
+
+powerMonitor.on('resume', () =&gt; {
+  console.log('System waking up');
+});
+</code></pre>
+<h3 id="custom-menus">Custom Menus</h3>
+<p>Create native menus:</p>
+<pre><code class="lang-javascript">const { Menu } = require('electron');
+
+const template = [
+  {
+    label: 'File',
+    submenu: [
+      { label: 'New Project', accelerator: 'CmdOrCtrl+N', click: createNewProject },
+      { label: 'Open Project', accelerator: 'CmdOrCtrl+O', click: openProject },
+      { type: 'separator' },
+      { role: 'quit' }
+    ]
+  },
+  // ...
+];
+
+const menu = Menu.buildFromTemplate(template);
+Menu.setApplicationMenu(menu);
+</code></pre>
+<hr>
+<h2 id="contributing">Contributing</h2>
+<p>When working on the desktop app:</p>
+<ol>
+<li><p><strong>Follow the existing patterns</strong></p>
+<ul>
+<li>Use IPC for renderer ↔ main communication</li>
+<li>Keep security best practices</li>
+<li>Test on all platforms</li>
+</ul>
+</li>
+<li><p><strong>Update documentation</strong></p>
+<ul>
+<li>Document new IPC handlers</li>
+<li>Update build scripts if needed</li>
+</ul>
+</li>
+<li><p><strong>Test thoroughly</strong></p>
+<ul>
+<li>Test on Windows, macOS, and Linux</li>
+<li>Test installers, not just unpacked builds</li>
+</ul>
+</li>
+<li><p><strong>Submit PRs</strong></p>
+<ul>
+<li>Include screenshots/videos of new features</li>
+<li>Describe testing performed</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="resources">Resources</h2>
+<ul>
+<li><a href="https://www.electronjs.org/docs">Electron Documentation</a></li>
+<li><a href="https://www.electron.build/">electron-builder Documentation</a></li>
+<li><a href="https://www.electronjs.org/docs/latest/tutorial/security">Electron Security</a></li>
+<li><a href="https://www.electron.build/auto-update">Auto-Update Best Practices</a></li>
+</ul>
+<hr>
+<p><strong>Questions?</strong> Open an issue or ask in <a href="https://discord.gg/aura-video-studio">Discord</a>!</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/DESKTOP_APP_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

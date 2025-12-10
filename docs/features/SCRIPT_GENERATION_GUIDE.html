@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Script Generation Flow - User Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Script Generation Flow - User Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/SCRIPT_GENERATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="script-generation-flow---user-guide">Script Generation Flow - User Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Script Generation Flow enables users to create AI-powered video scripts with full editing capabilities, quality indicators, and export options.</p>
+<h2 id="features">Features</h2>
+<h3 id="1-script-generation">1. Script Generation</h3>
+<p><strong>Endpoint</strong>: <code>POST /api/scripts/generate</code></p>
+<p>Generate a complete video script from a brief:</p>
+<pre><code class="lang-typescript">const script = await generateScript({
+  topic: 'Introduction to Machine Learning',
+  audience: 'Beginners in tech',
+  goal: 'Educate and inspire',
+  tone: 'Conversational',
+  targetDurationSeconds: 120,
+  preferredProvider: 'RuleBased' // optional
+});
+</code></pre>
+<p><strong>Response includes</strong>:</p>
+<ul>
+<li>Script ID for future reference</li>
+<li>List of scenes with narration and visual prompts</li>
+<li>Metadata (provider, model, cost, generation time)</li>
+<li>Correlation ID for tracking</li>
+</ul>
+<h3 id="2-provider-selection">2. Provider Selection</h3>
+<p><strong>Endpoint</strong>: <code>GET /api/scripts/providers</code></p>
+<p>Fetch available LLM providers:</p>
+<pre><code class="lang-typescript">const { providers } = await listProviders();
+// Returns list with:
+// - name, tier (Free/Pro)
+// - isAvailable status
+// - capabilities
+// - cost estimates
+</code></pre>
+<p><strong>Available Providers</strong>:</p>
+<ul>
+<li><strong>RuleBased</strong> (Free, Offline) - Template-based generation</li>
+<li><strong>Ollama</strong> (Free, Local) - Local LLM models</li>
+<li><strong>OpenAI</strong> (Pro) - GPT-4 and GPT-3.5</li>
+<li><strong>Gemini</strong> (Pro) - Google's language model</li>
+</ul>
+<h3 id="3-scene-editing">3. Scene Editing</h3>
+<p><strong>Auto-save</strong>: Changes are automatically saved 2 seconds after typing stops</p>
+<p><strong>Endpoint</strong>: <code>PUT /api/scripts/{id}/scenes/{sceneNumber}</code></p>
+<p>Update scene content:</p>
+<pre><code class="lang-typescript">await updateScene('script-123', 1, {
+  narration: 'Updated narration text',
+  visualPrompt: 'New visual description', // optional
+  durationSeconds: 6.5 // optional
+});
+</code></pre>
+<h3 id="4-script-regeneration">4. Script Regeneration</h3>
+<h4 id="full-script-regeneration">Full Script Regeneration</h4>
+<p><strong>Endpoint</strong>: <code>POST /api/scripts/{id}/regenerate</code></p>
+<pre><code class="lang-typescript">await regenerateScript('script-123', {
+  preferredProvider: 'OpenAI' // optional
+});
+</code></pre>
+<h4 id="single-scene-regeneration">Single Scene Regeneration</h4>
+<p><strong>Endpoint</strong>: <code>POST /api/scripts/{id}/scenes/{sceneNumber}/regenerate</code></p>
+<pre><code class="lang-typescript">await regenerateScene('script-123', 2);
+</code></pre>
+<h3 id="5-quality-indicators">5. Quality Indicators</h3>
+<p>The UI displays several quality metrics:</p>
+<p><strong>Word Count</strong>: Total words across all scenes</p>
+<p><strong>Reading Speed (WPM)</strong>: Words per minute - ideal range 120-180 WPM</p>
+<ul>
+<li><strong>Slow</strong>: &lt; 120 WPM</li>
+<li><strong>Good</strong>: 120-180 WPM</li>
+<li><strong>Fast</strong>: &gt; 180 WPM</li>
+</ul>
+<p><strong>Scene Pacing Badges</strong>:</p>
+<ul>
+<li><strong>Too Short</strong>: Scene has too few words for its duration</li>
+<li><strong>Too Long</strong>: Scene has too many words for its duration</li>
+<li><strong>Good</strong>: Scene has appropriate pacing</li>
+</ul>
+<h3 id="6-script-export">6. Script Export</h3>
+<p><strong>Endpoint</strong>: <code>GET /api/scripts/{id}/export?format=text|markdown</code></p>
+<p>Export formats:</p>
+<p><strong>Text Format</strong> (<code>.txt</code>):</p>
+<pre><code>Title
+=====
+
+Scene 1 (5.0s)
+
+Narration text here...
+
+Visual: Visual prompt here...
+---
+</code></pre>
+<p><strong>Markdown Format</strong> (<code>.md</code>):</p>
+<pre><code class="lang-markdown"># Title
+
+## Scene 1
+**Duration**: 5.0s | **Transition**: Cut
+
+### Narration
+Narration text here...
+
+### Visual
+&gt; Visual prompt here...
+</code></pre>
+<h2 id="user-workflow">User Workflow</h2>
+<h3 id="step-1-navigate-to-script-review-wizard-step-3">Step 1: Navigate to Script Review (Wizard Step 3)</h3>
+<ol>
+<li>Complete Brief Input (Step 1)</li>
+<li>Configure Style (Step 2)</li>
+<li>Reach Script Review (Step 3)</li>
+</ol>
+<h3 id="step-2-generate-script">Step 2: Generate Script</h3>
+<ol>
+<li>Click <strong>&quot;Generate Script&quot;</strong> button</li>
+<li>Wait for generation (shows loading state)</li>
+<li>Review generated scenes</li>
+</ol>
+<h3 id="step-3-edit-and-refine">Step 3: Edit and Refine</h3>
+<p><strong>Edit Scene Narration</strong>:</p>
+<ul>
+<li>Click in the narration text field</li>
+<li>Type your changes</li>
+<li>Changes auto-save after 2 seconds</li>
+</ul>
+<p><strong>Regenerate Scene</strong>:</p>
+<ul>
+<li>Click <strong>&quot;Regenerate&quot;</strong> button on specific scene</li>
+<li>Scene will be replaced with fresh content</li>
+</ul>
+<p><strong>Regenerate Entire Script</strong>:</p>
+<ul>
+<li>Click <strong>&quot;Regenerate&quot;</strong> button in header</li>
+<li>Entire script will be regenerated</li>
+</ul>
+<h3 id="step-4-review-quality">Step 4: Review Quality</h3>
+<p>Check the statistics bar:</p>
+<ul>
+<li>Total Duration</li>
+<li>Word Count</li>
+<li>Reading Speed (with Good/Slow/Fast indicator)</li>
+<li>Scene Count</li>
+<li>Provider Used</li>
+</ul>
+<p>Look for quality badges on scenes:</p>
+<ul>
+<li><strong>Too Short</strong>: Consider adding more content</li>
+<li><strong>Too Long</strong>: Consider breaking into multiple scenes</li>
+</ul>
+<h3 id="step-5-export">Step 5: Export</h3>
+<ol>
+<li>Click <strong>&quot;Export Text&quot;</strong> for plain text format</li>
+<li>Click <strong>&quot;Export Markdown&quot;</strong> for markdown format</li>
+<li>File downloads automatically with timestamp</li>
+</ol>
+<h3 id="step-6-continue-to-next-step">Step 6: Continue to Next Step</h3>
+<p>Once satisfied with the script, click <strong>&quot;Next&quot;</strong> to proceed to voice configuration.</p>
+<h2 id="technical-implementation">Technical Implementation</h2>
+<h3 id="frontend-component-structure">Frontend Component Structure</h3>
+<pre><code>ScriptReview.tsx
+├── Header
+│   ├── Title
+│   └── Actions (Export, Regenerate)
+├── Statistics Bar
+│   ├── Duration
+│   ├── Word Count
+│   ├── Reading Speed
+│   ├── Scene Count
+│   └── Provider Badge
+└── Scenes List
+    └── Scene Card (per scene)
+        ├── Scene Header
+        │   ├── Scene Number Badge
+        │   ├── Quality Badges
+        │   └── Regenerate Button
+        ├── Narration Field (auto-save)
+        ├── Metadata Row
+        │   ├── Duration
+        │   ├── Word Count
+        │   └── Transition
+        └── Visual Prompt (read-only)
+</code></pre>
+<h3 id="state-management">State Management</h3>
+<p><strong>Local State</strong>:</p>
+<ul>
+<li><code>isGenerating</code>: Loading state during generation</li>
+<li><code>generatedScript</code>: Current script data</li>
+<li><code>editingScenes</code>: Scenes being edited (for optimistic updates)</li>
+<li><code>regeneratingScenes</code>: Scenes being regenerated (loading states)</li>
+<li><code>providers</code>: Available LLM providers</li>
+<li><code>selectedProvider</code>: Currently selected provider</li>
+</ul>
+<p><strong>Auto-save Implementation</strong>:</p>
+<pre><code class="lang-typescript">const autoSaveTimeouts = useRef&lt;Record&lt;number, ReturnType&lt;typeof setTimeout&gt;&gt;&gt;({});
+
+const handleSceneEdit = (sceneNumber: number, newText: string) =&gt; {
+  // Clear existing timeout
+  if (autoSaveTimeouts.current[sceneNumber]) {
+    clearTimeout(autoSaveTimeouts.current[sceneNumber]);
+  }
+  
+  // Set new timeout for 2 seconds
+  autoSaveTimeouts.current[sceneNumber] = setTimeout(async () =&gt; {
+    await updateScene(scriptId, sceneNumber, { narration: newText });
+  }, 2000);
+};
+</code></pre>
+<h2 id="api-error-handling">API Error Handling</h2>
+<p>All API methods include proper error handling:</p>
+<pre><code class="lang-typescript">try {
+  const script = await generateScript(request);
+  // Success
+} catch (error) {
+  const apiError = parseApiError(error);
+  console.error('Generation failed:', apiError.message);
+  // Show user-friendly error message
+}
+</code></pre>
+<p><strong>Common Error Scenarios</strong>:</p>
+<ul>
+<li><strong>404</strong>: Script/Scene not found</li>
+<li><strong>500</strong>: Generation failed (provider issue, network)</li>
+<li><strong>501</strong>: Feature not implemented (shouldn't happen now)</li>
+</ul>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<p>Run: <code>npm test -- scriptApi.test.ts</code></p>
+<p>Tests cover:</p>
+<ul>
+<li>Script generation</li>
+<li>Scene updates</li>
+<li>Script regeneration</li>
+<li>Scene regeneration</li>
+<li>Provider listing</li>
+<li>Export functionality</li>
+</ul>
+<h3 id="e2e-tests">E2E Tests</h3>
+<p>Run: <code>npm run playwright -- script-generation.spec.ts</code></p>
+<p>Tests cover:</p>
+<ul>
+<li>Empty state display</li>
+<li>Script generation flow</li>
+<li>Scene editing with auto-save</li>
+<li>Export options</li>
+<li>Quality indicators</li>
+<li>Provider selection</li>
+</ul>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<p><strong>Auto-save Debouncing</strong>: 2-second delay prevents excessive API calls</p>
+<p><strong>Provider Caching</strong>: Providers loaded once and cached</p>
+<p><strong>Optimistic Updates</strong>: UI updates immediately, syncs with backend afterward</p>
+<p><strong>Loading States</strong>: Clear feedback during async operations</p>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>[ ] Script version history with undo/redo</li>
+<li>[ ] Scene reordering via drag-and-drop</li>
+<li>[ ] Scene splitting and merging</li>
+<li>[ ] Template library for common video types</li>
+<li>[ ] AI-powered script improvement suggestions</li>
+<li>[ ] Collaborative editing with real-time sync</li>
+<li>[ ] PDF export with formatting</li>
+<li>[ ] Integration with video templates</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p><strong>Script won't generate</strong>:</p>
+<ol>
+<li>Check brief is filled out (Step 1)</li>
+<li>Verify provider is available</li>
+<li>Check browser console for errors</li>
+<li>Try different provider if current one fails</li>
+</ol>
+<p><strong>Auto-save not working</strong>:</p>
+<ol>
+<li>Wait full 2 seconds after editing</li>
+<li>Check network tab for PUT request</li>
+<li>Verify script ID is valid</li>
+</ol>
+<p><strong>Export not downloading</strong>:</p>
+<ol>
+<li>Check browser's download permissions</li>
+<li>Try different format</li>
+<li>Verify script has content</li>
+</ol>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ul>
+<li>Check GitHub Issues</li>
+<li>Review API logs in backend</li>
+<li>Enable browser DevTools for debugging</li>
+<li>Check correlation IDs for request tracking</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/features/SCRIPT_GENERATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

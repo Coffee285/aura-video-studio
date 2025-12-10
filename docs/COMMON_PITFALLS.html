@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Common Pitfalls | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Common Pitfalls | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/COMMON_PITFALLS.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="common-pitfalls">Common Pitfalls</h1>
+
+<p>This document lists common mistakes and anti-patterns to avoid when working on Aura Video Studio.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#react-and-frontend">React and Frontend</a></li>
+<li><a href="#backend-and-c">Backend and C#</a></li>
+<li><a href="#video-processing">Video Processing</a></li>
+<li><a href="#api-integration">API Integration</a></li>
+</ol>
+<hr>
+<h2 id="react-and-frontend">React and Frontend</h2>
+<h3 id="-using-queryselector-with-fluent-ui-class-names">❌ Using <code>querySelector</code> with Fluent UI Class Names</h3>
+<p><strong>Problem</strong>: Fluent UI's <code>makeStyles</code> generates hashed class names that change between builds.</p>
+<pre><code class="lang-tsx">// ❌ WRONG - Will break between builds
+const element = containerRef.current?.querySelector('[class*=&quot;rulerScrollable&quot;]');
+</code></pre>
+<p><strong>Solution</strong>: Use React refs instead.</p>
+<pre><code class="lang-tsx">// ✅ CORRECT
+const rulerScrollableRef = useRef&lt;HTMLDivElement&gt;(null);
+// ... later
+const element = rulerScrollableRef.current;
+</code></pre>
+<p><strong>Why</strong>: Refs are stable references that don't depend on generated class names.</p>
+<hr>
+<h3 id="-checking-isplaying-before-syncing-video-position">❌ Checking <code>isPlaying</code> Before Syncing Video Position</h3>
+<p><strong>Problem</strong>: Video preview doesn't update when seeking while paused.</p>
+<pre><code class="lang-tsx">// ❌ WRONG - Ignores seeks when paused
+const handleTimeUpdate = () =&gt; {
+  if (!playbackStore.isPlaying) return; // Bug here
+  playbackStore.setCurrentTime(video.currentTime);
+};
+</code></pre>
+<p><strong>Solution</strong>: Always sync, regardless of play state.</p>
+<pre><code class="lang-tsx">// ✅ CORRECT - Syncs on seek and play
+const handleTimeUpdate = () =&gt; {
+  playbackStore.setCurrentTime(video.currentTime);
+};
+</code></pre>
+<p><strong>Why</strong>: Seeking (dragging playhead) should update preview even when paused.</p>
+<hr>
+<h3 id="-using-fixed-delays-for-sse-connection">❌ Using Fixed Delays for SSE Connection</h3>
+<p><strong>Problem</strong>: Artificial delays cause race conditions.</p>
+<pre><code class="lang-tsx">// ❌ WRONG - Race condition
+await new Promise(resolve =&gt; setTimeout(resolve, 2000)); // Wait for job registration
+// Then connect to SSE
+</code></pre>
+<p><strong>Solution</strong>: Connect immediately and handle missing jobs gracefully.</p>
+<pre><code class="lang-tsx">// ✅ CORRECT - Connect immediately
+const eventSource = new EventSource(sseUrl);
+// SSE endpoint sends initial state even if job isn't running yet
+</code></pre>
+<p><strong>Why</strong>: The 2-second delay doesn't guarantee job is registered, and may miss early events.</p>
+<hr>
+<h3 id="-using-any-type-in-error-handling">❌ Using <code>any</code> Type in Error Handling</h3>
+<p><strong>Problem</strong>: TypeScript strict mode forbids <code>any</code> type.</p>
+<pre><code class="lang-tsx">// ❌ WRONG - Will fail CI
+try {
+  await operation();
+} catch (error: any) { // Forbidden
+  console.error(error.message);
+}
+</code></pre>
+<p><strong>Solution</strong>: Use <code>unknown</code> with type guards.</p>
+<pre><code class="lang-tsx">// ✅ CORRECT
+try {
+  await operation();
+} catch (error: unknown) {
+  const errorObj = error instanceof Error ? error : new Error(String(error));
+  console.error(errorObj.message);
+}
+</code></pre>
+<p><strong>Why</strong>: TypeScript strict mode requires proper type narrowing for errors.</p>
+<hr>
+<h2 id="backend-and-c">Backend and C#</h2>
+<h3 id="-using-reflection-to-access-private-fields">❌ Using Reflection to Access Private Fields</h3>
+<p><strong>Problem</strong>: Reflection is fragile and breaks when implementation changes.</p>
+<pre><code class="lang-csharp">// ❌ WRONG - Extremely fragile
+var field = providerType.GetField(&quot;_httpClient&quot;, BindingFlags.NonPublic | BindingFlags.Instance);
+var httpClient = (HttpClient?)field.GetValue(provider);
+</code></pre>
+<p><strong>Solution</strong>: Use proper dependency injection with interfaces.</p>
+<pre><code class="lang-csharp">// ✅ CORRECT
+public interface IOllamaDirectClient
+{
+    Task&lt;string&gt; GenerateAsync(string model, string prompt, ...);
+}
+
+// Inject via constructor
+private readonly IOllamaDirectClient _ollamaClient;
+</code></pre>
+<p><strong>Why</strong>: Reflection breaks encapsulation, is untestable, and fails when wrapped in decorators.</p>
+<hr>
+<h3 id="-setting-job-status-to-completed-without-outputpath">❌ Setting Job Status to &quot;completed&quot; Without OutputPath</h3>
+<p><strong>Problem</strong>: Frontend polls job status but has no file to download.</p>
+<pre><code class="lang-csharp">// ❌ WRONG - Job appears complete but no output
+await UpdateJobStatusAsync(jobId, &quot;completed&quot;, 100); // Missing outputPath
+</code></pre>
+<p><strong>Solution</strong>: Always set outputPath atomically with completed status.</p>
+<pre><code class="lang-csharp">// ✅ CORRECT - Atomic update
+await UpdateJobStatusAsync(jobId, &quot;completed&quot;, 100, outputPath: &quot;/path/to/video.mp4&quot;);
+</code></pre>
+<p><strong>Why</strong>: Frontend waits for BOTH status=&quot;completed&quot; AND a valid outputPath. Missing outputPath causes stuck jobs.</p>
+<hr>
+<h3 id="-using-result-or-wait-on-async-methods">❌ Using <code>.Result</code> or <code>.Wait()</code> on Async Methods</h3>
+<p><strong>Problem</strong>: Causes deadlocks in ASP.NET Core.</p>
+<pre><code class="lang-csharp">// ❌ WRONG - Can deadlock
+var result = ProcessAsync().Result;
+var data = FetchDataAsync().Wait();
+</code></pre>
+<p><strong>Solution</strong>: Use <code>async</code>/<code>await</code> all the way up.</p>
+<pre><code class="lang-csharp">// ✅ CORRECT
+var result = await ProcessAsync();
+await FetchDataAsync();
+</code></pre>
+<p><strong>Why</strong>: ASP.NET Core's synchronization context can deadlock when blocking async methods.</p>
+<hr>
+<h3 id="-not-using-configureawaitfalse-in-library-code">❌ Not Using <code>ConfigureAwait(false)</code> in Library Code</h3>
+<p><strong>Problem</strong>: Unnecessary context switching in non-UI code.</p>
+<pre><code class="lang-csharp">// ❌ SUBOPTIMAL - Captures context unnecessarily
+var data = await FetchDataAsync();
+</code></pre>
+<p><strong>Solution</strong>: Use <code>ConfigureAwait(false)</code> in library/service code.</p>
+<pre><code class="lang-csharp">// ✅ CORRECT - Avoids context capture
+var data = await FetchDataAsync().ConfigureAwait(false);
+</code></pre>
+<p><strong>Why</strong>: Library code doesn't need to resume on original context. Controllers can omit this.</p>
+<hr>
+<h2 id="video-processing">Video Processing</h2>
+<h3 id="-assuming-video-completion-based-only-on-progress-percentage">❌ Assuming Video Completion Based Only on Progress Percentage</h3>
+<p><strong>Problem</strong>: Jobs can reach 100% but still fail or not produce output.</p>
+<pre><code class="lang-typescript">// ❌ WRONG - 100% doesn't guarantee success
+if (jobData.percent &gt;= 100) {
+  return true; // Assume completed
+}
+</code></pre>
+<p><strong>Solution</strong>: Check BOTH status AND outputPath.</p>
+<pre><code class="lang-typescript">// ✅ CORRECT - Verify completion
+if (jobData.status === 'completed' &amp;&amp; jobData.outputPath) {
+  return true;
+}
+</code></pre>
+<p><strong>Why</strong>: A job can reach 100% progress but fail during finalization (e.g., file write error).</p>
+<hr>
+<h3 id="-using-fixed-polling-intervals">❌ Using Fixed Polling Intervals</h3>
+<p><strong>Problem</strong>: Wastes network resources when job is idle.</p>
+<pre><code class="lang-typescript">// ❌ WRONG - Always polls every 1 second
+while (!completed) {
+  await delay(1000);
+  await checkStatus();
+}
+</code></pre>
+<p><strong>Solution</strong>: Use exponential backoff.</p>
+<pre><code class="lang-typescript">// ✅ CORRECT - Backs off when idle
+let pollDelay = 500;
+while (!completed) {
+  await delay(pollDelay);
+  const status = await checkStatus();
+  
+  if (status.progress === lastProgress) {
+    pollDelay = Math.min(pollDelay * 1.5, 5000); // Backoff
+  } else {
+    pollDelay = 500; // Reset when active
+  }
+}
+</code></pre>
+<p><strong>Why</strong>: Exponential backoff reduces server load when jobs are slow or stuck.</p>
+<hr>
+<h2 id="api-integration">API Integration</h2>
+<h3 id="-not-handling-sse-connection-failures">❌ Not Handling SSE Connection Failures</h3>
+<p><strong>Problem</strong>: Frontend gets stuck when SSE fails to connect.</p>
+<pre><code class="lang-typescript">// ❌ WRONG - No fallback
+const eventSource = new EventSource(sseUrl);
+// What if this never connects?
+</code></pre>
+<p><strong>Solution</strong>: Implement timeout and fallback to polling.</p>
+<pre><code class="lang-typescript">// ✅ CORRECT - Fallback strategy
+const eventSource = new EventSource(sseUrl);
+const timeout = setTimeout(() =&gt; {
+  if (!connectionEstablished) {
+    eventSource.close();
+    fallbackToPolling(); // Graceful degradation
+  }
+}, 30000);
+</code></pre>
+<p><strong>Why</strong>: Network issues, CORS problems, or backend restarts can prevent SSE connection.</p>
+<hr>
+<h3 id="-not-including-correlation-ids-in-errors">❌ Not Including Correlation IDs in Errors</h3>
+<p><strong>Problem</strong>: Cannot trace requests across frontend and backend.</p>
+<pre><code class="lang-typescript">// ❌ WRONG - Generic error
+throw new Error('Request failed');
+</code></pre>
+<p><strong>Solution</strong>: Include correlation ID from backend.</p>
+<pre><code class="lang-typescript">// ✅ CORRECT - Traceable error
+throw new Error(`Request failed (correlationId: ${errorData.correlationId})`);
+</code></pre>
+<p><strong>Why</strong>: Correlation IDs allow matching frontend errors to backend logs.</p>
+<hr>
+<h3 id="-swallowing-exceptions">❌ Swallowing Exceptions</h3>
+<p><strong>Problem</strong>: Silent failures make debugging impossible.</p>
+<pre><code class="lang-csharp">// ❌ WRONG - Exception disappears
+try {
+    await RiskyOperation();
+} catch {
+    // Do nothing - bug hides here
+}
+</code></pre>
+<p><strong>Solution</strong>: Log and rethrow or handle gracefully.</p>
+<pre><code class="lang-csharp">// ✅ CORRECT - Log and rethrow
+try {
+    await RiskyOperation();
+} catch (Exception ex) {
+    _logger.LogError(ex, &quot;Risky operation failed&quot;);
+    throw; // Let caller handle
+}
+</code></pre>
+<p><strong>Why</strong>: Silent failures hide bugs and make production issues impossible to diagnose.</p>
+<hr>
+<h2 id="build-and-deployment">Build and Deployment</h2>
+<h3 id="-committing-with-todofixmehack-comments">❌ Committing with TODO/FIXME/HACK Comments</h3>
+<p><strong>Problem</strong>: Zero-placeholder policy is enforced by pre-commit hooks and CI.</p>
+<pre><code class="lang-csharp">// ❌ WRONG - Will be rejected by pre-commit hook
+// TODO: Implement hardware acceleration
+// FIXME: This breaks on large files
+</code></pre>
+<p><strong>Solution</strong>: Finish implementation or create GitHub Issue.</p>
+<pre><code class="lang-csharp">// ✅ CORRECT - Reference issue instead
+// Currently using software encoding. Hardware acceleration available via
+// separate provider configuration (see issue #123).
+</code></pre>
+<p><strong>Why</strong>: All code must be production-ready when committed. Use GitHub Issues for future work.</p>
+<hr>
+<h3 id="-not-running-pre-build-validation">❌ Not Running Pre-build Validation</h3>
+<p><strong>Problem</strong>: CI failures that could have been caught locally.</p>
+<pre><code class="lang-bash"># ❌ WRONG - Skip validation
+npm run build
+</code></pre>
+<p><strong>Solution</strong>: Run validation scripts before building.</p>
+<pre><code class="lang-bash"># ✅ CORRECT - Validate first
+npm run prebuild  # Runs validate-environment.js
+npm run build
+npm run postbuild # Runs verify-build.js
+</code></pre>
+<p><strong>Why</strong>: Catches environment issues, placeholder violations, and build problems early.</p>
+<hr>
+<h2 id="quick-reference-checklist">Quick Reference Checklist</h2>
+<p>Before submitting a PR, ensure:</p>
+<ul>
+<li>[ ] ✅ No <code>querySelector</code> with Fluent UI class names</li>
+<li>[ ] ✅ No reflection to access private fields</li>
+<li>[ ] ✅ No <code>any</code> types in error handling</li>
+<li>[ ] ✅ No <code>.Result</code> or <code>.Wait()</code> on async methods</li>
+<li>[ ] ✅ Job status transitions include outputPath when completed</li>
+<li>[ ] ✅ Video sync works when paused (not just playing)</li>
+<li>[ ] ✅ SSE connections have timeout and polling fallback</li>
+<li>[ ] ✅ No TODO/FIXME/HACK comments in code</li>
+<li>[ ] ✅ All exceptions are logged with correlation IDs</li>
+<li>[ ] ✅ Exponential backoff for polling operations</li>
+</ul>
+<hr>
+<h2 id="getting-help">Getting Help</h2>
+<p>If you encounter an issue not covered here:</p>
+<ol>
+<li>Check <code>docs/ARCHITECTURE_DECISIONS.md</code> for design rationale</li>
+<li>Search closed PRs for similar fixes</li>
+<li>Ask in Discord or create a discussion on GitHub</li>
+<li>Add new pitfalls to this document when discovered</li>
+</ol>
+<hr>
+<h2 id="change-log">Change Log</h2>
+<ul>
+<li>2024-12-06: Initial version documenting common pitfalls</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/COMMON_PITFALLS.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

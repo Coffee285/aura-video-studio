@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Process Model - Aura Video Studio | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Process Model - Aura Video Studio | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/internal/PROCESS_MODEL.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="process-model---aura-video-studio">Process Model - Aura Video Studio</h1>
+
+<p>This document describes the complete process architecture for Aura Video Studio, including all process spawning locations, parent/child relationships, and shutdown responsibilities.</p>
+<h2 id="process-hierarchy">Process Hierarchy</h2>
+<pre><code>Electron Main Process (Aura.Desktop)
+├── Electron Renderer Process(es) (UI)
+├── Backend Process (Aura.Api.exe / dotnet Aura.Api.dll)
+│   ├── FFmpeg Process(es) (video encoding, format conversion)
+│   ├── Worker Thread Pool (async job execution)
+│   └── HTTP Server (Kestrel)
+└── System Tray Icon
+</code></pre>
+<h2 id="1-electron-main-process-pid-varies">1. Electron Main Process (PID: varies)</h2>
+<p><strong>Location</strong>: <code>Aura.Desktop/electron/main.js</code></p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Application lifecycle management</li>
+<li>Window creation and management</li>
+<li>Backend process spawning and supervision</li>
+<li>System tray management</li>
+<li>IPC communication with renderer</li>
+</ul>
+<p><strong>Spawned By</strong>: User launching the application</p>
+<p><strong>Managed By</strong>: Operating system</p>
+<p><strong>Shutdown Responsibility</strong>: Self (coordinates shutdown of all children)</p>
+<h2 id="2-electron-renderer-processes">2. Electron Renderer Process(es)</h2>
+<p><strong>Location</strong>: <code>Aura.Web</code> (React application)</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>UI rendering</li>
+<li>User interaction handling</li>
+<li>API calls to backend</li>
+</ul>
+<p><strong>Spawned By</strong>: Electron main process (BrowserWindow creation)</p>
+<p><strong>Managed By</strong>: Electron main process</p>
+<p><strong>Shutdown Responsibility</strong>: Electron main process (automatically terminated when windows close)</p>
+<h2 id="3-backend-process-auraapi">3. Backend Process (Aura.Api)</h2>
+<p><strong>Location</strong>: <code>Aura.Api/Program.cs</code></p>
+<p><strong>Executable</strong>:</p>
+<ul>
+<li><strong>Development</strong>: <code>dotnet run</code> or <code>Aura.Api.dll</code></li>
+<li><strong>Production</strong>: Self-contained executable in <code>resources/backend/{platform}/Aura.Api.exe</code></li>
+</ul>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>REST API server (Kestrel on configured port)</li>
+<li>Video generation orchestration</li>
+<li>FFmpeg process management</li>
+<li>Database operations</li>
+<li>Provider communication (LLM, TTS, etc.)</li>
+</ul>
+<p><strong>Spawned By</strong>:</p>
+<ul>
+<li><strong>Location</strong>: <code>Aura.Desktop/electron/backend-service.js</code> line 109</li>
+<li><strong>Method</strong>: <code>child_process.spawn()</code></li>
+<li><strong>Arguments</strong>: None (configuration via environment variables)</li>
+<li><strong>Options</strong>: <code>{ stdio: 'pipe', windowsHide: true, detached: false }</code></li>
+</ul>
+<p><strong>Process Tracking</strong>:</p>
+<ul>
+<li>PID stored in <code>backendService.pid</code></li>
+<li>Registered with Electron ProcessManager if available</li>
+<li>Health checked via HTTP <code>/health/live</code> endpoint</li>
+</ul>
+<p><strong>Managed By</strong>:</p>
+<ul>
+<li>Electron's BackendService class</li>
+<li>Registered with Electron's ProcessManager</li>
+</ul>
+<p><strong>Shutdown Responsibility</strong>:</p>
+<ol>
+<li>Electron ShutdownOrchestrator signals via <code>POST /api/system/shutdown</code></li>
+<li>Backend graceful shutdown (2 second timeout)</li>
+<li>Electron BackendService terminates process (force if needed)</li>
+<li>ProcessManager ensures complete termination</li>
+</ol>
+<h2 id="4-ffmpeg-processes">4. FFmpeg Processes</h2>
+<p><strong>Location</strong>: Spawned by <code>Aura.Core/Services/FFmpeg/*</code></p>
+<p><strong>Executable</strong>:</p>
+<ul>
+<li><strong>Development</strong>: From <code>Aura.Desktop/resources/ffmpeg/{platform}/bin/ffmpeg.exe</code></li>
+<li><strong>Production</strong>: From <code>resources/ffmpeg/{platform}/bin/ffmpeg.exe</code></li>
+<li><strong>System</strong>: May use system FFmpeg if configured</li>
+</ul>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Video encoding and transcoding</li>
+<li>Audio processing</li>
+<li>Format conversion</li>
+<li>Frame extraction</li>
+<li>Thumbnail generation</li>
+</ul>
+<p><strong>Spawned By</strong>:</p>
+<ul>
+<li><strong>Locations</strong>:
+<ul>
+<li><code>Aura.Core/Services/FFmpeg/FFmpegExecutor.cs</code></li>
+<li><code>Aura.Core/Audio/AudioFormatConverter.cs</code></li>
+<li><code>Aura.Providers/Video/FfmpegVideoComposer.cs</code></li>
+</ul>
+</li>
+<li><strong>Method</strong>: <code>System.Diagnostics.Process.Start()</code></li>
+<li><strong>Typical Arguments</strong>: Complex FFmpeg command lines for video operations</li>
+<li><strong>Options</strong>: <code>{ RedirectStandardOutput: true, RedirectStandardError: true, UseShellExecute: false }</code></li>
+</ul>
+<p><strong>Process Tracking</strong>:</p>
+<ul>
+<li>PIDs tracked by backend's <code>IProcessManager</code> (registered on spawn)</li>
+<li>Timeout enforcement (default 60 minutes per process)</li>
+<li>Periodic cleanup sweep every 15 minutes</li>
+</ul>
+<p><strong>Managed By</strong>:</p>
+<ul>
+<li>Backend's FFmpeg IProcessManager (<code>Aura.Core/Services/FFmpeg/ProcessManager.cs</code>)</li>
+<li>Tracked in <code>ConcurrentDictionary&lt;int, ProcessInfo&gt;</code></li>
+</ul>
+<p><strong>Shutdown Responsibility</strong>:</p>
+<ol>
+<li>Backend's IProcessManager on application shutdown</li>
+<li>Force kill on timeout</li>
+<li>Cleanup timer detects and removes orphans</li>
+</ol>
+<h2 id="5-worker-thread-pool">5. Worker Thread Pool</h2>
+<p><strong>Location</strong>: ASP.NET Core hosted services</p>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Background job queue processing</li>
+<li>Scheduled tasks (cleanup, health checks, etc.)</li>
+<li>Long-running operations</li>
+</ul>
+<p><strong>Spawned By</strong>: ASP.NET Core host on startup</p>
+<p><strong>Managed By</strong>: ASP.NET Core IHostedService infrastructure</p>
+<p><strong>Shutdown Responsibility</strong>: ASP.NET Core host (via IHostApplicationLifetime)</p>
+<h2 id="process-spawning-summary">Process Spawning Summary</h2>
+<h3 id="electron-desktop-javascriptnodejs">Electron Desktop (JavaScript/Node.js)</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Line(s)</th>
+<th>Process Type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>electron/backend-service.js</code></td>
+<td>109</td>
+<td>Backend</td>
+<td>Spawn Aura.Api backend server</td>
+</tr>
+<tr>
+<td><code>electron/main.js</code></td>
+<td>998</td>
+<td>Renderer</td>
+<td>Create main application window</td>
+</tr>
+</tbody>
+</table>
+<h3 id="backend-cnet">Backend (C#/.NET)</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+<th>Process Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Aura.Core/Services/FFmpeg/FFmpegExecutor.cs</code></td>
+<td>Video encoding</td>
+<td>0-N per job</td>
+</tr>
+<tr>
+<td><code>Aura.Core/Audio/AudioFormatConverter.cs</code></td>
+<td>Audio conversion</td>
+<td>0-N as needed</td>
+</tr>
+<tr>
+<td><code>Aura.Providers/Video/FfmpegVideoComposer.cs</code></td>
+<td>Video composition</td>
+<td>1 per render</td>
+</tr>
+<tr>
+<td><code>Aura.Core/Services/Setup/DependencyInstaller.cs</code></td>
+<td>FFmpeg installation</td>
+<td>1 during setup</td>
+</tr>
+</tbody>
+</table>
+<h3 id="total-process-budget">Total Process Budget</h3>
+<p><strong>Minimum</strong> (idle): 3 processes</p>
+<ul>
+<li>1 Electron main process</li>
+<li>1 Electron renderer process</li>
+<li>1 Backend process</li>
+</ul>
+<p><strong>Typical</strong> (active job): 5-7 processes</p>
+<ul>
+<li>3 base processes</li>
+<li>2-4 FFmpeg processes (encoding, audio, thumbnails)</li>
+</ul>
+<p><strong>Maximum</strong> (multiple jobs): 10-15 processes</p>
+<ul>
+<li>3 base processes</li>
+<li>Up to 12 FFmpeg processes (multiple concurrent jobs)</li>
+</ul>
+<h2 id="shutdown-sequence">Shutdown Sequence</h2>
+<h3 id="normal-exit-flow">Normal Exit Flow</h3>
+<ol>
+<li><strong>User Action</strong>: Click &quot;Quit&quot; or close window</li>
+<li><strong>Electron Main Process</strong> (<code>main.js</code> line 1379):
+<ul>
+<li>Event: <code>before-quit</code></li>
+<li>Prevents default to run cleanup</li>
+<li>Calls <code>shutdownOrchestrator.initiateShutdown()</code></li>
+</ul>
+</li>
+<li><strong>Shutdown Orchestrator</strong> (<code>shutdown-orchestrator.js</code>):
+<ul>
+<li>Check for active renders (unless skipped)</li>
+<li>Signal backend shutdown via API</li>
+<li>Stop backend service (graceful → force)</li>
+<li>Terminate all tracked processes via ProcessManager</li>
+<li>Cleanup temp files</li>
+</ul>
+</li>
+<li><strong>Backend Service</strong> (<code>backend-service.js</code> line 149):
+<ul>
+<li>Graceful shutdown attempt via <code>/api/system/shutdown</code></li>
+<li>2 second timeout</li>
+<li>Force termination using <code>taskkill /F /T</code> (Windows) or <code>SIGKILL</code> (Unix)</li>
+</ul>
+</li>
+<li><strong>Backend Process</strong> (<code>Program.cs</code> line 4899):
+<ul>
+<li>Event: <code>ApplicationStopping</code></li>
+<li>Kills all tracked FFmpeg processes</li>
+<li>Stops hosted services</li>
+<li>Flushes logs</li>
+</ul>
+</li>
+<li><strong>Process Manager</strong> (both Electron and Backend):
+<ul>
+<li>Terminates all registered child processes</li>
+<li>Verifies process exit</li>
+<li>Cleans up registrations</li>
+</ul>
+</li>
+</ol>
+<h3 id="timeout-handling">Timeout Handling</h3>
+<ul>
+<li><strong>Graceful Timeout</strong>: 2 seconds for backend API shutdown</li>
+<li><strong>Force Kill Timeout</strong>: 1 second after graceful</li>
+<li><strong>Absolute Timeout</strong>: 5 seconds total (hard limit in main.js)</li>
+<li><strong>Failsafe</strong>: If absolute timeout exceeded, kill all Aura processes by name</li>
+</ul>
+<h3 id="force-shutdown">Force Shutdown</h3>
+<p>If graceful shutdown fails:</p>
+<ol>
+<li><code>taskkill /F /T</code> for backend PID (Windows)</li>
+<li><code>process.kill(-pid, 'SIGKILL')</code> for process group (Unix)</li>
+<li>Failsafe: Kill all processes matching &quot;Aura.Api.exe&quot; and &quot;ffmpeg.exe&quot; (Windows) or in our process group (Unix)</li>
+</ol>
+<h2 id="orphan-process-detection">Orphan Process Detection</h2>
+<h3 id="on-startup">On Startup</h3>
+<p><strong>Backend Port Check</strong> (<code>backend-service.js</code> line 67):</p>
+<ul>
+<li>Before starting backend, check if port is already in use</li>
+<li>If occupied, attempt to identify if it's an orphaned backend</li>
+<li>Log diagnostic info</li>
+<li>Fail fast with clear error message</li>
+</ul>
+<h3 id="during-operation">During Operation</h3>
+<p><strong>FFmpeg ProcessManager Cleanup</strong> (<code>ProcessManager.cs</code> line 149):</p>
+<ul>
+<li>Periodic sweep every 15 minutes</li>
+<li>Kill processes exceeding 60-minute timeout</li>
+<li>Remove registrations for exited processes</li>
+</ul>
+<h2 id="single-instance-enforcement">Single Instance Enforcement</h2>
+<p><strong>Electron Single Instance Lock</strong> (<code>main.js</code> line 150):</p>
+<ul>
+<li>Uses <code>app.requestSingleInstanceLock()</code></li>
+<li>Second instance focuses existing window instead of starting new backend</li>
+<li>Prevents port conflicts and duplicate backends</li>
+</ul>
+<h2 id="diagnostics">Diagnostics</h2>
+<h3 id="process-tracking-logs">Process Tracking Logs</h3>
+<p><strong>Electron Side</strong>:</p>
+<ul>
+<li>Backend PID logged on startup</li>
+<li>Process registration events in ProcessManager</li>
+<li>Shutdown steps logged with timing</li>
+</ul>
+<p><strong>Backend Side</strong>:</p>
+<ul>
+<li>FFmpeg PID registration</li>
+<li>Process timeout warnings</li>
+<li>Cleanup sweep results</li>
+<li>Shutdown lifecycle events</li>
+</ul>
+<h3 id="health-checks">Health Checks</h3>
+<ul>
+<li>Backend health: <code>GET /health/live</code> (HTTP server running)</li>
+<li>Backend readiness: <code>GET /health/ready</code> (database + dependencies)</li>
+<li>FFmpeg detection: Checked via FFmpegResolver on demand</li>
+</ul>
+<h2 id="known-issues-and-mitigations">Known Issues and Mitigations</h2>
+<h3 id="issue-lingering-processes-after-crash">Issue: Lingering Processes After Crash</h3>
+<p><strong>Symptom</strong>: Aura.Api.exe and ffmpeg.exe remain in Task Manager after crash</p>
+<p><strong>Root Cause</strong>:</p>
+<ul>
+<li>No crash recovery handler</li>
+<li>Process tree not terminated on unhandled exception</li>
+</ul>
+<p><strong>Mitigation</strong> (Implemented in this PR):</p>
+<ul>
+<li>Enhanced failsafe in ShutdownOrchestrator</li>
+<li>Backend <code>ApplicationStopping</code> event handler kills FFmpeg processes</li>
+<li>Startup checks for orphaned processes</li>
+</ul>
+<h3 id="issue-port-already-in-use">Issue: Port Already in Use</h3>
+<p><strong>Symptom</strong>: Backend fails to start with &quot;address already in use&quot;</p>
+<p><strong>Root Cause</strong>: Previous backend instance still running</p>
+<p><strong>Mitigation</strong>:</p>
+<ul>
+<li>Single instance lock in Electron</li>
+<li>Port availability check before spawning backend</li>
+<li>Clear error messages with recovery steps</li>
+</ul>
+<h3 id="issue-zombie-ffmpeg-processes">Issue: Zombie FFmpeg Processes</h3>
+<p><strong>Symptom</strong>: FFmpeg processes outlive parent backend process</p>
+<p><strong>Root Cause</strong>:</p>
+<ul>
+<li>Process not registered with ProcessManager</li>
+<li>Timeout not enforced</li>
+<li>Shutdown sequence not killing children</li>
+</ul>
+<p><strong>Mitigation</strong>:</p>
+<ul>
+<li>All FFmpeg spawns registered with IProcessManager</li>
+<li>Timeout enforcement (60 minutes default)</li>
+<li>Shutdown handler kills all registered processes</li>
+<li>Periodic cleanup sweep removes orphans</li>
+</ul>
+<h2 id="future-improvements">Future Improvements</h2>
+<ol>
+<li><strong>Process Tree Visualization</strong>: Add UI to show active processes</li>
+<li><strong>Resource Monitoring</strong>: Track CPU/memory per process</li>
+<li><strong>Process Limits</strong>: Enforce max concurrent FFmpeg processes</li>
+<li><strong>Graceful Degradation</strong>: Continue operation if some processes fail</li>
+<li><strong>Crash Recovery</strong>: Auto-restart backend on crash (with backoff)</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://www.electronjs.org/docs/latest/tutorial/process-model">Electron Process Model</a></li>
+<li><a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/generic-host">ASP.NET Core Hosting</a></li>
+<li><a href="https://ffmpeg.org/documentation.html">FFmpeg Documentation</a></li>
+<li><a href="https://nodejs.org/api/child_process.html">Node.js Child Process</a></li>
+<li><a href="https://docs.microsoft.com/en-us/dotnet/api/system.diagnostics.process">.NET Process Class</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/internal/PROCESS_MODEL.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

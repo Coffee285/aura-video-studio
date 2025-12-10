@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>User Customization and Control Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="User Customization and Control Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/USER_CUSTOMIZATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="user-customization-and-control-guide">User Customization and Control Guide</h1>
+
+<p>This guide explains how to use the comprehensive user customization framework in Aura Video Studio. The framework gives you complete control over AI-driven decisions, content filtering, and generation settings.</p>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio now provides granular control over:</p>
+<ul>
+<li><strong>Model Selection and Pinning</strong>: Explicit control over which AI models are used at every pipeline stage (see detailed section below)</li>
+<li><strong>Custom Audience Profiles</strong>: Define audience characteristics beyond preset profiles</li>
+<li><strong>Content Filtering</strong>: Control what content is acceptable with custom policies</li>
+<li><strong>AI Behavior</strong>: Customize LLM parameters and prompts for each pipeline stage</li>
+<li><strong>Quality Thresholds</strong>: Define your own quality standards and validation rules</li>
+<li><strong>Visual Styles</strong>: Create custom visual aesthetic preferences</li>
+<li><strong>Import/Export</strong>: Share and backup your configurations</li>
+</ul>
+<h2 id="model-selection-and-pinning">Model Selection and Pinning</h2>
+<p>The model selection system provides complete control over which AI models are used at each stage of the video generation pipeline with strict precedence rules and audit visibility.</p>
+<h3 id="precedence-rules">Precedence Rules</h3>
+<p>Model selection follows a strict hierarchy. Higher priority selections override lower ones:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Source</th>
+<th>Pinnable</th>
+<th>Scope</th>
+<th>Behavior When Unavailable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 (Highest)</td>
+<td>Run Override (Pinned)</td>
+<td>Yes</td>
+<td>Single run via CLI/API</td>
+<td><strong>Blocks execution</strong> - requires user action</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Run Override</td>
+<td>No</td>
+<td>Single run via CLI/API</td>
+<td>Falls back to next priority</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Stage Pinned</td>
+<td>Yes</td>
+<td>Per-stage selection in UI</td>
+<td><strong>Blocks execution</strong> - requires user action</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Project Override</td>
+<td>No</td>
+<td>Per-project setting</td>
+<td>Falls back to next priority</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Global Default</td>
+<td>No</td>
+<td>Application-wide</td>
+<td>Falls back to next priority</td>
+</tr>
+<tr>
+<td>6 (Lowest)</td>
+<td>Automatic Fallback</td>
+<td>No</td>
+<td>System default</td>
+<td>Only if &quot;Allow automatic fallback&quot; is enabled</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key Rules:</strong></p>
+<ul>
+<li><strong>Pinned selections always block</strong> when unavailable - the system will NOT automatically fall back</li>
+<li><strong>Non-pinned selections</strong> allow fallback to the next priority level</li>
+<li>All selections are recorded in the audit log with source, reasoning, and timestamp</li>
+<li>No silent swaps - all model changes are transparent and traceable</li>
+</ul>
+<h3 id="per-stage-configuration">Per-Stage Configuration</h3>
+<p>Configure models separately for each pipeline stage:</p>
+<ul>
+<li><strong>Script Generation</strong>: Initial video script from brief</li>
+<li><strong>Visual Prompts</strong>: Image generation prompt creation</li>
+<li><strong>Narration Optimization</strong>: Text-to-speech preparation</li>
+<li><strong>Script Refinement</strong>: Script improvement and polishing</li>
+</ul>
+<h3 id="using-the-models-page">Using the Models Page</h3>
+<p>Navigate to <strong>Settings &gt; Models</strong> or the dedicated <strong>Models</strong> page:</p>
+<ol>
+<li><strong>Select Model</strong>: Choose model for each stage from dropdown</li>
+<li><strong>Pin/Unpin</strong>: Click pin icon to prevent automatic changes</li>
+<li><strong>Test Model</strong>: Verify model is accessible and working</li>
+<li><strong>Explain Choice</strong>: Get AI analysis comparing your selection to recommendations</li>
+<li><strong>View Audit Log</strong>: See all model resolutions with full reasoning</li>
+</ol>
+<h3 id="cli-override-syntax">CLI Override Syntax</h3>
+<p>Override models for a specific run:</p>
+<pre><code class="lang-bash"># Single stage override
+aura generate --brief &quot;...&quot; --model-override script=gpt-4
+
+# Multiple stage overrides
+aura generate --brief &quot;...&quot; \
+  --model-override script=gpt-4 \
+  --model-override visual=gpt-4o
+
+# Pinned override (blocks on unavailability)
+aura generate --brief &quot;...&quot; \
+  --model-override script=gpt-4 --pin-model script
+</code></pre>
+<h3 id="api-override-syntax">API Override Syntax</h3>
+<pre><code class="lang-json">{
+  &quot;brief&quot;: &quot;...&quot;,
+  &quot;modelOverrides&quot;: {
+    &quot;script&quot;: {
+      &quot;provider&quot;: &quot;OpenAI&quot;,
+      &quot;modelId&quot;: &quot;gpt-4&quot;,
+      &quot;pin&quot;: true
+    },
+    &quot;visual&quot;: {
+      &quot;provider&quot;: &quot;Anthropic&quot;,
+      &quot;modelId&quot;: &quot;claude-3-opus&quot;,
+      &quot;pin&quot;: false
+    }
+  }
+}
+</code></pre>
+<h3 id="audit-log-format">Audit Log Format</h3>
+<p>Every model resolution is logged with:</p>
+<pre><code class="lang-json">{
+  &quot;provider&quot;: &quot;OpenAI&quot;,
+  &quot;stage&quot;: &quot;script&quot;,
+  &quot;modelId&quot;: &quot;gpt-4&quot;,
+  &quot;source&quot;: &quot;StagePinned&quot;,
+  &quot;reasoning&quot;: &quot;Using stage-pinned model: gpt-4&quot;,
+  &quot;isPinned&quot;: true,
+  &quot;isBlocked&quot;: false,
+  &quot;timestamp&quot;: &quot;2025-01-15T10:30:00Z&quot;,
+  &quot;jobId&quot;: &quot;job-abc123&quot;
+}
+</code></pre>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li><strong>Pin critical stages</strong>: Pin models for stages where consistency is critical</li>
+<li><strong>Test before pinning</strong>: Always test a model before pinning it</li>
+<li><strong>Monitor audit log</strong>: Regularly review to understand actual model usage</li>
+<li><strong>Use &quot;Explain my choice&quot;</strong>: Understand tradeoffs of your selections</li>
+<li><strong>Enable fallback carefully</strong>: Only enable automatic fallback if you accept model changes</li>
+<li><strong>Set project overrides</strong>: Use project scope for project-specific requirements</li>
+</ol>
+<h3 id="troubleshooting">Troubleshooting</h3>
+<p><strong>Problem</strong>: &quot;Pinned model unavailable&quot; error blocks generation</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>View audit log to see recommended alternatives</li>
+<li>Test alternative models</li>
+<li>Either:
+<ul>
+<li>Update pinned selection to available model, or</li>
+<li>Temporarily unpin to allow fallback</li>
+</ul>
+</li>
+</ol>
+<p><strong>Problem</strong>: Models changing unexpectedly</p>
+<p><strong>Check</strong>:</p>
+<ol>
+<li>Audit log for resolution source</li>
+<li>Verify &quot;Allow automatic fallback&quot; setting</li>
+<li>Check if selections are pinned</li>
+<li>Review precedence hierarchy</li>
+</ol>
+<h2 id="architecture">Architecture</h2>
+<h3 id="backend-components">Backend Components</h3>
+<p><strong>Models</strong> (<code>Aura.Core/Models/UserPreferences/</code>):</p>
+<ul>
+<li><code>CustomAudienceProfile</code> - 20+ customizable audience parameters</li>
+<li><code>ContentFilteringPolicy</code> - Granular content filtering controls</li>
+<li><code>AIBehaviorSettings</code> - LLM parameter customization per stage</li>
+<li><code>CustomPromptTemplate</code> - User-defined prompt templates</li>
+<li><code>CustomQualityThresholds</code> - User-defined quality standards</li>
+<li><code>CustomVisualStyle</code> - Visual aesthetic customization</li>
+</ul>
+<p><strong>Service</strong> (<code>Aura.Core/Services/UserPreferences/</code>):</p>
+<ul>
+<li><code>UserPreferencesService</code> - Central service for all user customizations
+<ul>
+<li>CRUD operations for all custom entities</li>
+<li>Export/import functionality</li>
+<li>File-based JSON persistence</li>
+</ul>
+</li>
+</ul>
+<p><strong>API</strong> (<code>Aura.Api/Controllers/</code>):</p>
+<ul>
+<li><code>UserPreferencesController</code> - RESTful endpoints for all customizations</li>
+</ul>
+<h3 id="frontend-components">Frontend Components</h3>
+<p><strong>State Management</strong> (<code>Aura.Web/src/state/</code>):</p>
+<ul>
+<li><code>userPreferences.ts</code> - Zustand store for all customization state</li>
+</ul>
+<p><strong>UI Components</strong> (<code>Aura.Web/src/components/Settings/</code>):</p>
+<ul>
+<li><code>UserPreferencesTab</code> - Main settings interface</li>
+</ul>
+<h2 id="using-the-api">Using the API</h2>
+<h3 id="custom-audience-profiles">Custom Audience Profiles</h3>
+<h4 id="create-a-custom-audience-profile">Create a Custom Audience Profile</h4>
+<pre><code class="lang-bash">POST /api/user-preferences/audience-profiles
+Content-Type: application/json
+
+{
+  &quot;name&quot;: &quot;Tech-Savvy Millennials&quot;,
+  &quot;minAge&quot;: 25,
+  &quot;maxAge&quot;: 35,
+  &quot;educationLevel&quot;: &quot;Bachelor's or higher&quot;,
+  &quot;educationLevelDescription&quot;: &quot;College educated with strong tech background&quot;,
+  &quot;vocabularyLevel&quot;: 7,
+  &quot;sentenceStructurePreference&quot;: &quot;Complex&quot;,
+  &quot;readingLevel&quot;: 12,
+  &quot;violenceThreshold&quot;: 2,
+  &quot;profanityThreshold&quot;: 3,
+  &quot;sexualContentThreshold&quot;: 1,
+  &quot;controversialTopicsThreshold&quot;: 6,
+  &quot;humorStyle&quot;: &quot;Moderate&quot;,
+  &quot;sarcasmLevel&quot;: 5,
+  &quot;formalityLevel&quot;: 4,
+  &quot;attentionSpanSeconds&quot;: 180,
+  &quot;pacingPreference&quot;: &quot;Fast&quot;,
+  &quot;informationDensity&quot;: 7,
+  &quot;technicalDepthTolerance&quot;: 8,
+  &quot;jargonAcceptability&quot;: 7,
+  &quot;emotionalTone&quot;: &quot;Uplifting&quot;,
+  &quot;emotionalIntensity&quot;: 6,
+  &quot;ctaAggressiveness&quot;: 5,
+  &quot;ctaStyle&quot;: &quot;Conversational&quot;,
+  &quot;culturalSensitivities&quot;: [&quot;Inclusive language&quot;, &quot;Gender neutral&quot;],
+  &quot;topicsToAvoid&quot;: [&quot;Politics&quot;, &quot;Religion&quot;],
+  &quot;topicsToEmphasize&quot;: [&quot;Technology&quot;, &quot;Innovation&quot;, &quot;Sustainability&quot;],
+  &quot;jokeTypes&quot;: [&quot;Wordplay&quot;, &quot;Tech humor&quot;, &quot;Pop culture&quot;],
+  &quot;familiarTechnicalTerms&quot;: [&quot;API&quot;, &quot;Cloud&quot;, &quot;AI&quot;, &quot;ML&quot;, &quot;SaaS&quot;],
+  &quot;brandToneKeywords&quot;: [&quot;Innovative&quot;, &quot;Professional&quot;, &quot;Forward-thinking&quot;],
+  &quot;description&quot;: &quot;Tech-savvy millennial audience for SaaS product videos&quot;,
+  &quot;tags&quot;: [&quot;technology&quot;, &quot;professional&quot;, &quot;millennials&quot;],
+  &quot;isFavorite&quot;: true
+}
+</code></pre>
+<h4 id="get-all-custom-audience-profiles">Get All Custom Audience Profiles</h4>
+<pre><code class="lang-bash">GET /api/user-preferences/audience-profiles
+</code></pre>
+<h4 id="update-a-custom-audience-profile">Update a Custom Audience Profile</h4>
+<pre><code class="lang-bash">PUT /api/user-preferences/audience-profiles/{id}
+Content-Type: application/json
+
+{
+  // Include all fields from the profile with updates
+  &quot;formalityLevel&quot;: 6,
+  &quot;technicalDepthTolerance&quot;: 9
+}
+</code></pre>
+<h4 id="delete-a-custom-audience-profile">Delete a Custom Audience Profile</h4>
+<pre><code class="lang-bash">DELETE /api/user-preferences/audience-profiles/{id}
+</code></pre>
+<h3 id="content-filtering-policies">Content Filtering Policies</h3>
+<h4 id="create-a-content-filtering-policy">Create a Content Filtering Policy</h4>
+<pre><code class="lang-bash">POST /api/user-preferences/filtering-policies
+Content-Type: application/json
+
+{
+  &quot;name&quot;: &quot;Family-Friendly Strict&quot;,
+  &quot;filteringEnabled&quot;: true,
+  &quot;allowOverrideAll&quot;: false,
+  &quot;profanityFilter&quot;: &quot;Strict&quot;,
+  &quot;customBannedWords&quot;: [&quot;inappropriate&quot;, &quot;word&quot;, &quot;list&quot;],
+  &quot;customAllowedWords&quot;: [],
+  &quot;violenceThreshold&quot;: 1,
+  &quot;blockGraphicContent&quot;: true,
+  &quot;sexualContentThreshold&quot;: 0,
+  &quot;blockExplicitContent&quot;: true,
+  &quot;bannedTopics&quot;: [&quot;alcohol&quot;, &quot;gambling&quot;, &quot;violence&quot;],
+  &quot;allowedControversialTopics&quot;: [],
+  &quot;politicalContent&quot;: &quot;Off&quot;,
+  &quot;religiousContent&quot;: &quot;RespectfulOnly&quot;,
+  &quot;substanceReferences&quot;: &quot;Block&quot;,
+  &quot;blockHateSpeech&quot;: true,
+  &quot;hateSpeechExceptions&quot;: [],
+  &quot;copyrightPolicy&quot;: &quot;Strict&quot;,
+  &quot;blockedConcepts&quot;: [&quot;weapons&quot;, &quot;drugs&quot;],
+  &quot;allowedConcepts&quot;: [],
+  &quot;blockedPeople&quot;: [],
+  &quot;allowedPeople&quot;: [],
+  &quot;blockedBrands&quot;: [],
+  &quot;allowedBrands&quot;: [],
+  &quot;description&quot;: &quot;Strict filtering for family-friendly content&quot;,
+  &quot;isDefault&quot;: false
+}
+</code></pre>
+<h4 id="get-all-content-filtering-policies">Get All Content Filtering Policies</h4>
+<pre><code class="lang-bash">GET /api/user-preferences/filtering-policies
+</code></pre>
+<h4 id="update-a-content-filtering-policy">Update a Content Filtering Policy</h4>
+<pre><code class="lang-bash">PUT /api/user-preferences/filtering-policies/{id}
+Content-Type: application/json
+
+{
+  // Include all fields from the policy with updates
+  &quot;violenceThreshold&quot;: 2
+}
+</code></pre>
+<h4 id="delete-a-content-filtering-policy">Delete a Content Filtering Policy</h4>
+<pre><code class="lang-bash">DELETE /api/user-preferences/filtering-policies/{id}
+</code></pre>
+<h3 id="export-and-import">Export and Import</h3>
+<h4 id="export-all-preferences">Export All Preferences</h4>
+<pre><code class="lang-bash">GET /api/user-preferences/export
+</code></pre>
+<p>Response:</p>
+<pre><code class="lang-json">{
+  &quot;jsonData&quot;: &quot;{...full export...}&quot;,
+  &quot;exportDate&quot;: &quot;2025-11-01T15:00:00Z&quot;,
+  &quot;version&quot;: &quot;1.0&quot;
+}
+</code></pre>
+<h4 id="import-preferences">Import Preferences</h4>
+<pre><code class="lang-bash">POST /api/user-preferences/import
+Content-Type: application/json
+
+{
+  &quot;jsonData&quot;: &quot;{...previously exported data...}&quot;
+}
+</code></pre>
+<h2 id="using-the-frontend-ui">Using the Frontend UI</h2>
+<h3 id="accessing-user-preferences">Accessing User Preferences</h3>
+<ol>
+<li>Navigate to Settings page</li>
+<li>Look for the &quot;User Preferences &amp; Customization&quot; tab (coming soon - currently accessible via API)</li>
+</ol>
+<h3 id="advanced-mode-toggle">Advanced Mode Toggle</h3>
+<ul>
+<li><strong>Basic Mode</strong>: Shows simplified controls for common use cases</li>
+<li><strong>Advanced Mode</strong>: Exposes all 20+ parameters for granular control</li>
+</ul>
+<p>Toggle this at the top of the User Preferences section.</p>
+<h3 id="managing-custom-audience-profiles">Managing Custom Audience Profiles</h3>
+<p><strong>Create a Profile</strong>:</p>
+<ol>
+<li>Click &quot;Create Profile&quot; button</li>
+<li>Fill in basic information (name, age range, education)</li>
+<li>Expand advanced sections for detailed control</li>
+<li>Save the profile</li>
+</ol>
+<p><strong>Edit a Profile</strong>:</p>
+<ol>
+<li>Click the edit icon next to a profile</li>
+<li>Modify any parameters</li>
+<li>Save changes</li>
+</ol>
+<p><strong>Select a Profile</strong>:</p>
+<ol>
+<li>Click &quot;Select&quot; on the profile you want to use</li>
+<li>This profile will be used in future video generations</li>
+</ol>
+<p><strong>Delete a Profile</strong>:</p>
+<ol>
+<li>Click the delete icon next to a profile</li>
+<li>Confirm deletion</li>
+</ol>
+<h3 id="managing-content-filtering-policies">Managing Content Filtering Policies</h3>
+<p>Similar workflow to audience profiles:</p>
+<ul>
+<li>Create, edit, select, and delete filtering policies</li>
+<li>Toggle filtering on/off</li>
+<li>Define custom word lists</li>
+<li>Set thresholds for different content types</li>
+</ul>
+<h3 id="importexport-preferences">Import/Export Preferences</h3>
+<p><strong>Export</strong>:</p>
+<ol>
+<li>Click the &quot;Export&quot; button</li>
+<li>A JSON file will download with all your preferences</li>
+<li>Store this file securely as a backup</li>
+</ol>
+<p><strong>Import</strong>:</p>
+<ol>
+<li>Click the &quot;Import&quot; button</li>
+<li>Select a previously exported JSON file</li>
+<li>Confirm the import</li>
+<li>All preferences will be restored</li>
+</ol>
+<h2 id="customization-parameters-reference">Customization Parameters Reference</h2>
+<h3 id="custom-audience-profile-parameters">Custom Audience Profile Parameters</h3>
+<p><strong>Age and Demographics</strong>:</p>
+<ul>
+<li><code>minAge</code> (number): Minimum age (0-120)</li>
+<li><code>maxAge</code> (number): Maximum age (0-120)</li>
+<li><code>educationLevel</code> (string): Education level description</li>
+<li><code>educationLevelDescription</code> (string): Detailed explanation</li>
+</ul>
+<p><strong>Language Complexity</strong>:</p>
+<ul>
+<li><code>vocabularyLevel</code> (1-10): Complexity of vocabulary</li>
+<li><code>sentenceStructurePreference</code> (string): &quot;Simple&quot;, &quot;Mixed&quot;, &quot;Complex&quot;</li>
+<li><code>readingLevel</code> (number): Grade level (1-20)</li>
+</ul>
+<p><strong>Content Appropriateness</strong> (all 0-10 scale):</p>
+<ul>
+<li><code>violenceThreshold</code>: Acceptable level of violent content</li>
+<li><code>profanityThreshold</code>: Acceptable level of profanity</li>
+<li><code>sexualContentThreshold</code>: Acceptable level of sexual content</li>
+<li><code>controversialTopicsThreshold</code>: Acceptable level of controversial topics</li>
+</ul>
+<p><strong>Humor and Tone</strong>:</p>
+<ul>
+<li><code>humorStyle</code> (string): &quot;None&quot;, &quot;Light&quot;, &quot;Moderate&quot;, &quot;Heavy&quot;</li>
+<li><code>sarcasmLevel</code> (0-10): How much sarcasm is acceptable</li>
+<li><code>jokeTypes</code> (string[]): Types of jokes that resonate</li>
+<li><code>culturalHumorPreferences</code> (string[]): Cultural humor styles</li>
+</ul>
+<p><strong>Formality and Pacing</strong>:</p>
+<ul>
+<li><code>formalityLevel</code> (0-10): 0=very casual, 10=extremely formal</li>
+<li><code>attentionSpanSeconds</code> (number): Average attention span in seconds</li>
+<li><code>pacingPreference</code> (string): &quot;Slow&quot;, &quot;Medium&quot;, &quot;Fast&quot;, &quot;VeryFast&quot;</li>
+<li><code>informationDensity</code> (1-10): How much information per unit time</li>
+</ul>
+<p><strong>Technical Depth</strong>:</p>
+<ul>
+<li><code>technicalDepthTolerance</code> (0-10): How technical can content be</li>
+<li><code>jargonAcceptability</code> (0-10): How much jargon is acceptable</li>
+<li><code>familiarTechnicalTerms</code> (string[]): Terms the audience knows</li>
+</ul>
+<p><strong>Emotional and Motivational</strong>:</p>
+<ul>
+<li><code>emotionalTone</code> (string): &quot;Serious&quot;, &quot;Neutral&quot;, &quot;Uplifting&quot;, &quot;Dramatic&quot;, &quot;Inspirational&quot;</li>
+<li><code>emotionalIntensity</code> (0-10): How emotionally charged content should be</li>
+<li><code>ctaAggressiveness</code> (0-10): How aggressive calls-to-action should be</li>
+<li><code>ctaStyle</code> (string): &quot;Direct&quot;, &quot;Conversational&quot;, &quot;Suggestive&quot;</li>
+</ul>
+<p><strong>Brand Voice</strong>:</p>
+<ul>
+<li><code>brandVoiceGuidelines</code> (string): Brand voice guidelines</li>
+<li><code>brandToneKeywords</code> (string[]): Keywords describing brand tone</li>
+<li><code>brandPersonality</code> (string): Brand personality description</li>
+</ul>
+<p><strong>Cultural and Topical</strong>:</p>
+<ul>
+<li><code>culturalSensitivities</code> (string[]): Topics requiring special handling</li>
+<li><code>topicsToAvoid</code> (string[]): Topics to completely avoid</li>
+<li><code>topicsToEmphasize</code> (string[]): Topics to highlight</li>
+</ul>
+<h3 id="content-filtering-policy-parameters">Content Filtering Policy Parameters</h3>
+<p><strong>Global Controls</strong>:</p>
+<ul>
+<li><code>filteringEnabled</code> (boolean): Master switch for filtering</li>
+<li><code>allowOverrideAll</code> (boolean): Unrestricted mode (bypasses all filters)</li>
+</ul>
+<p><strong>Profanity Control</strong>:</p>
+<ul>
+<li><code>profanityFilter</code> (enum): &quot;Off&quot;, &quot;Mild&quot;, &quot;Moderate&quot;, &quot;Strict&quot;, &quot;Custom&quot;</li>
+<li><code>customBannedWords</code> (string[]): Words to block (up to 1000+)</li>
+<li><code>customAllowedWords</code> (string[]): Override default banned words</li>
+</ul>
+<p><strong>Violence and Gore</strong>:</p>
+<ul>
+<li><code>violenceThreshold</code> (0-10): Acceptable violence level</li>
+<li><code>blockGraphicContent</code> (boolean): Block graphic violence descriptions</li>
+</ul>
+<p><strong>Sexual Content</strong>:</p>
+<ul>
+<li><code>sexualContentThreshold</code> (0-10): Acceptable sexual content level</li>
+<li><code>blockExplicitContent</code> (boolean): Block explicit content</li>
+</ul>
+<p><strong>Controversial Topics</strong>:</p>
+<ul>
+<li><code>bannedTopics</code> (string[]): Topics to completely avoid</li>
+<li><code>allowedControversialTopics</code> (string[]): Controversial topics that are OK</li>
+</ul>
+<p><strong>Political Content</strong>:</p>
+<ul>
+<li><code>politicalContent</code> (enum): &quot;Off&quot;, &quot;NeutralOnly&quot;, &quot;AllowAll&quot;, &quot;Custom&quot;</li>
+<li><code>politicalContentGuidelines</code> (string): Custom guidelines</li>
+</ul>
+<p><strong>Religious Content</strong>:</p>
+<ul>
+<li><code>religiousContent</code> (enum): &quot;Off&quot;, &quot;RespectfulOnly&quot;, &quot;AllowAll&quot;, &quot;Custom&quot;</li>
+<li><code>religiousContentGuidelines</code> (string): Custom guidelines</li>
+</ul>
+<p><strong>Substance References</strong>:</p>
+<ul>
+<li><code>substanceReferences</code> (enum): &quot;Block&quot;, &quot;Moderate&quot;, &quot;Allow&quot;, &quot;Custom&quot;</li>
+</ul>
+<p><strong>Hate Speech</strong>:</p>
+<ul>
+<li><code>blockHateSpeech</code> (boolean): Always block hate speech</li>
+<li><code>hateSpeechExceptions</code> (string[]): Educational exceptions</li>
+</ul>
+<p><strong>Copyright</strong>:</p>
+<ul>
+<li><code>copyrightPolicy</code> (enum): &quot;Strict&quot;, &quot;Moderate&quot;, &quot;UserAssumesRisk&quot;</li>
+</ul>
+<p><strong>Allow/Block Lists</strong>:</p>
+<ul>
+<li><code>blockedConcepts</code> (string[]): Concepts to avoid</li>
+<li><code>allowedConcepts</code> (string[]): Concepts that are OK</li>
+<li><code>blockedPeople</code> (string[]): People not to mention</li>
+<li><code>allowedPeople</code> (string[]): People OK to mention</li>
+<li><code>blockedBrands</code> (string[]): Brands to avoid</li>
+<li><code>allowedBrands</code> (string[]): Brands OK to mention</li>
+</ul>
+<h2 id="best-practices-1">Best Practices</h2>
+<h3 id="creating-effective-audience-profiles">Creating Effective Audience Profiles</h3>
+<ol>
+<li><strong>Start with a preset</strong>: Clone an existing profile and modify it</li>
+<li><strong>Be specific</strong>: Detailed profiles lead to better-targeted content</li>
+<li><strong>Test and iterate</strong>: Generate videos with different profiles and compare</li>
+<li><strong>Use descriptive names</strong>: Make profiles easy to identify later</li>
+<li><strong>Tag your profiles</strong>: Use tags for organization and filtering</li>
+</ol>
+<h3 id="content-filtering-strategy">Content Filtering Strategy</h3>
+<ol>
+<li><strong>Define your use case first</strong>: Family content, professional, educational, etc.</li>
+<li><strong>Start strict, then relax</strong>: Easier to loosen than tighten</li>
+<li><strong>Use allowlists for exceptions</strong>: Better than trying to anticipate everything</li>
+<li><strong>Document your reasoning</strong>: Use the description field to explain policy</li>
+<li><strong>Test edge cases</strong>: Generate content that pushes boundaries</li>
+</ol>
+<h3 id="managing-multiple-profiles">Managing Multiple Profiles</h3>
+<ol>
+<li><strong>Use descriptive names</strong>: Include audience type and use case</li>
+<li><strong>Leverage tags</strong>: Organize profiles by project, client, or content type</li>
+<li><strong>Favorite frequently used</strong>: Mark common profiles as favorites</li>
+<li><strong>Regular exports</strong>: Back up your configurations monthly</li>
+<li><strong>Version control</strong>: Export before major changes, name files with versions</li>
+</ol>
+<h2 id="integration-with-video-generation">Integration with Video Generation</h2>
+<h3 id="applying-preferences-to-video-jobs">Applying Preferences to Video Jobs</h3>
+<p>Custom preferences are automatically applied when:</p>
+<ol>
+<li>A custom audience profile is selected</li>
+<li>A content filtering policy is active</li>
+<li>AI behavior settings are configured</li>
+</ol>
+<p>The VideoOrchestrator reads these preferences and applies them throughout the pipeline:</p>
+<ul>
+<li><strong>Script Generation</strong>: Uses audience profile parameters for tone, complexity, and style</li>
+<li><strong>Content Review</strong>: Applies filtering policy to reject inappropriate content</li>
+<li><strong>Visual Selection</strong>: Considers audience preferences for visual style</li>
+<li><strong>TTS Configuration</strong>: Adjusts voice and pacing based on audience</li>
+<li><strong>Quality Validation</strong>: Uses custom thresholds for acceptance criteria</li>
+</ul>
+<h3 id="override-hierarchy">Override Hierarchy</h3>
+<p>When multiple settings could apply:</p>
+<ol>
+<li><strong>Custom user preferences</strong> (highest priority)</li>
+<li><strong>Selected preset profile</strong></li>
+<li><strong>Default system settings</strong> (lowest priority)</li>
+</ol>
+<h2 id="troubleshooting-1">Troubleshooting</h2>
+<h3 id="common-issues">Common Issues</h3>
+<p><strong>Problem</strong>: Changes not appearing in generated videos</p>
+<ul>
+<li><strong>Solution</strong>: Ensure the profile is selected before starting generation</li>
+<li><strong>Solution</strong>: Check that preferences service is properly initialized</li>
+</ul>
+<p><strong>Problem</strong>: Import fails</p>
+<ul>
+<li><strong>Solution</strong>: Verify JSON format matches export structure</li>
+<li><strong>Solution</strong>: Check file size limits (&lt; 10MB recommended)</li>
+</ul>
+<p><strong>Problem</strong>: Too many/too few filtering restrictions</p>
+<ul>
+<li><strong>Solution</strong>: Review threshold values (0-10 scale)</li>
+<li><strong>Solution</strong>: Check allow/block lists for conflicts</li>
+</ul>
+<h3 id="validation-errors">Validation Errors</h3>
+<p>Profiles and policies are validated before saving:</p>
+<ul>
+<li>Age ranges must be valid (min ≤ max)</li>
+<li>Thresholds must be 0-10</li>
+<li>Required fields must be filled</li>
+<li>Lists cannot exceed reasonable sizes</li>
+</ul>
+<h2 id="advanced-topics">Advanced Topics</h2>
+<h3 id="prompt-template-variables">Prompt Template Variables</h3>
+<p>When creating custom prompt templates (API only currently):</p>
+<p>Available variables:</p>
+<ul>
+<li><code>{{topic}}</code> - Video topic</li>
+<li><code>{{audience}}</code> - Audience description</li>
+<li><code>{{duration}}</code> - Target duration</li>
+<li><code>{{goal}}</code> - Video goal</li>
+<li><code>{{tone}}</code> - Desired tone</li>
+<li><code>{{style}}</code> - Visual style</li>
+</ul>
+<h3 id="ab-testing-prompts">A/B Testing Prompts</h3>
+<p>Custom prompt templates support A/B testing:</p>
+<ol>
+<li>Create multiple variants in the same <code>variantGroup</code></li>
+<li>System tracks success/failure for each</li>
+<li>View success rates to identify best performers</li>
+</ol>
+<h3 id="scoring-weights">Scoring Weights</h3>
+<p>Customize quality scoring weights to prioritize what matters most:</p>
+<ul>
+<li><code>scriptQuality</code>: Content and writing (0-1)</li>
+<li><code>visualQuality</code>: Image and video quality (0-1)</li>
+<li><code>audioQuality</code>: Voice and sound quality (0-1)</li>
+<li><code>brandCompliance</code>: Brand guideline adherence (0-1)</li>
+<li><code>engagement</code>: Predicted viewer engagement (0-1)</li>
+</ul>
+<p>All weights should sum to 1.0.</p>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Coming soon:</p>
+<ul>
+<li>Visual prompt template editor in UI</li>
+<li>Real-time preview of settings impact</li>
+<li>Profile comparison tool</li>
+<li>Community-shared profiles</li>
+<li>Machine learning-based profile suggestions</li>
+<li>Per-project preference sets</li>
+<li>Collaborative profile editing</li>
+</ul>
+<h2 id="support-and-feedback">Support and Feedback</h2>
+<p>For questions or suggestions about the customization framework:</p>
+<ol>
+<li>Check this documentation first</li>
+<li>Review API documentation at <code>/api/swagger</code></li>
+<li>File issues on GitHub for bugs or feature requests</li>
+<li>Share your custom profiles with the community</li>
+</ol>
+<h2 id="appendix">Appendix</h2>
+<h3 id="example-use-cases">Example Use Cases</h3>
+<p><strong>Educational Content</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;High School Science&quot;,
+  &quot;minAge&quot;: 14,
+  &quot;maxAge&quot;: 18,
+  &quot;vocabularyLevel&quot;: 6,
+  &quot;technicalDepthTolerance&quot;: 6,
+  &quot;formalityLevel&quot;: 4,
+  &quot;pacingPreference&quot;: &quot;Medium&quot;,
+  &quot;humorStyle&quot;: &quot;Light&quot;,
+  &quot;topicsToEmphasize&quot;: [&quot;Science&quot;, &quot;Learning&quot;, &quot;Discovery&quot;]
+}
+</code></pre>
+<p><strong>Corporate Training</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Corporate Professional&quot;,
+  &quot;minAge&quot;: 25,
+  &quot;maxAge&quot;: 55,
+  &quot;vocabularyLevel&quot;: 8,
+  &quot;technicalDepthTolerance&quot;: 7,
+  &quot;formalityLevel&quot;: 7,
+  &quot;pacingPreference&quot;: &quot;Medium&quot;,
+  &quot;humorStyle&quot;: &quot;Light&quot;,
+  &quot;ctaAggressiveness&quot;: 6,
+  &quot;brandToneKeywords&quot;: [&quot;Professional&quot;, &quot;Reliable&quot;, &quot;Expert&quot;]
+}
+</code></pre>
+<p><strong>Social Media Content</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;name&quot;: &quot;Gen Z Social&quot;,
+  &quot;minAge&quot;: 18,
+  &quot;maxAge&quot;: 24,
+  &quot;vocabularyLevel&quot;: 5,
+  &quot;technicalDepthTolerance&quot;: 6,
+  &quot;formalityLevel&quot;: 2,
+  &quot;pacingPreference&quot;: &quot;VeryFast&quot;,
+  &quot;attentionSpanSeconds&quot;: 15,
+  &quot;humorStyle&quot;: &quot;Heavy&quot;,
+  &quot;sarcasmLevel&quot;: 7,
+  &quot;emotionalTone&quot;: &quot;Uplifting&quot;
+}
+</code></pre>
+<h3 id="api-quick-reference">API Quick Reference</h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/api/user-preferences/audience-profiles</code></td>
+<td>GET</td>
+<td>List all profiles</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/audience-profiles</code></td>
+<td>POST</td>
+<td>Create profile</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/audience-profiles/{id}</code></td>
+<td>GET</td>
+<td>Get one profile</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/audience-profiles/{id}</code></td>
+<td>PUT</td>
+<td>Update profile</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/audience-profiles/{id}</code></td>
+<td>DELETE</td>
+<td>Delete profile</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/filtering-policies</code></td>
+<td>GET</td>
+<td>List all policies</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/filtering-policies</code></td>
+<td>POST</td>
+<td>Create policy</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/filtering-policies/{id}</code></td>
+<td>GET</td>
+<td>Get one policy</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/filtering-policies/{id}</code></td>
+<td>PUT</td>
+<td>Update policy</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/filtering-policies/{id}</code></td>
+<td>DELETE</td>
+<td>Delete policy</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/export</code></td>
+<td>GET</td>
+<td>Export all preferences</td>
+</tr>
+<tr>
+<td><code>/api/user-preferences/import</code></td>
+<td>POST</td>
+<td>Import preferences</td>
+</tr>
+</tbody>
+</table>
+<h2 id="model-selection-and-pinning-1">Model Selection and Pinning</h2>
+<h3 id="overview-1">Overview</h3>
+<p>Aura Video Studio provides explicit, always-manual control over which AI models are used at every decision point in the video generation pipeline. You maintain complete control - the system never silently swaps or auto-chooses a model that overrides your explicit selections.</p>
+<h3 id="key-principles">Key Principles</h3>
+<ol>
+<li><strong>User Control First</strong>: No silent model swaps - all changes require explicit user action</li>
+<li><strong>Pin to Lock</strong>: Pin models to prevent any automatic changes, even when a model becomes unavailable</li>
+<li><strong>Graceful Degradation</strong>: When a pinned model is unavailable, the system blocks and presents options rather than auto-switching</li>
+<li><strong>Full Auditability</strong>: All model selections and resolutions are logged with who/when/why/source</li>
+</ol>
+<h3 id="model-selection-precedence">Model Selection Precedence</h3>
+<p>The system follows this strict precedence order when resolving which model to use:</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Source</th>
+<th>Behavior if Unavailable</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Run Override (Pinned)</strong></td>
+<td>❌ Blocks - requires user decision</td>
+<td>CLI/API with <code>--pin-model</code> for critical runs</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Run Override</strong></td>
+<td>✓ Falls back to next priority</td>
+<td>CLI/API for one-off model testing</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Stage Pinned</strong></td>
+<td>❌ Blocks - requires user decision</td>
+<td>Lock specific stages to specific models</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Project Override</strong></td>
+<td>✓ Falls back to next priority</td>
+<td>Per-project model preferences</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Global Default</strong></td>
+<td>✓ Falls back to next priority</td>
+<td>Application-wide defaults</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Automatic Fallback</strong></td>
+<td>Only if explicitly enabled (OFF by default)</td>
+<td>Safe fallback when no explicit selection exists</td>
+</tr>
+</tbody>
+</table>
+<h3 id="using-the-ui">Using the UI</h3>
+<h4 id="setting-a-model-for-a-pipeline-stage">Setting a Model for a Pipeline Stage</h4>
+<ol>
+<li>Navigate to <strong>Settings → Model Selection</strong></li>
+<li>Find the pipeline stage (e.g., &quot;Script Generation Model&quot;)</li>
+<li>Select your preferred model from the dropdown</li>
+<li>Optionally click <strong>Pin</strong> to prevent any automatic changes</li>
+<li>Changes are saved immediately</li>
+</ol>
+<h4 id="understanding-the-pinlock-feature">Understanding the Pin/Lock Feature</h4>
+<ul>
+<li><strong>Unpinned (default)</strong>: If the model becomes unavailable, the system will fall back to the next priority level</li>
+<li><strong>Pinned</strong>: If the model becomes unavailable, the pipeline will <strong>block</strong> and show a modal with options:
+<ul>
+<li>Apply recommended alternative</li>
+<li>Retry with original model later</li>
+<li>Continue with global defaults</li>
+<li>Cancel the run</li>
+</ul>
+</li>
+</ul>
+<h4 id="testing-a-model">Testing a Model</h4>
+<ol>
+<li>Select a model in the picker</li>
+<li>Click the <strong>Test</strong> button</li>
+<li>The system runs a lightweight probe to verify:
+<ul>
+<li>Model is accessible with your API key</li>
+<li>Model capabilities (context window, max tokens)</li>
+<li>Deprecation status</li>
+<li>Response time</li>
+</ul>
+</li>
+</ol>
+<h4 id="handling-deprecated-models">Handling Deprecated Models</h4>
+<p>When you select a deprecated model, you'll see:</p>
+<ul>
+<li>A <strong>Deprecated</strong> badge on the picker</li>
+<li>A confirmation dialog explaining the deprecation</li>
+<li>The recommended replacement model</li>
+<li>Option to &quot;Use Anyway&quot; if you explicitly need the deprecated model</li>
+</ul>
+<h3 id="using-the-api-1">Using the API</h3>
+<h4 id="get-available-models">Get Available Models</h4>
+<pre><code class="lang-bash">GET /api/models/available?provider=OpenAI
+
+Response:
+{
+  &quot;providers&quot;: {
+    &quot;OpenAI&quot;: [
+      {
+        &quot;provider&quot;: &quot;OpenAI&quot;,
+        &quot;modelId&quot;: &quot;gpt-4o&quot;,
+        &quot;maxTokens&quot;: 128000,
+        &quot;contextWindow&quot;: 128000,
+        &quot;aliases&quot;: [&quot;gpt-4o-latest&quot;],
+        &quot;isDeprecated&quot;: false
+      },
+      ...
+    ]
+  },
+  &quot;totalCount&quot;: 15,
+  &quot;correlationId&quot;: &quot;xyz789&quot;
+}
+</code></pre>
+<h4 id="get-current-selections">Get Current Selections</h4>
+<pre><code class="lang-bash">GET /api/models/selection
+
+Response:
+{
+  &quot;globalDefaults&quot;: [
+    {
+      &quot;provider&quot;: &quot;OpenAI&quot;,
+      &quot;stage&quot;: &quot;&quot;,
+      &quot;modelId&quot;: &quot;gpt-4o-mini&quot;,
+      &quot;scope&quot;: &quot;Global&quot;,
+      &quot;isPinned&quot;: false,
+      &quot;setBy&quot;: &quot;user&quot;,
+      &quot;setAt&quot;: &quot;2025-11-04T19:30:00Z&quot;,
+      &quot;reason&quot;: &quot;User selection&quot;
+    }
+  ],
+  &quot;stageSelections&quot;: [
+    {
+      &quot;provider&quot;: &quot;OpenAI&quot;,
+      &quot;stage&quot;: &quot;script&quot;,
+      &quot;modelId&quot;: &quot;gpt-4o&quot;,
+      &quot;scope&quot;: &quot;Stage&quot;,
+      &quot;isPinned&quot;: true,
+      &quot;setBy&quot;: &quot;user&quot;,
+      &quot;setAt&quot;: &quot;2025-11-04T19:35:00Z&quot;,
+      &quot;reason&quot;: &quot;User pinned for consistency&quot;
+    }
+  ],
+  &quot;allowAutomaticFallback&quot;: false,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h4 id="set-model-selection">Set Model Selection</h4>
+<pre><code class="lang-bash">POST /api/models/selection
+Content-Type: application/json
+
+{
+  &quot;provider&quot;: &quot;OpenAI&quot;,
+  &quot;stage&quot;: &quot;script&quot;,
+  &quot;modelId&quot;: &quot;gpt-4o&quot;,
+  &quot;scope&quot;: &quot;Stage&quot;,
+  &quot;pin&quot;: true,
+  &quot;reason&quot;: &quot;Need consistent script quality&quot;
+}
+
+Response:
+{
+  &quot;applied&quot;: true,
+  &quot;reason&quot;: &quot;Model selection saved successfully&quot;,
+  &quot;deprecationWarning&quot;: null,
+  &quot;correlationId&quot;: &quot;def456&quot;
+}
+</code></pre>
+<h4 id="clear-selections">Clear Selections</h4>
+<pre><code class="lang-bash">POST /api/models/selection/clear
+Content-Type: application/json
+
+{
+  &quot;provider&quot;: &quot;OpenAI&quot;,
+  &quot;stage&quot;: &quot;script&quot;,
+  &quot;scope&quot;: &quot;Stage&quot;
+}
+
+Response:
+{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;Selections cleared successfully&quot;,
+  &quot;correlationId&quot;: &quot;ghi789&quot;
+}
+</code></pre>
+<h4 id="test-a-model">Test a Model</h4>
+<pre><code class="lang-bash">POST /api/models/test
+Content-Type: application/json
+
+{
+  &quot;provider&quot;: &quot;OpenAI&quot;,
+  &quot;modelId&quot;: &quot;gpt-4o&quot;,
+  &quot;apiKey&quot;: &quot;sk-...&quot;
+}
+
+Response:
+{
+  &quot;provider&quot;: &quot;OpenAI&quot;,
+  &quot;modelId&quot;: &quot;gpt-4o&quot;,
+  &quot;isAvailable&quot;: true,
+  &quot;isDeprecated&quot;: false,
+  &quot;contextWindow&quot;: 128000,
+  &quot;maxTokens&quot;: 128000,
+  &quot;errorMessage&quot;: null,
+  &quot;testedAt&quot;: &quot;2025-11-04T19:40:00Z&quot;,
+  &quot;correlationId&quot;: &quot;jkl012&quot;
+}
+</code></pre>
+<h3 id="using-the-cli">Using the CLI</h3>
+<h4 id="set-model-override-for-a-run">Set Model Override for a Run</h4>
+<pre><code class="lang-bash"># One-time override (not pinned)
+aura generate --model gpt-4o --brief &quot;...&quot;
+
+# Pinned override (blocks if unavailable)
+aura generate --model gpt-4o --pin-model --brief &quot;...&quot;
+
+# Per-stage override
+aura generate --script-model gpt-4o --visual-model claude-3-opus --brief &quot;...&quot;
+</code></pre>
+<h4 id="allow-automatic-fallback">Allow Automatic Fallback</h4>
+<pre><code class="lang-bash"># For CI/CD scenarios where automatic fallback is acceptable
+aura generate --allow-auto-fallback --brief &quot;...&quot;
+</code></pre>
+<h3 id="settings-allow-automatic-fallback">Settings: Allow Automatic Fallback</h3>
+<p>By default, automatic fallback is <strong>disabled</strong>. This means:</p>
+<ul>
+<li>If no explicit model selection exists and no fallback is configured, operations will block</li>
+<li>You must either set a model selection or enable automatic fallback</li>
+</ul>
+<p>To enable automatic fallback:</p>
+<ol>
+<li>Go to <strong>Settings → Model Selection</strong></li>
+<li>Toggle <strong>Allow Automatic Fallback</strong> to ON</li>
+<li>When enabled, the system may automatically select a safe fallback model from the catalog if no explicit selection exists</li>
+<li>All automatic fallback usages are logged in the audit trail and shown in notifications</li>
+</ol>
+<p><strong>Important</strong>: Pinned models always override the automatic fallback setting. If a pinned model is unavailable, the operation will block regardless of this setting.</p>
+<h3 id="audit-trail">Audit Trail</h3>
+<p>All model selection resolutions are logged with full context:</p>
+<ul>
+<li>Which model was selected</li>
+<li>Source of the selection (run override, stage pinned, global default, etc.)</li>
+<li>Whether it was pinned</li>
+<li>Timestamp and correlation ID for traceability</li>
+<li>Job ID if part of a video generation job</li>
+</ul>
+<p>Access the audit log via:</p>
+<ul>
+<li>Settings page: View recent model selections</li>
+<li>API: <code>GET /api/models/audit-log?limit=100</code></li>
+<li>Logs directory: <code>AuraData/model-selections.json</code></li>
+</ul>
+<h3 id="best-practices-2">Best Practices</h3>
+<ol>
+<li><strong>Pin critical stages</strong>: Pin models for script generation and other stages where consistency is paramount</li>
+<li><strong>Leave non-critical stages unpinned</strong>: Allow fallback for less critical stages to avoid blocking</li>
+<li><strong>Test before pinning</strong>: Always test a model before pinning it to ensure it works with your API key</li>
+<li><strong>Monitor deprecations</strong>: Regularly check for deprecated models and plan migrations</li>
+<li><strong>Use project overrides sparingly</strong>: Reserve project overrides for special cases where project needs differ from global defaults</li>
+<li><strong>Enable audit logging</strong>: Review the audit log periodically to understand model usage patterns</li>
+</ol>
+<h3 id="troubleshooting-2">Troubleshooting</h3>
+<h4 id="model-unavailable-blocking-modal-appears">&quot;Model unavailable&quot; blocking modal appears</h4>
+<p><strong>Cause</strong>: A pinned model is unavailable (API key issue, model deprecated, network error)</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Click &quot;Apply recommended model&quot; to use the suggested alternative</li>
+<li>Or click &quot;Retry with original later&quot; and fix the underlying issue</li>
+<li>Or unpin the model in settings to allow fallback</li>
+</ol>
+<h4 id="models-not-appearing-in-picker">Models not appearing in picker</h4>
+<p><strong>Cause</strong>: Models haven't been loaded from the catalog</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check API key is configured for the provider</li>
+<li>Refresh the models list (Settings → Model Selection → Reload button)</li>
+<li>Check network connectivity</li>
+<li>Review logs for API errors</li>
+</ol>
+<h4 id="automatic-fallback-not-working">Automatic fallback not working</h4>
+<p><strong>Cause</strong>: Automatic fallback is disabled by default</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Enable &quot;Allow Automatic Fallback&quot; in Settings → Model Selection</li>
+<li>Or set an explicit model selection for the provider/stage</li>
+<li>Note that pinned models override automatic fallback</li>
+</ol>
+<h2 id="cost-and-budget-management">Cost and Budget Management</h2>
+<p>Aura Video Studio provides comprehensive cost tracking and budget controls to help you manage expenses across LLM, TTS, and other AI providers.</p>
+<h3 id="cost-tracking-configuration">Cost Tracking Configuration</h3>
+<p>Configure cost tracking through the API or Settings UI:</p>
+<h4 id="get-current-configuration">Get Current Configuration</h4>
+<pre><code class="lang-bash">GET /api/cost-tracking/configuration
+</code></pre>
+<h4 id="update-configuration">Update Configuration</h4>
+<pre><code class="lang-bash">PUT /api/cost-tracking/configuration
+Content-Type: application/json
+
+{
+  &quot;userId&quot;: &quot;default&quot;,
+  &quot;overallMonthlyBudget&quot;: 100.00,
+  &quot;periodType&quot;: &quot;Monthly&quot;,
+  &quot;currency&quot;: &quot;USD&quot;,
+  &quot;alertThresholds&quot;: [50, 75, 90, 100],
+  &quot;emailNotificationsEnabled&quot;: false,
+  &quot;alertFrequency&quot;: &quot;Once&quot;,
+  &quot;providerBudgets&quot;: {
+    &quot;OpenAI&quot;: 50.00,
+    &quot;ElevenLabs&quot;: 30.00,
+    &quot;Anthropic&quot;: 20.00
+  },
+  &quot;hardBudgetLimit&quot;: false,
+  &quot;enableProjectTracking&quot;: true
+}
+</code></pre>
+<h3 id="budget-period-types">Budget Period Types</h3>
+<ul>
+<li><strong>Monthly</strong>: Budget resets on the 1st of each month</li>
+<li><strong>Weekly</strong>: Budget resets every Sunday</li>
+<li><strong>Custom</strong>: Define your own start and end dates</li>
+</ul>
+<h3 id="budget-thresholds">Budget Thresholds</h3>
+<p>Configure alert thresholds as percentages:</p>
+<ul>
+<li><strong>50%</strong>: Early warning</li>
+<li><strong>75%</strong>: Approaching limit</li>
+<li><strong>90%</strong>: Near limit</li>
+<li><strong>100%</strong>: Limit reached</li>
+</ul>
+<h3 id="hard-vs-soft-limits">Hard vs Soft Limits</h3>
+<p><strong>Soft Limits</strong> (default):</p>
+<ul>
+<li>Generate warnings when thresholds are exceeded</li>
+<li>Allow operations to continue</li>
+<li>Useful for monitoring without disruption</li>
+</ul>
+<p><strong>Hard Limits</strong>:</p>
+<ul>
+<li>Block operations when budget is exceeded</li>
+<li>Require explicit confirmation to proceed</li>
+<li>Prevent unexpected overspending</li>
+</ul>
+<p>Example:</p>
+<pre><code class="lang-json">{
+  &quot;overallMonthlyBudget&quot;: 100.00,
+  &quot;hardBudgetLimit&quot;: true
+}
+</code></pre>
+<p>With this configuration, video generation will be blocked if it would exceed $100 for the month.</p>
+<h3 id="per-provider-budgets">Per-Provider Budgets</h3>
+<p>Set individual budgets for each provider:</p>
+<pre><code class="lang-json">{
+  &quot;providerBudgets&quot;: {
+    &quot;OpenAI&quot;: 50.00,
+    &quot;ElevenLabs&quot;: 30.00,
+    &quot;Anthropic&quot;: 20.00
+  }
+}
+</code></pre>
+<p>Operations will warn or block based on per-provider usage.</p>
+<h3 id="real-time-cost-meter">Real-Time Cost Meter</h3>
+<p>During video generation, the Cost Meter component displays:</p>
+<ul>
+<li>Current accumulated cost</li>
+<li>Estimated total cost</li>
+<li>Budget progress bar</li>
+<li>Cost breakdown by stage</li>
+<li>Warning indicators</li>
+</ul>
+<p>The cost meter updates live as each operation completes, giving you real-time visibility into spending.</p>
+<h3 id="post-run-cost-reports">Post-Run Cost Reports</h3>
+<p>After each video generation, get a comprehensive cost report:</p>
+<pre><code class="lang-bash">GET /api/cost-tracking/run-summary/{jobId}
+</code></pre>
+<p><strong>Report includes</strong>:</p>
+<ul>
+<li>Total cost breakdown by stage</li>
+<li>Total cost breakdown by provider</li>
+<li>Token usage statistics (for LLM operations)</li>
+<li>Individual operation costs with timestamps</li>
+<li>Cache hit rate and savings</li>
+<li>Cost optimization suggestions</li>
+</ul>
+<p>Example report:</p>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;job-12345&quot;,
+  &quot;totalCost&quot;: 4.75,
+  &quot;currency&quot;: &quot;USD&quot;,
+  &quot;costByStage&quot;: {
+    &quot;ScriptGeneration&quot;: { &quot;cost&quot;: 2.50, &quot;percentageOfTotal&quot;: 52.6 },
+    &quot;TTS&quot;: { &quot;cost&quot;: 1.50, &quot;percentageOfTotal&quot;: 31.6 },
+    &quot;Visuals&quot;: { &quot;cost&quot;: 0.50, &quot;percentageOfTotal&quot;: 10.5 },
+    &quot;Rendering&quot;: { &quot;cost&quot;: 0.25, &quot;percentageOfTotal&quot;: 5.3 }
+  },
+  &quot;tokenStats&quot;: {
+    &quot;totalTokens&quot;: 15000,
+    &quot;cacheHitRate&quot;: 25.0,
+    &quot;costSavedByCache&quot;: 0.75
+  },
+  &quot;optimizationSuggestions&quot;: [
+    {
+      &quot;category&quot;: &quot;ProviderSwitch&quot;,
+      &quot;suggestion&quot;: &quot;Switch from OpenAI to Gemini for 60% cost reduction&quot;,
+      &quot;estimatedSavings&quot;: 1.50
+    }
+  ]
+}
+</code></pre>
+<h3 id="export-cost-reports">Export Cost Reports</h3>
+<p>Export detailed reports in JSON or CSV format:</p>
+<pre><code class="lang-bash">POST /api/cost-tracking/export/{jobId}?format=csv
+</code></pre>
+<p>Exports include:</p>
+<ul>
+<li>All operation details with timestamps</li>
+<li>Token counts and costs</li>
+<li>Provider breakdowns</li>
+<li>Optimization suggestions</li>
+</ul>
+<p>Perfect for:</p>
+<ul>
+<li>Expense reporting</li>
+<li>Cost analysis</li>
+<li>Budget planning</li>
+<li>Provider comparisons</li>
+</ul>
+<h3 id="cost-optimization-suggestions">Cost Optimization Suggestions</h3>
+<p>The system analyzes your usage patterns and provides actionable suggestions:</p>
+<ol>
+<li><strong>Caching</strong>: Enable LLM caching to avoid repeat API calls</li>
+<li><strong>Provider Selection</strong>: Switch to lower-cost alternatives</li>
+<li><strong>Prompt Optimization</strong>: Reduce token usage</li>
+<li><strong>Model Selection</strong>: Use smaller models where appropriate</li>
+<li><strong>Batching</strong>: Combine operations efficiently</li>
+</ol>
+<p>Each suggestion includes:</p>
+<ul>
+<li>Estimated cost savings</li>
+<li>Quality impact assessment</li>
+<li>Implementation difficulty</li>
+</ul>
+<h3 id="optimize-for-budget">Optimize for Budget</h3>
+<p>Get AI-powered recommendations to meet a budget target:</p>
+<pre><code class="lang-bash">POST /api/cost-tracking/optimize-budget
+Content-Type: application/json
+
+{
+  &quot;budgetLimit&quot;: 2.00,
+  &quot;desiredQuality&quot;: &quot;standard&quot;,
+  &quot;deadlineMinutes&quot;: 15
+}
+</code></pre>
+<p>Response includes:</p>
+<ul>
+<li>Before/after cost comparison</li>
+<li>Recommended provider settings</li>
+<li>Specific configuration changes</li>
+<li>Quality impact summary</li>
+</ul>
+<p>Example response:</p>
+<pre><code class="lang-json">{
+  &quot;estimatedCostBefore&quot;: 5.00,
+  &quot;estimatedCostAfter&quot;: 1.50,
+  &quot;estimatedSavings&quot;: 3.50,
+  &quot;recommendedSettings&quot;: {
+    &quot;llmProvider&quot;: &quot;Gemini&quot;,
+    &quot;ttsProvider&quot;: &quot;Piper&quot;,
+    &quot;enableCaching&quot;: true,
+    &quot;maxTokensPerOperation&quot;: 2000
+  },
+  &quot;changes&quot;: [
+    &quot;Switch LLM provider from OpenAI to Gemini (60% cost reduction)&quot;,
+    &quot;Switch TTS provider to Piper (free, offline)&quot;,
+    &quot;Enable LLM caching for repeated operations&quot;
+  ],
+  &quot;qualityImpact&quot;: &quot;Slight reduction in output creativity, but maintains overall video quality&quot;
+}
+</code></pre>
+<h3 id="monitoring-current-spending">Monitoring Current Spending</h3>
+<p>Check your current period spending at any time:</p>
+<pre><code class="lang-bash">GET /api/cost-tracking/current-period
+</code></pre>
+<p>Returns:</p>
+<pre><code class="lang-json">{
+  &quot;totalCost&quot;: 45.75,
+  &quot;currency&quot;: &quot;USD&quot;,
+  &quot;periodType&quot;: &quot;Monthly&quot;,
+  &quot;budget&quot;: 100.00,
+  &quot;percentageUsed&quot;: 45.8
+}
+</code></pre>
+<h3 id="provider-pricing">Provider Pricing</h3>
+<p>View current pricing for all providers:</p>
+<pre><code class="lang-bash">GET /api/cost-tracking/pricing
+</code></pre>
+<p>Update pricing manually if needed:</p>
+<pre><code class="lang-bash">PUT /api/cost-tracking/pricing/OpenAI
+Content-Type: application/json
+
+{
+  &quot;providerName&quot;: &quot;OpenAI&quot;,
+  &quot;providerType&quot;: &quot;LLM&quot;,
+  &quot;costPer1KInputTokens&quot;: 0.03,
+  &quot;costPer1KOutputTokens&quot;: 0.06,
+  &quot;currency&quot;: &quot;USD&quot;,
+  &quot;notes&quot;: &quot;GPT-4 pricing&quot;
+}
+</code></pre>
+<h3 id="best-practices-3">Best Practices</h3>
+<ol>
+<li><strong>Set Realistic Budgets</strong>: Start with monitoring mode (soft limits) to understand your usage</li>
+<li><strong>Use Provider Budgets</strong>: Allocate budget across providers based on usage patterns</li>
+<li><strong>Enable Caching</strong>: Can save 20-40% on repeated operations</li>
+<li><strong>Review Reports</strong>: Analyze cost reports after each run to identify optimization opportunities</li>
+<li><strong>Monitor Trends</strong>: Track spending over time to spot anomalies</li>
+<li><strong>Test Optimizations</strong>: Try suggested optimizations on test runs before production</li>
+<li><strong>Update Pricing</strong>: Keep provider pricing current for accurate estimates</li>
+</ol>
+<h3 id="troubleshooting-3">Troubleshooting</h3>
+<h4 id="cost-estimates-seem-inaccurate">Cost estimates seem inaccurate</h4>
+<p><strong>Cause</strong>: Outdated provider pricing or token estimation issues</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Update provider pricing tables</li>
+<li>Verify token counts in operation logs</li>
+<li>Check for recent provider pricing changes</li>
+</ol>
+<h4 id="budget-alerts-not-triggering">Budget alerts not triggering</h4>
+<p><strong>Cause</strong>: Alert frequency setting or threshold configuration</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check alert thresholds include the levels you want</li>
+<li>Verify alertFrequency is not set to &quot;Once&quot; if you want repeated alerts</li>
+<li>Check triggered alerts haven't already fired for this period</li>
+</ol>
+<h4 id="hard-limit-blocking-operations-unexpectedly">Hard limit blocking operations unexpectedly</h4>
+<p><strong>Cause</strong>: Budget exceeded or misconfigured</p>
+<p><strong>Solution</strong>:</p>
+<ol>
+<li>Check current period spending</li>
+<li>Verify budget limits are set correctly</li>
+<li>Consider switching to soft limits during testing</li>
+<li>Review recent operations for unexpected costs</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/USER_CUSTOMIZATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

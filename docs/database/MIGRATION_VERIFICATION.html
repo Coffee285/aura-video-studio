@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Migration Verification Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Migration Verification Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/MIGRATION_VERIFICATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="migration-verification-guide">Migration Verification Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document provides verification procedures to ensure database migrations work correctly. Use these tests before deploying migrations to production.</p>
+<h2 id="verification-checklist">Verification Checklist</h2>
+<h3 id="pre-migration-verification">Pre-Migration Verification</h3>
+<ul>
+<li>[ ] All entity models have proper data annotations</li>
+<li>[ ] Relationships are correctly configured</li>
+<li>[ ] Indexes are defined for frequently queried columns</li>
+<li>[ ] Soft delete is implemented where needed</li>
+<li>[ ] Audit trails are configured</li>
+<li>[ ] Migration files are generated and reviewed</li>
+<li>[ ] Database backup is created</li>
+</ul>
+<h3 id="post-migration-verification">Post-Migration Verification</h3>
+<ul>
+<li>[ ] Migration applied successfully</li>
+<li>[ ] All tables created with correct schema</li>
+<li>[ ] Indexes are present</li>
+<li>[ ] Foreign keys are enforced</li>
+<li>[ ] Seed data is populated</li>
+<li>[ ] Audit trails are working</li>
+<li>[ ] Soft delete is functioning</li>
+<li>[ ] Rollback (Down migration) works</li>
+<li>[ ] Application can connect and query database</li>
+</ul>
+<h2 id="manual-verification-steps">Manual Verification Steps</h2>
+<h3 id="step-1-check-migration-status">Step 1: Check Migration Status</h3>
+<pre><code class="lang-bash"># List all migrations and their status
+./Scripts/run-migrations.sh list
+
+# Expected output should show:
+# ✓ InitialCreate (applied)
+</code></pre>
+<h3 id="step-2-verify-tables-exist">Step 2: Verify Tables Exist</h3>
+<p>Using SQLite CLI:</p>
+<pre><code class="lang-bash"># Open database
+sqlite3 /path/to/aura.db
+
+# List all tables
+.tables
+
+# Expected tables:
+# ProjectStates, SceneStates, AssetStates, RenderCheckpoints
+# ProjectVersions, ContentBlobs, UserSetups, SystemConfiguration
+# Configurations, Templates, CustomTemplates, ExportHistory, ActionLogs
+</code></pre>
+<h3 id="step-3-verify-table-schema">Step 3: Verify Table Schema</h3>
+<pre><code class="lang-sql">-- Check ProjectStates schema
+.schema ProjectStates
+
+-- Verify columns exist
+PRAGMA table_info(ProjectStates);
+
+-- Expected: Id, Title, Description, Status, CreatedAt, UpdatedAt, etc.
+</code></pre>
+<h3 id="step-4-verify-indexes">Step 4: Verify Indexes</h3>
+<pre><code class="lang-sql">-- List all indexes
+SELECT name, tbl_name, sql 
+FROM sqlite_master 
+WHERE type = 'index';
+
+-- Should see indexes on:
+-- - ProjectStates: Status, UpdatedAt, JobId, IsDeleted
+-- - SceneStates: ProjectId, (ProjectId + SceneIndex)
+-- - And others as documented
+</code></pre>
+<h3 id="step-5-verify-foreign-keys">Step 5: Verify Foreign Keys</h3>
+<pre><code class="lang-bash"># Enable foreign key enforcement (should be on by default)
+sqlite3 aura.db &quot;PRAGMA foreign_keys = ON;&quot;
+
+# Check foreign keys
+sqlite3 aura.db &quot;PRAGMA foreign_key_list(SceneStates);&quot;
+
+# Expected: Foreign key from ProjectId to ProjectStates(Id)
+</code></pre>
+<h3 id="step-6-verify-seed-data">Step 6: Verify Seed Data</h3>
+<pre><code class="lang-sql">-- Check system configuration
+SELECT * FROM system_configuration;
+-- Expected: 1 row with IsSetupComplete = 0
+
+-- Check for development seed data (if seeded)
+SELECT COUNT(*) FROM ProjectStates;
+SELECT COUNT(*) FROM Templates;
+SELECT COUNT(*) FROM UserSetups;
+</code></pre>
+<h3 id="step-7-test-audit-trail-functionality">Step 7: Test Audit Trail Functionality</h3>
+<p>Create a test record and verify audit fields are populated:</p>
+<pre><code class="lang-csharp">// In a test or console app
+using var context = new AuraDbContext(options);
+
+var project = new ProjectStateEntity
+{
+    Title = &quot;Test Project&quot;,
+    Status = &quot;Draft&quot;
+};
+
+await context.ProjectStates.AddAsync(project);
+await context.SaveChangesAsync();
+
+// Verify:
+// - CreatedAt should be set to current UTC time
+// - UpdatedAt should be set to current UTC time
+// - Both should be equal on creation
+
+Console.WriteLine($&quot;CreatedAt: {project.CreatedAt}&quot;);
+Console.WriteLine($&quot;UpdatedAt: {project.UpdatedAt}&quot;);
+</code></pre>
+<h3 id="step-8-test-soft-delete-functionality">Step 8: Test Soft Delete Functionality</h3>
+<pre><code class="lang-csharp">// Create and soft delete a custom template
+var template = new CustomTemplateEntity
+{
+    Name = &quot;Test Template&quot;,
+    Category = &quot;Test&quot;
+};
+
+context.CustomTemplates.Add(template);
+await context.SaveChangesAsync();
+
+// Soft delete
+context.CustomTemplates.Remove(template);
+await context.SaveChangesAsync();
+
+// Verify it's still in database but marked as deleted
+var allTemplates = await context.CustomTemplates
+    .IgnoreQueryFilters() // Bypass soft delete filter
+    .ToListAsync();
+
+// Should find the template with IsDeleted = true, DeletedAt set
+var deleted = allTemplates.First(t =&gt; t.Id == template.Id);
+Console.WriteLine($&quot;IsDeleted: {deleted.IsDeleted}&quot;);
+Console.WriteLine($&quot;DeletedAt: {deleted.DeletedAt}&quot;);
+</code></pre>
+<h3 id="step-9-test-relationships-and-cascade-delete">Step 9: Test Relationships and Cascade Delete</h3>
+<pre><code class="lang-csharp">// Create a project with scenes
+var project = new ProjectStateEntity
+{
+    Title = &quot;Test Project&quot;,
+    Status = &quot;Draft&quot;
+};
+
+context.ProjectStates.Add(project);
+await context.SaveChangesAsync();
+
+var scene = new SceneStateEntity
+{
+    ProjectId = project.Id,
+    SceneIndex = 0,
+    ScriptText = &quot;Test scene&quot;
+};
+
+context.SceneStates.Add(scene);
+await context.SaveChangesAsync();
+
+// Delete project (should cascade to scenes)
+context.ProjectStates.Remove(project);
+await context.SaveChangesAsync();
+
+// Verify scene was deleted
+var sceneExists = await context.SceneStates
+    .AnyAsync(s =&gt; s.Id == scene.Id);
+
+// sceneExists should be false
+Console.WriteLine($&quot;Scene exists after project delete: {sceneExists}&quot;);
+</code></pre>
+<h3 id="step-10-test-migration-rollback">Step 10: Test Migration Rollback</h3>
+<pre><code class="lang-bash"># Rollback to initial state
+./Scripts/run-migrations.sh rollback 0
+
+# Verify tables are dropped
+sqlite3 aura.db &quot;.tables&quot;
+# Should show empty or minimal tables
+
+# Re-apply migrations
+./Scripts/run-migrations.sh migrate
+
+# Verify everything is back
+./Scripts/run-migrations.sh list
+</code></pre>
+<h2 id="automated-verification-tests">Automated Verification Tests</h2>
+<h3 id="integration-test-example">Integration Test Example</h3>
+<pre><code class="lang-csharp">using Xunit;
+using Microsoft.EntityFrameworkCore;
+using Aura.Core.Data;
+
+public class MigrationTests
+{
+    [Fact]
+    public async Task InitialMigration_CreatesAllTables()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder&lt;AuraDbContext&gt;()
+            .UseSqlite(&quot;Data Source=:memory:&quot;)
+            .Options;
+
+        using var context = new AuraDbContext(options);
+        
+        // Act
+        await context.Database.EnsureCreatedAsync();
+        
+        // Assert
+        Assert.True(await context.Database.CanConnectAsync());
+        
+        // Verify each DbSet is accessible
+        var projectCount = await context.ProjectStates.CountAsync();
+        var sceneCount = await context.SceneStates.CountAsync();
+        var assetCount = await context.AssetStates.CountAsync();
+        
+        // All should return 0 (no data yet) but not throw
+        Assert.Equal(0, projectCount);
+        Assert.Equal(0, sceneCount);
+        Assert.Equal(0, assetCount);
+    }
+    
+    [Fact]
+    public async Task AuditTrail_AutomaticallySetTimestamps()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder&lt;AuraDbContext&gt;()
+            .UseSqlite(&quot;Data Source=:memory:&quot;)
+            .Options;
+
+        using var context = new AuraDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+        
+        // Act
+        var project = new ProjectStateEntity
+        {
+            Title = &quot;Test&quot;,
+            Status = &quot;Draft&quot;
+        };
+        
+        context.ProjectStates.Add(project);
+        await context.SaveChangesAsync();
+        
+        // Assert
+        Assert.NotEqual(default(DateTime), project.CreatedAt);
+        Assert.NotEqual(default(DateTime), project.UpdatedAt);
+        Assert.Equal(project.CreatedAt, project.UpdatedAt);
+    }
+    
+    [Fact]
+    public async Task SoftDelete_MarksEntityAsDeleted()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder&lt;AuraDbContext&gt;()
+            .UseSqlite(&quot;Data Source=:memory:&quot;)
+            .Options;
+
+        using var context = new AuraDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+        
+        var template = new CustomTemplateEntity
+        {
+            Name = &quot;Test&quot;,
+            Category = &quot;Test&quot;
+        };
+        
+        context.CustomTemplates.Add(template);
+        await context.SaveChangesAsync();
+        
+        // Act
+        context.CustomTemplates.Remove(template);
+        await context.SaveChangesAsync();
+        
+        // Assert
+        var deletedTemplate = await context.CustomTemplates
+            .IgnoreQueryFilters()
+            .FirstAsync(t =&gt; t.Id == template.Id);
+            
+        Assert.True(deletedTemplate.IsDeleted);
+        Assert.NotNull(deletedTemplate.DeletedAt);
+        
+        // Verify it's filtered from normal queries
+        var normalQuery = await context.CustomTemplates
+            .Where(t =&gt; t.Id == template.Id)
+            .FirstOrDefaultAsync();
+            
+        Assert.Null(normalQuery);
+    }
+    
+    [Fact]
+    public async Task CascadeDelete_DeletesRelatedEntities()
+    {
+        // Arrange
+        var options = new DbContextOptionsBuilder&lt;AuraDbContext&gt;()
+            .UseSqlite(&quot;Data Source=:memory:&quot;)
+            .Options;
+
+        using var context = new AuraDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+        
+        var project = new ProjectStateEntity
+        {
+            Title = &quot;Test&quot;,
+            Status = &quot;Draft&quot;
+        };
+        
+        context.ProjectStates.Add(project);
+        await context.SaveChangesAsync();
+        
+        var scene = new SceneStateEntity
+        {
+            ProjectId = project.Id,
+            SceneIndex = 0,
+            ScriptText = &quot;Test&quot;
+        };
+        
+        context.SceneStates.Add(scene);
+        await context.SaveChangesAsync();
+        
+        var sceneId = scene.Id;
+        
+        // Act
+        context.ProjectStates.Remove(project);
+        await context.SaveChangesAsync();
+        
+        // Assert
+        var sceneExists = await context.SceneStates
+            .AnyAsync(s =&gt; s.Id == sceneId);
+            
+        Assert.False(sceneExists);
+    }
+}
+</code></pre>
+<h2 id="performance-verification">Performance Verification</h2>
+<h3 id="query-performance-tests">Query Performance Tests</h3>
+<pre><code class="lang-csharp">using System.Diagnostics;
+
+public class PerformanceTests
+{
+    [Fact]
+    public async Task ProjectLookupByStatus_UsesIndex()
+    {
+        // Arrange
+        using var context = CreateContext();
+        await SeedTestData(context, projectCount: 1000);
+        
+        // Act
+        var sw = Stopwatch.StartNew();
+        var inProgressProjects = await context.ProjectStates
+            .Where(p =&gt; p.Status == &quot;InProgress&quot;)
+            .ToListAsync();
+        sw.Stop();
+        
+        // Assert
+        Assert.True(sw.ElapsedMilliseconds &lt; 100, 
+            $&quot;Query took {sw.ElapsedMilliseconds}ms (should be &lt; 100ms with index)&quot;);
+    }
+    
+    [Fact]
+    public async Task SceneLookupByProject_UsesCompositeIndex()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var projectId = await SeedProjectWithScenes(context, sceneCount: 100);
+        
+        // Act
+        var sw = Stopwatch.StartNew();
+        var scenes = await context.SceneStates
+            .Where(s =&gt; s.ProjectId == projectId)
+            .OrderBy(s =&gt; s.SceneIndex)
+            .ToListAsync();
+        sw.Stop();
+        
+        // Assert
+        Assert.Equal(100, scenes.Count);
+        Assert.True(sw.ElapsedMilliseconds &lt; 50,
+            $&quot;Query took {sw.ElapsedMilliseconds}ms (should be &lt; 50ms with index)&quot;);
+    }
+}
+</code></pre>
+<h2 id="common-issues-and-solutions">Common Issues and Solutions</h2>
+<h3 id="issue-migrations-not-detected">Issue: Migrations Not Detected</h3>
+<p><strong>Symptoms</strong>: <code>dotnet ef migrations list</code> shows no migrations</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Ensure you're in the correct directory</li>
+<li>Check that migration files exist in <code>Aura.Api/Data/Migrations/</code></li>
+<li>Verify project references are correct</li>
+<li>Clean and rebuild solution</li>
+</ol>
+<h3 id="issue-database-is-locked">Issue: &quot;Database is locked&quot;</h3>
+<p><strong>Symptoms</strong>: SQLite error during migration</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Close all connections to database</li>
+<li>Stop application if running</li>
+<li>Check for other processes using the database file</li>
+</ol>
+<h3 id="issue-foreign-key-constraint-violation">Issue: Foreign Key Constraint Violation</h3>
+<p><strong>Symptoms</strong>: Cannot insert/update due to FK violation</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Ensure foreign key exists before creating child record</li>
+<li>Check cascade delete configuration</li>
+<li>Verify relationship navigation properties</li>
+</ol>
+<h3 id="issue-audit-fields-not-populating">Issue: Audit Fields Not Populating</h3>
+<p><strong>Symptoms</strong>: CreatedAt/UpdatedAt remain default values</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Verify entity implements <code>IAuditableEntity</code></li>
+<li>Check <code>SaveChanges</code> override in DbContext</li>
+<li>Ensure <code>UpdateAuditFields()</code> method is called</li>
+</ol>
+<h3 id="issue-soft-delete-not-working">Issue: Soft Delete Not Working</h3>
+<p><strong>Symptoms</strong>: Records are hard-deleted or still appear in queries</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li>Verify entity implements <code>ISoftDeletable</code></li>
+<li>Check global query filter is applied</li>
+<li>Ensure <code>SaveChanges</code> override handles soft delete</li>
+</ol>
+<h2 id="continuous-integration-verification">Continuous Integration Verification</h2>
+<h3 id="github-actions-test">GitHub Actions Test</h3>
+<pre><code class="lang-yaml">name: Verify Migrations
+
+on: [push, pull_request]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore
+    
+    - name: Run migration tests
+      run: dotnet test --filter Category=Migration
+    
+    - name: Generate migration script
+      run: |
+        dotnet ef migrations script \
+          --project Aura.Api \
+          --output migration.sql \
+          --idempotent
+    
+    - name: Upload migration script
+      uses: actions/upload-artifact@v3
+      with:
+        name: migration-script
+        path: migration.sql
+</code></pre>
+<h2 id="sign-off-checklist">Sign-Off Checklist</h2>
+<p>Before marking migration as verified:</p>
+<ul>
+<li>[ ] All automated tests pass</li>
+<li>[ ] Manual verification steps completed</li>
+<li>[ ] Performance tests within acceptable range</li>
+<li>[ ] Rollback tested successfully</li>
+<li>[ ] Documentation updated</li>
+<li>[ ] Team review completed</li>
+<li>[ ] Staging environment validated</li>
+<li>[ ] Production deployment plan reviewed</li>
+</ul>
+<h2 id="approval">Approval</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Name</th>
+<th>Date</th>
+<th>Signature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Developer</td>
+<td>_____</td>
+<td>_____</td>
+<td>_____</td>
+</tr>
+<tr>
+<td>Tech Lead</td>
+<td>_____</td>
+<td>_____</td>
+<td>_____</td>
+</tr>
+<tr>
+<td>DBA</td>
+<td>_____</td>
+<td>_____</td>
+<td>_____</td>
+</tr>
+</tbody>
+</table>
+<h2 id="notes">Notes</h2>
+<p>Add any additional notes or observations here:</p>
+<hr>
+<p><strong>Last Updated</strong>: 2025-11-10
+<strong>Migration Version</strong>: InitialCreate
+<strong>Database Version</strong>: 1.0.0</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/MIGRATION_VERIFICATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

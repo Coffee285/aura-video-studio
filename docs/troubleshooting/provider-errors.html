@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Provider Errors | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Provider Errors | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/provider-errors.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="provider-errors">Provider Errors</h1>
+
+<p>This guide helps you troubleshoot errors related to AI provider services (OpenAI, Anthropic, ElevenLabs, Stability AI, etc.).</p>
+<h2 id="quick-navigation">Quick Navigation</h2>
+<ul>
+<li><a href="#llm-errors">LLM Errors</a> - Language model provider errors</li>
+<li><a href="#authentication">Authentication Errors</a> - API key and authentication issues</li>
+<li><a href="#rate-limits">Rate Limits</a> - Rate limiting and quota issues</li>
+<li><a href="#tts-errors">TTS Errors</a> - Text-to-speech provider errors</li>
+<li><a href="#visual-errors">Visual Errors</a> - Image generation provider errors</li>
+</ul>
+<hr>
+<h2 id="provider-validation-error-codes">Provider Validation Error Codes</h2>
+<p>The following error codes are returned by the provider validation system when checking provider connectivity and configuration:</p>
+<ul>
+<li><strong>ProviderNotConfigured</strong>: Provider API key or configuration is missing</li>
+<li><strong>ProviderKeyInvalid</strong>: API key is present but invalid or expired</li>
+<li><strong>ProviderNetworkError</strong>: Cannot connect to provider (network/DNS/timeout issues)</li>
+<li><strong>ProviderRateLimited</strong>: Provider is reachable but rate limit exceeded</li>
+<li><strong>ProviderServerError</strong>: Provider service is experiencing server issues (5xx errors)</li>
+<li><strong>ProviderNotSupported</strong>: Provider is not supported for validation</li>
+<li><strong>ValidationError</strong>: Unexpected error occurred during validation</li>
+</ul>
+<hr>
+<h2 id="api-key-validation-during-setup">API Key Validation During Setup</h2>
+<p>When validating API keys in the First-Run Wizard or Settings, the system distinguishes between different types of errors:</p>
+<h3 id="error-types-and-what-they-mean">Error Types and What They Mean</h3>
+<h4 id="-valid---key-verified-successfully">✅ &quot;Valid&quot; - Key Verified Successfully</h4>
+<ul>
+<li>The API key format is correct</li>
+<li>Network connection to the provider was successful</li>
+<li>The provider accepted the key and returned a successful response</li>
+<li>You can proceed with using this provider</li>
+</ul>
+<h4 id="-invalid---key-rejected-by-provider">❌ &quot;Invalid&quot; - Key Rejected by Provider</h4>
+<ul>
+<li>The API key was rejected by the provider (HTTP 401 Unauthorized)</li>
+<li>Common causes:
+<ul>
+<li>Key was typed incorrectly</li>
+<li>Key was revoked or expired</li>
+<li>Key doesn't have proper permissions</li>
+</ul>
+</li>
+<li><strong>Action</strong>: Double-check your API key and regenerate if needed</li>
+</ul>
+<h4 id="-unable-to-reach-backend---network-error">🌐 &quot;Unable to reach backend&quot; - Network Error</h4>
+<ul>
+<li>The frontend cannot connect to the Aura backend server</li>
+<li>This is <strong>not</strong> an invalid API key - it's a connectivity issue</li>
+<li>Common causes:
+<ul>
+<li>Backend API is not running</li>
+<li>Firewall is blocking the connection</li>
+<li>Incorrect backend URL configured</li>
+</ul>
+</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Ensure <code>dotnet run --project Aura.Api</code> is running</li>
+<li>Check firewall settings</li>
+<li>Verify <code>VITE_API_BASE_URL</code> in <code>.env.local</code></li>
+</ul>
+</li>
+</ul>
+<h4 id="-request-timed-out---timeout-error">⏱️ &quot;Request timed out&quot; - Timeout Error</h4>
+<ul>
+<li>The request took too long to complete (&gt;90 seconds)</li>
+<li>Network may be slow or provider is experiencing high latency</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Check your internet connection speed</li>
+<li>Try again when network conditions improve</li>
+<li>You can continue setup and the key will be validated on first use</li>
+</ul>
+</li>
+</ul>
+<h4 id="-openai-service-issue---provider-server-error">🔒 &quot;OpenAI service issue&quot; - Provider Server Error</h4>
+<ul>
+<li>The provider's API returned a server error (5xx)</li>
+<li>The key may be valid, but the service is having issues</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Check the provider's status page</li>
+<li>Wait and try again later</li>
+<li>You can continue setup anyway</li>
+</ul>
+</li>
+</ul>
+<h4 id="-access-denied---permission-error-http-403">🚫 &quot;Access denied&quot; - Permission Error (HTTP 403)</h4>
+<ul>
+<li>The API key is valid but lacks necessary permissions</li>
+<li>Common causes:
+<ul>
+<li>Organization/project restrictions</li>
+<li>Billing account not set up</li>
+<li>Rate limits or quotas exceeded</li>
+</ul>
+</li>
+<li><strong>Action</strong>:
+<ul>
+<li>Check your account settings at the provider's dashboard</li>
+<li>Ensure billing is set up</li>
+<li>Verify organization/project access</li>
+</ul>
+</li>
+</ul>
+<h3 id="validation-flow">Validation Flow</h3>
+<ol>
+<li><strong>Format Check</strong>: Validates the key format locally (e.g., OpenAI keys start with <code>sk-</code>)</li>
+<li><strong>Backend Connection</strong>: Attempts to connect to Aura backend</li>
+<li><strong>Provider Verification</strong>: Backend contacts the provider's API to verify the key</li>
+<li><strong>Result Interpretation</strong>: Parses the response and shows appropriate message</li>
+</ol>
+<h3 id="troubleshooting-validation-errors">Troubleshooting Validation Errors</h3>
+<h4 id="problem-valid-key-shows-as-invalid">Problem: Valid key shows as &quot;Invalid&quot;</h4>
+<p><strong>This should now be fixed!</strong> If you still see this:</p>
+<ol>
+<li>Check the exact error message shown</li>
+<li>If it mentions &quot;Unable to reach backend&quot; or &quot;Network error&quot;, this is not about your key</li>
+<li>Ensure the backend is running: <code>dotnet run --project Aura.Api</code></li>
+<li>Check backend logs for detailed error information</li>
+<li>Try resetting the circuit breaker by restarting the frontend</li>
+</ol>
+<h4 id="problem-validation-takes-too-long">Problem: Validation takes too long</h4>
+<p>The validation has extended timeouts (90 seconds) with retry logic:</p>
+<ol>
+<li>First attempt: Immediate validation</li>
+<li>Retry attempts: Up to 2 retries with exponential backoff</li>
+<li>Each attempt has a 90-second timeout</li>
+</ol>
+<p>If validation consistently times out:</p>
+<ul>
+<li>Check your network connection</li>
+<li>Try using a wired connection instead of WiFi</li>
+<li>Check if a proxy or firewall is interfering</li>
+<li>Contact your network administrator if on a corporate network</li>
+</ul>
+<h4 id="problem-circuit-breaker-is-open-error">Problem: &quot;Circuit breaker is open&quot; error</h4>
+<p>The circuit breaker protects against cascading failures:</p>
+<ol>
+<li>It opens after 10 consecutive failures</li>
+<li>It stays open for 60 seconds before retrying</li>
+<li><strong>Solution</strong>: The validation flow now resets the circuit breaker before each attempt</li>
+<li>If you still see this, restart the frontend application</li>
+</ol>
+<hr>
+<h2 id="llm-errors">LLM Errors</h2>
+<p>Language Model (LLM) provider errors occur when there are issues communicating with OpenAI, Anthropic, or other LLM services.</p>
+<h3 id="common-llm-error-codes">Common LLM Error Codes</h3>
+<ul>
+<li><strong>E100</strong>: General LLM provider error</li>
+<li><strong>E100-401</strong>: LLM authentication failed (see ProviderKeyInvalid)</li>
+<li><strong>E100-429</strong>: LLM rate limit exceeded (see ProviderRateLimited)</li>
+<li><strong>E100-500</strong>: LLM service unavailable (see ProviderServerError)</li>
+<li><strong>ProviderNotConfigured</strong>: No API key configured for LLM provider</li>
+<li><strong>ProviderKeyInvalid</strong>: LLM API key is invalid or expired</li>
+<li><strong>ProviderNetworkError</strong>: Cannot connect to LLM service</li>
+<li><strong>ProviderRateLimited</strong>: LLM rate limit exceeded</li>
+<li><strong>ProviderServerError</strong>: LLM service is experiencing issues</li>
+</ul>
+<h3 id="symptoms">Symptoms</h3>
+<ul>
+<li>Script generation fails with provider error</li>
+<li>Timeout errors during generation</li>
+<li>&quot;Model not available&quot; messages</li>
+<li>Empty or incomplete responses</li>
+</ul>
+<h3 id="solutions">Solutions</h3>
+<h4 id="1-verify-api-key">1. Verify API Key</h4>
+<p><strong>Check API Key Configuration:</strong></p>
+<pre><code class="lang-bash"># Navigate to Settings → Providers in the UI
+# Or check appsettings.json
+
+# For OpenAI:
+{
+  &quot;OpenAI&quot;: {
+    &quot;ApiKey&quot;: &quot;sk-...&quot;
+  }
+}
+
+# For Anthropic:
+{
+  &quot;Anthropic&quot;: {
+    &quot;ApiKey&quot;: &quot;sk-ant-...&quot;
+  }
+}
+</code></pre>
+<p><strong>Test API Key:</strong></p>
+<ol>
+<li>Go to Settings → Providers</li>
+<li>Select your LLM provider</li>
+<li>Click &quot;Test Connection&quot;</li>
+<li>If test fails, regenerate your API key from the provider's dashboard</li>
+</ol>
+<h4 id="2-check-provider-status">2. Check Provider Status</h4>
+<ul>
+<li><strong>OpenAI Status</strong>: <a href="https://status.openai.com/">https://status.openai.com/</a></li>
+<li><strong>Anthropic Status</strong>: <a href="https://status.anthropic.com/">https://status.anthropic.com/</a></li>
+</ul>
+<p>If the provider is experiencing an outage, switch to an alternative provider temporarily.</p>
+<h4 id="3-verify-model-availability">3. Verify Model Availability</h4>
+<p>Some models may not be available on your account tier:</p>
+<ul>
+<li>GPT-4 requires appropriate access level</li>
+<li>Claude 3 models require Anthropic API access</li>
+</ul>
+<p><strong>To check model access:</strong></p>
+<ol>
+<li>Visit your provider's dashboard</li>
+<li>Check your account tier and available models</li>
+<li>Update model selection in Aura to use available models</li>
+</ol>
+<h4 id="4-check-request-formatting">4. Check Request Formatting</h4>
+<p>Ensure your prompts don't exceed model limits:</p>
+<ul>
+<li>GPT-3.5: 4,096 tokens context</li>
+<li>GPT-4: 8,192 tokens (32k for GPT-4-32k)</li>
+<li>Claude 3: Up to 200k tokens</li>
+</ul>
+<h4 id="5-network-and-connectivity">5. Network and Connectivity</h4>
+<p>Test network connectivity to provider endpoints:</p>
+<pre><code class="lang-bash"># Test OpenAI connectivity
+curl https://api.openai.com/v1/models -H &quot;Authorization: Bearer YOUR_KEY&quot;
+
+# Test Anthropic connectivity
+curl https://api.anthropic.com/v1/messages -H &quot;x-api-key: YOUR_KEY&quot;
+</code></pre>
+<hr>
+<h2 id="authentication">Authentication</h2>
+<p>Authentication errors occur when API keys are invalid, expired, or incorrectly configured.</p>
+<h3 id="error-codes">Error Codes</h3>
+<ul>
+<li><strong>E100-401</strong>: LLM authentication failed</li>
+<li><strong>E200-401</strong>: TTS authentication failed</li>
+<li><strong>E400-401</strong>: Visual provider authentication failed</li>
+</ul>
+<h3 id="common-causes">Common Causes</h3>
+<ol>
+<li><p><strong>Invalid API Key Format</strong></p>
+<ul>
+<li>OpenAI keys start with <code>sk-</code></li>
+<li>Anthropic keys start with <code>sk-ant-</code></li>
+<li>ElevenLabs keys are UUIDs</li>
+<li>Stability AI keys are alphanumeric</li>
+</ul>
+</li>
+<li><p><strong>Expired or Revoked Keys</strong></p>
+<ul>
+<li>Keys may expire based on provider policy</li>
+<li>Keys may be revoked if account has billing issues</li>
+</ul>
+</li>
+<li><p><strong>Incorrect Environment Configuration</strong></p>
+<ul>
+<li>Key stored in wrong configuration location</li>
+<li>Environment variables not loaded properly</li>
+</ul>
+</li>
+</ol>
+<h3 id="solutions-1">Solutions</h3>
+<h4 id="re-configure-api-keys">Re-configure API Keys</h4>
+<ol>
+<li><strong>Navigate to Settings → Providers</strong></li>
+<li><strong>For each provider:</strong>
+<ul>
+<li>Remove existing API key</li>
+<li>Generate new API key from provider dashboard:
+<ul>
+<li><strong>OpenAI</strong>: <a href="https://platform.openai.com/api-keys">https://platform.openai.com/api-keys</a></li>
+<li><strong>Anthropic</strong>: <a href="https://console.anthropic.com/settings/keys">https://console.anthropic.com/settings/keys</a></li>
+<li><strong>ElevenLabs</strong>: <a href="https://elevenlabs.io/app/settings/api-keys">https://elevenlabs.io/app/settings/api-keys</a></li>
+<li><strong>Stability AI</strong>: <a href="https://platform.stability.ai/account/keys">https://platform.stability.ai/account/keys</a></li>
+</ul>
+</li>
+<li>Enter new key in Aura</li>
+<li>Click &quot;Test Connection&quot;</li>
+</ul>
+</li>
+<li><strong>Save settings</strong></li>
+</ol>
+<h4 id="verify-environment-variables">Verify Environment Variables</h4>
+<p>If using environment variables:</p>
+<pre><code class="lang-bash"># Linux/Mac
+export OPENAI_KEY=&quot;sk-...&quot;
+export ANTHROPIC_KEY=&quot;sk-ant-...&quot;
+export ELEVENLABS_KEY=&quot;...&quot;
+export STABILITY_KEY=&quot;...&quot;
+
+# Windows PowerShell
+$env:OPENAI_KEY=&quot;sk-...&quot;
+$env:ANTHROPIC_KEY=&quot;sk-ant-...&quot;
+$env:ELEVENLABS_KEY=&quot;...&quot;
+$env:STABILITY_KEY=&quot;...&quot;
+</code></pre>
+<h4 id="check-configuration-files">Check Configuration Files</h4>
+<p>Verify <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;ApiKey&quot;: &quot;sk-...&quot;,
+      &quot;BaseUrl&quot;: &quot;https://api.openai.com/v1&quot;
+    },
+    &quot;Anthropic&quot;: {
+      &quot;ApiKey&quot;: &quot;sk-ant-...&quot;,
+      &quot;BaseUrl&quot;: &quot;https://api.anthropic.com/v1&quot;
+    }
+  }
+}
+</code></pre>
+<hr>
+<h2 id="rate-limits">Rate Limits</h2>
+<p>Rate limit errors occur when you exceed the allowed number of requests per time period.</p>
+<h3 id="error-codes-1">Error Codes</h3>
+<ul>
+<li><strong>E100-429</strong>: LLM rate limit exceeded</li>
+<li><strong>E429</strong>: General rate limit exceeded</li>
+</ul>
+<h3 id="understanding-rate-limits">Understanding Rate Limits</h3>
+<p>Different providers have different rate limits based on your account tier:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Free Tier</th>
+<th>Paid Tier</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenAI</td>
+<td>3 RPM</td>
+<td>60+ RPM</td>
+</tr>
+<tr>
+<td>Anthropic</td>
+<td>5 RPM</td>
+<td>50+ RPM</td>
+</tr>
+<tr>
+<td>ElevenLabs</td>
+<td>10 requests/month</td>
+<td>Varies by plan</td>
+</tr>
+<tr>
+<td>Stability AI</td>
+<td>150 credits/month</td>
+<td>Varies by plan</td>
+</tr>
+</tbody>
+</table>
+<h3 id="solutions-2">Solutions</h3>
+<h4 id="1-wait-and-retry">1. Wait and Retry</h4>
+<p>Most rate limits reset after a short period:</p>
+<pre><code>Rate limit will reset in: XX seconds
+</code></pre>
+<p>Wait for the reset period before retrying.</p>
+<h4 id="2-implement-request-throttling">2. Implement Request Throttling</h4>
+<p>Aura includes built-in rate limiting. Configure it in <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;RateLimiting&quot;: {
+    &quot;EnableRateLimiting&quot;: true,
+    &quot;RequestsPerMinute&quot;: 10,
+    &quot;BurstSize&quot;: 20
+  }
+}
+</code></pre>
+<h4 id="3-upgrade-provider-tier">3. Upgrade Provider Tier</h4>
+<p>Consider upgrading your provider account tier for higher rate limits:</p>
+<ul>
+<li>More requests per minute</li>
+<li>Higher token limits</li>
+<li>Priority access during high-traffic periods</li>
+</ul>
+<h4 id="4-use-multiple-providers">4. Use Multiple Providers</h4>
+<p>Configure fallback providers to distribute load:</p>
+<ol>
+<li>Go to Settings → Providers</li>
+<li>Configure multiple LLM providers</li>
+<li>Enable &quot;Automatic Fallback&quot;</li>
+<li>Aura will automatically switch to alternative providers if rate limited</li>
+</ol>
+<h4 id="5-optimize-request-patterns">5. Optimize Request Patterns</h4>
+<ul>
+<li><strong>Batch similar requests</strong> when possible</li>
+<li><strong>Cache responses</strong> for repeated queries</li>
+<li><strong>Use streaming</strong> for long-running generations</li>
+<li><strong>Implement exponential backoff</strong> (built into Aura)</li>
+</ul>
+<hr>
+<h2 id="tts-errors">TTS Errors</h2>
+<p>Text-to-Speech (TTS) provider errors relate to audio generation services.</p>
+<h3 id="error-codes-2">Error Codes</h3>
+<ul>
+<li><strong>E200</strong>: General TTS provider error</li>
+<li><strong>E200-401</strong>: TTS authentication failed</li>
+</ul>
+<h3 id="common-issues">Common Issues</h3>
+<h4 id="voice-not-available">Voice Not Available</h4>
+<p><strong>Problem</strong>: Selected voice is not available on your plan<br>
+<strong>Solution</strong>:</p>
+<ol>
+<li>Go to Settings → Providers → TTS</li>
+<li>Click &quot;Refresh Voice List&quot;</li>
+<li>Select an available voice</li>
+<li>Or upgrade your provider tier</li>
+</ol>
+<h4 id="audio-format-issues">Audio Format Issues</h4>
+<p><strong>Problem</strong>: Generated audio format not supported<br>
+<strong>Solution</strong>:</p>
+<ol>
+<li>Check export settings (Settings → Export)</li>
+<li>Ensure FFmpeg is installed for format conversion</li>
+<li>Use MP3 or WAV format for best compatibility</li>
+</ol>
+<h4 id="poor-audio-quality">Poor Audio Quality</h4>
+<p><strong>Problem</strong>: Generated audio sounds robotic or unclear<br>
+<strong>Solution</strong>:</p>
+<ol>
+<li>Try different voices within the same provider</li>
+<li>Adjust voice stability and similarity sliders</li>
+<li>Consider using premium voices</li>
+<li>Ensure input text has proper punctuation</li>
+</ol>
+<hr>
+<h2 id="visual-errors">Visual Errors</h2>
+<p>Image generation provider errors relate to services like Stability AI, DALL-E, etc.</p>
+<h3 id="error-codes-3">Error Codes</h3>
+<ul>
+<li><strong>E400</strong>: General visual provider error</li>
+<li><strong>E400-401</strong>: Visual provider authentication failed</li>
+</ul>
+<h3 id="common-issues-1">Common Issues</h3>
+<h4 id="content-policy-violations">Content Policy Violations</h4>
+<p><strong>Problem</strong>: &quot;Your prompt violated our content policy&quot;<br>
+<strong>Solution</strong>:</p>
+<ol>
+<li>Review and modify your prompt to remove:
+<ul>
+<li>Violent or graphic content</li>
+<li>Inappropriate or NSFW content</li>
+<li>Copyrighted character names or brands</li>
+</ul>
+</li>
+<li>Use more general or abstract descriptions</li>
+<li>Review provider's content policy</li>
+</ol>
+<h4 id="image-generation-failed">Image Generation Failed</h4>
+<p><strong>Problem</strong>: Image generation times out or fails<br>
+<strong>Solution</strong>:</p>
+<ol>
+<li>Simplify your prompt - overly complex prompts can fail</li>
+<li>Reduce image resolution if using high settings</li>
+<li>Check provider status</li>
+<li>Try alternative image generation provider</li>
+<li>Ensure sufficient VRAM for local generation</li>
+</ol>
+<h4 id="wrong-image-style">Wrong Image Style</h4>
+<p><strong>Problem</strong>: Generated images don't match expected style<br>
+<strong>Solution</strong>:</p>
+<ol>
+<li>Add style modifiers to prompt: &quot;photorealistic&quot;, &quot;cartoon&quot;, &quot;3D render&quot;, etc.</li>
+<li>Adjust generation parameters (CFG scale, steps)</li>
+<li>Use style presets if available</li>
+<li>Reference example images in documentation</li>
+</ol>
+<h4 id="vrammemory-errors-local-generation">VRAM/Memory Errors (Local Generation)</h4>
+<p><strong>Problem</strong>: &quot;Out of memory&quot; errors with local image generation<br>
+<strong>Solution</strong>:</p>
+<ol>
+<li>Reduce image resolution (512x512 instead of 1024x1024)</li>
+<li>Close other GPU-intensive applications</li>
+<li>Check available VRAM:
+<pre><code class="lang-bash">nvidia-smi  # Shows GPU memory usage
+</code></pre>
+</li>
+<li>Consider using cloud-based provider instead</li>
+</ol>
+<hr>
+<h2 id="provider-configuration-best-practices">Provider Configuration Best Practices</h2>
+<h3 id="api-key-security">API Key Security</h3>
+<ul>
+<li><strong>Never commit API keys</strong> to version control</li>
+<li>Use environment variables or secure configuration</li>
+<li>Rotate keys regularly</li>
+<li>Use separate keys for development and production</li>
+</ul>
+<h3 id="fallback-strategy">Fallback Strategy</h3>
+<p>Configure multiple providers for each service type:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;LLM&quot;: {
+      &quot;Primary&quot;: &quot;OpenAI&quot;,
+      &quot;Fallback&quot;: [&quot;Anthropic&quot;, &quot;LocalLLM&quot;]
+    },
+    &quot;TTS&quot;: {
+      &quot;Primary&quot;: &quot;ElevenLabs&quot;,
+      &quot;Fallback&quot;: [&quot;AzureTTS&quot;]
+    }
+  }
+}
+</code></pre>
+<h3 id="monitoring">Monitoring</h3>
+<p>Enable provider monitoring:</p>
+<ol>
+<li>Go to Settings → Diagnostics</li>
+<li>Enable &quot;Provider Health Monitoring&quot;</li>
+<li>View real-time status in dashboard</li>
+<li>Set up alerts for provider failures</li>
+</ol>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="../setup/api-keys.html">API Key Setup Guide</a></li>
+<li><a href="network-errors.html">Network Errors</a></li>
+<li><a href="resilience.html">Resilience and Retries</a></li>
+<li><a href="Troubleshooting.html">General Troubleshooting</a></li>
+</ul>
+<h2 id="need-more-help">Need More Help?</h2>
+<p>If you continue to experience provider errors:</p>
+<ol>
+<li>Check the <a href="https://github.com/Coffee285/aura-video-studio/issues">GitHub Issues</a></li>
+<li>Review provider-specific documentation</li>
+<li>Enable detailed logging (Settings → Diagnostics → Enable Debug Logging)</li>
+<li>Create a new issue with:
+<ul>
+<li>Error code and message</li>
+<li>Provider being used</li>
+<li>Steps to reproduce</li>
+<li>Relevant log excerpts (with API keys removed)</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="detailed-error-code-reference">Detailed Error Code Reference</h2>
+<h3 id="providernotconfigured">ProviderNotConfigured</h3>
+<p><strong>What it means</strong>: The provider requires configuration (typically an API key) but none has been provided.</p>
+<p><strong>Typical causes</strong>:</p>
+<ul>
+<li>API key not set in application settings</li>
+<li>Environment variable not configured</li>
+<li>Configuration was deleted or revoked</li>
+</ul>
+<p><strong>Steps to fix</strong>:</p>
+<ol>
+<li>Go to <strong>Settings → Providers</strong> in the Aura UI</li>
+<li>Find the provider that shows &quot;Not Configured&quot;</li>
+<li>Click <strong>Configure</strong> or <strong>Add API Key</strong></li>
+<li>Enter your API key from the provider's dashboard:
+<ul>
+<li><strong>OpenAI</strong>: <a href="https://platform.openai.com/api-keys">https://platform.openai.com/api-keys</a></li>
+<li><strong>Anthropic</strong>: <a href="https://console.anthropic.com/">https://console.anthropic.com/</a></li>
+<li><strong>Google Gemini</strong>: <a href="https://makersuite.google.com/app/apikey">https://makersuite.google.com/app/apikey</a></li>
+<li><strong>ElevenLabs</strong>: <a href="https://elevenlabs.io/app/settings">https://elevenlabs.io/app/settings</a></li>
+<li><strong>PlayHT</strong>: <a href="https://play.ht/app/api-access">https://play.ht/app/api-access</a></li>
+</ul>
+</li>
+<li>Click <strong>Save</strong> and then <strong>Retry Validation</strong></li>
+</ol>
+<hr>
+<h3 id="providerkeyinvalid">ProviderKeyInvalid</h3>
+<p><strong>What it means</strong>: An API key was provided, but the provider rejected it as invalid, expired, or lacking permissions.</p>
+<p><strong>Typical causes</strong>:</p>
+<ul>
+<li>API key was typed incorrectly</li>
+<li>API key has been revoked or expired</li>
+<li>API key doesn't have the required permissions</li>
+<li>Wrong API key format (e.g., missing 'sk-' prefix for OpenAI)</li>
+</ul>
+<p><strong>Steps to fix</strong>:</p>
+<ol>
+<li><strong>Verify the key format</strong>:
+<ul>
+<li>OpenAI keys start with <code>sk-</code></li>
+<li>Anthropic keys start with <code>sk-ant-</code></li>
+<li>Check provider documentation for correct format</li>
+</ul>
+</li>
+<li><strong>Check for typos</strong>:
+<ul>
+<li>Copy the key directly from the provider dashboard</li>
+<li>Ensure no extra spaces or characters</li>
+</ul>
+</li>
+<li><strong>Regenerate the key</strong>:
+<ul>
+<li>Go to your provider's dashboard</li>
+<li>Revoke the old key</li>
+<li>Generate a new API key</li>
+<li>Update it in Aura Settings → Providers</li>
+</ul>
+</li>
+<li><strong>Verify permissions</strong>:
+<ul>
+<li>Some providers require specific permissions to be enabled</li>
+<li>Check that your account tier supports the features you're using</li>
+</ul>
+</li>
+<li><strong>Test the key directly</strong>:
+<pre><code class="lang-bash"># For OpenAI:
+curl https://api.openai.com/v1/models \
+  -H &quot;Authorization: Bearer YOUR_KEY&quot;
+
+# For Anthropic:
+curl https://api.anthropic.com/v1/messages \
+  -H &quot;x-api-key: YOUR_KEY&quot; \
+  -H &quot;anthropic-version: 2023-06-01&quot; \
+  -H &quot;content-type: application/json&quot; \
+  -d '{&quot;model&quot;:&quot;claude-3-haiku-20240307&quot;,&quot;max_tokens&quot;:1,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;Hi&quot;}]}'
+</code></pre>
+</li>
+</ol>
+<hr>
+<h3 id="providernetworkerror">ProviderNetworkError</h3>
+<p><strong>What it means</strong>: Aura cannot establish a network connection to the provider's API endpoint.</p>
+<p><strong>Typical causes</strong>:</p>
+<ul>
+<li>No internet connection</li>
+<li>Firewall blocking outbound connections</li>
+<li>DNS resolution failure</li>
+<li>Provider's endpoint is unreachable</li>
+<li>Connection timeout (&gt; 5 seconds)</li>
+</ul>
+<p><strong>Steps to fix</strong>:</p>
+<ol>
+<li><strong>Check your internet connection</strong>:
+<pre><code class="lang-bash"># Test basic connectivity
+ping 8.8.8.8
+
+# Test DNS resolution
+nslookup api.openai.com
+</code></pre>
+</li>
+<li><strong>Check firewall settings</strong>:
+<ul>
+<li>Ensure outbound HTTPS (port 443) is allowed</li>
+<li>Add provider domains to firewall allowlist if needed:
+<ul>
+<li><code>api.openai.com</code></li>
+<li><code>api.anthropic.com</code></li>
+<li><code>generativelanguage.googleapis.com</code></li>
+<li><code>api.elevenlabs.io</code></li>
+<li><code>api.play.ht</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Check proxy settings</strong>:
+<ul>
+<li>If behind a corporate proxy, configure proxy settings</li>
+<li>Some providers may require proxy configuration</li>
+</ul>
+</li>
+<li><strong>Test connectivity manually</strong>:
+<pre><code class="lang-bash">curl -v https://api.openai.com/v1/models
+</code></pre>
+</li>
+<li><strong>Try a different network</strong>:
+<ul>
+<li>Switch to a different WiFi network or use mobile hotspot</li>
+<li>Some networks block AI provider endpoints</li>
+</ul>
+</li>
+<li><strong>Check DNS settings</strong>:
+<ul>
+<li>Try using public DNS servers (8.8.8.8, 1.1.1.1)</li>
+<li>Clear DNS cache if needed</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="providerratelimited">ProviderRateLimited</h3>
+<p><strong>What it means</strong>: The provider is reachable and your API key is valid, but you've exceeded your rate limits or quota.</p>
+<p><strong>Typical causes</strong>:</p>
+<ul>
+<li>Made too many requests in a short time period</li>
+<li>Exceeded monthly token quota</li>
+<li>Account tier has low rate limits</li>
+<li>Multiple Aura instances using the same API key</li>
+</ul>
+<p><strong>Steps to fix</strong>:</p>
+<ol>
+<li><strong>Wait before retrying</strong>:
+<ul>
+<li>Rate limits typically reset after 1 minute to 1 hour</li>
+<li>Check the provider's documentation for specific reset times</li>
+</ul>
+</li>
+<li><strong>Check your usage dashboard</strong>:
+<ul>
+<li><strong>OpenAI</strong>: <a href="https://platform.openai.com/usage">https://platform.openai.com/usage</a></li>
+<li><strong>Anthropic</strong>: <a href="https://console.anthropic.com/">https://console.anthropic.com/</a></li>
+<li><strong>ElevenLabs</strong>: <a href="https://elevenlabs.io/app/usage">https://elevenlabs.io/app/usage</a></li>
+</ul>
+</li>
+<li><strong>Upgrade your account tier</strong>:
+<ul>
+<li>Free tiers have very low rate limits</li>
+<li>Paid accounts typically have much higher limits</li>
+</ul>
+</li>
+<li><strong>Reduce request frequency</strong>:
+<ul>
+<li>Avoid rapid-fire validation checks</li>
+<li>Use provider fallback chains instead of retrying same provider</li>
+</ul>
+</li>
+<li><strong>Use multiple API keys</strong>:
+<ul>
+<li>Configure fallback providers</li>
+<li>Rotate between multiple accounts if allowed by provider terms</li>
+</ul>
+</li>
+</ol>
+<p><strong>Rate Limit Examples</strong>:</p>
+<ul>
+<li>OpenAI Free: 3 requests/minute</li>
+<li>OpenAI Tier 1: 500 requests/day</li>
+<li>ElevenLabs Free: 10,000 characters/month</li>
+<li>Anthropic: Varies by account tier</li>
+</ul>
+<hr>
+<h3 id="providerservererror">ProviderServerError</h3>
+<p><strong>What it means</strong>: The provider's service is experiencing server-side issues (HTTP 500-599 errors).</p>
+<p><strong>Typical causes</strong>:</p>
+<ul>
+<li>Provider is experiencing an outage</li>
+<li>Temporary server maintenance</li>
+<li>Overloaded provider infrastructure</li>
+<li>Internal provider bug or issue</li>
+</ul>
+<p><strong>Steps to fix</strong>:</p>
+<ol>
+<li><strong>Check provider status pages</strong>:
+<ul>
+<li><strong>OpenAI</strong>: <a href="https://status.openai.com/">https://status.openai.com/</a></li>
+<li><strong>Anthropic</strong>: <a href="https://status.anthropic.com/">https://status.anthropic.com/</a></li>
+<li><strong>ElevenLabs</strong>: Check their Twitter/status page</li>
+</ul>
+</li>
+<li><strong>Wait and retry later</strong>:
+<ul>
+<li>Server errors are usually temporary</li>
+<li>Retry after 5-15 minutes</li>
+</ul>
+</li>
+<li><strong>Use fallback providers</strong>:
+<ul>
+<li>Configure provider fallback chains</li>
+<li>Switch to alternative provider temporarily:
+<ul>
+<li>OpenAI ↔ Anthropic ↔ Google Gemini</li>
+<li>ElevenLabs ↔ PlayHT ↔ Windows SAPI</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Check community forums</strong>:
+<ul>
+<li>Provider forums may have real-time outage information</li>
+<li>Other users may report similar issues</li>
+</ul>
+</li>
+<li><strong>Contact provider support</strong>:
+<ul>
+<li>If issue persists for &gt; 1 hour, contact provider support</li>
+<li>Provide error details and correlation ID</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="provider-specific-configuration">Provider-Specific Configuration</h2>
+<h3 id="openai">OpenAI</h3>
+<p><strong>Required Configuration</strong>:</p>
+<ul>
+<li>API Key (format: <code>sk-...</code>)</li>
+</ul>
+<p><strong>Optional Configuration</strong>:</p>
+<ul>
+<li>Base URL (default: <code>https://api.openai.com/v1</code>)</li>
+<li>Organization ID (for organization accounts)</li>
+<li>Project ID (for project isolation)</li>
+</ul>
+<p><strong>Testing</strong>:</p>
+<pre><code class="lang-bash">curl https://api.openai.com/v1/models \
+  -H &quot;Authorization: Bearer YOUR_KEY&quot;
+</code></pre>
+<p><strong>Common Issues</strong>:</p>
+<ul>
+<li>Key format must start with <code>sk-</code></li>
+<li>Ensure key hasn't been revoked</li>
+<li>Check rate limits on free tier</li>
+</ul>
+<hr>
+<h3 id="anthropic-claude">Anthropic Claude</h3>
+<p><strong>Required Configuration</strong>:</p>
+<ul>
+<li>API Key (format: <code>sk-ant-...</code>)</li>
+</ul>
+<p><strong>Testing</strong>:</p>
+<pre><code class="lang-bash">curl https://api.anthropic.com/v1/messages \
+  -H &quot;x-api-key: YOUR_KEY&quot; \
+  -H &quot;anthropic-version: 2023-06-01&quot; \
+  -H &quot;content-type: application/json&quot; \
+  -d '{&quot;model&quot;:&quot;claude-3-haiku-20240307&quot;,&quot;max_tokens&quot;:1,&quot;messages&quot;:[{&quot;role&quot;:&quot;user&quot;,&quot;content&quot;:&quot;Hi&quot;}]}'
+</code></pre>
+<hr>
+<h3 id="google-gemini">Google Gemini</h3>
+<p><strong>Required Configuration</strong>:</p>
+<ul>
+<li>API Key</li>
+</ul>
+<p><strong>Testing</strong>:</p>
+<pre><code class="lang-bash">curl &quot;https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY&quot;
+</code></pre>
+<hr>
+<h3 id="elevenlabs">ElevenLabs</h3>
+<p><strong>Required Configuration</strong>:</p>
+<ul>
+<li>API Key</li>
+</ul>
+<p><strong>Testing</strong>:</p>
+<pre><code class="lang-bash">curl https://api.elevenlabs.io/v1/voices \
+  -H &quot;xi-api-key: YOUR_KEY&quot;
+</code></pre>
+<hr>
+<h3 id="playht">PlayHT</h3>
+<p><strong>Required Configuration</strong>:</p>
+<ul>
+<li>API Key</li>
+<li>User ID</li>
+</ul>
+<p><strong>Testing</strong>:</p>
+<pre><code class="lang-bash">curl https://api.play.ht/api/v2/voices \
+  -H &quot;Authorization: YOUR_KEY&quot; \
+  -H &quot;X-User-ID: YOUR_USER_ID&quot;
+</code></pre>
+<hr>
+<h3 id="ollama-local">Ollama (Local)</h3>
+<p><strong>Required Configuration</strong>:</p>
+<ul>
+<li>None (uses localhost by default)</li>
+</ul>
+<p><strong>Optional Configuration</strong>:</p>
+<ul>
+<li>Base URL (default: <code>http://localhost:11434</code>)</li>
+</ul>
+<p><strong>Testing</strong>:</p>
+<pre><code class="lang-bash">curl http://localhost:11434/api/tags
+</code></pre>
+<p><strong>Common Issues</strong>:</p>
+<ul>
+<li>Ensure Ollama service is running: <code>ollama serve</code></li>
+<li>Check that models are downloaded: <code>ollama list</code></li>
+<li>Verify port 11434 is not blocked</li>
+</ul>
+<hr>
+<h3 id="stable-diffusion-webui-local">Stable Diffusion WebUI (Local)</h3>
+<p><strong>Required Configuration</strong>:</p>
+<ul>
+<li>None (uses localhost by default)</li>
+</ul>
+<p><strong>Optional Configuration</strong>:</p>
+<ul>
+<li>Base URL (default: <code>http://localhost:7860</code>)</li>
+</ul>
+<p><strong>Testing</strong>:</p>
+<pre><code class="lang-bash">curl http://localhost:7860/sdapi/v1/sd-models
+</code></pre>
+<p><strong>Common Issues</strong>:</p>
+<ul>
+<li>Ensure WebUI is started with <code>--api</code> flag</li>
+<li>Check that port 7860 is not in use by another application</li>
+<li>Verify models are loaded in WebUI</li>
+</ul>
+<hr>
+<h2 id="using-the-provider-status-dashboard">Using the Provider Status Dashboard</h2>
+<p>The Provider Status Dashboard in Aura provides real-time validation of all configured providers:</p>
+<ol>
+<li><strong>Navigate to Settings → Providers → Status Dashboard</strong></li>
+<li><strong>View provider cards</strong> showing:
+<ul>
+<li>Configuration status (Configured / Not Configured)</li>
+<li>Reachability status (Reachable / Not Reachable)</li>
+<li>Error codes and messages</li>
+<li>How-to-fix guidance</li>
+</ul>
+</li>
+<li><strong>Retry validation</strong> for any provider by clicking <strong>Retry Validation</strong></li>
+<li><strong>Auto-refresh</strong> occurs every 30 seconds</li>
+<li><strong>Manual refresh</strong> available with the Refresh button</li>
+</ol>
+<p><strong>Status Indicators</strong>:</p>
+<ul>
+<li>🟢 <strong>Green checkmark</strong>: Provider configured and reachable</li>
+<li>⚠️ <strong>Yellow warning</strong>: Provider configured but not reachable</li>
+<li>ℹ️ <strong>Gray info</strong>: Provider not configured</li>
+</ul>
+<hr>
+<h2 id="troubleshooting-workflow">Troubleshooting Workflow</h2>
+<p>Follow this workflow when encountering provider errors:</p>
+<pre><code>1. Check Provider Status Dashboard
+   ↓
+2. Is provider configured?
+   No → Go to Settings → Providers → Add API Key
+   Yes → Continue
+   ↓
+3. Click &quot;Retry Validation&quot;
+   ↓
+4. Check error code:
+   - ProviderNotConfigured → Configure API key
+   - ProviderKeyInvalid → Regenerate and update key
+   - ProviderNetworkError → Check firewall/DNS/connectivity
+   - ProviderRateLimited → Wait or upgrade tier
+   - ProviderServerError → Check provider status page
+   ↓
+5. Follow &quot;How to Fix&quot; guidance in error details
+   ↓
+6. If issue persists:
+   - Check provider status page
+   - Test API key with curl
+   - Contact provider support
+   - Use fallback provider
+</code></pre>
+<hr>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="ffmpeg-errors.html">FFmpeg Errors</a> - FFmpeg-specific error codes</li>
+<li><a href="../api/errors.html">API Errors</a> - Complete API error taxonomy</li>
+<li><a href="../PROVIDER_CONFIGURATION_GUIDE.md">Provider Configuration Guide</a> - Detailed provider setup</li>
+<li><a href="../OFFLINE_MODE_IMPROVEMENTS.html">Offline Mode</a> - Using Aura without internet</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/provider-errors.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

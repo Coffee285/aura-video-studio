@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Build and Run Guide - Aura Video Studio | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Build and Run Guide - Aura Video Studio | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/BUILD_AND_RUN.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="build-and-run-guide---aura-video-studio">Build and Run Guide - Aura Video Studio</h1>
+
+<h2 id="-recent-fixes-applied">🔧 Recent Fixes Applied</h2>
+<h3 id="issue-white-screen-on-launch">Issue: White Screen on Launch</h3>
+<p><strong>Problem:</strong> After extracting and running the portable build, the browser opens to <code>http://127.0.0.1:5005</code> but shows a white screen instead of the application UI.</p>
+<p><strong>Root Causes:</strong></p>
+<ol>
+<li>Frontend not being built during the publish process</li>
+<li>Assets not copied to the wwwroot directory</li>
+<li>Incorrect API base URL configuration in production</li>
+</ol>
+<p><strong>Solutions Applied:</strong></p>
+<ol>
+<li>✅ Added MSBuild targets to auto-build frontend during <code>dotnet publish</code></li>
+<li>✅ Added automatic copy of dist folder to wwwroot during publish</li>
+<li>✅ Updated frontend to use same-origin API calls in production</li>
+<li>✅ Enhanced startup diagnostics to detect missing static files</li>
+<li>✅ Added <code>/diag</code> endpoint for troubleshooting</li>
+<li>✅ Updated Launch.bat to poll health endpoint before opening browser</li>
+</ol>
+<h3 id="previous-fix-404-error-when-running-portable-build">Previous Fix: 404 Error When Running Portable Build</h3>
+<p><strong>Problem:</strong> The Web UI returned 404 errors because the working directory was incorrect.</p>
+<p><strong>Root Cause:</strong> The launcher script was starting the API without setting the working directory.</p>
+<p><strong>Solution:</strong> Updated the launcher to use <code>/D</code> flag:</p>
+<pre><code class="lang-batch">start &quot;&quot; /D &quot;Api&quot; &quot;Aura.Api.exe&quot;
+</code></pre>
+<h3 id="api-endpoint-prefix">API Endpoint Prefix</h3>
+<p><strong>Problem:</strong> The Web UI was calling <code>/api/healthz</code> but the API served it at <code>/healthz</code>.</p>
+<p><strong>Solution:</strong> Added a route group with <code>/api</code> prefix to all API endpoints:</p>
+<pre><code class="lang-csharp">var apiGroup = app.MapGroup(&quot;/api&quot;);
+apiGroup.MapGet(&quot;/healthz&quot;, ...);
+</code></pre>
+<h2 id="-quick-start---portable-version-recommended">🚀 Quick Start - Portable Version (Recommended)</h2>
+<p>This is the easiest way to build and run Aura Video Studio.</p>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>Windows 10/11</li>
+<li>PowerShell 5.1 or later</li>
+<li>.NET 8 SDK (<a href="https://dotnet.microsoft.com/download/dotnet/8.0">Download</a>)</li>
+<li>Node.js 18+ (<a href="https://nodejs.org/">Download</a>)</li>
+</ul>
+<h3 id="build-steps">Build Steps</h3>
+<ol>
+<li><p><strong>Clone the repository</strong> (if you haven't already):</p>
+<pre><code class="lang-powershell">git clone https://github.com/Coffee285/aura-video-studio.git
+cd aura-video-studio
+</code></pre>
+</li>
+<li><p><strong>Run the portable build script</strong>:</p>
+<pre><code class="lang-powershell">.\scripts\packaging\build-portable.ps1
+</code></pre>
+<p>This will:</p>
+<ul>
+<li>Build the .NET API (self-contained, no dependencies needed)</li>
+<li><strong>Automatically build the React Web UI</strong></li>
+<li><strong>Automatically copy the frontend to wwwroot</strong></li>
+<li>Copy everything to <code>artifacts\portable\build\</code></li>
+<li>Create <code>AuraVideoStudio_Portable_x64.zip</code></li>
+</ul>
+</li>
+<li><p><strong>Extract and run</strong>:</p>
+<pre><code class="lang-powershell"># Extract the ZIP
+Expand-Archive artifacts\portable\AuraVideoStudio_Portable_x64.zip -DestinationPath test-run
+
+# Run the application
+cd test-run
+.\Launch.bat
+</code></pre>
+</li>
+<li><p><strong>Use the application</strong>:</p>
+<ul>
+<li>The launcher will start the API server</li>
+<li>Wait for the health check to pass</li>
+<li>Browser opens automatically to <code>http://127.0.0.1:5005</code></li>
+<li>You should see the Aura Video Studio welcome page</li>
+</ul>
+</li>
+</ol>
+<h3 id="expected-output">Expected Output</h3>
+<p>When you run <code>Launch.bat</code>, you should see:</p>
+<pre><code>========================================
+ Aura Video Studio - Portable Edition
+========================================
+
+Starting API server...
+Waiting for server to become ready...
+Server is ready!
+
+Opening web browser...
+
+========================================
+Application started successfully!
+========================================
+
+The application should open in your web browser.
+If not, manually navigate to: http://127.0.0.1:5005
+
+For diagnostics, visit: http://127.0.0.1:5005/diag
+</code></pre>
+<p>In the API server window, you should see:</p>
+<pre><code>[INFO] =================================================================
+[INFO] Static UI: ENABLED
+[INFO]   Path: C:\path\to\build\Api\wwwroot
+[INFO]   Files: 14
+[INFO]   index.html: ✓
+[INFO]   assets/: ✓
+[INFO] =================================================================
+[INFO] Now listening on: http://127.0.0.1:5005
+[INFO] Application started. Press Ctrl+C to shut down.
+</code></pre>
+<p><strong>Key Success Indicators:</strong></p>
+<ul>
+<li>✅ &quot;Static UI: ENABLED&quot; message</li>
+<li>✅ File count &gt; 0 (should be ~14 files)</li>
+<li>✅ index.html and assets/ checkmarks</li>
+<li>✅ NO &quot;wwwroot directory not found&quot; errors</li>
+</ul>
+<h2 id="-troubleshooting">🔍 Troubleshooting</h2>
+<h3 id="problem-white-screen-or-404-errors">Problem: White Screen or 404 Errors</h3>
+<p><strong>Step 1: Check the Diagnostics Page</strong></p>
+<p>Open <a href="http://127.0.0.1:5005/diag">http://127.0.0.1:5005/diag</a> in your browser. This page will show:</p>
+<ul>
+<li>✅/❌ wwwroot directory status</li>
+<li>✅/❌ index.html file status</li>
+<li>✅/❌ assets directory status</li>
+<li>File count in wwwroot</li>
+<li>API connectivity status</li>
+</ul>
+<p><strong>Step 2: Check Server Logs</strong></p>
+<p>Look at the API server window for these messages:</p>
+<p><strong>Good:</strong></p>
+<pre><code>[INFO] Static UI: ENABLED
+[INFO]   Files: 14
+</code></pre>
+<p><strong>Bad:</strong></p>
+<pre><code>[ERROR] CRITICAL: wwwroot directory not found
+</code></pre>
+<p><strong>Step 3: Verify Files Exist</strong></p>
+<p>Check that these files exist:</p>
+<ul>
+<li><code>Api\wwwroot\index.html</code> ✓</li>
+<li><code>Api\wwwroot\assets\</code> (folder with JS/CSS files) ✓</li>
+</ul>
+<p><strong>Step 4: Re-extract or Rebuild</strong></p>
+<p>If files are missing:</p>
+<pre><code class="lang-powershell"># Option 1: Re-extract the portable ZIP
+Expand-Archive -Force artifacts\portable\AuraVideoStudio_Portable_x64.zip -DestinationPath test-run
+
+# Option 2: Rebuild from source
+.\scripts\packaging\build-portable.ps1
+</code></pre>
+<h3 id="problem-server-wont-start">Problem: Server Won't Start</h3>
+<p><strong>Check Port Availability:</strong></p>
+<pre><code class="lang-powershell"># Check if port 5005 is in use
+netstat -ano | findstr :5005
+
+# If port is in use, kill the process or choose different port
+$env:ASPNETCORE_URLS = &quot;http://127.0.0.1:5006&quot;
+</code></pre>
+<h3 id="problem-browser-opens-too-early">Problem: Browser Opens Too Early</h3>
+<p>The new launcher script includes health check polling, but if you still see issues:</p>
+<p><strong>Manual Start:</strong></p>
+<ol>
+<li>Start the API: <code>cd Api &amp;&amp; Aura.Api.exe</code></li>
+<li>Wait for &quot;Application started&quot; message</li>
+<li>Open browser to <a href="http://127.0.0.1:5005">http://127.0.0.1:5005</a></li>
+</ol>
+<h2 id="-development-mode">🛠️ Development Mode</h2>
+<p>For active development, you can run the API and Web UI separately:</p>
+<h3 id="1-start-the-api-backend">1. Start the API Backend</h3>
+<pre><code class="lang-powershell">cd Aura.Api
+dotnet run
+</code></pre>
+<p>Expected output:</p>
+<pre><code>[INFO] Serving static files from: C:\...\Aura.Api\wwwroot
+[INFO] Now listening on: http://127.0.0.1:5005
+</code></pre>
+<h3 id="2-start-the-web-ui-in-another-terminal">2. Start the Web UI (in another terminal)</h3>
+<pre><code class="lang-powershell">cd Aura.Web
+npm install
+npm run dev
+</code></pre>
+<p>Expected output:</p>
+<pre><code>VITE v5.4.20  ready in 500 ms
+
+➜  Local:   http://localhost:5173/
+➜  Network: use --host to expose
+</code></pre>
+<h3 id="3-access-the-application">3. Access the Application</h3>
+<ul>
+<li><strong>Development:</strong> Open http://localhost:5173 (Web UI dev server with hot reload)</li>
+<li><strong>Production-like:</strong> Open <a href="http://127.0.0.1:5005">http://127.0.0.1:5005</a> (served by API)</li>
+</ul>
+<h2 id="-testing">🧪 Testing</h2>
+<h3 id="run-unit-tests">Run Unit Tests</h3>
+<pre><code class="lang-powershell">dotnet test Aura.Tests/Aura.Tests.csproj
+</code></pre>
+<p>Expected: 84+ tests passing</p>
+<h3 id="run-e2e-tests">Run E2E Tests</h3>
+<pre><code class="lang-powershell">dotnet test Aura.E2E/Aura.E2E.csproj
+</code></pre>
+<p>Expected: 8+ tests passing</p>
+<h3 id="test-the-api-endpoints">Test the API Endpoints</h3>
+<pre><code class="lang-powershell"># Health check
+curl http://127.0.0.1:5005/api/healthz
+
+# System capabilities
+curl http://127.0.0.1:5005/api/capabilities
+
+# Available profiles
+curl http://127.0.0.1:5005/api/profiles/list
+</code></pre>
+<h2 id="-whats-included">📊 What's Included</h2>
+<p>The application includes:</p>
+<h3 id="backend-api-auraapi">Backend API (Aura.Api)</h3>
+<ul>
+<li>✅ Health check endpoint</li>
+<li>✅ Hardware detection and capabilities</li>
+<li>✅ Script generation (rule-based, free)</li>
+<li>✅ Text-to-speech (Windows SAPI, free)</li>
+<li>✅ Video composition (FFmpeg)</li>
+<li>✅ Settings management</li>
+<li>✅ Render queue management</li>
+<li>✅ Downloads manifest</li>
+</ul>
+<h3 id="web-ui-auraweb">Web UI (Aura.Web)</h3>
+<ul>
+<li>✅ Welcome page with system status</li>
+<li>✅ Create page (step-by-step video creation wizard)</li>
+<li>✅ Dashboard (overview and quick actions)</li>
+<li>✅ Render page (export settings)</li>
+<li>✅ Publish page (YouTube metadata)</li>
+<li>✅ Downloads page (dependency management)</li>
+<li>✅ Settings page (API keys, preferences)</li>
+</ul>
+<h3 id="core-features-auracore">Core Features (Aura.Core)</h3>
+<ul>
+<li>✅ Hardware detection (CPU, RAM, GPU)</li>
+<li>✅ Provider system (LLM, TTS, Video)</li>
+<li>✅ Video orchestration pipeline</li>
+<li>✅ Timeline builder</li>
+<li>✅ Render presets (YouTube 1080p, 4K, Shorts)</li>
+<li>✅ Audio processing and normalization</li>
+</ul>
+<h2 id="-troubleshooting-1">🐛 Troubleshooting</h2>
+<h3 id="issue-wwwroot-directory-not-found">Issue: &quot;wwwroot directory not found&quot;</h3>
+<p><strong>Symptom:</strong></p>
+<pre><code>[WARN] wwwroot directory not found at: C:\...\build\wwwroot
+[WARN] Static file serving is disabled. Web UI will not be available.
+</code></pre>
+<p><strong>Solution:</strong> This means you're running an old build. Rebuild using the latest code:</p>
+<pre><code class="lang-powershell">.\scripts\packaging\build-portable.ps1
+</code></pre>
+<h3 id="issue-404-error-in-browser">Issue: 404 Error in Browser</h3>
+<p><strong>Symptom:</strong> Browser shows &quot;404 - Not Found&quot; when accessing <a href="http://127.0.0.1:5005">http://127.0.0.1:5005</a></p>
+<p><strong>Causes:</strong></p>
+<ol>
+<li>Old launcher script (doesn't set working directory correctly)</li>
+<li>Missing wwwroot folder</li>
+<li>API not finding static files</li>
+</ol>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Rebuild the portable version with the latest scripts</li>
+<li>Verify the directory structure:
+<pre><code>build\
+├── Api\
+│   ├── Aura.Api.exe
+│   └── wwwroot\
+│       ├── index.html
+│       └── assets\
+├── Launch.bat
+└── README.md
+</code></pre>
+</li>
+</ol>
+<h3 id="issue-api-endpoints-return-404">Issue: API endpoints return 404</h3>
+<p><strong>Symptom:</strong> Web UI shows errors like &quot;Failed to fetch system info&quot;</p>
+<p><strong>Solution:</strong> Make sure you're using the latest API code that includes the <code>/api</code> prefix. Rebuild:</p>
+<pre><code class="lang-powershell">cd Aura.Api
+dotnet build
+</code></pre>
+<h3 id="issue-port-5005-already-in-use">Issue: Port 5005 already in use</h3>
+<p><strong>Symptom:</strong></p>
+<pre><code>[ERROR] Failed to bind to address http://127.0.0.1:5005: address already in use
+</code></pre>
+<p><strong>Solution:</strong></p>
+<ol>
+<li>Close any other instances of Aura.Api.exe</li>
+<li>Or change the port in <code>Aura.Api/Program.cs</code>:
+<pre><code class="lang-csharp">builder.WebHost.UseUrls(&quot;http://127.0.0.1:5006&quot;);
+</code></pre>
+</li>
+</ol>
+<h2 id="-next-steps">📝 Next Steps</h2>
+<p>After confirming the application works:</p>
+<ol>
+<li><p><strong>Create your first video:</strong></p>
+<ul>
+<li>Click &quot;Create Video&quot; on the welcome page</li>
+<li>Fill in the brief (topic, audience, tone)</li>
+<li>Set duration and pacing</li>
+<li>Click &quot;Generate Video&quot;</li>
+</ul>
+</li>
+<li><p><strong>Configure providers:</strong></p>
+<ul>
+<li>Go to Settings</li>
+<li>Add API keys for pro providers (optional)</li>
+<li>Configure hardware preferences</li>
+</ul>
+</li>
+<li><p><strong>Explore features:</strong></p>
+<ul>
+<li>Check hardware capabilities on the dashboard</li>
+<li>View render queue</li>
+<li>Manage downloads</li>
+</ul>
+</li>
+</ol>
+<h2 id="-getting-help">🆘 Getting Help</h2>
+<p>If you're still experiencing issues:</p>
+<ol>
+<li><strong>Check the console output</strong> - The API logs show exactly what's happening</li>
+<li><strong>Verify the directory structure</strong> - Make sure wwwroot is in the right place</li>
+<li><strong>Check file permissions</strong> - Ensure the launcher can execute Aura.Api.exe</li>
+<li><strong>Review the logs</strong> - API logs are in <code>logs/aura-api-*.log</code></li>
+</ol>
+<h2 id="-additional-documentation">📚 Additional Documentation</h2>
+<ul>
+<li><a href="README.html">README.md</a> - Project overview and architecture</li>
+<li><a href="../architecture/ARCHITECTURE.html">ARCHITECTURE.md</a> - System design and components</li>
+<li><a href="../../PORTABLE.md">PORTABLE.md</a> - User guide for the portable version</li>
+<li><a href="INSTALL.html">INSTALL.md</a> - Detailed installation instructions</li>
+<li><a href="../../README.html">Aura.Api/README.md</a> - API documentation</li>
+<li><a href="../../README.html">Aura.Web/README.md</a> - Web UI documentation</li>
+</ul>
+<hr>
+<p><strong>Note:</strong> All the fixes mentioned above are already applied to the codebase. Simply rebuild and run to get the working version!</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/BUILD_AND_RUN.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

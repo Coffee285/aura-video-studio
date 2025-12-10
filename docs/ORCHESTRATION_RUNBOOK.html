@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Orchestration and Startup Diagnostics Runbook | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Orchestration and Startup Diagnostics Runbook | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/ORCHESTRATION_RUNBOOK.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="orchestration-and-startup-diagnostics-runbook">Orchestration and Startup Diagnostics Runbook</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This runbook provides operational guidance for diagnosing, troubleshooting, and monitoring the Aura Video Studio startup orchestration and service initialization process.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#service-initialization-order">Service Initialization Order</a></li>
+<li><a href="#health-checks">Health Checks</a></li>
+<li><a href="#diagnostic-procedures">Diagnostic Procedures</a></li>
+<li><a href="#common-issues">Common Issues</a></li>
+<li><a href="#log-analysis">Log Analysis</a></li>
+<li><a href="#performance-metrics">Performance Metrics</a></li>
+</ul>
+<hr>
+<h2 id="architecture-overview">Architecture Overview</h2>
+<h3 id="startup-flow">Startup Flow</h3>
+<pre><code>Application Start
+    ↓
+Logging Configuration
+    ↓
+Configuration Loading
+    ↓
+Database Connection
+    ↓
+Required Directories Setup
+    ↓
+Dependency Validation (FFmpeg, Python, etc.)
+    ↓
+AI Services Initialization
+    ↓
+Job/Worker Registration
+    ↓
+API Binding (Kestrel/HTTP Server)
+    ↓
+Application Ready (/health/ready → 200 OK)
+</code></pre>
+<h3 id="service-dependencies">Service Dependencies</h3>
+<ul>
+<li><strong>Database</strong> depends on: Logging</li>
+<li><strong>FFmpeg Validator</strong> depends on: File System</li>
+<li><strong>Video Services</strong> depend on: Database, FFmpeg</li>
+<li><strong>AI Services</strong> depend on: Configuration, Network</li>
+<li><strong>Export Pipeline</strong> depends on: Video Services, FFmpeg</li>
+</ul>
+<hr>
+<h2 id="service-initialization-order">Service Initialization Order</h2>
+<h3 id="phase-1-core-infrastructure-critical">Phase 1: Core Infrastructure (Critical)</h3>
+<ol>
+<li><p><strong>Logging Service</strong> - First to initialize, all others depend on it</p>
+<ul>
+<li>Timeout: 5 seconds</li>
+<li>Failure Mode: Fatal - application exits</li>
+</ul>
+</li>
+<li><p><strong>Database Connectivity</strong> - Required for persistence</p>
+<ul>
+<li>Timeout: 30 seconds</li>
+<li>Failure Mode: Fatal - application exits</li>
+<li>Retry: 3 attempts with exponential backoff</li>
+</ul>
+</li>
+<li><p><strong>Required Directories</strong> - File system structure</p>
+<ul>
+<li>Timeout: 10 seconds</li>
+<li>Failure Mode: Fatal - application exits</li>
+<li>Creates: Data, Output, Projects, Logs directories</li>
+</ul>
+</li>
+</ol>
+<h3 id="phase-2-external-dependencies-conditional">Phase 2: External Dependencies (Conditional)</h3>
+<ol start="4">
+<li><p><strong>FFmpeg Availability</strong> - Video processing capability</p>
+<ul>
+<li>Timeout: 10 seconds</li>
+<li>Failure Mode: Graceful degradation - app continues</li>
+<li>Impact: Video export and preview disabled until FFmpeg configured</li>
+</ul>
+</li>
+<li><p><strong>Python Detection</strong> - AI capabilities</p>
+<ul>
+<li>Timeout: 10 seconds</li>
+<li>Failure Mode: Graceful degradation</li>
+<li>Impact: Local AI features disabled, cloud APIs still available</li>
+</ul>
+</li>
+</ol>
+<h3 id="phase-3-application-services-non-critical">Phase 3: Application Services (Non-Critical)</h3>
+<ol start="6">
+<li><p><strong>AI Services</strong> - Optional enhancements</p>
+<ul>
+<li>Timeout: 10 seconds per service</li>
+<li>Failure Mode: Graceful degradation</li>
+<li>Impact: Specific AI features unavailable based on which service fails</li>
+</ul>
+</li>
+<li><p><strong>Background Workers</strong> - Async job processing</p>
+<ul>
+<li>Timeout: 5 seconds</li>
+<li>Failure Mode: Graceful degradation</li>
+<li>Impact: Background jobs queued until workers available</li>
+</ul>
+</li>
+</ol>
+<h3 id="total-expected-startup-time">Total Expected Startup Time</h3>
+<ul>
+<li><strong>Optimal</strong>: 3-5 seconds (all dependencies present)</li>
+<li><strong>Degraded</strong>: 5-10 seconds (some dependencies missing)</li>
+<li><strong>Failure</strong>: &gt;10 seconds (critical dependency failed)</li>
+</ul>
+<hr>
+<h2 id="health-checks">Health Checks</h2>
+<h3 id="liveness-probe">Liveness Probe</h3>
+<p><strong>Endpoint</strong>: <code>GET /health/live</code></p>
+<p><strong>Purpose</strong>: Verify the application process is running</p>
+<p><strong>Expected Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Healthy&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-27T22:00:00Z&quot;
+}
+</code></pre>
+<p><strong>Response Codes</strong>:</p>
+<ul>
+<li><code>200 OK</code>: Application is alive</li>
+<li><code>503 Service Unavailable</code>: Application is starting or shutting down</li>
+</ul>
+<p><strong>When to Use</strong>: Container orchestration liveness checks, uptime monitoring</p>
+<h3 id="readiness-probe">Readiness Probe</h3>
+<p><strong>Endpoint</strong>: <code>GET /health/ready</code></p>
+<p><strong>Purpose</strong>: Verify the application is ready to serve traffic</p>
+<p><strong>Expected Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;status&quot;: &quot;Ready&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-27T22:00:00Z&quot;,
+  &quot;services&quot;: {
+    &quot;database&quot;: &quot;healthy&quot;,
+    &quot;ffmpeg&quot;: &quot;healthy&quot;,
+    &quot;aiServices&quot;: &quot;degraded&quot;
+  }
+}
+</code></pre>
+<p><strong>Response Codes</strong>:</p>
+<ul>
+<li><code>200 OK</code>: Application is ready to serve requests</li>
+<li><code>503 Service Unavailable</code>: Still initializing or critical service failed</li>
+</ul>
+<p><strong>Degraded Mode</strong>: Returns 200 but indicates degraded services in response body</p>
+<p><strong>When to Use</strong>: Load balancer health checks, pre-deployment validation</p>
+<h3 id="startup-diagnostics-endpoint">Startup Diagnostics Endpoint</h3>
+<p><strong>Endpoint</strong>: <code>GET /api/diagnostics/initialization-order</code></p>
+<p><strong>Purpose</strong>: View detailed initialization sequence and timing</p>
+<p><strong>Expected Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;initializationOrder&quot;: [
+    {
+      &quot;service&quot;: &quot;logging&quot;,
+      &quot;timestamp&quot;: 1000,
+      &quot;duration&quot;: 45,
+      &quot;status&quot;: &quot;initialized&quot;
+    },
+    {
+      &quot;service&quot;: &quot;database&quot;,
+      &quot;timestamp&quot;: 1045,
+      &quot;duration&quot;: 234,
+      &quot;status&quot;: &quot;initialized&quot;
+    },
+    {
+      &quot;service&quot;: &quot;ffmpeg&quot;,
+      &quot;timestamp&quot;: 1279,
+      &quot;duration&quot;: 156,
+      &quot;status&quot;: &quot;initialized&quot;
+    }
+  ],
+  &quot;totalDuration&quot;: 1435,
+  &quot;criticalFailures&quot;: 0,
+  &quot;warnings&quot;: 1
+}
+</code></pre>
+<hr>
+<h2 id="diagnostic-procedures">Diagnostic Procedures</h2>
+<h3 id="procedure-1-verify-application-is-starting">Procedure 1: Verify Application is Starting</h3>
+<pre><code class="lang-bash"># Check if process is running
+ps aux | grep Aura.Api
+
+# Check if port is listening (default 5000/5001)
+netstat -tuln | grep 5000
+
+# Check health endpoints
+curl http://localhost:5000/health/live
+curl http://localhost:5000/health/ready
+</code></pre>
+<h3 id="procedure-2-analyze-startup-logs">Procedure 2: Analyze Startup Logs</h3>
+<pre><code class="lang-bash"># View real-time startup logs
+tail -f ~/.local/share/aura/logs/startup.log
+
+# Search for errors
+grep &quot;ERROR&quot; ~/.local/share/aura/logs/startup.log
+
+# Search for initialization failures
+grep &quot;failed to initialize&quot; ~/.local/share/aura/logs/startup.log
+
+# View structured initialization sequence
+grep &quot;Initializing:&quot; ~/.local/share/aura/logs/startup.log
+</code></pre>
+<h3 id="procedure-3-check-dependency-status">Procedure 3: Check Dependency Status</h3>
+<pre><code class="lang-bash"># Run dependency check script
+./scripts/check-deps.sh
+
+# Check via API
+curl http://localhost:5000/api/dependencies/check | jq
+
+# Force rescan
+curl -X POST http://localhost:5000/api/dependencies/rescan
+</code></pre>
+<h3 id="procedure-4-investigate-slow-startup">Procedure 4: Investigate Slow Startup</h3>
+<pre><code class="lang-bash"># View initialization timing
+curl http://localhost:5000/api/diagnostics/initialization-order | jq '.initializationOrder[] | select(.duration &gt; 1000)'
+
+# Check database connectivity
+curl http://localhost:5000/api/diagnostics/database-status
+
+# Check filesystem permissions
+ls -la ~/.local/share/aura/
+</code></pre>
+<h3 id="procedure-5-diagnose-failed-startup">Procedure 5: Diagnose Failed Startup</h3>
+<pre><code class="lang-bash"># View last 100 lines of startup log
+tail -n 100 ~/.local/share/aura/logs/startup.log
+
+# Search for critical failures
+grep &quot;CRITICAL&quot; ~/.local/share/aura/logs/startup.log
+
+# Check if database is reachable
+# (connection string from appsettings.json)
+
+# Verify required directories exist
+ls -la ~/.local/share/aura/
+ls -la ~/Documents/Aura\ Projects/
+ls -la ~/Videos/Aura/
+</code></pre>
+<hr>
+<h2 id="common-issues">Common Issues</h2>
+<h3 id="issue-1-application-stuck-in-starting-state">Issue 1: Application Stuck in &quot;Starting&quot; State</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li><code>/health/ready</code> returns 503 for &gt;30 seconds</li>
+<li>Logs show initialization steps but never complete</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check initialization order
+curl http://localhost:5000/api/diagnostics/initialization-order
+
+# Look for hanging step
+tail -f ~/.local/share/aura/logs/startup.log | grep &quot;Initializing:&quot;
+</code></pre>
+<p><strong>Common Causes</strong>:</p>
+<ol>
+<li>Database connection timeout</li>
+<li>FFmpeg detection hanging</li>
+<li>Network timeout for AI service check</li>
+</ol>
+<p><strong>Resolution</strong>:</p>
+<pre><code class="lang-bash"># For database: Verify connection string
+# For FFmpeg: Kill any hung ffmpeg processes
+pkill ffmpeg
+
+# For network: Check firewall/proxy settings
+# Restart application
+</code></pre>
+<h3 id="issue-2-ffmpeg-not-detected">Issue 2: FFmpeg Not Detected</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>First-run wizard shows FFmpeg as &quot;Not Installed&quot;</li>
+<li>Video export fails with &quot;FFmpeg not found&quot;</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check if FFmpeg is in PATH
+which ffmpeg
+ffmpeg -version
+
+# Check application's FFmpeg detection
+curl http://localhost:5000/api/dependencies/check | jq '.ffmpeg'
+</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Install FFmpeg via auto-installer in Downloads/Engines</li>
+<li>Or manually add to PATH</li>
+<li>Or use &quot;Attach Existing&quot; to specify custom path</li>
+<li>Rescan dependencies: <code>POST /api/dependencies/rescan</code></li>
+</ol>
+<h3 id="issue-3-database-connection-failure">Issue 3: Database Connection Failure</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Application exits immediately after start</li>
+<li>Logs show &quot;Database Connectivity failed&quot;</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check logs
+grep &quot;Database Connectivity&quot; ~/.local/share/aura/logs/startup.log
+
+# Verify SQLite database file
+ls -la ~/.local/share/aura/aura.db
+</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Ensure data directory exists and is writable</li>
+<li>Check disk space availability</li>
+<li>Verify SQLite runtime is available</li>
+<li>Delete corrupted database (will recreate on next start)</li>
+</ol>
+<h3 id="issue-4-startup-takes-30-seconds">Issue 4: Startup Takes &gt;30 Seconds</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li>Application eventually starts but very slowly</li>
+<li>Users experience long wait times</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check initialization timing
+curl http://localhost:5000/api/diagnostics/initialization-order | jq '.initializationOrder[] | {service, duration}'
+</code></pre>
+<p><strong>Common Causes</strong>:</p>
+<ol>
+<li>Network timeout trying to reach AI services</li>
+<li>Large number of projects/media causing database query slowness</li>
+<li>Disk I/O bottleneck</li>
+</ol>
+<p><strong>Resolution</strong>:</p>
+<ol>
+<li>Increase timeouts in configuration</li>
+<li>Optimize database indexes</li>
+<li>Consider async initialization for non-critical services</li>
+</ol>
+<h3 id="issue-5-services-in-degraded-mode">Issue 5: Services in Degraded Mode</h3>
+<p><strong>Symptoms</strong>:</p>
+<ul>
+<li><code>/health/ready</code> returns 200 but with degraded services</li>
+<li>Some features unavailable</li>
+</ul>
+<p><strong>Diagnosis</strong>:</p>
+<pre><code class="lang-bash"># Check health details
+curl http://localhost:5000/health/ready | jq
+
+# Check specific service status
+curl http://localhost:5000/api/dependencies/check | jq
+</code></pre>
+<p><strong>Resolution</strong>:</p>
+<ul>
+<li>This is expected behavior when optional dependencies are missing</li>
+<li>Review which services are degraded and install missing dependencies</li>
+<li>Or accept degraded mode and use available features only</li>
+</ul>
+<hr>
+<h2 id="log-analysis">Log Analysis</h2>
+<h3 id="log-format">Log Format</h3>
+<p>Structured JSON logs for each initialization step:</p>
+<pre><code class="lang-json">{
+  &quot;timestamp&quot;: &quot;2025-10-27T22:00:01.234Z&quot;,
+  &quot;level&quot;: &quot;Information&quot;,
+  &quot;service&quot;: &quot;ffmpeg&quot;,
+  &quot;step&quot;: &quot;detection&quot;,
+  &quot;status&quot;: &quot;success&quot;,
+  &quot;duration&quot;: 156,
+  &quot;details&quot;: {
+    &quot;version&quot;: &quot;6.0&quot;,
+    &quot;path&quot;: &quot;/usr/bin/ffmpeg&quot;
+  }
+}
+</code></pre>
+<h3 id="key-log-patterns">Key Log Patterns</h3>
+<h4 id="successful-initialization">Successful Initialization</h4>
+<pre><code>=== Service Initialization Starting ===
+Initializing: Database Connectivity (Critical: True, Timeout: 30s)
+✓ Database Connectivity initialized successfully in 234ms
+Initializing: Required Directories (Critical: True, Timeout: 10s)
+✓ Required Directories initialized successfully in 45ms
+...
+=== Service Initialization COMPLETE ===
+Total time: 1435ms, Successful: 4/4
+</code></pre>
+<h4 id="critical-failure">Critical Failure</h4>
+<pre><code>Initializing: Database Connectivity (Critical: True, Timeout: 30s)
+✗ CRITICAL: Database Connectivity failed to initialize (took 30001ms)
+=== Service Initialization FAILED ===
+Critical services failed to initialize. Application cannot start.
+</code></pre>
+<h4 id="graceful-degradation">Graceful Degradation</h4>
+<pre><code>Initializing: AI Services (Critical: False, Timeout: 10s)
+⚠ AI Services failed to initialize - continuing with graceful degradation (took 10002ms)
+=== Service Initialization COMPLETE ===
+Some non-critical services failed. Application running in degraded mode.
+</code></pre>
+<h3 id="log-locations">Log Locations</h3>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>%LOCALAPPDATA%\Aura\logs\startup.log</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/Library/Application Support/Aura/logs/startup.log</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>~/.local/share/aura/logs/startup.log</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="performance-metrics">Performance Metrics</h2>
+<h3 id="initialization-time-targets">Initialization Time Targets</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Target (ms)</th>
+<th>Warning (ms)</th>
+<th>Critical (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logging</td>
+<td>&lt;50</td>
+<td>&gt;100</td>
+<td>&gt;500</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>&lt;300</td>
+<td>&gt;1000</td>
+<td>&gt;5000</td>
+</tr>
+<tr>
+<td>Directories</td>
+<td>&lt;100</td>
+<td>&gt;500</td>
+<td>&gt;2000</td>
+</tr>
+<tr>
+<td>FFmpeg</td>
+<td>&lt;200</td>
+<td>&gt;1000</td>
+<td>&gt;5000</td>
+</tr>
+<tr>
+<td>AI Services</td>
+<td>&lt;500</td>
+<td>&gt;2000</td>
+<td>&gt;10000</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>&lt;2000</strong></td>
+<td><strong>&gt;5000</strong></td>
+<td><strong>&gt;15000</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="health-check-response-times">Health Check Response Times</h3>
+<table>
+<thead>
+<tr>
+<th>Endpoint</th>
+<th>Target (ms)</th>
+<th>Warning (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/health/live</td>
+<td>&lt;10</td>
+<td>&gt;50</td>
+</tr>
+<tr>
+<td>/health/ready</td>
+<td>&lt;50</td>
+<td>&gt;200</td>
+</tr>
+<tr>
+<td>/api/diagnostics/initialization-order</td>
+<td>&lt;100</td>
+<td>&gt;500</td>
+</tr>
+</tbody>
+</table>
+<h3 id="monitoring-recommendations">Monitoring Recommendations</h3>
+<ol>
+<li><p><strong>Alert on</strong>:</p>
+<ul>
+<li>Startup time &gt;10 seconds</li>
+<li>Health check failures &gt;3 consecutive</li>
+<li>Critical service initialization failure</li>
+<li>Readiness probe down &gt;60 seconds</li>
+</ul>
+</li>
+<li><p><strong>Track Metrics</strong>:</p>
+<ul>
+<li>Average startup time (by platform)</li>
+<li>FFmpeg detection success rate</li>
+<li>Database connection success rate</li>
+<li>Degraded mode frequency</li>
+</ul>
+</li>
+<li><p><strong>Dashboard Views</strong>:</p>
+<ul>
+<li>Initialization timeline visualization</li>
+<li>Service health status matrix</li>
+<li>Dependency availability trends</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="emergency-procedures">Emergency Procedures</h2>
+<h3 id="emergency-restart">Emergency Restart</h3>
+<pre><code class="lang-bash"># Stop application
+pkill -f Aura.Api
+
+# Clear temp files (optional)
+rm -rf ~/.local/share/aura/temp/*
+
+# Start application
+./Aura.Api
+</code></pre>
+<h3 id="reset-to-default-state">Reset to Default State</h3>
+<pre><code class="lang-bash"># Backup current state
+cp -r ~/.local/share/aura ~/.local/share/aura.backup
+
+# Clear all application data (will trigger first-run wizard)
+rm -rf ~/.local/share/aura/*
+
+# Restart application
+./Aura.Api
+</code></pre>
+<h3 id="collect-diagnostic-bundle">Collect Diagnostic Bundle</h3>
+<pre><code class="lang-bash"># Create diagnostic bundle for support
+mkdir -p /tmp/aura-diagnostics
+cp ~/.local/share/aura/logs/*.log /tmp/aura-diagnostics/
+curl http://localhost:5000/api/diagnostics/initialization-order &gt; /tmp/aura-diagnostics/init-order.json
+curl http://localhost:5000/api/dependencies/check &gt; /tmp/aura-diagnostics/dependencies.json
+curl http://localhost:5000/health/ready &gt; /tmp/aura-diagnostics/health.json
+tar -czf aura-diagnostics-$(date +%Y%m%d-%H%M%S).tar.gz /tmp/aura-diagnostics/
+</code></pre>
+<hr>
+<h2 id="appendix-configuration-reference">Appendix: Configuration Reference</h2>
+<h3 id="timeout-configuration">Timeout Configuration</h3>
+<p>Located in <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Orchestration&quot;: {
+    &quot;Timeouts&quot;: {
+      &quot;DatabaseConnection&quot;: 30,
+      &quot;FFmpegDetection&quot;: 10,
+      &quot;AIServices&quot;: 10,
+      &quot;DirectorySetup&quot;: 10
+    },
+    &quot;Retries&quot;: {
+      &quot;DatabaseConnection&quot;: 3,
+      &quot;ExponentialBackoffMs&quot;: 1000
+    }
+  }
+}
+</code></pre>
+<h3 id="feature-flags">Feature Flags</h3>
+<pre><code class="lang-json">{
+  &quot;Features&quot;: {
+    &quot;EnableAIServices&quot;: true,
+    &quot;RequireFFmpegOnStartup&quot;: false,
+    &quot;AllowDegradedMode&quot;: true
+  }
+}
+</code></pre>
+<hr>
+<h2 id="contact-and-escalation">Contact and Escalation</h2>
+<p>For issues not covered in this runbook:</p>
+<ol>
+<li>Check Troubleshooting Guide (archived)</li>
+<li>Review <a href="../PRODUCTION_READINESS_CHECKLIST.md">Production Readiness Checklist</a></li>
+<li>Collect diagnostic bundle (see Emergency Procedures)</li>
+<li>File issue on GitHub with diagnostic bundle attached</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/ORCHESTRATION_RUNBOOK.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

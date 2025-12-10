@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>CI Platform Requirements and Build Configuration | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="CI Platform Requirements and Build Configuration | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/CI_PLATFORM_REQUIREMENTS.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ci-platform-requirements-and-build-configuration">CI Platform Requirements and Build Configuration</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document explains the platform-specific build requirements for Aura Video Studio and how CI workflows handle cross-platform compatibility.</p>
+<h2 id="project-platform-compatibility">Project Platform Compatibility</h2>
+<h3 id="cross-platform-projects-linux--windows">Cross-Platform Projects (Linux + Windows)</h3>
+<p>The following projects can be built on both Linux and Windows:</p>
+<ul>
+<li><strong>Aura.Core</strong> - Core business logic and services</li>
+<li><strong>Aura.Providers</strong> - LLM, TTS, and image provider implementations</li>
+<li><strong>Aura.Api</strong> - ASP.NET Core REST API</li>
+<li><strong>Aura.Cli</strong> - Command-line interface</li>
+<li><strong>Aura.Analyzers</strong> - Roslyn code analyzers</li>
+<li><strong>Aura.Tests</strong> - Unit and integration tests</li>
+<li><strong>Aura.E2E</strong> - End-to-end test suite</li>
+<li><strong>Aura.Web</strong> - React/Vite frontend (Node.js-based)</li>
+</ul>
+<h3 id="windows-only-projects">Windows-Only Projects</h3>
+<ul>
+<li><strong>Aura.App</strong> - WinUI 3 desktop application
+<ul>
+<li>Target framework: <code>net8.0-windows10.0.19041.0</code></li>
+<li>Uses Windows App SDK and WinUI 3</li>
+<li>Requires Windows-specific XAML compiler</li>
+<li><strong>Cannot be built on Linux runners</strong></li>
+</ul>
+</li>
+</ul>
+<h2 id="ci-workflow-configuration">CI Workflow Configuration</h2>
+<h3 id="linux-based-workflows">Linux-Based Workflows</h3>
+<p>The following workflows run on <code>ubuntu-latest</code> and explicitly exclude <code>Aura.App</code>:</p>
+<h4 id="githubworkflowsciyml"><code>.github/workflows/ci.yml</code></h4>
+<ul>
+<li><strong>Runner</strong>: <code>ubuntu-latest</code></li>
+<li><strong>Build Strategy</strong>: Individual project builds (excludes Aura.App)</li>
+<li><strong>Projects Built</strong>:
+<pre><code class="lang-bash">dotnet build Aura.Core/Aura.Core.csproj
+dotnet build Aura.Providers/Aura.Providers.csproj
+dotnet build Aura.Api/Aura.Api.csproj
+dotnet build Aura.Cli/Aura.Cli.csproj
+dotnet build Aura.Analyzers/Aura.Analyzers.csproj
+dotnet build Aura.Tests/Aura.Tests.csproj
+dotnet build Aura.E2E/Aura.E2E.csproj
+</code></pre>
+</li>
+</ul>
+<h4 id="githubworkflowsci-linuxyml"><code>.github/workflows/ci-linux.yml</code></h4>
+<ul>
+<li><strong>Runner</strong>: <code>ubuntu-latest</code></li>
+<li><strong>Build Strategy</strong>: Same as ci.yml (excludes Aura.App)</li>
+<li><strong>Additional Steps</strong>: Includes coverage collection and Playwright E2E tests</li>
+</ul>
+<h3 id="windows-based-workflows">Windows-Based Workflows</h3>
+<p>The following workflows run on <code>windows-latest</code> and can build all projects including <code>Aura.App</code>:</p>
+<h4 id="githubworkflowsbuild-validationyml"><code>.github/workflows/build-validation.yml</code></h4>
+<ul>
+<li><strong>Runner</strong>: <code>windows-latest</code></li>
+<li><strong>Build Strategy</strong>: Full solution build (<code>dotnet build Aura.sln</code>)</li>
+<li><strong>Projects Built</strong>: All projects including Aura.App</li>
+</ul>
+<h4 id="githubworkflowsci-windowsyml"><code>.github/workflows/ci-windows.yml</code></h4>
+<ul>
+<li><strong>Runner</strong>: <code>windows-latest</code></li>
+<li><strong>Build Strategy</strong>: Full solution build</li>
+<li><strong>Projects Built</strong>: All projects including Aura.App</li>
+</ul>
+<h2 id="why-this-matters">Why This Matters</h2>
+<h3 id="the-problem-before-fix">The Problem (Before Fix)</h3>
+<p>Prior to this fix, Linux-based CI workflows attempted to build the entire solution using:</p>
+<pre><code class="lang-bash">dotnet build --configuration Release --no-restore
+</code></pre>
+<p>This would fail with:</p>
+<pre><code>error MSB3073: The command &quot;XamlCompiler.exe&quot; exited with code 126
+</code></pre>
+<p>This happened because:</p>
+<ol>
+<li>The solution (<code>Aura.sln</code>) includes <code>Aura.App</code></li>
+<li><code>Aura.App</code> requires Windows App SDK XAML compiler</li>
+<li>XAML compiler is a Windows-only .exe file</li>
+<li>Linux cannot execute Windows .exe files</li>
+</ol>
+<h3 id="the-solution">The Solution</h3>
+<p>Linux workflows now explicitly build each compatible project individually, skipping <code>Aura.App</code>. This:</p>
+<ul>
+<li>✅ Allows CI to complete successfully on Linux runners</li>
+<li>✅ Provides platform coverage for cross-platform code</li>
+<li>✅ Reduces CI costs (Linux runners are cheaper than Windows)</li>
+<li>✅ Validates that core functionality works on Linux servers</li>
+<li>✅ Still builds Aura.App on Windows runners for validation</li>
+</ul>
+<h2 id="build-commands">Build Commands</h2>
+<h3 id="for-linux-developmentci">For Linux Development/CI</h3>
+<pre><code class="lang-bash"># Build all Linux-compatible projects
+dotnet build Aura.Core/Aura.Core.csproj --configuration Release
+dotnet build Aura.Providers/Aura.Providers.csproj --configuration Release
+dotnet build Aura.Api/Aura.Api.csproj --configuration Release
+dotnet build Aura.Cli/Aura.Cli.csproj --configuration Release
+dotnet build Aura.Analyzers/Aura.Analyzers.csproj --configuration Release
+dotnet build Aura.Tests/Aura.Tests.csproj --configuration Release
+dotnet build Aura.E2E/Aura.E2E.csproj --configuration Release
+</code></pre>
+<h3 id="for-windows-developmentci">For Windows Development/CI</h3>
+<pre><code class="lang-bash"># Build entire solution (includes Aura.App)
+dotnet build Aura.sln --configuration Release
+</code></pre>
+<h2 id="testing-strategy">Testing Strategy</h2>
+<h3 id="linux-ci">Linux CI</h3>
+<ul>
+<li>Runs unit tests from <code>Aura.Tests</code></li>
+<li>Runs E2E tests that don't require the WinUI app</li>
+<li>Validates API and CLI functionality</li>
+</ul>
+<h3 id="windows-ci">Windows CI</h3>
+<ul>
+<li>Runs full test suite</li>
+<li>Validates WinUI app builds correctly</li>
+<li>Tests Windows-specific features</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="error-xamlcompilerexe-exited-with-code-126-on-linux">Error: &quot;XamlCompiler.exe exited with code 126&quot; on Linux</h3>
+<p><strong>Cause</strong>: Attempting to build Aura.App on a Linux system</p>
+<p><strong>Solution</strong>: Exclude Aura.App from the build:</p>
+<pre><code class="lang-bash"># Don't do this on Linux:
+dotnet build Aura.sln
+
+# Do this instead:
+dotnet build Aura.Core/Aura.Core.csproj
+dotnet build Aura.Api/Aura.Api.csproj
+# ... (other compatible projects)
+</code></pre>
+<h3 id="error-the-specified-framework-net80-windows100190410-could-not-be-found-on-linux">Error: &quot;The specified framework 'net8.0-windows10.0.19041.0' could not be found&quot; on Linux</h3>
+<p><strong>Cause</strong>: Same as above - trying to build Windows-specific project on Linux</p>
+<p><strong>Solution</strong>: Use the project-specific build commands shown above</p>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="BUILD_GUIDE.md">BUILD_GUIDE.md</a> - General build instructions</li>
+<li><a href="CONTRIBUTING.md">CONTRIBUTING.md</a> - Contribution guidelines</li>
+<li><a href="/.github/workflows/">.github/workflows/</a> - CI workflow definitions</li>
+</ul>
+<h2 id="ci-workflow-decision-matrix">CI Workflow Decision Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>Runner</th>
+<th>Builds Aura.App?</th>
+<th>Primary Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ci.yml</td>
+<td>ubuntu-latest</td>
+<td>❌ No</td>
+<td>Fast cross-platform validation</td>
+</tr>
+<tr>
+<td>ci-linux.yml</td>
+<td>ubuntu-latest</td>
+<td>❌ No</td>
+<td>Comprehensive Linux testing</td>
+</tr>
+<tr>
+<td>ci-windows.yml</td>
+<td>windows-latest</td>
+<td>✅ Yes</td>
+<td>Windows-specific validation</td>
+</tr>
+<tr>
+<td>build-validation.yml</td>
+<td>windows-latest</td>
+<td>✅ Yes</td>
+<td>Strict build quality checks</td>
+</tr>
+<tr>
+<td>comprehensive-ci.yml</td>
+<td>ubuntu-latest</td>
+<td>❌ No</td>
+<td>Full pipeline testing</td>
+</tr>
+<tr>
+<td>e2e-pipeline.yml</td>
+<td>Mixed</td>
+<td>Varies</td>
+<td>E2E scenarios</td>
+</tr>
+</tbody>
+</table>
+<h2 id="future-considerations">Future Considerations</h2>
+<p>If additional Windows-only projects are added to the solution:</p>
+<ol>
+<li>Add them to the exclusion list in Linux CI workflows</li>
+<li>Update this document</li>
+<li>Ensure Windows CI workflows continue to build them</li>
+<li>Consider creating a <code>Aura.CrossPlatform.sln</code> for Linux builds</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/development/CI_PLATFORM_REQUIREMENTS.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

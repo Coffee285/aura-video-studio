@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Architecture Migration Note: Web-Based to Electron Desktop | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Architecture Migration Note: Web-Based to Electron Desktop | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ARCHITECTURE_MIGRATION_NOTE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="architecture-migration-note-web-based-to-electron-desktop">Architecture Migration Note: Web-Based to Electron Desktop</h1>
+
+<p><strong>Date:</strong> November 2025<br>
+<strong>Status:</strong> Migration Complete</p>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio has migrated from a web-based architecture to an <strong>Electron desktop application</strong>. This document provides context for understanding references in historical documentation and explains the current architecture.</p>
+<h2 id="architecture-evolution">Architecture Evolution</h2>
+<h3 id="previous-architecture-pre-migration">Previous Architecture (Pre-Migration)</h3>
+<p><strong>Web-Based Application:</strong></p>
+<ul>
+<li>Standalone React frontend served via Vite dev server</li>
+<li>Separate ASP.NET Core backend API</li>
+<li>Docker Compose for orchestration</li>
+<li>Browser-based access at http://localhost:3000 or http://localhost:5173</li>
+<li>Redis for caching and sessions</li>
+<li>Separate deployment as web application</li>
+</ul>
+<p><strong>Characteristics:</strong></p>
+<ul>
+<li>Frontend and backend run as separate processes</li>
+<li>Frontend accessed via browser</li>
+<li>Docker containers for dependencies (Redis, FFmpeg)</li>
+<li>Web deployment targets (servers, hosting platforms)</li>
+</ul>
+<h3 id="current-architecture-electron-desktop-app">Current Architecture (Electron Desktop App)</h3>
+<p><strong>Electron Desktop Application:</strong></p>
+<ul>
+<li><strong>Electron Main Process</strong> - Orchestrates everything</li>
+<li><strong>React Frontend</strong> - Bundled into Electron, runs in renderer process</li>
+<li><strong>ASP.NET Core Backend</strong> - Embedded as child process, spawned by Electron</li>
+<li><strong>Native Desktop App</strong> - Windows installer, macOS DMG, Linux AppImage</li>
+<li>No Docker required (native desktop app)</li>
+<li>No browser required (Electron provides window)</li>
+</ul>
+<p><strong>Process Model:</strong></p>
+<pre><code>┌──────────────────────────────────────┐
+│     Electron Main Process            │
+│  (window mgmt, IPC, lifecycle)       │
+└────┬─────────────────────┬───────────┘
+     │ spawns              │ IPC
+     ▼                     ▼
+┌──────────────┐    ┌─────────────────┐
+│  ASP.NET     │◄───┤   Renderer      │
+│  Backend     │ HTTP│   Process       │
+│  (child)     │───►│  (React UI)     │
+└──────────────┘    └─────────────────┘
+</code></pre>
+<p><strong>Characteristics:</strong></p>
+<ul>
+<li>All-in-one desktop application</li>
+<li>Backend embedded as child process (not external service)</li>
+<li>Frontend loaded from bundled files (not via network)</li>
+<li>Native installers for distribution</li>
+<li>No Docker/containers needed (native app)</li>
+</ul>
+<h2 id="port-references-in-documentation">Port References in Documentation</h2>
+<p>Many historical documents reference specific ports. Here's what they mean:</p>
+<h3 id="localhost5173">localhost:5173</h3>
+<p><strong>Context:</strong> Vite dev server (component development mode)</p>
+<p><strong>When Used:</strong></p>
+<ul>
+<li>During frontend component development in browser</li>
+<li>For rapid iteration with hot module replacement (HMR)</li>
+<li><strong>NOT used in the Electron app</strong> (frontend is bundled)</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code class="lang-bash"># Component development mode (browser-based)
+cd Aura.Web
+npm run dev
+# Frontend runs at http://localhost:5173
+</code></pre>
+<p><strong>Note:</strong> This is only for developing the frontend components in isolation, not for running the desktop app.</p>
+<h3 id="localhost3000">localhost:3000</h3>
+<p><strong>Context:</strong> Old Docker web server port (no longer applicable)</p>
+<p><strong>When Used:</strong></p>
+<ul>
+<li>In the previous Docker Compose architecture</li>
+<li>Web UI served via Docker container</li>
+<li><strong>No longer used</strong> in Electron architecture</li>
+</ul>
+<p><strong>Why References Exist:</strong></p>
+<ul>
+<li>Historical implementation summaries</li>
+<li>Old testing guides</li>
+<li>Pre-migration documentation</li>
+</ul>
+<p><strong>Status:</strong> These references are obsolete for current architecture.</p>
+<h3 id="localhost5005">localhost:5005</h3>
+<p><strong>Context:</strong> Standalone backend API port for development <strong>only</strong></p>
+<p><strong>When Used:</strong></p>
+<ol>
+<li><p><strong>Standalone Backend Development Mode (Component Mode):</strong></p>
+<ul>
+<li>Backend runs standalone: <code>cd Aura.Api &amp;&amp; dotnet run</code></li>
+<li>API available at http://localhost:5005</li>
+<li>Used for testing API endpoints directly</li>
+<li><strong>This is NOT used in the Electron app runtime</strong></li>
+</ul>
+</li>
+<li><p><strong>Electron App Runtime:</strong></p>
+<ul>
+<li>Backend spawned by Electron main process</li>
+<li><strong>Port is dynamically chosen</strong> based on the <code>networkContract</code></li>
+<li>Default dev port: 5272 (from <code>AURA_DEV_BACKEND_URL</code>)</li>
+<li>Default prod port: 5890 (from <code>AURA_PROD_BACKEND_URL</code>)</li>
+<li>Can be overridden via <code>AURA_BACKEND_URL</code> environment variable</li>
+<li>Frontend connects automatically via <code>desktopBridge.backend.getUrl()</code></li>
+<li><strong>Port 5005 is NOT guaranteed or expected in Electron</strong></li>
+</ul>
+</li>
+</ol>
+<p><strong>Important:</strong> When running the Electron desktop app, the backend does <strong>not</strong> use port 5005. The port is resolved dynamically through the network contract system. Port 5005 is strictly for standalone backend development where you run <code>dotnet run</code> directly.</p>
+<p><strong>Example:</strong></p>
+<pre><code class="lang-bash"># Standalone backend for API testing (uses port 5005)
+cd Aura.Api
+dotnet run
+# API at http://localhost:5005
+
+# Health check
+curl http://localhost:5005/health/live
+
+# Note: In Electron, the backend URL comes from the contract:
+# - Dev: http://127.0.0.1:5272 (default)
+# - Prod: http://127.0.0.1:5890 (default)
+# - Or whatever is set in AURA_BACKEND_URL
+</code></pre>
+<h2 id="development-modes">Development Modes</h2>
+<h3 id="electron-desktop-app-development">Electron Desktop App Development</h3>
+<p><strong>Purpose:</strong> Develop and test the complete desktop application</p>
+<p><strong>Workflow:</strong></p>
+<pre><code class="lang-bash"># Build frontend
+cd Aura.Web &amp;&amp; npm run build:prod
+
+# Run Electron app
+cd ../Aura.Desktop &amp;&amp; npm run dev
+</code></pre>
+<p><strong>Characteristics:</strong></p>
+<ul>
+<li>Frontend loaded from bundled files</li>
+<li>Backend spawned automatically by Electron</li>
+<li>Native window (not browser)</li>
+<li>Access to Electron APIs (IPC, native dialogs, etc.)</li>
+<li>Tests the actual production experience</li>
+</ul>
+<h3 id="component-development-mode">Component Development Mode</h3>
+<p><strong>Purpose:</strong> Rapid iteration on backend API or frontend UI</p>
+<p><strong>Workflow:</strong></p>
+<pre><code class="lang-bash"># Terminal 1: Backend
+cd Aura.Api &amp;&amp; dotnet watch run
+# Runs at http://localhost:5005
+
+# Terminal 2: Frontend
+cd Aura.Web &amp;&amp; npm run dev
+# Runs at http://localhost:5173 with hot reload
+</code></pre>
+<p><strong>Characteristics:</strong></p>
+<ul>
+<li>Frontend runs in browser (Vite dev server)</li>
+<li>Backend runs standalone</li>
+<li>Hot reload for instant updates</li>
+<li>No Electron (browser-based)</li>
+<li>No access to Electron APIs</li>
+</ul>
+<p><strong>When to Use:</strong></p>
+<ul>
+<li>Backend API endpoint development</li>
+<li>Frontend UI component development</li>
+<li>Quick testing without full Electron overhead</li>
+</ul>
+<p><strong>When NOT to Use:</strong></p>
+<ul>
+<li>Testing Electron-specific features (IPC, native dialogs, menus)</li>
+<li>Testing backend lifecycle in Electron</li>
+<li>Final integration testing</li>
+</ul>
+<h2 id="historical-documentation">Historical Documentation</h2>
+<h3 id="implementation-summaries">Implementation Summaries</h3>
+<p>Many files like <code>PR*_IMPLEMENTATION_SUMMARY.md</code> reference the old architecture. These are <strong>historical records</strong> and should be understood in context:</p>
+<p><strong>Files Referencing localhost:3000:</strong></p>
+<ul>
+<li><code>PR1_IMPLEMENTATION_SUMMARY.md</code> - Docker-based setup</li>
+<li><code>VERIFICATION_CHECKLIST.md</code> - Old verification steps</li>
+<li><code>QUICK_REFERENCE.md</code> (now updated)</li>
+</ul>
+<p><strong>Files Referencing localhost:5173:</strong></p>
+<ul>
+<li>Various testing guides for browser-based testing</li>
+<li>Component development instructions</li>
+<li>Still valid for component mode, but not for Electron app</li>
+</ul>
+<h3 id="updated-documentation">Updated Documentation</h3>
+<p>The following files have been <strong>updated for Electron architecture</strong>:</p>
+<ul>
+<li><code>README.md</code> - Electron architecture overview</li>
+<li><code>DEVELOPMENT.md</code> - Component vs Electron development</li>
+<li><code>BUILD_GUIDE.md</code> - Desktop app building</li>
+<li><code>DESKTOP_APP_GUIDE.md</code> - Complete Electron guide</li>
+<li><code>QUICK_REFERENCE.md</code> - Electron workflows</li>
+</ul>
+<h2 id="migration-impact">Migration Impact</h2>
+<h3 id="no-longer-applicable">No Longer Applicable</h3>
+<p>The following are <strong>no longer used</strong> in Electron architecture:</p>
+<ul>
+<li>Docker Compose workflows</li>
+<li>Makefile commands (make dev, make logs, etc.)</li>
+<li>Redis dependency (unless explicitly added)</li>
+<li>Browser-based access for production</li>
+<li>Web deployment configurations</li>
+<li>localhost:3000 references</li>
+</ul>
+<h3 id="still-applicable">Still Applicable</h3>
+<p>The following are <strong>still valid</strong> in Electron architecture:</p>
+<ul>
+<li>Backend API structure (ASP.NET Core)</li>
+<li>Core business logic (Aura.Core)</li>
+<li>Provider system (Aura.Providers)</li>
+<li>Frontend components (React + TypeScript)</li>
+<li>Build validation scripts</li>
+<li>Testing infrastructure (Vitest, Playwright)</li>
+<li>localhost:5173 for component development mode</li>
+<li>localhost:5005 for standalone backend testing</li>
+</ul>
+<h2 id="for-new-contributors">For New Contributors</h2>
+<p><strong>If you're new to the project:</strong></p>
+<ol>
+<li><strong>Ignore Docker references</strong> - We don't use Docker anymore (desktop app)</li>
+<li><strong>Ignore localhost:3000</strong> - That was the old web port</li>
+<li><strong>Use Electron for main development</strong> - See <a href="../../DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a></li>
+<li><strong>Use component mode for iteration</strong> - See <a href="../../DEVELOPMENT.html">DEVELOPMENT.md</a></li>
+<li><strong>localhost:5173</strong> - Only for component mode (browser testing)</li>
+<li><strong>localhost:5005</strong> - Backend API port (standalone mode)</li>
+</ol>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="../../DESKTOP_APP_GUIDE.html">DESKTOP_APP_GUIDE.md</a> - Complete Electron development guide</li>
+<li><a href="../../DEVELOPMENT.html">DEVELOPMENT.md</a> - Component development workflows</li>
+<li><a href="../../BUILD_GUIDE.html">BUILD_GUIDE.md</a> - Building desktop app installers</li>
+<li>Electron README - Electron architecture details</li>
+</ul>
+<h2 id="questions">Questions?</h2>
+<p>If you encounter documentation that references old architecture patterns:</p>
+<ol>
+<li>Check if it's in an archived/historical context</li>
+<li>Refer to this document for clarification</li>
+<li>Use the current documentation links above</li>
+<li>Ask in GitHub Discussions if unclear</li>
+</ol>
+<hr>
+<p><strong>Last Updated:</strong> November 2025 (Electron migration complete)</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/ARCHITECTURE_MIGRATION_NOTE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

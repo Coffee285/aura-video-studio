@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Mandatory First-Run Setup Wizard - Implementation Summary | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Mandatory First-Run Setup Wizard - Implementation Summary | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/MANDATORY_FIRST_RUN_SETUP.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="mandatory-first-run-setup-wizard---implementation-summary">Mandatory First-Run Setup Wizard - Implementation Summary</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document describes the mandatory first-run setup wizard implementation that ensures all new users complete essential configuration before accessing the application.</p>
+<h2 id="key-features">Key Features</h2>
+<h3 id="1-mandatory-full-screen-wizard">1. Mandatory Full-Screen Wizard</h3>
+<p>The setup wizard is now completely mandatory and displayed as a full-screen overlay:</p>
+<ul>
+<li><strong>Cannot be dismissed</strong>: No &quot;X&quot; button, no &quot;Skip&quot; button, no &quot;Save and Exit&quot; option</li>
+<li><strong>Blocks all navigation</strong>: Sidebar and main navigation are hidden during setup</li>
+<li><strong>Full-screen overlay</strong>: Wizard is rendered at <code>z-index: 10000</code> covering the entire app</li>
+<li><strong>Completion required</strong>: User cannot access any features until setup is complete</li>
+</ul>
+<h3 id="2-simplified-5-step-flow">2. Simplified 5-Step Flow</h3>
+<p>Reduced from 9 steps to 5 essential mandatory steps:</p>
+<h4 id="step-1-welcome">Step 1: Welcome</h4>
+<ul>
+<li>Clear welcome message: &quot;Welcome to Aura Video Studio - Let's get you set up!&quot;</li>
+<li>Brief explanation of what will be configured</li>
+<li>Single &quot;Get Started&quot; button</li>
+</ul>
+<h4 id="step-2-ffmpeg-installation-required">Step 2: FFmpeg Installation (REQUIRED)</h4>
+<ul>
+<li><strong>Why required</strong>: &quot;FFmpeg is the industry-standard tool for video processing. Aura uses it to render your videos, add transitions, apply effects, and export in various formats. Without FFmpeg, video generation cannot proceed.&quot;</li>
+<li><strong>Auto-installation</strong>: One-click install that automatically:
+<ul>
+<li>Detects OS (Windows/Mac/Linux)</li>
+<li>Downloads appropriate FFmpeg version</li>
+<li>Extracts to application directory</li>
+<li>Sets up PATH automatically</li>
+<li>Verifies installation</li>
+</ul>
+</li>
+<li><strong>Validation</strong>: Cannot proceed without FFmpeg installed</li>
+<li><strong>Error handling</strong>: Shows clear error message if installation fails with retry option</li>
+</ul>
+<h4 id="step-3-provider-configuration-at-least-one-required">Step 3: Provider Configuration (AT LEAST ONE REQUIRED)</h4>
+<ul>
+<li><strong>Why required</strong>: &quot;LLM providers power the AI script generation. You need at least one configured to create video scripts automatically. Premium providers (OpenAI, Anthropic) offer higher quality, while offline mode provides basic functionality without API keys.&quot;</li>
+<li><strong>Options</strong>:
+<ul>
+<li>Configure premium providers (OpenAI, Anthropic, Google Gemini)</li>
+<li>Use offline mode (rule-based generation)</li>
+</ul>
+</li>
+<li><strong>Prominent &quot;Skip for now - Use offline mode&quot; button</strong>:
+<ul>
+<li>One-click to enable offline mode</li>
+<li>Shows toast: &quot;Offline Mode Enabled - Using rule-based script generation&quot;</li>
+<li>Automatically marks provider requirement as satisfied</li>
+</ul>
+</li>
+<li><strong>Validation</strong>: Cannot proceed without at least one provider configured OR offline mode enabled</li>
+<li><strong>Clear labeling</strong>: &quot;Required for core functionality&quot;</li>
+<li><strong>Error message</strong>: Shows red warning card if user tries to proceed without any provider</li>
+</ul>
+<h4 id="step-4-workspace-setup-required">Step 4: Workspace Setup (REQUIRED)</h4>
+<ul>
+<li><strong>Why required</strong>: &quot;Aura needs to know where to save your generated videos and temporary files. We've pre-filled sensible defaults for your operating system, but you can customize these locations.&quot;</li>
+<li><strong>Pre-filled defaults</strong>:
+<ul>
+<li>Windows: <code>%USERPROFILE%\Videos\Aura</code></li>
+<li>macOS: <code>~/Movies/Aura</code></li>
+<li>Linux: <code>~/Videos/Aura</code></li>
+</ul>
+</li>
+<li><strong>Features</strong>:
+<ul>
+<li>Browse button for custom location selection</li>
+<li>Path validation</li>
+<li>Auto-creates directories if they don't exist</li>
+</ul>
+</li>
+<li><strong>Validation</strong>: Cannot proceed without workspace location configured</li>
+</ul>
+<h4 id="step-5-setup-complete">Step 5: Setup Complete</h4>
+<ul>
+<li><strong>Success screen</strong> with checkmarks showing:
+<ul>
+<li>✓ FFmpeg installed and ready</li>
+<li>✓ X LLM provider(s) configured OR Offline mode enabled</li>
+<li>✓ Workspace configured</li>
+</ul>
+</li>
+<li><strong>&quot;Start Creating Videos&quot; button</strong>: Completes setup and navigates to main app</li>
+<li><strong>No &quot;Never show again&quot; option</strong>: Setup is truly first-run only, stored in database</li>
+</ul>
+<h3 id="3-progress-indicators">3. Progress Indicators</h3>
+<ul>
+<li><strong>Step counter</strong>: &quot;Step X of 5 - Required Setup&quot; at top of wizard</li>
+<li><strong>Progress bar</strong>: Visual progress indicator showing current step</li>
+<li><strong>Step labels</strong>: Clear labels for each step (not just numbers)</li>
+<li><strong>Cannot skip ahead</strong>: Can only go back to previous steps, not forward</li>
+</ul>
+<h3 id="4-validation-at-each-step">4. Validation at Each Step</h3>
+<p>Each step has strict validation before allowing &quot;Next&quot;:</p>
+<pre><code class="lang-typescript">// Step 1 → Step 2: FFmpeg check
+if (!ffmpegReady) {
+  showFailureToast({
+    title: 'FFmpeg Required',
+    message: 'Please install FFmpeg before continuing.'
+  });
+  return; // Blocks navigation
+}
+
+// Step 2 → Step 3: Provider check
+if (!hasAtLeastOneProvider) {
+  showFailureToast({
+    title: 'Provider Required',
+    message: 'Please configure at least one LLM provider or choose offline mode.'
+  });
+  return; // Blocks navigation
+}
+
+// Step 3 → Step 4: Workspace check
+if (!state.workspacePreferences?.defaultSaveLocation) {
+  showFailureToast({
+    title: 'Workspace Required',
+    message: 'Please configure your workspace location.'
+  });
+  return; // Blocks navigation
+}
+</code></pre>
+<h3 id="5-ffmpeg-auto-installation">5. FFmpeg Auto-Installation</h3>
+<p>The backend implements full FFmpeg auto-installation:</p>
+<p><strong>Backend Implementation</strong> (<code>DependencyInstaller.cs</code>):</p>
+<ol>
+<li>Detects operating system</li>
+<li>Downloads appropriate FFmpeg build:
+<ul>
+<li><strong>Windows</strong>: FFmpeg 7.0.2 full build from GyanD/codexffmpeg</li>
+<li><strong>Linux</strong>: Static build from johnvansickle.com</li>
+<li><strong>macOS</strong>: Latest build from evermeet.cx</li>
+</ul>
+</li>
+<li>Extracts to <code>%LOCALAPPDATA%\Aura\ffmpeg</code> (or equivalent)</li>
+<li>Sets up PATH</li>
+<li>Verifies installation</li>
+<li>Reports progress via Server-Sent Events (SSE)</li>
+</ol>
+<p><strong>Frontend Integration</strong> (<code>FFmpegDependencyCard.tsx</code>):</p>
+<ul>
+<li>Shows current FFmpeg status (installed, version, path)</li>
+<li>&quot;Install Managed FFmpeg&quot; button triggers auto-installation</li>
+<li>Progress bar shows download and extraction progress</li>
+<li>Auto-verifies after installation</li>
+<li>Calls <code>onInstallComplete</code> callback to enable &quot;Next&quot; button</li>
+</ul>
+<h3 id="6-configuration-gate">6. Configuration Gate</h3>
+<p>After setup completes, the <code>ConfigurationGate</code> component still validates settings on app load:</p>
+<ul>
+<li>Checks if first-run is complete</li>
+<li>Validates FFmpeg is still available</li>
+<li>Validates workspace paths are valid</li>
+<li>Shows non-dismissible error if configuration becomes invalid</li>
+<li>Allows re-running setup from Settings</li>
+</ul>
+<h2 id="technical-implementation">Technical Implementation</h2>
+<h3 id="apptsx-changes">App.tsx Changes</h3>
+<pre><code class="lang-typescript">// Show mandatory wizard as full-screen overlay if first run
+if (shouldShowOnboarding) {
+  return (
+    &lt;QueryClientProvider client={queryClient}&gt;
+      &lt;ThemeContext.Provider value={{ isDarkMode, toggleTheme }}&gt;
+        &lt;FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}&gt;
+          &lt;BrowserRouter&gt;
+            &lt;FirstRunWizard
+              onComplete={async () =&gt; {
+                setShouldShowOnboarding(false);
+                await markFirstRunCompleted();
+              }}
+            /&gt;
+          &lt;/BrowserRouter&gt;
+        &lt;/FluentProvider&gt;
+      &lt;/ThemeContext.Provider&gt;
+    &lt;/QueryClientProvider&gt;
+  );
+}
+
+// Regular app flow (only after setup complete)
+return (
+  &lt;QueryClientProvider client={queryClient}&gt;
+    &lt;ThemeContext.Provider value={{ isDarkMode, toggleTheme }}&gt;
+      &lt;FluentProvider theme={isDarkMode ? webDarkTheme : webLightTheme}&gt;
+        &lt;ActivityProvider&gt;
+          &lt;BrowserRouter&gt;
+            {/* Main app with sidebar, routes, etc. */}
+          &lt;/BrowserRouter&gt;
+        &lt;/ActivityProvider&gt;
+      &lt;/FluentProvider&gt;
+    &lt;/ThemeContext.Provider&gt;
+  &lt;/QueryClientProvider&gt;
+);
+</code></pre>
+<h3 id="firstrunwizardtsx-changes">FirstRunWizard.tsx Changes</h3>
+<p><strong>Key differences from old implementation</strong>:</p>
+<ol>
+<li><strong>Removed optional steps</strong>: Tier selection, templates, hardware detection, validation</li>
+<li><strong>Simplified to 5 mandatory steps</strong>: Welcome, FFmpeg, Providers, Workspace, Complete</li>
+<li><strong>Added validation logic</strong>: Each step validates before allowing &quot;Next&quot;</li>
+<li><strong>Removed exit options</strong>: No &quot;Save and Exit&quot;, no dismiss button</li>
+<li><strong>Full-screen styling</strong>: <code>position: fixed</code> with high z-index</li>
+<li><strong>Provider offline mode</strong>: Clear &quot;Skip All&quot; option that enables offline mode</li>
+<li><strong>Help text</strong>: Each step shows &quot;Why is this required?&quot; explanation</li>
+</ol>
+<h3 id="state-management">State Management</h3>
+<p>The wizard uses the existing <code>onboarding</code> state from Zustand, but simplified:</p>
+<pre><code class="lang-typescript">// Core state used
+- step: number (0-4)
+- apiKeys: Record&lt;string, string&gt;
+- apiKeyValidationStatus: Record&lt;string, 'valid' | 'invalid' | 'pending'&gt;
+- workspacePreferences: { defaultSaveLocation, cacheLocation }
+- selectedTier: 'free' | 'pro' (for offline mode detection)
+- mode: 'free' | 'pro' (for offline mode)
+
+// State NOT used anymore
+- hardware detection
+- template selection
+- dependency scanning (except FFmpeg)
+- validation stages
+</code></pre>
+<h3 id="persistence">Persistence</h3>
+<p>Setup completion is persisted in two places:</p>
+<ol>
+<li><p><strong>LocalStorage</strong> (fast, immediate):</p>
+<pre><code class="lang-typescript">localStorage.setItem('hasCompletedFirstRun', 'true');
+</code></pre>
+</li>
+<li><p><strong>Backend Database</strong> (persistent, cross-device):</p>
+<pre><code class="lang-typescript">POST /api/setup/wizard/complete
+{
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;selectedTier&quot;: &quot;free&quot;,
+  &quot;lastStep&quot;: 10
+}
+</code></pre>
+</li>
+</ol>
+<h2 id="user-experience-flow">User Experience Flow</h2>
+<h3 id="first-time-user">First-Time User</h3>
+<ol>
+<li><p><strong>Opens application</strong></p>
+<ul>
+<li>Sees loading spinner: &quot;Loading...&quot;</li>
+<li>Backend checks first-run status</li>
+</ul>
+</li>
+<li><p><strong>Wizard appears</strong> (full-screen, cannot dismiss)</p>
+<ul>
+<li>&quot;Welcome to Aura Video Studio - Let's get you set up!&quot;</li>
+<li>&quot;Step 1 of 5 - Required Setup&quot;</li>
+<li>Progress bar shows 0%</li>
+</ul>
+</li>
+<li><p><strong>Step 1: Welcome</strong></p>
+<ul>
+<li>Click &quot;Get Started&quot;</li>
+</ul>
+</li>
+<li><p><strong>Step 2: FFmpeg Installation</strong></p>
+<ul>
+<li>Sees FFmpeg status check</li>
+<li>If not installed: Click &quot;Install Managed FFmpeg&quot;</li>
+<li>Progress bar shows download/extraction progress</li>
+<li>Success: FFmpeg version displayed, &quot;Next&quot; button enabled</li>
+</ul>
+</li>
+<li><p><strong>Step 3: Provider Configuration</strong></p>
+<ul>
+<li>Sees list of providers (OpenAI, Anthropic, etc.)</li>
+<li>Options:
+<ul>
+<li><strong>Enter API key</strong> → Validate → Success ✓</li>
+<li><strong>Click &quot;Skip All&quot;</strong> → Offline mode enabled → Success ✓</li>
+</ul>
+</li>
+<li>&quot;Next&quot; button enabled when at least one provider configured</li>
+</ul>
+</li>
+<li><p><strong>Step 4: Workspace Setup</strong></p>
+<ul>
+<li>Sees pre-filled default paths</li>
+<li>Can accept defaults or click &quot;Browse&quot; to customize</li>
+<li>&quot;Next&quot; button always enabled (defaults are valid)</li>
+</ul>
+</li>
+<li><p><strong>Step 5: Setup Complete</strong></p>
+<ul>
+<li>Success screen with checkmarks</li>
+<li>Click &quot;Start Creating Videos&quot;</li>
+<li>Setup marked complete in database</li>
+<li>Wizard closes, main app loads</li>
+</ul>
+</li>
+</ol>
+<h3 id="returning-user">Returning User</h3>
+<ol>
+<li><strong>Opens application</strong>
+<ul>
+<li>Backend checks: first-run already complete</li>
+<li>Main app loads directly</li>
+<li>No wizard shown</li>
+</ul>
+</li>
+</ol>
+<h3 id="re-running-setup">Re-running Setup</h3>
+<p>If user wants to reconfigure:</p>
+<ol>
+<li>Go to <strong>Settings</strong> → <strong>Re-run Setup Wizard</strong></li>
+<li>Wizard appears again</li>
+<li>Current configuration pre-filled</li>
+<li>Can update any settings</li>
+<li>Completion updates configuration</li>
+</ol>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="ffmpeg-installation-fails">FFmpeg Installation Fails</h3>
+<pre><code>❌ Installation failed
+Error: Failed to download FFmpeg from GitHub
+
+[Retry] [Troubleshoot]
+</code></pre>
+<p><strong>Troubleshoot</strong> opens help page with:</p>
+<ul>
+<li>Manual installation instructions</li>
+<li>System requirements</li>
+<li>Firewall configuration tips</li>
+<li>Alternative download links</li>
+</ul>
+<h3 id="provider-validation-fails">Provider Validation Fails</h3>
+<pre><code>❌ Invalid API Key
+The provided OpenAI API key is invalid or expired.
+
+[Re-enter Key] [Skip for now - Use offline mode]
+</code></pre>
+<h3 id="workspace-path-invalid">Workspace Path Invalid</h3>
+<pre><code>❌ Invalid Path
+The specified path is not writable or does not exist.
+
+[Browse] [Use Default]
+</code></pre>
+<h2 id="testing-checklist">Testing Checklist</h2>
+<ul>
+<li><p>[ ] Fresh installation flow</p>
+<ul>
+<li>[ ] Wizard appears on first launch</li>
+<li>[ ] Cannot dismiss wizard</li>
+<li>[ ] Cannot access sidebar/navigation</li>
+<li>[ ] Progress indicator updates correctly</li>
+</ul>
+</li>
+<li><p>[ ] FFmpeg installation</p>
+<ul>
+<li>[ ] Windows: Downloads and installs correctly</li>
+<li>[ ] macOS: Downloads and installs correctly</li>
+<li>[ ] Linux: Downloads and installs correctly</li>
+<li>[ ] PATH is set automatically</li>
+<li>[ ] Version is verified and displayed</li>
+</ul>
+</li>
+<li><p>[ ] Provider configuration</p>
+<ul>
+<li>[ ] Can configure OpenAI</li>
+<li>[ ] Can configure Anthropic</li>
+<li>[ ] Can validate API keys</li>
+<li>[ ] Can enable offline mode</li>
+<li>[ ] Cannot proceed without at least one</li>
+</ul>
+</li>
+<li><p>[ ] Workspace setup</p>
+<ul>
+<li>[ ] Default paths are OS-appropriate</li>
+<li>[ ] Browse button works</li>
+<li>[ ] Custom paths are validated</li>
+<li>[ ] Directories are created if needed</li>
+</ul>
+</li>
+<li><p>[ ] Completion</p>
+<ul>
+<li>[ ] Configuration persists to database</li>
+<li>[ ] Wizard closes on completion</li>
+<li>[ ] Main app loads successfully</li>
+<li>[ ] Can create videos immediately</li>
+</ul>
+</li>
+<li><p>[ ] Re-entry</p>
+<ul>
+<li>[ ] Returning users don't see wizard</li>
+<li>[ ] Can re-run from Settings</li>
+<li>[ ] Previous configuration pre-filled</li>
+</ul>
+</li>
+<li><p>[ ] Error handling</p>
+<ul>
+<li>[ ] Network errors handled gracefully</li>
+<li>[ ] Invalid API keys detected</li>
+<li>[ ] Invalid paths rejected</li>
+<li>[ ] Retry mechanisms work</li>
+</ul>
+</li>
+</ul>
+<h2 id="limitations-and-future-enhancements">Limitations and Future Enhancements</h2>
+<h3 id="current-limitations">Current Limitations</h3>
+<ol>
+<li><p><strong>No sample generation</strong>: Removed from completion step</p>
+<ul>
+<li>Could be added as optional &quot;Quick Demo&quot; button</li>
+<li>Would require job orchestration ready</li>
+</ul>
+</li>
+<li><p><strong>No hardware detection</strong>: Removed as optional</p>
+<ul>
+<li>Could be added as background task</li>
+<li>Not blocking for basic usage</li>
+</ul>
+</li>
+<li><p><strong>No templates</strong>: Removed as optional</p>
+<ul>
+<li>Could be added as post-setup onboarding</li>
+<li>Not essential for first video</li>
+</ul>
+</li>
+</ol>
+<h3 id="potential-enhancements">Potential Enhancements</h3>
+<ol>
+<li><strong>Auto-detect providers</strong>: Check for existing API keys in environment</li>
+<li><strong>Quick test</strong>: Validate complete setup with micro-generation</li>
+<li><strong>Setup profiles</strong>: Save multiple configurations (work, personal)</li>
+<li><strong>Import settings</strong>: Load configuration from file</li>
+<li><strong>Skip for developers</strong>: Environment variable to bypass for dev/test</li>
+</ol>
+<h2 id="resetting-the-wizard-for-testing--development">Resetting the Wizard (For Testing &amp; Development)</h2>
+<p>While the wizard is designed to run only once per installation, developers and testers may need to reset it to verify the first-run experience. There are multiple ways to reset the wizard state:</p>
+<h3 id="method-1-using-clean-desktopps1-script-recommended">Method 1: Using <code>clean-desktop.ps1</code> Script (Recommended)</h3>
+<p>The most comprehensive way to reset the wizard is to use the <code>clean-desktop.ps1</code> script located in the <code>Aura.Desktop</code> folder:</p>
+<pre><code class="lang-powershell"># Preview what will be cleaned (dry run)
+.\Aura.Desktop\clean-desktop.ps1 -DryRun
+
+# Clean everything including wizard state
+.\Aura.Desktop\clean-desktop.ps1
+</code></pre>
+<p><strong>What this script resets:</strong></p>
+<ul>
+<li>✅ SQLite database (<code>%LOCALAPPDATA%\Aura\aura.db</code>) - removes all wizard progress</li>
+<li>✅ Database WAL/journal files</li>
+<li>✅ Backend wizard state (via API call if server is running)</li>
+<li>✅ AppData configuration and cache</li>
+<li>✅ Downloaded tools and temporary files</li>
+<li>✅ Build artifacts</li>
+</ul>
+<p><strong>Note:</strong> LocalStorage is cleared automatically when the app restarts and detects no backend state.</p>
+<h3 id="method-2-backend-api-call">Method 2: Backend API Call</h3>
+<p>If the backend server is running, you can call the reset endpoint directly:</p>
+<pre><code class="lang-bash"># Using curl (Windows/Linux/macOS)
+curl -X POST http://localhost:5005/api/setup/wizard/reset \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;userId&quot;:&quot;default&quot;,&quot;preserveData&quot;:false}'
+
+# Using PowerShell
+$body = @{userId=&quot;default&quot;; preserveData=$false} | ConvertTo-Json
+Invoke-WebRequest -Uri &quot;http://localhost:5005/api/setup/wizard/reset&quot; `
+  -Method POST -Body $body -ContentType &quot;application/json&quot;
+</code></pre>
+<h3 id="method-3-manual-database-deletion">Method 3: Manual Database Deletion</h3>
+<p>If you only want to reset the wizard without cleaning everything:</p>
+<ol>
+<li><strong>Stop the application</strong> (both frontend and backend)</li>
+<li><strong>Delete the database file:</strong>
+<ul>
+<li>Windows: <code>%LOCALAPPDATA%\Aura\aura.db</code></li>
+<li>Also delete: <code>aura.db-shm</code>, <code>aura.db-wal</code>, <code>aura.db-journal</code> (if present)</li>
+</ul>
+</li>
+<li><strong>Clear browser localStorage</strong> (if testing web version):
+<ul>
+<li>Open Developer Tools (F12)</li>
+<li>Go to Application tab → Local Storage</li>
+<li>Delete keys: <code>hasCompletedFirstRun</code>, <code>hasSeenOnboarding</code>, <code>wizardProgress</code></li>
+</ul>
+</li>
+<li><strong>Restart the application</strong></li>
+</ol>
+<h3 id="method-4-programmatic-reset-from-frontend">Method 4: Programmatic Reset (From Frontend)</h3>
+<p>For automated testing or development tools, use the exported functions:</p>
+<pre><code class="lang-typescript">import { resetFirstRunStatus } from './services/firstRunService';
+import { clearWizardStateFromStorage, resetWizardInBackend } from './state/onboarding';
+
+// Full reset (localStorage + backend)
+await resetFirstRunStatus();
+
+// Individual resets
+clearWizardStateFromStorage(); // Clear localStorage only
+await resetWizardInBackend(false); // Clear backend only (preserveData=false)
+</code></pre>
+<h3 id="verification-after-reset">Verification After Reset</h3>
+<p>After resetting, verify the wizard appears correctly:</p>
+<ol>
+<li>Start the application</li>
+<li>Should see the welcome screen (Step 1 of 5)</li>
+<li>No &quot;Continue where you left off?&quot; dialog</li>
+<li>Empty configuration (except smart defaults)</li>
+</ol>
+<h3 id="database-location-reference">Database Location Reference</h3>
+<p>The wizard state is stored in the SQLite database at:</p>
+<pre><code>Windows:  %LOCALAPPDATA%\Aura\aura.db
+          (typically: C:\Users\&lt;YourName&gt;\AppData\Local\Aura\aura.db)
+
+macOS:    ~/Library/Application Support/Aura/aura.db
+
+Linux:    ~/.local/share/Aura/aura.db
+</code></pre>
+<p>The database contains the <code>UserSetups</code> table which tracks:</p>
+<ul>
+<li>Wizard completion status (<code>Completed</code> boolean)</li>
+<li>Current step (<code>LastStep</code> integer)</li>
+<li>Wizard state JSON (<code>WizardState</code> text)</li>
+<li>Timestamps (<code>CreatedAt</code>, <code>UpdatedAt</code>, <code>CompletedAt</code>)</li>
+</ul>
+<h3 id="troubleshooting-reset-issues">Troubleshooting Reset Issues</h3>
+<p><strong>Issue:</strong> Wizard still shows &quot;completed&quot; after reset</p>
+<ul>
+<li><strong>Cause:</strong> Backend database not deleted or still running</li>
+<li><strong>Solution:</strong> Stop backend, delete database, restart</li>
+</ul>
+<p><strong>Issue:</strong> &quot;Continue where you left off?&quot; appears after clean reset</p>
+<ul>
+<li><strong>Cause:</strong> Old wizard progress saved in backend</li>
+<li><strong>Solution:</strong> Use <code>clean-desktop.ps1</code> to ensure backend reset</li>
+</ul>
+<p><strong>Issue:</strong> App bypasses wizard even after reset</p>
+<ul>
+<li><strong>Cause:</strong> localStorage still has completion flag</li>
+<li><strong>Solution:</strong> Clear browser cache/localStorage or use incognito mode</li>
+</ul>
+<h2 id="conclusion">Conclusion</h2>
+<p>The mandatory first-run setup wizard ensures every user has a working configuration before creating their first video. By simplifying to 5 essential steps and adding clear validation, the setup experience is both thorough and user-friendly.</p>
+<p>Key achievements:</p>
+<ul>
+<li>✅ Truly mandatory (cannot skip or dismiss)</li>
+<li>✅ Clear progress indicators</li>
+<li>✅ Helpful explanations for each step</li>
+<li>✅ FFmpeg auto-installation for all OS</li>
+<li>✅ Flexible provider configuration (premium or offline)</li>
+<li>✅ Smart defaults for workspace</li>
+<li>✅ Validation at every step</li>
+<li>✅ Persistence to prevent re-runs</li>
+<li>✅ Comprehensive reset mechanism for testing</li>
+</ul>
+<p>This implementation resolves the critical usability issue where new users could bypass setup and encounter errors when trying to generate videos.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/MANDATORY_FIRST_RUN_SETUP.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

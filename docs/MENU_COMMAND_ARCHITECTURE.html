@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Menu Command System Architecture | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Menu Command System Architecture | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/MENU_COMMAND_ARCHITECTURE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="menu-command-system-architecture">Menu Command System Architecture</h1>
+
+<h2 id="flow-diagram">Flow Diagram</h2>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────────┐
+│                           USER CLICKS MENU ITEM                              │
+│                         (e.g., File → New Project)                           │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        MAIN PROCESS (Electron)                               │
+│                                                                               │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ menu-builder.js                                                        │  │
+│  │                                                                         │  │
+│  │  1. User clicks &quot;New Project&quot;                                          │  │
+│  │  2. Call: _sendToRenderer('menu:newProject', {})                       │  │
+│  │                                                                         │  │
+│  │  3. Validate payload:                                                  │  │
+│  │     const validation = validateCommandPayload(                         │  │
+│  │       'menu:newProject', {}                                            │  │
+│  │     );                                                                  │  │
+│  │     ✓ Validation passed                                                │  │
+│  │                                                                         │  │
+│  │  4. Generate correlation ID:                                           │  │
+│  │     correlationId = &quot;cmd_1763080295_abc123&quot;                            │  │
+│  │                                                                         │  │
+│  │  5. Log:                                                               │  │
+│  │     [MenuBuilder] Sending command to renderer                          │  │
+│  │       correlationId: cmd_1763080295_abc123                             │  │
+│  │       channel: menu:newProject                                         │  │
+│  │       command: New Project                                             │  │
+│  │                                                                         │  │
+│  │  6. Send IPC: webContents.send(channel, payload)                       │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │ IPC Message
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        PRELOAD SCRIPT (Sandboxed)                            │
+│                                                                               │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ menu-command-handler.js                                                │  │
+│  │                                                                         │  │
+│  │  1. Receive IPC event on 'menu:newProject'                             │  │
+│  │                                                                         │  │
+│  │  2. Re-validate payload:                                               │  │
+│  │     const validation = validateCommandPayload(                         │  │
+│  │       'menu:newProject', payload                                       │  │
+│  │     );                                                                  │  │
+│  │     ✓ Validation passed                                                │  │
+│  │                                                                         │  │
+│  │  3. Enhance payload:                                                   │  │
+│  │     enhancedPayload = {                                                │  │
+│  │       _correlationId: &quot;cmd_1763080295_abc123&quot;,                         │  │
+│  │       _timestamp: &quot;2025-11-14T00:31:35.219Z&quot;,                          │  │
+│  │       _command: {                                                      │  │
+│  │         label: &quot;New Project&quot;,                                          │  │
+│  │         category: &quot;File&quot;,                                              │  │
+│  │         description: &quot;Create a new video project&quot;                      │  │
+│  │       }                                                                 │  │
+│  │     }                                                                   │  │
+│  │                                                                         │  │
+│  │  4. Log:                                                               │  │
+│  │     [Preload:MenuCommand] Validation passed, dispatching               │  │
+│  │       correlationId: cmd_1763080295_abc123                             │  │
+│  │       channel: menu:newProject                                         │  │
+│  │                                                                         │  │
+│  │  5. Call user callback with enhanced payload                           │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└───────────────────────────────────┬─────────────────────────────────────────┘
+                                    │ Enhanced Payload
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       RENDERER PROCESS (React)                               │
+│                                                                               │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │ menuCommandDispatcher.ts                                               │  │
+│  │                                                                         │  │
+│  │  1. dispatch('menu:newProject', enhancedPayload) called                │  │
+│  │                                                                         │  │
+│  │  2. Check for validation errors:                                       │  │
+│  │     if (payload._validationError) {                                    │  │
+│  │       showToast(error);                                                │  │
+│  │       return;                                                           │  │
+│  │     }                                                                   │  │
+│  │     ✓ No validation errors                                             │  │
+│  │                                                                         │  │
+│  │  3. Find registered handlers:                                          │  │
+│  │     handlers = getHandlers('menu:newProject')                          │  │
+│  │     ✓ Found 1 handler                                                  │  │
+│  │                                                                         │  │
+│  │  4. Check context availability:                                        │  │
+│  │     currentContext = GLOBAL                                            │  │
+│  │     requiredContext = GLOBAL                                           │  │
+│  │     ✓ Command available in current context                            │  │
+│  │                                                                         │  │
+│  │  5. Execute handler:                                                   │  │
+│  │     handler(enhancedPayload)                                           │  │
+│  │     → navigate('/create')                                              │  │
+│  │                                                                         │  │
+│  │  6. Log:                                                               │  │
+│  │     [MenuCommand] Command completed                                    │  │
+│  │       correlationId: cmd_1763080295_abc123                             │  │
+│  │       duration: 15ms                                                   │  │
+│  │                                                                         │  │
+│  │  Result: User navigated to /create page ✓                              │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="error-scenarios">Error Scenarios</h2>
+<h3 id="scenario-1-validation-error">Scenario 1: Validation Error</h3>
+<pre><code>User clicks: File → Open Recent Project (without data)
+                                    ↓
+Main: Validates payload {} against schema
+      ✗ Error: &quot;path&quot; is required
+      → Still sends IPC but includes _validationError
+                                    ↓
+Preload: Receives payload with _validationError
+         → Calls callback with error context
+                                    ↓
+Renderer: Checks payload._validationError
+          → Shows toast: &quot;Command validation failed: path is required&quot;
+          → Does NOT execute handler
+</code></pre>
+<h3 id="scenario-2-context-mismatch">Scenario 2: Context Mismatch</h3>
+<pre><code>User clicks: File → Save Project
+                                    ↓
+Main: Validates and sends (validation passes)
+                                    ↓
+Preload: Validates and enhances (validation passes)
+                                    ↓
+Renderer: Checks context
+          currentContext = GLOBAL (no project loaded)
+          requiredContext = PROJECT_LOADED
+          ✗ Context mismatch
+          → Shows toast: &quot;Save Project is not available in this view&quot;
+          → Does NOT execute handler
+</code></pre>
+<h3 id="scenario-3-handler-error">Scenario 3: Handler Error</h3>
+<pre><code>User clicks: Tools → Clear Cache
+                                    ↓
+Main: Validates and sends (validation passes)
+                                    ↓
+Preload: Validates and enhances (validation passes)
+                                    ↓
+Renderer: Context check passes, executes handler
+          → handler throws: Error(&quot;Network timeout&quot;)
+          → Caught by dispatcher
+          → Shows toast: &quot;Failed to execute Clear Cache: Network timeout&quot;
+          → Logs error with correlation ID
+</code></pre>
+<h2 id="component-interaction">Component Interaction</h2>
+<pre><code>┌────────────────┐
+│  MenuBuilder   │  Builds Electron menu, handles clicks
+│  (main.js)     │  Validates, generates correlation IDs
+└────────┬───────┘
+         │ IPC: webContents.send()
+         ▼
+┌────────────────┐
+│ MenuCommand    │  Validates payloads, enhances with metadata
+│ Handler        │  Wraps callbacks with error handling
+│ (preload.js)   │  Tracks promise completion
+└────────┬───────┘
+         │ Callback: window.electron.menu.onXXX()
+         ▼
+┌────────────────┐
+│ MenuCommand    │  Checks context, finds handlers
+│ Dispatcher     │  Executes handlers, shows feedback
+│ (React)        │  Logs with correlation IDs
+└────────────────┘
+</code></pre>
+<h2 id="data-flow">Data Flow</h2>
+<pre><code>Menu Click
+    │
+    ├─► CommandId: &quot;menu:newProject&quot;
+    ├─► Payload: {}
+    │
+    ▼
+Validation (Main)
+    │
+    ├─► Schema: EmptyPayloadSchema
+    ├─► Result: ✓ Valid
+    │
+    ▼
+Correlation ID
+    │
+    ├─► Generated: &quot;cmd_1763080295_abc123&quot;
+    │
+    ▼
+IPC Message
+    │
+    ├─► Channel: &quot;menu:newProject&quot;
+    ├─► Payload: { _correlationId, _timestamp }
+    │
+    ▼
+Validation (Preload)
+    │
+    ├─► Re-validate against same schema
+    ├─► Result: ✓ Valid
+    │
+    ▼
+Enhancement
+    │
+    ├─► Add _command metadata
+    ├─► Add _timestamp
+    │
+    ▼
+Dispatch (Renderer)
+    │
+    ├─► Check context: ✓ Available
+    ├─► Find handler: ✓ Found
+    ├─► Execute: navigate('/create')
+    │
+    ▼
+Result
+    │
+    └─► User sees new page ✓
+</code></pre>
+<h2 id="context-system">Context System</h2>
+<pre><code>┌─────────────────────────────────────────┐
+│         Application Contexts             │
+├─────────────────────────────────────────┤
+│                                          │
+│  GLOBAL                                  │
+│  ├─ Always available                    │
+│  ├─ Commands: New, Open, Preferences    │
+│  └─ Used when: No specific state needed │
+│                                          │
+│  PROJECT_LOADED                          │
+│  ├─ Available: When project open        │
+│  ├─ Commands: Save, Export              │
+│  └─ Used when: User has active project  │
+│                                          │
+│  TIMELINE                                │
+│  ├─ Available: In timeline view         │
+│  ├─ Commands: Export Timeline           │
+│  └─ Used when: Editing timeline         │
+│                                          │
+│  MEDIA_LIBRARY                           │
+│  ├─ Available: In media library         │
+│  ├─ Commands: Import Video/Audio/Images │
+│  └─ Used when: Managing media           │
+│                                          │
+│  SETTINGS                                │
+│  ├─ Available: In settings view         │
+│  ├─ Commands: Provider Settings         │
+│  └─ Used when: Configuring app          │
+│                                          │
+│  HELP                                    │
+│  ├─ Available: In help/docs             │
+│  ├─ Commands: Getting Started           │
+│  └─ Used when: Viewing documentation    │
+│                                          │
+└─────────────────────────────────────────┘
+
+Context Checking Flow:
+1. Dispatcher: getCurrentContext() → &quot;GLOBAL&quot;
+2. Handler: requiredContext → &quot;PROJECT_LOADED&quot;
+3. Check: GLOBAL ≠ PROJECT_LOADED
+4. Result: Command not available
+5. Action: Show toast notification
+</code></pre>
+<h2 id="logging-flow">Logging Flow</h2>
+<pre><code>[Main Process]
+  [MenuBuilder] Sending command to renderer
+    timestamp: 2025-11-14T00:31:35.219Z
+    correlationId: cmd_1763080295_abc123
+    channel: menu:newProject
+    command: New Project
+    category: File
+
+[Preload Script]
+  [Preload:MenuCommand] Received command
+    correlationId: cmd_1763080295_abc123
+    channel: menu:newProject
+    timestamp: 2025-11-14T00:31:35.219Z
+
+  [Preload:MenuCommand] Validation passed, dispatching to renderer
+    correlationId: cmd_1763080295_abc123
+    channel: menu:newProject
+    command: New Project
+
+[Renderer Process]
+  [MenuCommand] Dispatching menu command
+    correlationId: cmd_1763080295_abc123
+    commandId: menu:newProject
+    command: New Project
+    category: File
+    currentContext: GLOBAL
+
+  [MenuCommand] Executing command handler
+    correlationId: cmd_1763080295_abc123
+    commandId: menu:newProject
+    feature: project-management
+    context: global
+
+  [MenuCommand] Command handler completed
+    correlationId: cmd_1763080295_abc123
+    commandId: menu:newProject
+    feature: project-management
+    duration: 15ms
+
+  [MenuCommand] Command dispatch completed
+    correlationId: cmd_1763080295_abc123
+    commandId: menu:newProject
+    handlersExecuted: 1
+    duration: 15ms
+</code></pre>
+<h2 id="key-concepts">Key Concepts</h2>
+<h3 id="correlation-id">Correlation ID</h3>
+<ul>
+<li>Format: <code>cmd_timestamp_random</code></li>
+<li>Generated: Once in main process</li>
+<li>Propagated: Through entire flow</li>
+<li>Used for: Tracking, debugging, analytics</li>
+</ul>
+<h3 id="validation-layers">Validation Layers</h3>
+<ol>
+<li><strong>Main Process</strong>: First validation, log if failed</li>
+<li><strong>Preload</strong>: Second validation, can still dispatch with error</li>
+<li><strong>Dispatcher</strong>: Final check, respects context</li>
+</ol>
+<h3 id="context-awareness">Context Awareness</h3>
+<ul>
+<li>Commands declare required contexts</li>
+<li>Dispatcher checks current context</li>
+<li>Mismatch = friendly error message</li>
+<li>No silent failures</li>
+</ul>
+<h3 id="user-feedback">User Feedback</h3>
+<ul>
+<li>Toast for validation errors</li>
+<li>Toast for context mismatches</li>
+<li>Toast for handler failures</li>
+<li>Always includes command label</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/MENU_COMMAND_ARCHITECTURE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

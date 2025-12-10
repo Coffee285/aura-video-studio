@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Database Migration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Database Migration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/MIGRATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="database-migration-guide">Database Migration Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This guide covers how to create, apply, and manage database migrations for the Aura Video Studio application using Entity Framework Core.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>.NET 8.0 SDK installed</li>
+<li>EF Core CLI tools installed: <code>dotnet tool install --global dotnet-ef</code></li>
+<li>Access to the project repository</li>
+</ul>
+<h2 id="migration-commands">Migration Commands</h2>
+<h3 id="apply-migrations">Apply Migrations</h3>
+<p>Run all pending migrations to update the database to the latest version:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh migrate
+</code></pre>
+<p>Or using dotnet CLI directly:</p>
+<pre><code class="lang-bash">cd /workspace
+dotnet ef database update \
+  --project Aura.Api \
+  --startup-project Aura.Api \
+  --context AuraDbContext
+</code></pre>
+<h3 id="create-a-new-migration">Create a New Migration</h3>
+<p>When you make changes to entity models, create a new migration:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh add &lt;MigrationName&gt;
+</code></pre>
+<p>Example:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh add AddUserEmailColumn
+</code></pre>
+<p>Or using dotnet CLI:</p>
+<pre><code class="lang-bash">dotnet ef migrations add AddUserEmailColumn \
+  --project Aura.Api \
+  --startup-project Aura.Api \
+  --context AuraDbContext \
+  --output-dir Data/Migrations
+</code></pre>
+<h3 id="remove-last-migration">Remove Last Migration</h3>
+<p>If you made a mistake in the last migration (before applying it):</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh remove
+</code></pre>
+<p><strong>Warning</strong>: Only works if the migration hasn't been applied to the database yet.</p>
+<h3 id="rollback-to-a-specific-migration">Rollback to a Specific Migration</h3>
+<p>Revert the database to a previous migration:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh rollback &lt;MigrationName&gt;
+</code></pre>
+<p>Example:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh rollback InitialCreate
+</code></pre>
+<p>To rollback all migrations:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh rollback 0
+</code></pre>
+<h3 id="list-all-migrations">List All Migrations</h3>
+<p>Show all migrations and their status:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh list
+</code></pre>
+<h3 id="generate-sql-script">Generate SQL Script</h3>
+<p>Generate an idempotent SQL script for all migrations:</p>
+<pre><code class="lang-bash">./Scripts/run-migrations.sh script migration.sql
+</code></pre>
+<p>This is useful for:</p>
+<ul>
+<li>Reviewing changes before applying</li>
+<li>Manual database updates</li>
+<li>CI/CD pipelines</li>
+</ul>
+<h2 id="migration-workflow">Migration Workflow</h2>
+<h3 id="1-development-workflow">1. Development Workflow</h3>
+<pre><code class="lang-bash"># 1. Make changes to entity models
+# Edit files in Aura.Core/Data/
+
+# 2. Create migration
+./Scripts/run-migrations.sh add MyNewFeature
+
+# 3. Review generated migration
+# Check Aura.Api/Data/Migrations/
+
+# 4. Test migration locally
+./Scripts/run-migrations.sh migrate
+
+# 5. Commit migration files
+git add Aura.Api/Data/Migrations/
+git commit -m &quot;Add migration: MyNewFeature&quot;
+</code></pre>
+<h3 id="2-production-deployment-workflow">2. Production Deployment Workflow</h3>
+<pre><code class="lang-bash"># 1. Backup database BEFORE applying migrations
+./Scripts/backup-database.sh /path/to/aura.db ./backups
+
+# 2. Review migration SQL script
+./Scripts/run-migrations.sh script review.sql
+cat review.sql
+
+# 3. Apply migrations
+./Scripts/run-migrations.sh migrate
+
+# 4. Verify migration success
+./Scripts/run-migrations.sh list
+
+# 5. Test application functionality
+
+# 6. If issues occur, rollback
+./Scripts/restore-database.sh ./backups/aura_backup_YYYYMMDD_HHMMSS.db
+</code></pre>
+<h3 id="3-staging-environment-workflow">3. Staging Environment Workflow</h3>
+<pre><code class="lang-bash"># 1. Deploy to staging
+git pull origin main
+
+# 2. Run migrations in staging
+./Scripts/run-migrations.sh migrate
+
+# 3. Run integration tests
+dotnet test
+
+# 4. Validate data integrity
+# Check key tables and queries
+
+# 5. If successful, proceed to production
+</code></pre>
+<h2 id="common-scenarios">Common Scenarios</h2>
+<h3 id="adding-a-new-column">Adding a New Column</h3>
+<pre><code class="lang-csharp">// In entity class
+public class ProjectStateEntity
+{
+    // Existing properties...
+    
+    [MaxLength(100)]
+    public string? Priority { get; set; } // New column
+}
+</code></pre>
+<pre><code class="lang-bash"># Create migration
+./Scripts/run-migrations.sh add AddProjectPriority
+
+# Apply migration
+./Scripts/run-migrations.sh migrate
+</code></pre>
+<h3 id="renaming-a-column">Renaming a Column</h3>
+<pre><code class="lang-csharp">// In migration Up method
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.RenameColumn(
+        name: &quot;OldName&quot;,
+        table: &quot;ProjectStates&quot;,
+        newName: &quot;NewName&quot;);
+}
+
+// In migration Down method
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.RenameColumn(
+        name: &quot;NewName&quot;,
+        table: &quot;ProjectStates&quot;,
+        newName: &quot;OldName&quot;);
+}
+</code></pre>
+<h3 id="adding-an-index">Adding an Index</h3>
+<pre><code class="lang-csharp">// In AuraDbContext.OnModelCreating
+modelBuilder.Entity&lt;ProjectStateEntity&gt;(entity =&gt;
+{
+    entity.HasIndex(e =&gt; e.Priority);
+});
+</code></pre>
+<pre><code class="lang-bash"># Create and apply migration
+./Scripts/run-migrations.sh add AddPriorityIndex
+./Scripts/run-migrations.sh migrate
+</code></pre>
+<h3 id="data-migration">Data Migration</h3>
+<p>When you need to transform existing data:</p>
+<pre><code class="lang-csharp">// In migration Up method
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    // Add new column
+    migrationBuilder.AddColumn&lt;string&gt;(
+        name: &quot;FullName&quot;,
+        table: &quot;Users&quot;,
+        nullable: true);
+    
+    // Migrate data
+    migrationBuilder.Sql(@&quot;
+        UPDATE Users 
+        SET FullName = FirstName || ' ' || LastName
+        WHERE FirstName IS NOT NULL AND LastName IS NOT NULL
+    &quot;);
+    
+    // Make column required if needed
+    migrationBuilder.AlterColumn&lt;string&gt;(
+        name: &quot;FullName&quot;,
+        table: &quot;Users&quot;,
+        nullable: false);
+}
+</code></pre>
+<h3 id="seeding-data">Seeding Data</h3>
+<pre><code class="lang-csharp">// In AuraDbContext.OnModelCreating
+modelBuilder.Entity&lt;TemplateEntity&gt;().HasData(
+    new TemplateEntity
+    {
+        Id = Guid.NewGuid().ToString(),
+        Name = &quot;Default Template&quot;,
+        Category = &quot;General&quot;,
+        CreatedAt = DateTime.UtcNow,
+        UpdatedAt = DateTime.UtcNow
+    }
+);
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="1-migration-naming">1. Migration Naming</h3>
+<p>Use descriptive names that indicate what changed:</p>
+<p>✅ <strong>Good</strong>:</p>
+<ul>
+<li><code>AddUserEmailColumn</code></li>
+<li><code>CreateProjectIndexes</code></li>
+<li><code>UpdateTemplateSchema</code></li>
+<li><code>SeedInitialTemplates</code></li>
+</ul>
+<p>❌ <strong>Bad</strong>:</p>
+<ul>
+<li><code>Migration1</code></li>
+<li><code>UpdateStuff</code></li>
+<li><code>Fix</code></li>
+</ul>
+<h3 id="2-migration-content">2. Migration Content</h3>
+<ul>
+<li>Keep migrations small and focused</li>
+<li>One logical change per migration</li>
+<li>Include both <code>Up</code> and <code>Down</code> methods</li>
+<li>Test rollback functionality</li>
+</ul>
+<h3 id="3-never-modify-applied-migrations">3. Never Modify Applied Migrations</h3>
+<p>Once a migration is applied to any environment (dev, staging, prod), <strong>never modify it</strong>. Instead, create a new migration to make additional changes.</p>
+<h3 id="4-review-generated-migrations">4. Review Generated Migrations</h3>
+<p>Always review auto-generated migrations before applying:</p>
+<ul>
+<li>Check for data loss warnings</li>
+<li>Verify nullable constraints</li>
+<li>Ensure indexes are created</li>
+<li>Review default values</li>
+</ul>
+<h3 id="5-test-migrations">5. Test Migrations</h3>
+<p>Before production deployment:</p>
+<ol>
+<li>Test migration up</li>
+<li>Test migration down (rollback)</li>
+<li>Verify data integrity</li>
+<li>Test application functionality</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="migration-fails-with-table-already-exists">Migration Fails with &quot;Table already exists&quot;</h3>
+<p><strong>Cause</strong>: Migration was partially applied or database is out of sync.</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Option 1: Reset database (development only)
+rm aura.db
+./Scripts/run-migrations.sh migrate
+
+# Option 2: Manually fix and sync
+# Edit migration to skip existing table
+# Or manually drop conflicting table
+</code></pre>
+<h3 id="cannot-rollback-migration">Cannot Rollback Migration</h3>
+<p><strong>Cause</strong>: <code>Down</code> method not implemented or data loss would occur.</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Restore from backup
+./Scripts/restore-database.sh ./backups/latest_backup.db
+
+# Or manually implement Down method
+</code></pre>
+<h3 id="no-migrations-configuration-type-was-found">&quot;No migrations configuration type was found&quot;</h3>
+<p><strong>Cause</strong>: EF Core tools can't find the DbContext.</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># Ensure you're in the project root
+cd /workspace
+
+# Specify all parameters explicitly
+dotnet ef database update \
+  --project Aura.Api \
+  --startup-project Aura.Api \
+  --context AuraDbContext
+</code></pre>
+<h3 id="migrations-work-locally-but-fail-in-production">Migrations Work Locally But Fail in Production</h3>
+<p><strong>Cause</strong>: Different database state or missing permissions.</p>
+<p><strong>Solution</strong>:</p>
+<pre><code class="lang-bash"># 1. Generate SQL script
+./Scripts/run-migrations.sh script production.sql
+
+# 2. Review script for issues
+cat production.sql
+
+# 3. Run script manually or with proper permissions
+</code></pre>
+<h2 id="cicd-integration">CI/CD Integration</h2>
+<h3 id="github-actions-example">GitHub Actions Example</h3>
+<pre><code class="lang-yaml">name: Run Migrations
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Run migrations
+      run: |
+        dotnet ef database update \
+          --project Aura.Api \
+          --startup-project Aura.Api \
+          --context AuraDbContext
+    
+    - name: Run tests
+      run: dotnet test
+</code></pre>
+<h3 id="docker-deployment">Docker Deployment</h3>
+<pre><code class="lang-dockerfile"># Dockerfile
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+
+WORKDIR /app
+COPY . .
+
+# Run migrations on container startup
+ENTRYPOINT [&quot;sh&quot;, &quot;-c&quot;, &quot;dotnet ef database update &amp;&amp; dotnet Aura.Api.dll&quot;]
+</code></pre>
+<h2 id="schema-versioning">Schema Versioning</h2>
+<p>Track schema version in application:</p>
+<pre><code class="lang-csharp">public class DatabaseVersionService
+{
+    private readonly AuraDbContext _context;
+    
+    public async Task&lt;string&gt; GetCurrentVersionAsync()
+    {
+        var lastMigration = await _context.Database
+            .GetAppliedMigrationsAsync()
+            .LastOrDefaultAsync();
+        
+        return lastMigration ?? &quot;No migrations applied&quot;;
+    }
+}
+</code></pre>
+<h2 id="migration-checklist">Migration Checklist</h2>
+<p>Before creating a migration:</p>
+<ul>
+<li>[ ] Entity changes are complete and tested</li>
+<li>[ ] Relationships are properly configured</li>
+<li>[ ] Indexes are defined for query performance</li>
+<li>[ ] Validation attributes are in place</li>
+</ul>
+<p>Before applying a migration:</p>
+<ul>
+<li>[ ] Database backup created</li>
+<li>[ ] Migration reviewed for correctness</li>
+<li>[ ] Down method tested (rollback works)</li>
+<li>[ ] SQL script generated and reviewed</li>
+</ul>
+<p>After applying a migration:</p>
+<ul>
+<li>[ ] Migration status verified (<code>list</code> command)</li>
+<li>[ ] Application functionality tested</li>
+<li>[ ] Data integrity checked</li>
+<li>[ ] Performance validated</li>
+</ul>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/managing-schemas/migrations/">EF Core Migrations Documentation</a></li>
+<li><a href="https://docs.microsoft.com/en-us/ef/core/cli/dotnet">Entity Framework Core Tools Reference</a></li>
+<li><a href="https://www.sqlite.org/docs.html">SQLite Documentation</a></li>
+<li><a href="DATABASE_SCHEMA.html">Database Schema Documentation</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For migration issues:</p>
+<ol>
+<li>Check this guide</li>
+<li>Review database logs</li>
+<li>Consult the team</li>
+<li>Create an issue with detailed error messages</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/MIGRATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

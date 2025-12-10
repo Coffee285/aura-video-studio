@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>General Errors and Troubleshooting | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="General Errors and Troubleshooting | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/general-errors.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="general-errors-and-troubleshooting">General Errors and Troubleshooting</h1>
+
+<p>This guide covers general errors that don't fit into specific categories.</p>
+<h2 id="quick-navigation">Quick Navigation</h2>
+<ul>
+<li><a href="#operation-cancelled">Operation Cancelled</a></li>
+<li><a href="#not-implemented">Not Implemented</a></li>
+<li><a href="#unexpected-errors">Unexpected Errors</a></li>
+<li><a href="#database-errors">Database Errors</a></li>
+<li><a href="#configuration-errors">Configuration Errors</a></li>
+</ul>
+<hr>
+<h2 id="operation-cancelled">Operation Cancelled</h2>
+<h3 id="error-code-e998-operation-cancelled">Error Code E998: Operation Cancelled</h3>
+<p><strong>Error Message</strong>: &quot;The operation was cancelled by the user or system&quot;</p>
+<h3 id="common-causes">Common Causes</h3>
+<ol>
+<li><p><strong>User Cancelled</strong>:</p>
+<ul>
+<li>Clicked &quot;Cancel&quot; button</li>
+<li>Closed dialog mid-operation</li>
+<li>Interrupted long-running process</li>
+</ul>
+</li>
+<li><p><strong>System Cancelled</strong>:</p>
+<ul>
+<li>Application shutdown during operation</li>
+<li>Timeout exceeded</li>
+<li>Resource constraints</li>
+</ul>
+</li>
+<li><p><strong>Automatic Cancellation</strong>:</p>
+<ul>
+<li>Parent operation cancelled</li>
+<li>Dependency failed</li>
+<li>Circuit breaker opened</li>
+</ul>
+</li>
+</ol>
+<h3 id="solutions">Solutions</h3>
+<h4 id="if-accidentally-cancelled">If Accidentally Cancelled</h4>
+<ol>
+<li><strong>Retry the operation</strong></li>
+<li><strong>Check for auto-save</strong>:
+<ul>
+<li>Settings → Projects → Auto-save</li>
+<li>May have partial progress saved</li>
+</ul>
+</li>
+</ol>
+<h4 id="if-operation-taking-too-long">If Operation Taking Too Long</h4>
+<ol>
+<li><p><strong>Check progress indicator</strong>:</p>
+<ul>
+<li>Some operations show progress</li>
+<li>Wait if close to completion</li>
+</ul>
+</li>
+<li><p><strong>Increase timeout</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Timeouts&quot;: {
+    &quot;Operation&quot;: 600000  // 10 minutes
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Break into smaller operations</strong>:</p>
+<ul>
+<li>Process in batches</li>
+<li>Save progress between batches</li>
+</ul>
+</li>
+</ol>
+<h4 id="prevent-accidental-cancellation">Prevent Accidental Cancellation</h4>
+<ol>
+<li><p><strong>Enable confirmation</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;UI&quot;: {
+    &quot;ConfirmCancellation&quot;: true,
+    &quot;WarnOnLongOperations&quot;: true
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Disable cancel button during critical operations</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;UI&quot;: {
+    &quot;AllowCancelDuringRender&quot;: false
+  }
+}
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2 id="not-implemented">Not Implemented</h2>
+<h3 id="error-code-e997-feature-not-implemented">Error Code E997: Feature Not Implemented</h3>
+<p><strong>Error Message</strong>: &quot;This feature is not yet implemented&quot;</p>
+<h3 id="what-this-means">What This Means</h3>
+<ul>
+<li>Feature is planned but not yet developed</li>
+<li>Feature may be platform-specific and unavailable on your OS</li>
+<li>Feature requires specific hardware not present</li>
+</ul>
+<h3 id="check-feature-status">Check Feature Status</h3>
+<ol>
+<li><strong>Review Roadmap</strong>: <a href="../roadmap.html">Roadmap Documentation</a></li>
+<li><strong>Check GitHub Issues</strong>: May be in development</li>
+<li><strong>Check System Requirements</strong>: Feature may require specific hardware</li>
+</ol>
+<h3 id="workarounds">Workarounds</h3>
+<h4 id="alternative-methods">Alternative Methods</h4>
+<p>Some unimplemented features may have alternatives:</p>
+<ul>
+<li>Advanced export formats → Use standard formats</li>
+<li>Experimental effects → Use built-in effects</li>
+<li>Beta features → Use stable equivalents</li>
+</ul>
+<h4 id="request-feature">Request Feature</h4>
+<ol>
+<li>Check if already requested: <a href="https://github.com/Coffee285/aura-video-studio/issues">GitHub Issues</a></li>
+<li>Create feature request with:
+<ul>
+<li>Use case description</li>
+<li>Expected behavior</li>
+<li>Alternative solutions tried</li>
+<li>Willingness to test beta</li>
+</ul>
+</li>
+</ol>
+<h4 id="enable-experimental-features">Enable Experimental Features</h4>
+<p>Some features are implemented but experimental:</p>
+<pre><code class="lang-json">{
+  &quot;Features&quot;: {
+    &quot;EnableExperimental&quot;: true,
+    &quot;ExperimentalFeatures&quot;: [
+      &quot;AdvancedTransitions&quot;,
+      &quot;AIVoiceCloning&quot;,
+      &quot;RealTimePreview&quot;
+    ]
+  }
+}
+</code></pre>
+<p><strong>Warning</strong>: Experimental features may:</p>
+<ul>
+<li>Be unstable</li>
+<li>Have bugs</li>
+<li>Change without notice</li>
+<li>Be removed in future versions</li>
+</ul>
+<hr>
+<h2 id="unexpected-errors">Unexpected Errors</h2>
+<h3 id="error-code-e999-unexpected-error">Error Code E999: Unexpected Error</h3>
+<p><strong>Error Message</strong>: &quot;An unexpected error occurred&quot;</p>
+<h3 id="what-this-means-1">What This Means</h3>
+<ul>
+<li>Unhandled exception</li>
+<li>Rare edge case</li>
+<li>Potential bug</li>
+</ul>
+<h3 id="immediate-actions">Immediate Actions</h3>
+<ol>
+<li><p><strong>Save Work</strong>:</p>
+<ul>
+<li>Save project immediately</li>
+<li>Export work-in-progress if possible</li>
+</ul>
+</li>
+<li><p><strong>Note Error Context</strong>:</p>
+<ul>
+<li>What were you doing?</li>
+<li>What settings were active?</li>
+<li>Can you reproduce it?</li>
+</ul>
+</li>
+<li><p><strong>Check Logs</strong>:</p>
+<ul>
+<li>Windows: <code>%APPDATA%\Aura\logs\</code></li>
+<li>Linux/Mac: <code>~/.config/aura/logs/</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="solutions-1">Solutions</h3>
+<h4 id="1-restart-application">1. Restart Application</h4>
+<p>Simple restart often resolves:</p>
+<ul>
+<li>Memory leaks</li>
+<li>Corrupted state</li>
+<li>Temporary glitches</li>
+</ul>
+<h4 id="2-clear-cache">2. Clear Cache</h4>
+<pre><code class="lang-bash"># Via UI
+Settings → Storage → Clear Cache
+
+# Manually
+# Windows
+del /s &quot;%APPDATA%\Aura\cache\*&quot;
+
+# Linux/Mac
+rm -rf ~/.config/aura/cache/*
+</code></pre>
+<h4 id="3-reset-configuration">3. Reset Configuration</h4>
+<p>If error persists, reset to defaults:</p>
+<pre><code class="lang-bash"># Backup current config
+cp appsettings.json appsettings.json.backup
+
+# Delete config (will regenerate on next start)
+rm appsettings.json
+</code></pre>
+<h4 id="4-update-application">4. Update Application</h4>
+<p>Check for updates:</p>
+<pre><code class="lang-bash">git pull origin main
+dotnet build
+</code></pre>
+<h4 id="5-report-bug">5. Report Bug</h4>
+<p>If error persists:</p>
+<ol>
+<li>Enable debug logging:
+<pre><code class="lang-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Debug&quot;
+    }
+  }
+}
+</code></pre>
+</li>
+<li>Reproduce error</li>
+<li>Collect logs</li>
+<li>Create GitHub issue with:
+<ul>
+<li>Steps to reproduce</li>
+<li>Expected vs actual behavior</li>
+<li>Error logs (sanitized of sensitive data)</li>
+<li>System information</li>
+<li>Screenshots if applicable</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="database-errors">Database Errors</h2>
+<h3 id="database-locked">Database Locked</h3>
+<p><strong>Error</strong>: &quot;Database is locked&quot;</p>
+<p><strong>Causes</strong>:</p>
+<ul>
+<li>Another Aura instance is running</li>
+<li>Previous instance didn't close cleanly</li>
+<li>Backup software accessing database</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Close All Aura Instances</strong>:</p>
+<pre><code class="lang-bash"># Windows
+taskkill /IM Aura.Api.exe /F
+
+# Linux/Mac
+killall Aura.Api
+</code></pre>
+</li>
+<li><p><strong>Remove Stale Lock</strong>:</p>
+<pre><code class="lang-bash"># Windows
+del &quot;%APPDATA%\Aura\.lock&quot;
+
+# Linux/Mac
+rm ~/.config/aura/.lock
+</code></pre>
+</li>
+<li><p><strong>Wait for Lock Release</strong>:</p>
+<ul>
+<li>Lock typically releases within 30 seconds</li>
+<li>May be held by backup software</li>
+</ul>
+</li>
+</ol>
+<h3 id="database-corrupted">Database Corrupted</h3>
+<p><strong>Error</strong>: &quot;Database file is corrupted&quot;</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Restore from Backup</strong>:</p>
+<pre><code class="lang-bash"># Windows
+copy &quot;%APPDATA%\Aura\backups\aura.db.backup&quot; &quot;%APPDATA%\Aura\aura.db&quot;
+
+# Linux/Mac
+cp ~/.config/aura/backups/aura.db.backup ~/.config/aura/aura.db
+</code></pre>
+</li>
+<li><p><strong>Repair Database</strong>:</p>
+<pre><code class="lang-bash">sqlite3 ~/.config/aura/aura.db &quot;.recover&quot; | sqlite3 aura_recovered.db
+</code></pre>
+</li>
+<li><p><strong>Recreate Database</strong>:</p>
+<pre><code class="lang-bash"># Last resort - loses all data
+rm ~/.config/aura/aura.db
+# Aura will create new database on next start
+</code></pre>
+</li>
+</ol>
+<h3 id="migration-failed">Migration Failed</h3>
+<p><strong>Error</strong>: &quot;Database migration failed&quot;</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Check Database Version</strong>:</p>
+<pre><code class="lang-bash">sqlite3 ~/.config/aura/aura.db &quot;SELECT version FROM migrations ORDER BY version DESC LIMIT 1;&quot;
+</code></pre>
+</li>
+<li><p><strong>Rollback Migration</strong>:</p>
+<pre><code class="lang-bash"># Use migration rollback tool
+dotnet run --project Aura.Api -- migrate:rollback
+</code></pre>
+</li>
+<li><p><strong>Fresh Migration</strong>:</p>
+<pre><code class="lang-bash"># Backup data
+cp aura.db aura.db.backup
+
+# Recreate and migrate
+rm aura.db
+dotnet run --project Aura.Api -- migrate:up
+</code></pre>
+</li>
+</ol>
+<hr>
+<h2 id="configuration-errors">Configuration Errors</h2>
+<h3 id="invalid-configuration">Invalid Configuration</h3>
+<p><strong>Error</strong>: &quot;Configuration file is invalid&quot;</p>
+<p><strong>Causes</strong>:</p>
+<ul>
+<li>JSON syntax error</li>
+<li>Invalid values</li>
+<li>Missing required sections</li>
+</ul>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Validate JSON</strong>:</p>
+<pre><code class="lang-bash"># Use online validator: https://jsonlint.com/
+# Or command line:
+jq . appsettings.json
+</code></pre>
+</li>
+<li><p><strong>Check for Common Issues</strong>:</p>
+<ul>
+<li>Trailing commas</li>
+<li>Unescaped quotes</li>
+<li>Missing brackets</li>
+<li>Incorrect paths (use forward slashes or escaped backslashes)</li>
+</ul>
+</li>
+<li><p><strong>Use Example Config</strong>:</p>
+<pre><code class="lang-bash">cp appsettings.example.json appsettings.json
+# Then reconfigure
+</code></pre>
+</li>
+</ol>
+<h3 id="missing-configuration">Missing Configuration</h3>
+<p><strong>Error</strong>: &quot;Required configuration section is missing&quot;</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Add Missing Section</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;OpenAI&quot;: {
+      &quot;ApiKey&quot;: &quot;your-key-here&quot;,
+      &quot;BaseUrl&quot;: &quot;https://api.openai.com/v1&quot;
+    }
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Use Configuration Builder</strong>:</p>
+<ul>
+<li>First Run Wizard walks through configuration</li>
+<li>Or Settings UI to configure visually</li>
+</ul>
+</li>
+</ol>
+<h3 id="environment-variable-issues">Environment Variable Issues</h3>
+<p><strong>Error</strong>: &quot;Environment variable not found&quot;</p>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Set Environment Variable</strong>:</p>
+<pre><code class="lang-bash"># Windows
+setx OPENAI_KEY &quot;sk-...&quot;
+
+# Linux/Mac
+export OPENAI_KEY=&quot;sk-...&quot;
+</code></pre>
+</li>
+<li><p><strong>Use Configuration File Instead</strong>:</p>
+<ul>
+<li>More reliable than environment variables</li>
+<li>Easier to manage</li>
+</ul>
+</li>
+<li><p><strong>Check Variable Name</strong>:</p>
+<ul>
+<li>Case-sensitive on Linux/Mac</li>
+<li>Ensure correct spelling</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="application-startup-errors">Application Startup Errors</h2>
+<h3 id="failed-to-start">Failed to Start</h3>
+<p><strong>Error</strong>: &quot;Application failed to start&quot;</p>
+<p><strong>Common Causes</strong>:</p>
+<ol>
+<li><p><strong>Port Already in Use</strong>:</p>
+<pre><code class="lang-bash"># Check what's using port 5005
+netstat -ano | findstr :5005  # Windows
+lsof -i :5005  # Linux/Mac
+
+# Change Aura port
+# In appsettings.json:
+{
+  &quot;Urls&quot;: &quot;http://localhost:5006&quot;
+}
+</code></pre>
+</li>
+<li><p><strong>Missing Dependencies</strong>:</p>
+<pre><code class="lang-bash"># Install .NET dependencies
+dotnet restore
+
+# Install Node.js dependencies (for web UI)
+cd Aura.Web
+npm install
+</code></pre>
+</li>
+<li><p><strong>Permission Issues</strong>:</p>
+<pre><code class="lang-bash"># Linux/Mac: May need permission to bind to port
+# Use port &gt; 1024 or run with sudo (not recommended)
+</code></pre>
+</li>
+</ol>
+<h3 id="white-screen-on-launch">White Screen on Launch</h3>
+<p>See <a href="Troubleshooting.html#white-screen-or-application-failed-to-initialize">Troubleshooting Guide - White Screen</a></p>
+<hr>
+<h2 id="performance-issues">Performance Issues</h2>
+<h3 id="slow-application">Slow Application</h3>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Clear Cache</strong>:</p>
+<pre><code class="lang-bash">Settings → Storage → Clear Cache
+</code></pre>
+</li>
+<li><p><strong>Reduce Memory Usage</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Performance&quot;: {
+    &quot;MaxMemoryMB&quot;: 2048,
+    &quot;EnableMemoryOptimization&quot;: true
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Disable Unused Features</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Features&quot;: {
+    &quot;EnableLivePreview&quot;: false,
+    &quot;EnableAutoSave&quot;: false
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Close Browser Tabs</strong>:</p>
+<ul>
+<li>Web UI runs in browser</li>
+<li>Close other tabs to free resources</li>
+</ul>
+</li>
+</ol>
+<h3 id="frequent-crashes">Frequent Crashes</h3>
+<p><strong>Solutions</strong>:</p>
+<ol>
+<li><p><strong>Update Application</strong>:</p>
+<pre><code class="lang-bash">git pull origin main
+dotnet build
+</code></pre>
+</li>
+<li><p><strong>Check Logs for Patterns</strong>:</p>
+<ul>
+<li>Look for repeated errors</li>
+<li>Note what triggers crash</li>
+</ul>
+</li>
+<li><p><strong>Disable Hardware Acceleration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Rendering&quot;: {
+    &quot;UseHardwareAcceleration&quot;: false
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Increase System Resources</strong>:</p>
+<ul>
+<li>Close other applications</li>
+<li>Add more RAM if possible</li>
+<li>Use SSD for better performance</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="getting-help">Getting Help</h2>
+<h3 id="before-asking-for-help">Before Asking for Help</h3>
+<ol>
+<li><p><strong>Search Existing Issues</strong>:</p>
+<ul>
+<li><a href="https://github.com/Coffee285/aura-video-studio/issues">GitHub Issues</a></li>
+<li>May already be reported and fixed</li>
+</ul>
+</li>
+<li><p><strong>Check Documentation</strong>:</p>
+<ul>
+<li><a href="Troubleshooting.html">Troubleshooting Guide</a></li>
+<li>Category-specific guides</li>
+<li><a href="../user-guide/FAQ.html">FAQ</a></li>
+</ul>
+</li>
+<li><p><strong>Enable Debug Logging</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Logging&quot;: {
+    &quot;LogLevel&quot;: {
+      &quot;Default&quot;: &quot;Debug&quot;
+    }
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Collect Information</strong>:</p>
+<ul>
+<li>Error message (full text)</li>
+<li>Steps to reproduce</li>
+<li>System information</li>
+<li>Logs (sanitized)</li>
+<li>Screenshots</li>
+</ul>
+</li>
+</ol>
+<h3 id="create-github-issue">Create GitHub Issue</h3>
+<ol>
+<li>Go to <a href="https://github.com/Coffee285/aura-video-studio/issues">Issues</a></li>
+<li>Click &quot;New Issue&quot;</li>
+<li>Choose appropriate template</li>
+<li>Fill in all sections</li>
+<li>Attach logs/screenshots</li>
+<li>Be responsive to questions</li>
+</ol>
+<h3 id="community-support">Community Support</h3>
+<ul>
+<li>Check GitHub Discussions</li>
+<li>Review closed issues for solutions</li>
+<li>Help others when you can</li>
+</ul>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="Troubleshooting.html">Main Troubleshooting Guide</a></li>
+<li><a href="provider-errors.html">Provider Errors</a></li>
+<li><a href="validation-errors.html">Validation Errors</a></li>
+<li><a href="resource-errors.html">Resource Errors</a></li>
+<li><a href="../getting-started/INSTALLATION.html">Getting Started Guide</a></li>
+</ul>
+<h2 id="preventive-measures">Preventive Measures</h2>
+<h3 id="regular-maintenance">Regular Maintenance</h3>
+<ol>
+<li><p><strong>Update Regularly</strong>:</p>
+<pre><code class="lang-bash">git pull origin main
+dotnet build
+</code></pre>
+</li>
+<li><p><strong>Clear Cache Weekly</strong>:</p>
+<pre><code class="lang-bash">Settings → Storage → Clear Cache
+</code></pre>
+</li>
+<li><p><strong>Backup Projects</strong>:</p>
+<ul>
+<li>Export projects regularly</li>
+<li>Keep database backups</li>
+</ul>
+</li>
+<li><p><strong>Monitor Logs</strong>:</p>
+<ul>
+<li>Check for warnings</li>
+<li>Address issues early</li>
+</ul>
+</li>
+<li><p><strong>Keep Dependencies Updated</strong>:</p>
+<pre><code class="lang-bash"># Update .NET packages
+dotnet outdated
+dotnet update
+
+# Update Node packages
+cd Aura.Web
+npm outdated
+npm update
+</code></pre>
+</li>
+</ol>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li><strong>Save Frequently</strong>: Don't rely on auto-save alone</li>
+<li><strong>Test Changes</strong>: Test with small projects first</li>
+<li><strong>Use Stable Features</strong>: Avoid experimental features in production</li>
+<li><strong>Monitor Resources</strong>: Keep eye on disk space and memory</li>
+<li><strong>Read Release Notes</strong>: Check for breaking changes</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/troubleshooting/general-errors.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

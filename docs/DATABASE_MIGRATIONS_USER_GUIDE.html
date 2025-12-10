@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Database Migration CLI Commands - User Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Database Migration CLI Commands - User Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/DATABASE_MIGRATIONS_USER_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="database-migration-cli-commands---user-guide">Database Migration CLI Commands - User Guide</h1>
+
+<p>This guide explains how to use the Aura CLI database management commands to manage your database schema.</p>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio uses Entity Framework Core migrations to manage database schema changes. The CLI provides three commands to help you manage these migrations:</p>
+<ul>
+<li><strong><code>migrate</code></strong> - Apply pending database migrations</li>
+<li><strong><code>status</code></strong> - Display the current migration status</li>
+<li><strong><code>reset</code></strong> - Drop and recreate the database (⚠️ WARNING: deletes all data)</li>
+</ul>
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li>.NET 8 SDK installed</li>
+<li>Aura CLI built (<code>dotnet build Aura.Cli/Aura.Cli.csproj</code>)</li>
+<li>Database configured (default: SQLite in <code>~/.local/share/Aura/aura.db</code>)</li>
+</ul>
+<h2 id="commands">Commands</h2>
+<h3 id="aura-cli-migrate"><code>aura-cli migrate</code></h3>
+<p>Applies all pending database migrations to bring your database schema up to date.</p>
+<h4 id="usage">Usage</h4>
+<pre><code class="lang-bash">aura-cli migrate [options]
+</code></pre>
+<h4 id="options">Options</h4>
+<ul>
+<li><code>-h, --help</code> - Show help message</li>
+<li><code>-v, --verbose</code> - Enable verbose output with detailed error messages</li>
+<li><code>--dry-run</code> - Check for pending migrations without applying them</li>
+</ul>
+<h4 id="examples">Examples</h4>
+<p>Apply all pending migrations:</p>
+<pre><code class="lang-bash">aura-cli migrate
+</code></pre>
+<p>Check what migrations would be applied without actually applying them:</p>
+<pre><code class="lang-bash">aura-cli migrate --dry-run
+</code></pre>
+<p>Apply migrations with verbose output:</p>
+<pre><code class="lang-bash">aura-cli migrate -v
+</code></pre>
+<h4 id="output">Output</h4>
+<p>When there are pending migrations:</p>
+<pre><code>╔══════════════════════════════════════════════════════════╗
+║         Database Migration - Apply Pending Changes      ║
+╚══════════════════════════════════════════════════════════╝
+
+Checking for pending migrations...
+Found 3 pending migration(s):
+
+  • 20251109170431_AddSystemConfiguration
+  • 20251110000000_AddJobQueueSupport
+  • 20251110120000_AddLocalAnalytics
+
+Applying migrations...
+
+✓ Successfully applied 3 migration(s)
+</code></pre>
+<p>When database is up to date:</p>
+<pre><code>╔══════════════════════════════════════════════════════════╗
+║         Database Migration - Apply Pending Changes      ║
+╚══════════════════════════════════════════════════════════╝
+
+Checking for pending migrations...
+✓ Database is up to date - no pending migrations
+</code></pre>
+<hr>
+<h3 id="aura-cli-status"><code>aura-cli status</code></h3>
+<p>Displays the current status of database migrations, including which migrations have been applied and which are pending.</p>
+<h4 id="usage-1">Usage</h4>
+<pre><code class="lang-bash">aura-cli status [options]
+</code></pre>
+<h4 id="options-1">Options</h4>
+<ul>
+<li><code>-h, --help</code> - Show help message</li>
+<li><code>-v, --verbose</code> - Show all applied migrations (default shows last 5)</li>
+</ul>
+<h4 id="examples-1">Examples</h4>
+<p>Check current migration status:</p>
+<pre><code class="lang-bash">aura-cli status
+</code></pre>
+<p>Show all applied migrations:</p>
+<pre><code class="lang-bash">aura-cli status -v
+</code></pre>
+<h4 id="output-1">Output</h4>
+<p>Standard output:</p>
+<pre><code>╔══════════════════════════════════════════════════════════╗
+║           Database Migration Status Report              ║
+╚══════════════════════════════════════════════════════════╝
+
+✓ Database connection successful
+
+Database Status:
+  Total Migrations: 7
+  Applied: 7
+  Pending: 0
+
+Applied Migrations:
+  ✓ 20251102050640_AddProjectStatePersistence
+  ✓ 20251103202216_AddActionLogAndSoftDelete
+  ✓ 20251108184353_AddWizardProjectManagement
+  ✓ 20251109170431_AddSystemConfiguration
+  ✓ 20251121045900_AddCreatedByToConfigurations
+  ... and 2 more (use -v to see all)
+
+✓ Database is up to date - no pending migrations
+</code></pre>
+<p>When there are pending migrations:</p>
+<pre><code>Pending Migrations:
+  ⚠ 20251110000000_AddJobQueueSupport
+  ⚠ 20251110120000_AddLocalAnalytics
+
+Run 'aura-cli migrate' to apply pending migrations.
+</code></pre>
+<hr>
+<h3 id="aura-cli-reset"><code>aura-cli reset</code></h3>
+<p>Drops the existing database and recreates it by applying all migrations from scratch.</p>
+<p>⚠️ <strong>WARNING</strong>: This command will permanently delete all data in the database!</p>
+<h4 id="usage-2">Usage</h4>
+<pre><code class="lang-bash">aura-cli reset [options]
+</code></pre>
+<h4 id="options-2">Options</h4>
+<ul>
+<li><code>-h, --help</code> - Show help message</li>
+<li><code>-v, --verbose</code> - Enable verbose output with detailed error messages</li>
+<li><code>-f, --force</code> - Skip confirmation prompt</li>
+<li><code>--dry-run</code> - Show what would be done without actually doing it</li>
+</ul>
+<h4 id="examples-2">Examples</h4>
+<p>Reset database with confirmation prompt:</p>
+<pre><code class="lang-bash">aura-cli reset
+</code></pre>
+<p>Reset without confirmation (useful for scripts):</p>
+<pre><code class="lang-bash">aura-cli reset --force
+</code></pre>
+<p>See what would be done without actually resetting:</p>
+<pre><code class="lang-bash">aura-cli reset --dry-run --force
+</code></pre>
+<h4 id="output-2">Output</h4>
+<p>With confirmation:</p>
+<pre><code>╔══════════════════════════════════════════════════════════╗
+║         Database Reset - Drop and Recreate              ║
+╚══════════════════════════════════════════════════════════╝
+
+⚠ WARNING: This will delete ALL data in the database!
+
+Are you sure you want to continue? Type 'yes' to confirm: yes
+
+Dropping existing database...
+✓ Database dropped successfully
+
+Creating database with all migrations...
+
+✓ Database created successfully with 7 migration(s)
+</code></pre>
+<p>With --force flag:</p>
+<pre><code>╔══════════════════════════════════════════════════════════╗
+║         Database Reset - Drop and Recreate              ║
+╚══════════════════════════════════════════════════════════╝
+
+⚠ WARNING: This will delete ALL data in the database!
+
+Dropping existing database...
+✓ Database dropped successfully
+
+Creating database with all migrations...
+
+✓ Database created successfully with 7 migration(s)
+</code></pre>
+<hr>
+<h2 id="common-workflows">Common Workflows</h2>
+<h3 id="initial-setup">Initial Setup</h3>
+<p>When setting up Aura for the first time:</p>
+<pre><code class="lang-bash"># Check if database exists and its status
+aura-cli status
+
+# If database doesn't exist or has pending migrations
+aura-cli migrate
+</code></pre>
+<h3 id="after-updating-aura">After Updating Aura</h3>
+<p>After pulling new code or updating Aura:</p>
+<pre><code class="lang-bash"># Check for new migrations
+aura-cli status
+
+# Apply any pending migrations
+aura-cli migrate
+</code></pre>
+<h3 id="developmenttesting">Development/Testing</h3>
+<p>When you need to start fresh (⚠️ deletes all data):</p>
+<pre><code class="lang-bash"># Reset database to initial state
+aura-cli reset --force
+
+# Verify it was reset
+aura-cli status
+</code></pre>
+<h3 id="troubleshooting">Troubleshooting</h3>
+<p>If you encounter migration errors:</p>
+<pre><code class="lang-bash"># Check current status
+aura-cli status -v
+
+# Try migrating with verbose output
+aura-cli migrate -v
+
+# If migrations are corrupted, reset and start fresh
+aura-cli reset --force
+</code></pre>
+<hr>
+<h2 id="error-handling">Error Handling</h2>
+<p>All commands handle errors gracefully and provide clear error messages:</p>
+<ul>
+<li><strong>Cannot connect to database</strong> - Check database path and permissions</li>
+<li><strong>Migration failed</strong> - Review error message, check migration files, try verbose mode</li>
+<li><strong>Assembly not found</strong> - Ensure Aura.Api.dll is in the CLI output directory</li>
+</ul>
+<p>Exit codes:</p>
+<ul>
+<li><strong>0</strong> - Success</li>
+<li><strong>1</strong> - Error occurred</li>
+</ul>
+<hr>
+<h2 id="database-location">Database Location</h2>
+<p>By default, the database is stored at:</p>
+<ul>
+<li><strong>Linux/macOS</strong>: <code>~/.local/share/Aura/aura.db</code></li>
+<li><strong>Windows</strong>: <code>%LOCALAPPDATA%\Aura\aura.db</code></li>
+</ul>
+<p>You can verify the location by checking the CLI output or looking at the connection string in the logs.</p>
+<hr>
+<h2 id="automatic-migrations-on-api-startup">Automatic Migrations on API Startup</h2>
+<p>In addition to the CLI commands, the Aura API automatically checks for and applies pending migrations on startup. This means:</p>
+<ol>
+<li>When you start the API server, it will check for pending migrations</li>
+<li>If found, it will apply them automatically</li>
+<li>The server will log the migration status</li>
+<li>If migration fails, the server will start anyway but log an error</li>
+</ol>
+<p>This ensures your database is always up to date when running the API.</p>
+<hr>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Always check status before migrating</strong> - Use <code>status</code> to see what will be applied</li>
+<li><strong>Use dry-run for safety</strong> - Test with <code>--dry-run</code> before actual migration</li>
+<li><strong>Backup before reset</strong> - Always backup your database before using <code>reset</code></li>
+<li><strong>Check logs</strong> - Review verbose output if something goes wrong</li>
+<li><strong>Version control</strong> - Keep migration files in version control</li>
+<li><strong>Test migrations</strong> - Test on development database before production</li>
+</ol>
+<hr>
+<h2 id="getting-help">Getting Help</h2>
+<p>For command-specific help:</p>
+<pre><code class="lang-bash">aura-cli migrate --help
+aura-cli status --help
+aura-cli reset --help
+</code></pre>
+<p>For general CLI help:</p>
+<pre><code class="lang-bash">aura-cli --help
+</code></pre>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="DATABASE_MIGRATIONS_DEVELOPER_GUIDE.html">Developer Guide - Adding Migrations</a></li>
+<li><a href="../docs/architecture.md">Architecture Documentation</a></li>
+<li><a href="https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/">Entity Framework Core Migrations</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/DATABASE_MIGRATIONS_USER_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

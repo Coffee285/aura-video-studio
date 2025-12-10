@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>UI Changes: Settings Page API Keys | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="UI Changes: Settings Page API Keys | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/UI_CHANGES_API_KEYS.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ui-changes-settings-page-api-keys">UI Changes: Settings Page API Keys</h1>
+
+<h2 id="before">Before</h2>
+<p>The Settings page API Keys tab only had fields for:</p>
+<ul>
+<li>OpenAI API Key</li>
+<li>ElevenLabs API Key</li>
+<li>Pexels API Key</li>
+<li>Stability AI API Key</li>
+</ul>
+<h2 id="after">After</h2>
+<p>The Settings page API Keys tab now includes fields for ALL stock providers:</p>
+<ul>
+<li>OpenAI API Key (for GPT-based script generation)</li>
+<li>ElevenLabs API Key (for high-quality voice synthesis)</li>
+<li>Pexels API Key (for stock video and images from Pexels)</li>
+<li><strong>Pixabay API Key</strong> ← NEW (for stock video and images from Pixabay)</li>
+<li><strong>Unsplash API Key</strong> ← NEW (for stock images from Unsplash)</li>
+<li>Stability AI API Key (for AI image generation)</li>
+</ul>
+<h2 id="code-changes">Code Changes</h2>
+<h3 id="settingspagetsx">SettingsPage.tsx</h3>
+<h4 id="state-variable">State Variable</h4>
+<pre><code class="lang-typescript">// Before
+const [apiKeys, setApiKeys] = useState({
+  openai: '',
+  elevenlabs: '',
+  pexels: '',
+  stabilityai: '',
+});
+
+// After
+const [apiKeys, setApiKeys] = useState({
+  openai: '',
+  elevenlabs: '',
+  pexels: '',
+  pixabay: '',      // NEW
+  unsplash: '',     // NEW
+  stabilityai: '',
+});
+</code></pre>
+<h4 id="save-api-keys">Save API Keys</h4>
+<pre><code class="lang-typescript">// Before
+body: JSON.stringify({
+  openAiKey: apiKeys.openai,
+  elevenLabsKey: apiKeys.elevenlabs,
+  pexelsKey: apiKeys.pexels,
+  stabilityAiKey: apiKeys.stabilityai,
+})
+
+// After
+body: JSON.stringify({
+  openAiKey: apiKeys.openai,
+  elevenLabsKey: apiKeys.elevenlabs,
+  pexelsKey: apiKeys.pexels,
+  pixabayKey: apiKeys.pixabay,        // NEW
+  unsplashKey: apiKeys.unsplash,      // NEW
+  stabilityAiKey: apiKeys.stabilityai,
+})
+</code></pre>
+<h4 id="ui-fields">UI Fields</h4>
+<pre><code class="lang-tsx">&lt;Field label=&quot;Pixabay API Key&quot; hint=&quot;Required for stock video and images from Pixabay&quot;&gt;
+  &lt;Input 
+    type=&quot;password&quot; 
+    placeholder=&quot;...&quot; 
+    value={apiKeys.pixabay}
+    onChange={(e) =&gt; updateApiKey('pixabay', e.target.value)}
+  /&gt;
+&lt;/Field&gt;
+
+&lt;Field label=&quot;Unsplash API Key&quot; hint=&quot;Required for stock images from Unsplash&quot;&gt;
+  &lt;Input 
+    type=&quot;password&quot; 
+    placeholder=&quot;...&quot; 
+    value={apiKeys.unsplash}
+    onChange={(e) =&gt; updateApiKey('unsplash', e.target.value)}
+  /&gt;
+&lt;/Field&gt;
+</code></pre>
+<h2 id="user-experience">User Experience</h2>
+<p>Users can now:</p>
+<ol>
+<li>Navigate to Settings → API Keys tab</li>
+<li>Enter API keys for Pixabay and Unsplash</li>
+<li>Save the keys (they are stored in <code>%LOCALAPPDATA%\Aura\apikeys.json</code>)</li>
+<li>Use Pixabay and Unsplash as stock sources in the video creation wizard</li>
+</ol>
+<p>The keys are displayed as masked (password fields) for security and only the first 8 characters are shown when loading saved keys.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/developer/UI_CHANGES_API_KEYS.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

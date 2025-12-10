@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>AI Context Management System | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="AI Context Management System | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONTEXT_MANAGEMENT_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ai-context-management-system">AI Context Management System</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The AI Context Management system provides persistent, multi-turn conversation capabilities throughout the video creation workflow. It maintains conversation history, project context, and decision tracking across application sessions.</p>
+<h2 id="architecture">Architecture</h2>
+<h3 id="core-components">Core Components</h3>
+<ol>
+<li><strong>ConversationContextManager</strong> - Manages conversation message history for each project</li>
+<li><strong>ProjectContextManager</strong> - Manages project metadata and AI decision history</li>
+<li><strong>ContextPersistence</strong> - Handles JSON-based persistence to local disk</li>
+<li><strong>ConversationalLlmService</strong> - Enriches LLM requests with conversation context</li>
+</ol>
+<h3 id="data-storage">Data Storage</h3>
+<p>All context data is stored locally in:</p>
+<ul>
+<li>Windows: <code>%LOCALAPPDATA%\Aura\Conversations</code> and <code>%LOCALAPPDATA%\Aura\ProjectContexts</code></li>
+<li>Linux/Mac: <code>~/.local/share/Aura/Conversations</code> and <code>~/.local/share/Aura/ProjectContexts</code></li>
+</ul>
+<p>Files are stored as JSON with atomic write operations for data integrity.</p>
+<h2 id="data-models">Data Models</h2>
+<h3 id="message">Message</h3>
+<pre><code class="lang-typescript">{
+  role: &quot;user&quot; | &quot;assistant&quot; | &quot;system&quot;,
+  content: string,
+  timestamp: string,
+  metadata?: Record&lt;string, any&gt;
+}
+</code></pre>
+<h3 id="conversationcontext">ConversationContext</h3>
+<pre><code class="lang-typescript">{
+  projectId: string,
+  messages: Message[],
+  createdAt: string,
+  updatedAt: string,
+  metadata?: Record&lt;string, any&gt;
+}
+</code></pre>
+<h3 id="videometadata">VideoMetadata</h3>
+<pre><code class="lang-typescript">{
+  contentType?: string,        // &quot;Tutorial&quot;, &quot;Marketing&quot;, etc.
+  targetPlatform?: string,      // &quot;YouTube&quot;, &quot;TikTok&quot;, etc.
+  audience?: string,            // &quot;Beginners&quot;, &quot;Professionals&quot;, etc.
+  tone?: string,                // &quot;Formal&quot;, &quot;Casual&quot;, etc.
+  durationSeconds?: number,
+  keywords?: string[]
+}
+</code></pre>
+<h3 id="aidecision">AiDecision</h3>
+<pre><code class="lang-typescript">{
+  decisionId: string,
+  stage: string,                // &quot;script&quot;, &quot;visuals&quot;, &quot;pacing&quot;, etc.
+  type: string,                 // &quot;suggestion&quot;, &quot;recommendation&quot;, etc.
+  suggestion: string,
+  userAction: &quot;accepted&quot; | &quot;rejected&quot; | &quot;modified&quot;,
+  userModification?: string,
+  timestamp: string
+}
+</code></pre>
+<h3 id="projectcontext">ProjectContext</h3>
+<pre><code class="lang-typescript">{
+  projectId: string,
+  videoMetadata?: VideoMetadata,
+  decisionHistory: AiDecision[],
+  createdAt: string,
+  updatedAt: string,
+  metadata?: Record&lt;string, any&gt;
+}
+</code></pre>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="post-apiconversationprojectidmessage">POST /api/conversation/{projectId}/message</h3>
+<p>Send a message with full conversation context.</p>
+<p><strong>Request:</strong></p>
+<pre><code class="lang-json">{
+  &quot;message&quot;: &quot;How can I improve this script?&quot;
+}
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;response&quot;: &quot;Here are some suggestions...&quot;,
+  &quot;timestamp&quot;: &quot;2025-10-21T12:00:00Z&quot;
+}
+</code></pre>
+<h3 id="get-apiconversationprojectidhistory">GET /api/conversation/{projectId}/history</h3>
+<p>Retrieve conversation history with optional pagination.</p>
+<p><strong>Query Parameters:</strong></p>
+<ul>
+<li><code>maxMessages</code> (optional): Maximum number of messages to return (default: 100)</li>
+</ul>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;messages&quot;: [...],
+  &quot;count&quot;: 42
+}
+</code></pre>
+<h3 id="delete-apiconversationprojectid">DELETE /api/conversation/{projectId}</h3>
+<p>Clear conversation history for a project.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;Conversation history cleared&quot;
+}
+</code></pre>
+<h3 id="get-apiconversationprojectidcontext">GET /api/conversation/{projectId}/context</h3>
+<p>Get full project context including metadata and decision history.</p>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;project&quot;: {
+    &quot;projectId&quot;: &quot;...&quot;,
+    &quot;videoMetadata&quot;: {...},
+    &quot;decisionHistory&quot;: [...]
+  },
+  &quot;conversation&quot;: {
+    &quot;projectId&quot;: &quot;...&quot;,
+    &quot;messages&quot;: [...]
+  }
+}
+</code></pre>
+<h3 id="put-apiconversationprojectidcontext">PUT /api/conversation/{projectId}/context</h3>
+<p>Update project metadata.</p>
+<p><strong>Request:</strong></p>
+<pre><code class="lang-json">{
+  &quot;contentType&quot;: &quot;Tutorial&quot;,
+  &quot;targetPlatform&quot;: &quot;YouTube&quot;,
+  &quot;audience&quot;: &quot;Developers&quot;,
+  &quot;tone&quot;: &quot;Professional&quot;,
+  &quot;durationSeconds&quot;: 300,
+  &quot;keywords&quot;: [&quot;coding&quot;, &quot;tutorial&quot;]
+}
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;Context updated&quot;
+}
+</code></pre>
+<h3 id="post-apiconversationprojectiddecision">POST /api/conversation/{projectId}/decision</h3>
+<p>Record an AI decision and user response.</p>
+<p><strong>Request:</strong></p>
+<pre><code class="lang-json">{
+  &quot;stage&quot;: &quot;script&quot;,
+  &quot;type&quot;: &quot;suggestion&quot;,
+  &quot;suggestion&quot;: &quot;Add more examples&quot;,
+  &quot;userAction&quot;: &quot;accepted&quot;,
+  &quot;userModification&quot;: null
+}
+</code></pre>
+<p><strong>Response:</strong></p>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;Decision recorded&quot;
+}
+</code></pre>
+<h2 id="frontend-usage">Frontend Usage</h2>
+<h3 id="using-the-conversationpanel-component">Using the ConversationPanel Component</h3>
+<pre><code class="lang-tsx">import { ConversationPanel } from './components/Conversation';
+
+function MyPage() {
+  const projectId = &quot;my-project-123&quot;;
+  
+  return (
+    &lt;ConversationPanel 
+      projectId={projectId}
+      onClose={() =&gt; console.log('Panel closed')}
+    /&gt;
+  );
+}
+</code></pre>
+<h3 id="using-the-conversation-service">Using the Conversation Service</h3>
+<pre><code class="lang-typescript">import { conversationService } from './services/conversationService';
+
+// Send a message
+const response = await conversationService.sendMessage(
+  projectId,
+  &quot;How can I improve pacing?&quot;
+);
+
+// Get conversation history
+const history = await conversationService.getHistory(projectId, 50);
+
+// Update project metadata
+await conversationService.updateContext(projectId, {
+  contentType: &quot;Tutorial&quot;,
+  targetPlatform: &quot;YouTube&quot;,
+  audience: &quot;Developers&quot;
+});
+
+// Record a decision
+await conversationService.recordDecision(projectId, {
+  stage: &quot;script&quot;,
+  type: &quot;suggestion&quot;,
+  suggestion: &quot;Add introduction&quot;,
+  userAction: &quot;accepted&quot;
+});
+
+// Clear conversation
+await conversationService.clearConversation(projectId);
+</code></pre>
+<h2 id="features">Features</h2>
+<h3 id="context-enrichment">Context Enrichment</h3>
+<p>Every message sent to the LLM automatically includes:</p>
+<ul>
+<li>Recent conversation history (last 10 messages)</li>
+<li>Project metadata (content type, platform, audience, etc.)</li>
+<li>Recent decision history (last 5 decisions)</li>
+</ul>
+<h3 id="multi-project-isolation">Multi-Project Isolation</h3>
+<p>Each project maintains completely separate:</p>
+<ul>
+<li>Conversation histories</li>
+<li>Project metadata</li>
+<li>Decision histories</li>
+</ul>
+<h3 id="persistence">Persistence</h3>
+<ul>
+<li>Automatic save after each message exchange</li>
+<li>Atomic file operations prevent data corruption</li>
+<li>Survives application restarts</li>
+<li>Thread-safe operations</li>
+</ul>
+<h3 id="user-experience">User Experience</h3>
+<ul>
+<li>Optimistic UI updates for instant feedback</li>
+<li>Auto-scroll to bottom on new messages</li>
+<li>Relative timestamp display (e.g., &quot;5m ago&quot;)</li>
+<li>Loading states during AI responses</li>
+<li>Error handling with user-friendly messages</li>
+<li>Keyboard shortcuts (Shift+Enter for new line)</li>
+</ul>
+<h2 id="development">Development</h2>
+<h3 id="running-tests">Running Tests</h3>
+<pre><code class="lang-bash"># Run all conversation tests
+dotnet test --filter &quot;FullyQualifiedName~Conversation&quot;
+
+# Run specific test categories
+dotnet test --filter &quot;FullyQualifiedName~ConversationContextManagerTests&quot;
+dotnet test --filter &quot;FullyQualifiedName~ProjectContextManagerTests&quot;
+dotnet test --filter &quot;FullyQualifiedName~ContextPersistenceTests&quot;
+</code></pre>
+<h3 id="adding-new-context-types">Adding New Context Types</h3>
+<ol>
+<li>Add fields to <code>VideoMetadata</code> model in <code>ConversationModels.cs</code></li>
+<li>Update <code>UpdateContextRequest</code> in <code>ConversationController.cs</code></li>
+<li>Update frontend types in <code>conversationService.ts</code></li>
+<li>Update UI in <code>ConversationPanel.tsx</code></li>
+</ol>
+<h3 id="extending-decision-types">Extending Decision Types</h3>
+<ol>
+<li>Define new stage/type constants</li>
+<li>Update decision recording logic in <code>ProjectContextManager</code></li>
+<li>Update frontend to handle new types</li>
+<li>Add filtering/display logic as needed</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Project IDs</strong>: Use stable, unique identifiers for projects</li>
+<li><strong>Message Content</strong>: Keep messages concise but informative</li>
+<li><strong>Metadata Updates</strong>: Update project metadata when key parameters change</li>
+<li><strong>Decision Recording</strong>: Record all significant AI interactions</li>
+<li><strong>Error Handling</strong>: Always handle API errors gracefully</li>
+<li><strong>Pagination</strong>: Use <code>maxMessages</code> parameter for large conversations</li>
+</ol>
+<h2 id="security--privacy">Security &amp; Privacy</h2>
+<ul>
+<li>All data stored locally on user's machine</li>
+<li>No cloud synchronization by default</li>
+<li>File system permissions protect data</li>
+<li>No sensitive data in logs</li>
+<li>API keys stored separately in secure location</li>
+</ul>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<ul>
+<li>Conversation history limited to 100 messages by default</li>
+<li>Automatic summarization when context exceeds token limits</li>
+<li>Efficient JSON serialization with System.Text.Json</li>
+<li>Thread-safe with minimal locking</li>
+<li>Caching in memory for frequently accessed contexts</li>
+</ul>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>Export conversation history to various formats</li>
+<li>Search within conversation history</li>
+<li>Conversation branching and forking</li>
+<li>Cloud backup/sync (opt-in)</li>
+<li>Advanced summarization with LLM</li>
+<li>Conversation templates</li>
+<li>Multi-user collaboration support</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/CONTEXT_MANAGEMENT_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

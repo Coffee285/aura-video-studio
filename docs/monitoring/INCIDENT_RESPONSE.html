@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Incident Response Procedures | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Incident Response Procedures | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/monitoring/INCIDENT_RESPONSE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="incident-response-procedures">Incident Response Procedures</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document outlines the incident response procedures for Aura production operations. Following these procedures ensures rapid resolution, clear communication, and continuous improvement.</p>
+<h2 id="incident-severity-levels">Incident Severity Levels</h2>
+<h3 id="sev-1-critical">SEV-1: Critical</h3>
+<p><strong>Definition</strong>: Complete service outage or severe degradation affecting all users</p>
+<p><strong>Examples</strong>:</p>
+<ul>
+<li>API completely unavailable</li>
+<li>Data loss or corruption</li>
+<li>Security breach</li>
+<li>Payment system failure</li>
+</ul>
+<p><strong>Response</strong>:</p>
+<ul>
+<li><strong>Time to Acknowledge</strong>: &lt; 5 minutes</li>
+<li><strong>Initial Response Time</strong>: Immediate</li>
+<li><strong>Communication</strong>: Real-time updates every 15 minutes</li>
+<li><strong>Escalation</strong>: Automatic page to on-call engineer</li>
+<li><strong>All-Hands</strong>: Mobilize all available engineers</li>
+<li><strong>Post-Mortem</strong>: Required within 48 hours</li>
+</ul>
+<h3 id="sev-2-major">SEV-2: Major</h3>
+<p><strong>Definition</strong>: Significant service degradation affecting multiple users</p>
+<p><strong>Examples</strong>:</p>
+<ul>
+<li>API partially unavailable</li>
+<li>SLO breach (&lt; 99% availability)</li>
+<li>Critical feature failure</li>
+<li>Major performance degradation</li>
+</ul>
+<p><strong>Response</strong>:</p>
+<ul>
+<li><strong>Time to Acknowledge</strong>: &lt; 15 minutes</li>
+<li><strong>Initial Response Time</strong>: &lt; 1 hour</li>
+<li><strong>Communication</strong>: Updates every 30 minutes</li>
+<li><strong>Escalation</strong>: Page on-call if not resolved in 1 hour</li>
+<li><strong>Post-Mortem</strong>: Required within 1 week</li>
+</ul>
+<h3 id="sev-3-minor">SEV-3: Minor</h3>
+<p><strong>Definition</strong>: Isolated issues with workarounds available</p>
+<p><strong>Examples</strong>:</p>
+<ul>
+<li>Non-critical feature impaired</li>
+<li>Intermittent errors</li>
+<li>Performance degradation for edge cases</li>
+<li>Provider health warnings</li>
+</ul>
+<p><strong>Response</strong>:</p>
+<ul>
+<li><strong>Time to Acknowledge</strong>: &lt; 1 hour</li>
+<li><strong>Initial Response Time</strong>: Within business day</li>
+<li><strong>Communication</strong>: Updates as needed</li>
+<li><strong>Escalation</strong>: None unless escalates to SEV-2</li>
+<li><strong>Post-Mortem</strong>: Optional</li>
+</ul>
+<h2 id="incident-response-phases">Incident Response Phases</h2>
+<h3 id="1-detection">1. Detection</h3>
+<p><strong>How Incidents Are Detected</strong>:</p>
+<ul>
+<li>Automated alerts (PagerDuty, Slack)</li>
+<li>Synthetic monitoring failures</li>
+<li>User reports (support tickets, social media)</li>
+<li>Internal team observations</li>
+</ul>
+<p><strong>First Actions</strong>:</p>
+<ol>
+<li>Acknowledge the alert (stops re-paging)</li>
+<li>Assess severity</li>
+<li>Create incident ticket</li>
+<li>Join incident channel (Slack: #incident-active)</li>
+</ol>
+<h3 id="2-triage">2. Triage</h3>
+<p><strong>Assess Impact</strong>:</p>
+<ul>
+<li>How many users are affected?</li>
+<li>What functionality is broken?</li>
+<li>Is this getting worse?</li>
+<li>What's the financial impact?</li>
+</ul>
+<p><strong>Gather Initial Data</strong>:</p>
+<pre><code class="lang-bash"># Check overall system health
+curl http://localhost:5005/api/health
+
+# Check firing alerts
+curl http://localhost:5005/api/monitoring/alerts/firing
+
+# Check recent errors
+tail -n 100 logs/errors-$(date +%Y-%m-%d).log
+
+# Check recent deployments
+git log --since=&quot;2 hours ago&quot; --oneline
+</code></pre>
+<p><strong>Determine Severity</strong>:
+Use the severity matrix above to classify the incident.</p>
+<h3 id="3-communication">3. Communication</h3>
+<p><strong>Incident Channel</strong>: #incident-active on Slack</p>
+<p><strong>Communication Template</strong>:</p>
+<pre><code>🚨 INCIDENT DETECTED
+
+Severity: SEV-X
+Summary: &lt;Brief description&gt;
+Impact: &lt;What's broken and for whom&gt;
+Detected: &lt;Timestamp&gt;
+Status: Investigating
+
+Updates will be posted every &lt;15/30/60&gt; minutes.
+</code></pre>
+<p><strong>Update Template</strong>:</p>
+<pre><code>⏰ UPDATE [HH:MM]
+
+Current Status: &lt;Investigating|Mitigating|Resolved&gt;
+Actions Taken: &lt;What we've done&gt;
+Next Steps: &lt;What we're doing next&gt;
+ETA: &lt;Best estimate&gt;
+</code></pre>
+<p><strong>Resolution Template</strong>:</p>
+<pre><code>✅ RESOLVED [HH:MM]
+
+Summary: &lt;What happened&gt;
+Root Cause: &lt;Why it happened&gt;
+Resolution: &lt;How we fixed it&gt;
+Duration: &lt;Total incident time&gt;
+
+Post-mortem will be completed by: &lt;Date&gt;
+</code></pre>
+<h3 id="4-mitigation">4. Mitigation</h3>
+<p><strong>Goal</strong>: Restore service ASAP (fix root cause later if needed)</p>
+<p><strong>Mitigation Strategies</strong>:</p>
+<ol>
+<li><p><strong>Rollback Recent Deployment</strong></p>
+<pre><code class="lang-bash"># Rollback to previous version
+git log -10 --oneline
+git checkout &lt;previous-commit&gt;
+docker build -t aura-api:rollback .
+docker-compose up -d
+</code></pre>
+</li>
+<li><p><strong>Scale Up Resources</strong></p>
+<pre><code class="lang-bash"># Increase container count
+docker-compose up -d --scale api=5
+
+# Or scale in Azure/AWS
+az webapp scale --resource-group aura --name aura-api --instance-count 5
+</code></pre>
+</li>
+<li><p><strong>Switch to Backup Provider</strong></p>
+<pre><code class="lang-bash"># Disable failing provider
+curl -X POST http://localhost:5005/api/providers/disable \
+  -H &quot;Content-Type: application/json&quot; \
+  -d '{&quot;provider&quot;: &quot;OpenAI&quot;, &quot;reason&quot;: &quot;High error rate&quot;}'
+
+# Verify failover
+curl http://localhost:5005/api/health/providers
+</code></pre>
+</li>
+<li><p><strong>Clear Cache</strong></p>
+<pre><code class="lang-bash"># If caching issue
+curl -X POST http://localhost:5005/api/cache/clear
+</code></pre>
+</li>
+<li><p><strong>Restart Services</strong></p>
+<pre><code class="lang-bash"># Last resort
+docker-compose restart
+</code></pre>
+</li>
+</ol>
+<h3 id="5-resolution">5. Resolution</h3>
+<p><strong>Verify Service Restored</strong>:</p>
+<pre><code class="lang-bash"># Check health endpoints
+curl http://localhost:5005/api/health
+curl http://localhost:5005/api/monitoring/health/synthetic
+
+# Check error rate
+curl http://localhost:5005/api/monitoring/metrics/histogram/api.errors.5xx
+
+# Run smoke tests
+./scripts/smoke-tests.sh
+</code></pre>
+<p><strong>Clear Alerts</strong>:</p>
+<ul>
+<li>Most alerts auto-resolve when metrics return to normal</li>
+<li>Manually acknowledge any persistent alerts</li>
+</ul>
+<p><strong>Communicate Resolution</strong>:</p>
+<ul>
+<li>Post resolution message to #incident-active</li>
+<li>Notify users via status page</li>
+<li>Close incident ticket</li>
+</ul>
+<h3 id="6-post-mortem">6. Post-Mortem</h3>
+<p><strong>Within 48 Hours for SEV-1, 1 Week for SEV-2</strong></p>
+<p><strong>Post-Mortem Template</strong>:</p>
+<pre><code class="lang-markdown"># Incident Post-Mortem: &lt;Title&gt;
+
+## Incident Summary
+- **Date**: YYYY-MM-DD
+- **Duration**: &lt;Total time&gt;
+- **Severity**: SEV-X
+- **Impact**: &lt;Users affected, functionality impaired&gt;
+
+## Timeline
+
+| Time | Event |
+|------|-------|
+| 14:30 | Alert fired: API Availability Below SLO |
+| 14:32 | On-call acknowledged, began investigation |
+| 14:40 | Identified root cause: Database connection pool exhausted |
+| 14:45 | Mitigation: Restarted API, increased connection pool size |
+| 15:00 | Service restored, monitoring for stability |
+| 15:30 | Incident closed |
+
+## Root Cause
+
+&lt;Detailed explanation of what went wrong and why&gt;
+
+Example:
+- Database connection pool was configured for max 50 connections
+- Increased traffic from marketing campaign exceeded capacity
+- Connections were not being released properly due to bug in new code
+- Led to connection pool exhaustion and API failures
+
+## Impact Assessment
+
+- **Users Affected**: ~5,000 (estimated)
+- **Duration**: 1 hour
+- **SLO Impact**: 99.5% availability (below 99.9% target)
+- **Financial Impact**: ~$500 in lost revenue
+- **Reputation Impact**: 12 support tickets, 3 tweets
+
+## What Went Well
+
+- ✅ Alert fired within 2 minutes of issue
+- ✅ On-call engineer responded quickly
+- ✅ Mitigation applied within 15 minutes
+- ✅ Clear communication in incident channel
+
+## What Went Wrong
+
+- ❌ Connection pool size not adequately tested under load
+- ❌ Code review didn't catch connection leak
+- ❌ Monitoring didn't alert on connection pool usage
+- ❌ Rollback took longer than expected (manual process)
+
+## Action Items
+
+| Action | Owner | Due Date | Status |
+|--------|-------|----------|--------|
+| Add alert for connection pool usage | @alice | 2025-11-15 | ✅ Done |
+| Add load testing to CI/CD | @bob | 2025-11-20 | 🔄 In Progress |
+| Fix connection leak bug | @charlie | 2025-11-12 | ✅ Done |
+| Automate rollback process | @david | 2025-11-30 | 📋 To Do |
+| Increase connection pool to 200 | @alice | 2025-11-11 | ✅ Done |
+
+## Lessons Learned
+
+1. **Load testing is critical**: Always test new features under realistic load
+2. **Monitor everything**: Connection pools, thread pools, file descriptors
+3. **Fast rollbacks are essential**: Automate deployment/rollback
+4. **Code reviews should check resource usage**: Not just functionality
+
+## Questions Raised
+
+1. Should we implement circuit breakers for database connections?
+2. Do we need auto-scaling based on connection pool usage?
+3. Should we have a staging environment that mirrors production load?
+
+## Related Incidents
+
+- None (first incident of this type)
+</code></pre>
+<p><strong>Distribute Post-Mortem</strong>:</p>
+<ul>
+<li>Share with engineering team</li>
+<li>Present at weekly incident review</li>
+<li>Add to incident knowledge base</li>
+</ul>
+<h2 id="on-call-responsibilities">On-Call Responsibilities</h2>
+<h3 id="primary-on-call">Primary On-Call</h3>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Monitor alerts 24/7</li>
+<li>Acknowledge incidents within 5 minutes (SEV-1)</li>
+<li>Lead incident response</li>
+<li>Communicate status updates</li>
+<li>Complete post-mortem</li>
+</ul>
+<p><strong>Rotation</strong>:</p>
+<ul>
+<li>1-week shifts</li>
+<li>Hand-off meeting at shift change</li>
+<li>Calendar invites sent automatically</li>
+</ul>
+<p><strong>Escalation</strong>:</p>
+<ul>
+<li>If unable to resolve SEV-1 in 30 minutes, escalate to secondary</li>
+<li>If unable to resolve SEV-2 in 2 hours, escalate to secondary</li>
+</ul>
+<h3 id="secondary-on-call">Secondary On-Call</h3>
+<p><strong>Responsibilities</strong>:</p>
+<ul>
+<li>Backup for primary on-call</li>
+<li>Respond to escalations</li>
+<li>Available for consultation</li>
+<li>Take over if primary is unavailable</li>
+</ul>
+<h3 id="escalation-path">Escalation Path</h3>
+<pre><code>Level 1: Primary On-Call Engineer
+   ↓ (30 min for SEV-1, 2 hr for SEV-2)
+Level 2: Secondary On-Call Engineer
+   ↓ (1 hr for SEV-1, 4 hr for SEV-2)
+Level 3: Engineering Manager
+   ↓ (2 hr for SEV-1)
+Level 4: VP of Engineering / CTO
+</code></pre>
+<h2 id="communication-guidelines">Communication Guidelines</h2>
+<h3 id="internal-communication-slack">Internal Communication (Slack)</h3>
+<p><strong>Channels</strong>:</p>
+<ul>
+<li><code>#incident-active</code>: Active incident coordination</li>
+<li><code>#incident-archive</code>: Historical incidents</li>
+<li><code>#engineering</code>: General team updates</li>
+<li><code>#alerts</code>: Alert notifications</li>
+</ul>
+<p><strong>Best Practices</strong>:</p>
+<ul>
+<li>Use threads to keep discussions organized</li>
+<li>Pin important messages (mitigation steps, status)</li>
+<li>Use emojis for quick status:
+<ul>
+<li>🚨 New incident</li>
+<li>🔍 Investigating</li>
+<li>🛠️ Mitigating</li>
+<li>✅ Resolved</li>
+<li>⚠️ Degraded</li>
+</ul>
+</li>
+</ul>
+<h3 id="external-communication-users">External Communication (Users)</h3>
+<p><strong>Status Page</strong> (status.aura.studio):</p>
+<ul>
+<li>Update within 15 minutes of incident</li>
+<li>Provide regular updates</li>
+<li>Clear, non-technical language</li>
+</ul>
+<p><strong>Example Status Page Update</strong>:</p>
+<pre><code>⚠️ Partial Service Disruption
+
+We are currently investigating issues with video generation.
+Some users may experience delays or failures.
+
+Our team is actively working on a resolution.
+
+Updated: 2025-11-10 14:45 UTC
+Next update: 2025-11-10 15:00 UTC
+</code></pre>
+<p><strong>Social Media</strong>:</p>
+<ul>
+<li>Tweet from @AuraStudio account for SEV-1</li>
+<li>Acknowledge user reports</li>
+<li>Link to status page</li>
+</ul>
+<p><strong>Email</strong> (for prolonged outages):</p>
+<ul>
+<li>Send to all active users</li>
+<li>Apologize, explain, provide ETA</li>
+<li>Offer compensation if appropriate</li>
+</ul>
+<h2 id="incident-tooling">Incident Tooling</h2>
+<h3 id="required-tools">Required Tools</h3>
+<ol>
+<li><strong>PagerDuty</strong>: Alert routing and escalation</li>
+<li><strong>Slack</strong>: Real-time communication</li>
+<li><strong>Azure Portal</strong>: Infrastructure management</li>
+<li><strong>GitHub</strong>: Code deployment and rollback</li>
+<li><strong>Monitoring Dashboards</strong>: Observability</li>
+</ol>
+<h3 id="quick-links">Quick Links</h3>
+<p>Keep these bookmarked:</p>
+<ul>
+<li><strong>Monitoring Dashboard</strong>: <a href="https://portal.azure.com/..">https://portal.azure.com/..</a>.</li>
+<li><strong>Logs</strong>: <a href="https://portal.azure.com/..">https://portal.azure.com/..</a>.</li>
+<li><strong>Runbooks</strong>: <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/">https://github.com/Coffee285/aura-video-studio/blob/main/docs/runbooks/</a></li>
+<li><strong>Status Page Admin</strong>: <a href="https://status.aura.studio/admin">https://status.aura.studio/admin</a></li>
+<li><strong>PagerDuty</strong>: <a href="https://aura.pagerduty.com">https://aura.pagerduty.com</a></li>
+</ul>
+<h3 id="useful-commands">Useful Commands</h3>
+<pre><code class="lang-bash"># Quick health check
+curl -s http://localhost:5005/api/health | jq .
+
+# Check firing alerts
+curl -s http://localhost:5005/api/monitoring/alerts/firing | jq .
+
+# View recent errors
+tail -n 50 logs/errors-$(date +%Y-%m-%d).log
+
+# Check system resources
+docker stats
+
+# View recent deployments
+git log --since=&quot;6 hours ago&quot; --oneline
+
+# Rollback to previous version
+git checkout HEAD~1 &amp;&amp; docker-compose up -d
+
+# Scale up
+docker-compose up -d --scale api=5
+
+# Restart services
+docker-compose restart api
+</code></pre>
+<h2 id="testing-incident-response">Testing Incident Response</h2>
+<h3 id="fire-drills">Fire Drills</h3>
+<p><strong>Monthly Drill</strong>:</p>
+<ul>
+<li>Simulate SEV-2 incident</li>
+<li>Practice detection, mitigation, communication</li>
+<li>Review performance afterward</li>
+</ul>
+<p><strong>Example Scenarios</strong>:</p>
+<ol>
+<li>Database connection pool exhaustion</li>
+<li>Provider API outage</li>
+<li>Deployment introduces bug</li>
+<li>Sudden traffic spike</li>
+<li>Disk space exhaustion</li>
+</ol>
+<h3 id="chaos-engineering">Chaos Engineering</h3>
+<p><strong>Inject Failures</strong>:</p>
+<pre><code class="lang-bash"># Kill random container
+docker ps | tail -n +2 | shuf -n 1 | awk '{print $1}' | xargs docker kill
+
+# Introduce network latency
+tc qdisc add dev eth0 root netem delay 500ms
+
+# Fill disk space
+dd if=/dev/zero of=/tmp/fillfile bs=1M count=1000
+</code></pre>
+<h2 id="incident-metrics">Incident Metrics</h2>
+<h3 id="track-these-metrics">Track These Metrics</h3>
+<ol>
+<li><strong>MTTD</strong> (Mean Time To Detect): Alert fires → Incident acknowledged</li>
+<li><strong>MTTR</strong> (Mean Time To Resolve): Incident start → Service restored</li>
+<li><strong>False Positive Rate</strong>: Alerts that were not incidents</li>
+<li><strong>Incident Frequency</strong>: Incidents per week/month</li>
+<li><strong>SLO Compliance</strong>: % of time meeting SLO targets</li>
+</ol>
+<h3 id="monthly-report">Monthly Report</h3>
+<pre><code class="lang-markdown">## Incident Report: November 2025
+
+- **Total Incidents**: 8
+  - SEV-1: 0
+  - SEV-2: 2
+  - SEV-3: 6
+
+- **MTTD**: 3.2 minutes (target: &lt; 5 min)
+- **MTTR**: 
+  - SEV-2: 45 minutes (target: &lt; 1 hour)
+  - SEV-3: 4 hours (target: &lt; 1 day)
+
+- **SLO Compliance**: 99.87% (target: 99.9%)
+
+- **Top Incident Causes**:
+  1. Provider API failures (3)
+  2. Performance issues (2)
+  3. Deployment bugs (2)
+  4. Infrastructure issues (1)
+
+- **Action Items**:
+  - Improve provider failover logic
+  - Add more performance testing
+  - Implement canary deployments
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="-do">✅ DO</h3>
+<ul>
+<li>Acknowledge alerts immediately</li>
+<li>Communicate early and often</li>
+<li>Focus on mitigation first, root cause second</li>
+<li>Document everything in incident ticket</li>
+<li>Run regular fire drills</li>
+<li>Review incidents as a team</li>
+</ul>
+<h3 id="-dont">❌ DON'T</h3>
+<ul>
+<li>Panic or guess wildly</li>
+<li>Make changes without documenting</li>
+<li>Skip post-mortems</li>
+<li>Blame individuals (blame processes)</li>
+<li>Fix and forget (learn from incidents)</li>
+</ul>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="MONITORING_PHILOSOPHY.html">Monitoring Philosophy</a></li>
+<li><a href="ALERT_CREATION_GUIDE.html">Alert Creation Guide</a></li>
+<li><a href="../INDEX.html">Runbooks Index</a></li>
+<li>On-Call Guide</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<p>Effective incident response requires:</p>
+<ol>
+<li><strong>Fast Detection</strong>: Automated monitoring and alerting</li>
+<li><strong>Clear Process</strong>: Follow established procedures</li>
+<li><strong>Good Communication</strong>: Keep stakeholders informed</li>
+<li><strong>Quick Mitigation</strong>: Restore service ASAP</li>
+<li><strong>Continuous Learning</strong>: Post-mortems and action items</li>
+</ol>
+<p>Remember: <strong>Incidents are learning opportunities. No blame, just improvement.</strong></p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/monitoring/INCIDENT_RESPONSE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

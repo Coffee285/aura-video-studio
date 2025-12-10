@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Export Presets, Validation, and Post-Export Integrity Checks - Implementation Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Export Presets, Validation, and Post-Export Integrity Checks - Implementation Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/EXPORT_PRESETS_IMPLEMENTATION.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="export-presets-validation-and-post-export-integrity-checks---implementation-guide">Export Presets, Validation, and Post-Export Integrity Checks - Implementation Guide</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This document provides a comprehensive guide for implementing the export presets feature with preflight validation and post-export integrity checks. The backend implementation is complete, and this guide focuses on frontend integration and testing.</p>
+<h2 id="backend-implementation-completed">Backend Implementation (Completed)</h2>
+<h3 id="services-implemented">Services Implemented</h3>
+<ol>
+<li><p><strong>ExportPreflightValidator</strong> (<code>Aura.Core/Services/Export/ExportPreflightValidator.cs</code>)</p>
+<ul>
+<li>Validates export settings before starting an export</li>
+<li>Checks disk space availability</li>
+<li>Validates aspect ratio conformity</li>
+<li>Validates resolution (detects upscaling)</li>
+<li>Validates bitrate ceilings against platform limits</li>
+<li>Checks codec compatibility</li>
+<li>Validates platform-specific requirements (duration, file size)</li>
+<li>Estimates encoding duration based on hardware tier</li>
+<li>Recommends hardware or software encoder</li>
+</ul>
+</li>
+<li><p><strong>HardwareEncoderSelection</strong> (<code>Aura.Core/Models/Export/HardwareEncoderSelection.cs</code>)</p>
+<ul>
+<li>Hardware-tier-aware encoder selection</li>
+<li>Supports NVENC (NVIDIA), AMF (AMD), QSV (Intel)</li>
+<li>Falls back to software encoders for lower tiers</li>
+<li>Provides encoder quality presets based on tier and quality level</li>
+<li>Returns encoder-specific parameters (CRF for software, RC for hardware)</li>
+</ul>
+</li>
+<li><p><strong>ExportMetadata</strong> (<code>Aura.Core/Models/Export/ExportMetadata.cs</code>)</p>
+<ul>
+<li>Captures post-export metadata</li>
+<li>Computes SHA256 file hash</li>
+<li>Stores actual video properties (resolution, codec, bitrate, duration)</li>
+<li>Records validation results</li>
+<li>Tracks hardware acceleration usage</li>
+</ul>
+</li>
+<li><p><strong>Enhanced ExportValidator</strong> (<code>Aura.Core/Services/Render/ExportValidator.cs</code>)</p>
+<ul>
+<li>Now includes <code>CaptureMetadataAsync</code> method</li>
+<li>Computes file hash using SHA256</li>
+<li>Integrates with ffprobe for metadata extraction</li>
+<li>Validates export against expected preset parameters</li>
+</ul>
+</li>
+</ol>
+<h3 id="api-endpoints">API Endpoints</h3>
+<h4 id="preflight-validation">Preflight Validation</h4>
+<pre><code class="lang-http">POST /api/export/preflight
+Content-Type: application/json
+
+{
+  &quot;presetName&quot;: &quot;YouTube 1080p&quot;,
+  &quot;videoDuration&quot;: &quot;00:02:00&quot;,
+  &quot;outputDirectory&quot;: &quot;/path/to/output&quot;,
+  &quot;sourceResolution&quot;: &quot;1920x1080&quot;,
+  &quot;sourceAspectRatio&quot;: &quot;16:9&quot;
+}
+</code></pre>
+<p>Response:</p>
+<pre><code class="lang-json">{
+  &quot;canProceed&quot;: true,
+  &quot;errors&quot;: [],
+  &quot;warnings&quot;: [
+    &quot;Source aspect ratio (9:16) differs from preset (16:9). Video will be letterboxed or pillarboxed.&quot;
+  ],
+  &quot;recommendations&quot;: [
+    &quot;Consider using 'Fix automatically' to adjust project aspect ratio&quot;
+  ],
+  &quot;estimates&quot;: {
+    &quot;estimatedFileSizeMB&quot;: 120.5,
+    &quot;estimatedDurationMinutes&quot;: 2.5,
+    &quot;requiredDiskSpaceMB&quot;: 301.25,
+    &quot;availableDiskSpaceGB&quot;: 50.0,
+    &quot;recommendedEncoder&quot;: &quot;h264_nvenc&quot;,
+    &quot;hardwareAccelerationAvailable&quot;: true
+  }
+}
+</code></pre>
+<h4 id="export-presets">Export Presets</h4>
+<pre><code class="lang-http">GET /api/export/presets
+</code></pre>
+<p>Returns list of all available export presets with their specifications.</p>
+<h3 id="hardware-tier-integration">Hardware Tier Integration</h3>
+<p>The system automatically detects hardware capabilities and selects the appropriate encoder:</p>
+<ul>
+<li><strong>Tier A</strong> (High-end): Hardware encoders with high-quality presets</li>
+<li><strong>Tier B</strong> (Upper-mid): Hardware encoders with balanced presets</li>
+<li><strong>Tier C</strong> (Mid): Hardware or software encoders based on capabilities</li>
+<li><strong>Tier D</strong> (Entry): Software encoders with faster presets</li>
+</ul>
+<h2 id="frontend-implementation-guide">Frontend Implementation Guide</h2>
+<h3 id="1-export-dialog-component">1. Export Dialog Component</h3>
+<p>Create <code>ExportDialog.tsx</code> in <code>Aura.Web/src/components/export/</code>:</p>
+<pre><code class="lang-typescript">import React, { useState, useEffect } from 'react';
+import { Dialog, Button, Select, Text } from '@fluentui/react-components';
+import { useExportStore } from '@/state/export';
+import { apiClient } from '@/services/api/apiClient';
+import type { ExportPreset, PreflightResult } from '@/types/api-v1';
+
+interface ExportDialogProps {
+  open: boolean;
+  onClose: () =&gt; void;
+  onExport: (presetName: string) =&gt; void;
+  videoDuration: number; // in seconds
+}
+
+export const ExportDialog: React.FC&lt;ExportDialogProps&gt; = ({
+  open,
+  onClose,
+  onExport,
+  videoDuration
+}) =&gt; {
+  const [selectedPreset, setSelectedPreset] = useState&lt;string&gt;('');
+  const [preflightResult, setPreflightResult] = useState&lt;PreflightResult | null&gt;(null);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch presets on mount
+  const { presets, fetchPresets } = useExportStore();
+  
+  useEffect(() =&gt; {
+    if (open) {
+      fetchPresets();
+    }
+  }, [open, fetchPresets]);
+
+  // Run preflight validation when preset changes
+  useEffect(() =&gt; {
+    if (selectedPreset &amp;&amp; open) {
+      runPreflightValidation();
+    }
+  }, [selectedPreset, open]);
+
+  const runPreflightValidation = async () =&gt; {
+    setLoading(true);
+    try {
+      const minutes = Math.floor(videoDuration / 60);
+      const seconds = videoDuration % 60;
+      const formattedDuration = `00:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      
+      const response = await apiClient.post('/api/export/preflight', {
+        presetName: selectedPreset,
+        videoDuration: formattedDuration,
+        outputDirectory: '', // Use default
+      });
+      setPreflightResult(response.data);
+    } catch (error) {
+      console.error('Preflight validation failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = () =&gt; {
+    if (preflightResult?.canProceed || confirm('There are issues. Proceed anyway?')) {
+      onExport(selectedPreset);
+      onClose();
+    }
+  };
+
+  return (
+    &lt;Dialog open={open} onOpenChange={(_, data) =&gt; !data.open &amp;&amp; onClose()}&gt;
+      &lt;DialogSurface&gt;
+        &lt;DialogTitle&gt;Export Video&lt;/DialogTitle&gt;
+        &lt;DialogBody&gt;
+          &lt;Select
+            label=&quot;Export Preset&quot;
+            value={selectedPreset}
+            onChange={(_, data) =&gt; setSelectedPreset(data.value)}
+          &gt;
+            {presets.map(preset =&gt; (
+              &lt;option key={preset.name} value={preset.name}&gt;
+                {preset.name} - {preset.description}
+              &lt;/option&gt;
+            ))}
+          &lt;/Select&gt;
+
+          {loading &amp;&amp; &lt;Spinner label=&quot;Validating...&quot; /&gt;}
+
+          {preflightResult &amp;&amp; (
+            &lt;PreflightSummary result={preflightResult} /&gt;
+          )}
+        &lt;/DialogBody&gt;
+        &lt;DialogActions&gt;
+          &lt;Button appearance=&quot;secondary&quot; onClick={onClose}&gt;Cancel&lt;/Button&gt;
+          &lt;Button 
+            appearance=&quot;primary&quot; 
+            onClick={handleExport}
+            disabled={!selectedPreset || (!preflightResult?.canProceed &amp;&amp; preflightResult?.errors.length &gt; 0)}
+          &gt;
+            Export
+          &lt;/Button&gt;
+        &lt;/DialogActions&gt;
+      &lt;/DialogSurface&gt;
+    &lt;/Dialog&gt;
+  );
+};
+</code></pre>
+<h3 id="2-preflight-summary-component">2. Preflight Summary Component</h3>
+<p>Create <code>PreflightSummary.tsx</code>:</p>
+<pre><code class="lang-typescript">interface PreflightSummaryProps {
+  result: PreflightResult;
+}
+
+export const PreflightSummary: React.FC&lt;PreflightSummaryProps&gt; = ({ result }) =&gt; {
+  return (
+    &lt;div className=&quot;preflight-summary&quot;&gt;
+      {result.errors.length &gt; 0 &amp;&amp; (
+        &lt;MessageBar intent=&quot;error&quot;&gt;
+          &lt;strong&gt;Errors:&lt;/strong&gt;
+          &lt;ul&gt;
+            {result.errors.map((error, i) =&gt; &lt;li key={i}&gt;{error}&lt;/li&gt;)}
+          &lt;/ul&gt;
+        &lt;/MessageBar&gt;
+      )}
+
+      {result.warnings.length &gt; 0 &amp;&amp; (
+        &lt;MessageBar intent=&quot;warning&quot;&gt;
+          &lt;strong&gt;Warnings:&lt;/strong&gt;
+          &lt;ul&gt;
+            {result.warnings.map((warning, i) =&gt; &lt;li key={i}&gt;{warning}&lt;/li&gt;)}
+          &lt;/ul&gt;
+        &lt;/MessageBar&gt;
+      )}
+
+      {result.recommendations.length &gt; 0 &amp;&amp; (
+        &lt;MessageBar intent=&quot;info&quot;&gt;
+          &lt;strong&gt;Recommendations:&lt;/strong&gt;
+          &lt;ul&gt;
+            {result.recommendations.map((rec, i) =&gt; &lt;li key={i}&gt;{rec}&lt;/li&gt;)}
+          &lt;/ul&gt;
+        &lt;/MessageBar&gt;
+      )}
+
+      &lt;div className=&quot;estimates&quot;&gt;
+        &lt;Text weight=&quot;semibold&quot;&gt;Estimates:&lt;/Text&gt;
+        &lt;dl&gt;
+          &lt;dt&gt;File Size:&lt;/dt&gt;
+          &lt;dd&gt;{result.estimates.estimatedFileSizeMB.toFixed(2)} MB&lt;/dd&gt;
+          
+          &lt;dt&gt;Encoding Time:&lt;/dt&gt;
+          &lt;dd&gt;{result.estimates.estimatedDurationMinutes.toFixed(1)} minutes&lt;/dd&gt;
+          
+          &lt;dt&gt;Required Space:&lt;/dt&gt;
+          &lt;dd&gt;{result.estimates.requiredDiskSpaceMB.toFixed(2)} MB&lt;/dd&gt;
+          
+          &lt;dt&gt;Encoder:&lt;/dt&gt;
+          &lt;dd&gt;
+            {result.estimates.recommendedEncoder}
+            {result.estimates.hardwareAccelerationAvailable &amp;&amp; ' (Hardware Accelerated)'}
+          &lt;/dd&gt;
+        &lt;/dl&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+};
+</code></pre>
+<h3 id="3-export-state-management">3. Export State Management</h3>
+<p>Create <code>Aura.Web/src/state/export.ts</code>:</p>
+<pre><code class="lang-typescript">import { create } from 'zustand';
+import { apiClient } from '@/services/api/apiClient';
+import type { ExportPreset, ExportJob } from '@/types/api-v1';
+
+interface ExportState {
+  presets: ExportPreset[];
+  currentJob: ExportJob | null;
+  
+  fetchPresets: () =&gt; Promise&lt;void&gt;;
+  startExport: (presetName: string, outputFile: string) =&gt; Promise&lt;string&gt;;
+  getJobStatus: (jobId: string) =&gt; Promise&lt;ExportJob&gt;;
+  cancelJob: (jobId: string) =&gt; Promise&lt;void&gt;;
+}
+
+export const useExportStore = create&lt;ExportState&gt;((set, get) =&gt; ({
+  presets: [],
+  currentJob: null,
+
+  fetchPresets: async () =&gt; {
+    try {
+      const response = await apiClient.get('/api/export/presets');
+      set({ presets: response.data });
+    } catch (error) {
+      console.error('Failed to fetch presets:', error);
+    }
+  },
+
+  startExport: async (presetName: string, outputFile: string) =&gt; {
+    try {
+      const response = await apiClient.post('/api/export/start', {
+        presetName,
+        outputFile
+      });
+      return response.data.jobId;
+    } catch (error) {
+      console.error('Failed to start export:', error);
+      throw error;
+    }
+  },
+
+  getJobStatus: async (jobId: string) =&gt; {
+    try {
+      const response = await apiClient.get(`/api/export/status/${jobId}`);
+      set({ currentJob: response.data });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get job status:', error);
+      throw error;
+    }
+  },
+
+  cancelJob: async (jobId: string) =&gt; {
+    try {
+      await apiClient.post(`/api/export/cancel/${jobId}`);
+      set({ currentJob: null });
+    } catch (error) {
+      console.error('Failed to cancel job:', error);
+      throw error;
+    }
+  }
+}));
+</code></pre>
+<h3 id="4-job-completion-panel">4. Job Completion Panel</h3>
+<p>Create <code>ExportCompletionPanel.tsx</code>:</p>
+<pre><code class="lang-typescript">interface ExportCompletionPanelProps {
+  job: ExportJob;
+  metadata?: ExportMetadata;
+}
+
+export const ExportCompletionPanel: React.FC&lt;ExportCompletionPanelProps&gt; = ({ 
+  job, 
+  metadata 
+}) =&gt; {
+  const openFolder = () =&gt; {
+    if (job.outputFile) {
+      // Use Electron shell to open folder
+      const folder = path.dirname(job.outputFile);
+      shell.openPath(folder);
+    }
+  };
+
+  return (
+    &lt;Card className=&quot;export-completion&quot;&gt;
+      &lt;CardHeader&gt;
+        &lt;Text weight=&quot;semibold&quot; size={500}&gt;Export Completed&lt;/Text&gt;
+        &lt;Status appearance=&quot;success&quot;&gt;Success&lt;/Status&gt;
+      &lt;/CardHeader&gt;
+
+      &lt;CardBody&gt;
+        {metadata &amp;&amp; (
+          &lt;div className=&quot;export-metadata&quot;&gt;
+            &lt;dl&gt;
+              &lt;dt&gt;Resolution:&lt;/dt&gt;
+              &lt;dd&gt;{metadata.resolution.width}x{metadata.resolution.height}&lt;/dd&gt;
+              
+              &lt;dt&gt;Duration:&lt;/dt&gt;
+              &lt;dd&gt;{formatDuration(metadata.duration)}&lt;/dd&gt;
+              
+              &lt;dt&gt;Codec:&lt;/dt&gt;
+              &lt;dd&gt;{metadata.videoCodec} / {metadata.audioCodec}&lt;/dd&gt;
+              
+              &lt;dt&gt;File Size:&lt;/dt&gt;
+              &lt;dd&gt;{(metadata.fileSizeBytes / 1024 / 1024).toFixed(2)} MB&lt;/dd&gt;
+              
+              &lt;dt&gt;Encoder:&lt;/dt&gt;
+              &lt;dd&gt;
+                {metadata.encoderUsed}
+                {metadata.hardwareAccelerationUsed &amp;&amp; ' (HW Accelerated)'}
+              &lt;/dd&gt;
+            &lt;/dl&gt;
+
+            {metadata.validationIssues.length &gt; 0 &amp;&amp; (
+              &lt;MessageBar intent=&quot;warning&quot;&gt;
+                &lt;strong&gt;Validation Issues:&lt;/strong&gt;
+                &lt;ul&gt;
+                  {metadata.validationIssues.map((issue, i) =&gt; 
+                    &lt;li key={i}&gt;{issue}&lt;/li&gt;
+                  )}
+                &lt;/ul&gt;
+              &lt;/MessageBar&gt;
+            )}
+          &lt;/div&gt;
+        )}
+      &lt;/CardBody&gt;
+
+      &lt;CardFooter&gt;
+        &lt;Button appearance=&quot;primary&quot; onClick={openFolder}&gt;
+          Open Folder
+        &lt;/Button&gt;
+      &lt;/CardFooter&gt;
+    &lt;/Card&gt;
+  );
+};
+</code></pre>
+<h2 id="testing-plan">Testing Plan</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<ol>
+<li><p><strong>Export Dialog Tests</strong> (<code>ExportDialog.test.tsx</code>)</p>
+<ul>
+<li>Renders with preset list</li>
+<li>Triggers preflight validation on preset selection</li>
+<li>Shows errors/warnings from preflight</li>
+<li>Enables/disables export button based on validation</li>
+</ul>
+</li>
+<li><p><strong>Preflight Summary Tests</strong> (<code>PreflightSummary.test.tsx</code>)</p>
+<ul>
+<li>Displays errors with correct styling</li>
+<li>Displays warnings with correct styling</li>
+<li>Shows estimates in readable format</li>
+</ul>
+</li>
+<li><p><strong>Export State Tests</strong> (<code>export.test.ts</code>)</p>
+<ul>
+<li>Fetches presets from API</li>
+<li>Starts export job</li>
+<li>Polls job status</li>
+<li>Cancels job</li>
+</ul>
+</li>
+</ol>
+<h3 id="integration-tests">Integration Tests</h3>
+<ol>
+<li><strong>Export Flow Test</strong>
+<ul>
+<li>User selects preset</li>
+<li>Preflight validation runs automatically</li>
+<li>Warnings displayed</li>
+<li>Export starts</li>
+<li>Progress updates via SSE</li>
+<li>Completion panel shows metadata</li>
+</ul>
+</li>
+</ol>
+<h3 id="e2e-tests-playwright">E2E Tests (Playwright)</h3>
+<ol>
+<li><p><strong>Happy Path Export</strong> (<code>export-flow.spec.ts</code>)</p>
+<ul>
+<li>Open export dialog</li>
+<li>Select &quot;YouTube 1080p&quot; preset</li>
+<li>Verify preflight summary appears</li>
+<li>Click export</li>
+<li>Wait for completion</li>
+<li>Verify file exists</li>
+</ul>
+</li>
+<li><p><strong>Error Handling</strong> (<code>export-errors.spec.ts</code>)</p>
+<ul>
+<li>Select TikTok preset with long video</li>
+<li>Verify error message</li>
+<li>Verify export button disabled</li>
+<li>Try &quot;Proceed Anyway&quot; option</li>
+</ul>
+</li>
+<li><p><strong>Hardware Acceleration</strong> (<code>hw-accel.spec.ts</code>)</p>
+<ul>
+<li>Mock system with NVIDIA GPU</li>
+<li>Verify NVENC recommendation</li>
+<li>Compare encoding time with CPU</li>
+</ul>
+</li>
+</ol>
+<h2 id="api-type-definitions">API Type Definitions</h2>
+<p>Add to <code>Aura.Web/src/types/api-v1.ts</code>:</p>
+<pre><code class="lang-typescript">export interface ExportPreset {
+  name: string;
+  description: string;
+  platform: string;
+  resolution: string;
+  videoCodec: string;
+  audioCodec: string;
+  frameRate: number;
+  videoBitrate: number;
+  audioBitrate: number;
+  aspectRatio: string;
+  quality: string;
+}
+
+export interface PreflightResult {
+  canProceed: boolean;
+  errors: string[];
+  warnings: string[];
+  recommendations: string[];
+  estimates: {
+    estimatedFileSizeMB: number;
+    estimatedDurationMinutes: number;
+    requiredDiskSpaceMB: number;
+    availableDiskSpaceGB: number;
+    recommendedEncoder: string;
+    hardwareAccelerationAvailable: boolean;
+  };
+}
+
+export interface ExportJob {
+  id: string;
+  status: string;
+  progress: number;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  errorMessage?: string;
+  outputFile?: string;
+  estimatedTimeRemaining?: string;
+}
+
+export interface ExportMetadata {
+  fileHash: string;
+  fileSizeBytes: number;
+  duration: string;
+  videoCodec: string;
+  audioCodec: string;
+  resolution: {
+    width: number;
+    height: number;
+  };
+  frameRate: number;
+  videoBitrate: number;
+  audioBitrate: number;
+  container: string;
+  encoderUsed: string;
+  encodingDuration: string;
+  presetName: string;
+  platform: string;
+  validationIssues: string[];
+  validationPassed: boolean;
+  hardwareAccelerationUsed: boolean;
+}
+</code></pre>
+<h2 id="acceptance-criteria">Acceptance Criteria</h2>
+<ul>
+<li>[ ] Users can select from curated export presets</li>
+<li>[ ] Preflight validation runs automatically</li>
+<li>[ ] Errors prevent export, warnings allow &quot;Proceed anyway&quot;</li>
+<li>[ ] Disk space estimates shown before export</li>
+<li>[ ] Hardware acceleration automatically detected and used</li>
+<li>[ ] Progress updates during export</li>
+<li>[ ] Post-export metadata displayed</li>
+<li>[ ] &quot;Open folder&quot; button works</li>
+<li>[ ] Validation issues flagged in completion panel</li>
+<li>[ ] All tests pass</li>
+</ul>
+<h2 id="known-limitations">Known Limitations</h2>
+<ol>
+<li>Platform profile validation uses generic limits (may need per-account customization)</li>
+<li>Disk space estimation includes 150% buffer (conservative)</li>
+<li>Encoding time estimation is approximate (actual may vary ±30%)</li>
+<li>Hardware acceleration detection requires FFmpeg 4.0+</li>
+<li>Hash computation may take time for large files (10+ GB)</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ol>
+<li>Custom preset creation/editing</li>
+<li>Batch export with multiple presets</li>
+<li>Auto-retry failed exports</li>
+<li>Export queue management</li>
+<li>Cloud storage integration</li>
+<li>Format conversion post-export</li>
+<li>Advanced codec options (HDR, 10-bit)</li>
+<li>Export profiles per project</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/EXPORT_PRESETS_IMPLEMENTATION.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

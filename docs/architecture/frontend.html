@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Frontend Architecture | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Frontend Architecture | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/frontend.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="frontend-architecture">Frontend Architecture</h1>
+
+<p>Comprehensive guide to the Aura Video Studio frontend architecture.</p>
+<h2 id="overview">Overview</h2>
+<p>The frontend is built with modern React and TypeScript, bundled with Vite, and runs inside Electron as the renderer process.</p>
+<p><strong>Technology Stack:</strong></p>
+<ul>
+<li>React 18.2.0+ with TypeScript 5.3.3 (strict mode)</li>
+<li>Vite 6.4.1 for build tooling and HMR</li>
+<li>Fluent UI React Components 9.47.0 for UI</li>
+<li>Zustand 5.0.8 for state management</li>
+<li>React Router 6.21.0 for routing</li>
+<li>Axios 1.6.5 for HTTP client</li>
+</ul>
+<h2 id="project-structure">Project Structure</h2>
+<pre><code>Aura.Web/
+├── public/                 # Static assets
+├── src/
+│   ├── components/         # Reusable UI components
+│   │   ├── common/        # Shared components (Button, Card, etc.)
+│   │   ├── layout/        # Layout components (Header, Sidebar)
+│   │   └── features/      # Feature-specific components
+│   ├── pages/             # Route components (page-level)
+│   ├── services/          # API clients and external services
+│   │   └── api/           # API client and utilities
+│   ├── stores/            # Zustand state stores
+│   ├── hooks/             # Custom React hooks
+│   ├── types/             # TypeScript type definitions
+│   ├── utils/             # Utility functions
+│   ├── styles/            # Global styles and themes
+│   ├── App.tsx            # Root application component
+│   └── main.tsx           # Application entry point
+├── tests/                 # Test files
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+├── package.json
+├── tsconfig.json          # TypeScript configuration (strict mode)
+├── vite.config.ts         # Vite configuration
+└── playwright.config.ts   # E2E test configuration
+</code></pre>
+<h2 id="state-management-zustand">State Management (Zustand)</h2>
+<h3 id="store-pattern">Store Pattern</h3>
+<p>Each store focuses on a single domain with clear boundaries:</p>
+<pre><code class="lang-typescript">// src/stores/jobStore.ts
+import { create } from 'zustand';
+
+interface Job {
+  id: string;
+  status: 'Queued' | 'Running' | 'Completed' | 'Failed';
+  progress: number;
+}
+
+interface JobState {
+  // State
+  jobs: Job[];
+  selectedJobId: string | null;
+  isLoading: boolean;
+  
+  // Actions
+  addJob: (job: Job) =&gt; void;
+  updateJob: (id: string, updates: Partial&lt;Job&gt;) =&gt; void;
+  removeJob: (id: string) =&gt; void;
+  selectJob: (id: string | null) =&gt; void;
+  loadJobs: () =&gt; Promise&lt;void&gt;;
+}
+
+export const useJobStore = create&lt;JobState&gt;((set, get) =&gt; ({
+  // Initial state
+  jobs: [],
+  selectedJobId: null,
+  isLoading: false,
+  
+  // Actions
+  addJob: (job) =&gt; set((state) =&gt; ({
+    jobs: [...state.jobs, job]
+  })),
+  
+  updateJob: (id, updates) =&gt; set((state) =&gt; ({
+    jobs: state.jobs.map(job =&gt; 
+      job.id === id ? { ...job, ...updates } : job
+    )
+  })),
+  
+  removeJob: (id) =&gt; set((state) =&gt; ({
+    jobs: state.jobs.filter(job =&gt; job.id !== id),
+    selectedJobId: state.selectedJobId === id ? null : state.selectedJobId
+  })),
+  
+  selectJob: (id) =&gt; set({ selectedJobId: id }),
+  
+  loadJobs: async () =&gt; {
+    set({ isLoading: true });
+    try {
+      const jobs = await apiClient.get&lt;Job[]&gt;('/api/jobs');
+      set({ jobs: jobs.data, isLoading: false });
+    } catch (error) {
+      console.error('Failed to load jobs:', error);
+      set({ isLoading: false });
+    }
+  }
+}));
+</code></pre>
+<h3 id="using-stores-in-components">Using Stores in Components</h3>
+<pre><code class="lang-typescript">import { useJobStore } from '@/stores/jobStore';
+
+function JobList() {
+  const jobs = useJobStore(state =&gt; state.jobs);
+  const isLoading = useJobStore(state =&gt; state.isLoading);
+  const loadJobs = useJobStore(state =&gt; state.loadJobs);
+  
+  useEffect(() =&gt; {
+    loadJobs();
+  }, [loadJobs]);
+  
+  if (isLoading) return &lt;Spinner /&gt;;
+  
+  return (
+    &lt;div&gt;
+      {jobs.map(job =&gt; (
+        &lt;JobCard key={job.id} job={job} /&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h3 id="store-organization">Store Organization</h3>
+<p><strong>Existing Stores:</strong></p>
+<ul>
+<li><code>onboarding.ts</code> - Wizard state and navigation</li>
+<li><code>render.ts</code> - Video rendering state and progress</li>
+<li><code>settings.ts</code> - Application settings</li>
+<li><code>jobs.ts</code> - Job queue and status</li>
+<li><code>timeline.ts</code> - Timeline editing state</li>
+<li><code>engines.ts</code> - Engine configuration</li>
+</ul>
+<h2 id="routing-react-router-6">Routing (React Router 6)</h2>
+<h3 id="route-configuration">Route Configuration</h3>
+<pre><code class="lang-typescript">// src/App.tsx
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+function App() {
+  return (
+    &lt;BrowserRouter&gt;
+      &lt;Routes&gt;
+        &lt;Route path=&quot;/&quot; element={&lt;Layout /&gt;}&gt;
+          &lt;Route index element={&lt;HomePage /&gt;} /&gt;
+          &lt;Route path=&quot;create&quot; element={&lt;CreateWizard /&gt;} /&gt;
+          &lt;Route path=&quot;jobs&quot; element={&lt;JobsPage /&gt;} /&gt;
+          &lt;Route path=&quot;jobs/:id&quot; element={&lt;JobDetailPage /&gt;} /&gt;
+          &lt;Route path=&quot;timeline/:id&quot; element={&lt;TimelineEditor /&gt;} /&gt;
+          &lt;Route path=&quot;settings&quot; element={&lt;SettingsPage /&gt;} /&gt;
+          &lt;Route path=&quot;*&quot; element={&lt;Navigate to=&quot;/&quot; replace /&gt;} /&gt;
+        &lt;/Route&gt;
+      &lt;/Routes&gt;
+    &lt;/BrowserRouter&gt;
+  );
+}
+</code></pre>
+<h3 id="protected-routes">Protected Routes</h3>
+<pre><code class="lang-typescript">interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredConfig?: string[];
+}
+
+function ProtectedRoute({ children, requiredConfig }: ProtectedRouteProps) {
+  const settings = useSettingsStore(state =&gt; state.settings);
+  const navigate = useNavigate();
+  
+  useEffect(() =&gt; {
+    if (requiredConfig &amp;&amp; !checkConfig(settings, requiredConfig)) {
+      navigate('/settings');
+    }
+  }, [settings, requiredConfig, navigate]);
+  
+  return &lt;&gt;{children}&lt;/&gt;;
+}
+
+// Usage
+&lt;Route 
+  path=&quot;create&quot; 
+  element={
+    &lt;ProtectedRoute requiredConfig={['llmProvider', 'ttsProvider']}&gt;
+      &lt;CreateWizard /&gt;
+    &lt;/ProtectedRoute&gt;
+  } 
+/&gt;
+</code></pre>
+<h3 id="navigation">Navigation</h3>
+<pre><code class="lang-typescript">import { useNavigate } from 'react-router-dom';
+
+function MyComponent() {
+  const navigate = useNavigate();
+  
+  const handleCreate = () =&gt; {
+    navigate('/create');
+  };
+  
+  const handleJobDetail = (jobId: string) =&gt; {
+    navigate(`/jobs/${jobId}`);
+  };
+  
+  return (
+    &lt;div&gt;
+      &lt;Button onClick={handleCreate}&gt;Create Video&lt;/Button&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h2 id="api-client-pattern">API Client Pattern</h2>
+<h3 id="central-api-client">Central API Client</h3>
+<pre><code class="lang-typescript">// src/services/api/apiClient.ts
+import axios, { AxiosInstance, AxiosError } from 'axios';
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5005';
+
+// Circuit breaker state
+let failureCount = 0;
+let circuitOpen = false;
+let lastFailureTime = 0;
+
+const FAILURE_THRESHOLD = 5;
+const CIRCUIT_TIMEOUT = 30000; // 30 seconds
+
+export const apiClient: AxiosInstance = axios.create({
+  baseURL: BASE_URL,
+  timeout: 30000,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Request interceptor - add correlation ID
+apiClient.interceptors.request.use((config) =&gt; {
+  // Check circuit breaker
+  if (circuitOpen) {
+    const now = Date.now();
+    if (now - lastFailureTime &gt; CIRCUIT_TIMEOUT) {
+      circuitOpen = false;
+      failureCount = 0;
+    } else {
+      return Promise.reject(new Error('Circuit breaker is open'));
+    }
+  }
+  
+  // Add correlation ID
+  config.headers['X-Correlation-ID'] = crypto.randomUUID();
+  return config;
+});
+
+// Response interceptor - handle errors
+apiClient.interceptors.response.use(
+  (response) =&gt; {
+    // Reset failure count on success
+    failureCount = 0;
+    return response;
+  },
+  (error: AxiosError) =&gt; {
+    // Increment failure count
+    failureCount++;
+    lastFailureTime = Date.now();
+    
+    // Open circuit if threshold reached
+    if (failureCount &gt;= FAILURE_THRESHOLD) {
+      circuitOpen = true;
+    }
+    
+    return Promise.reject(error);
+  }
+);
+</code></pre>
+<h3 id="error-handling">Error Handling</h3>
+<pre><code class="lang-typescript">// src/services/api/apiError.ts
+import { AxiosError } from 'axios';
+
+export interface ApiError {
+  type: string;
+  title: string;
+  status: number;
+  detail: string;
+  correlationId?: string;
+}
+
+export function parseApiError(error: unknown): ApiError {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError&lt;ApiError&gt;;
+    
+    if (axiosError.response?.data) {
+      return axiosError.response.data;
+    }
+    
+    return {
+      type: 'NetworkError',
+      title: 'Network Error',
+      status: 0,
+      detail: axiosError.message || 'An unknown network error occurred'
+    };
+  }
+  
+  const errorObj = error instanceof Error ? error : new Error(String(error));
+  return {
+    type: 'UnknownError',
+    title: 'Unknown Error',
+    status: 0,
+    detail: errorObj.message
+  };
+}
+</code></pre>
+<h3 id="api-service-pattern">API Service Pattern</h3>
+<pre><code class="lang-typescript">// src/services/api/jobService.ts
+import { apiClient } from './apiClient';
+import { parseApiError } from './apiError';
+import type { CreateJobRequest, JobResponse } from '@/types/api-v1';
+
+export const jobService = {
+  async create(request: CreateJobRequest): Promise&lt;JobResponse&gt; {
+    try {
+      const response = await apiClient.post&lt;JobResponse&gt;('/api/jobs', request);
+      return response.data;
+    } catch (error: unknown) {
+      const apiError = parseApiError(error);
+      console.error('Failed to create job:', apiError.detail);
+      throw apiError;
+    }
+  },
+  
+  async get(id: string): Promise&lt;JobResponse&gt; {
+    try {
+      const response = await apiClient.get&lt;JobResponse&gt;(`/api/jobs/${id}`);
+      return response.data;
+    } catch (error: unknown) {
+      const apiError = parseApiError(error);
+      throw apiError;
+    }
+  },
+  
+  async list(page = 1, pageSize = 20): Promise&lt;JobResponse[]&gt; {
+    try {
+      const response = await apiClient.get&lt;JobResponse[]&gt;('/api/jobs', {
+        params: { page, pageSize }
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const apiError = parseApiError(error);
+      throw apiError;
+    }
+  },
+  
+  async cancel(id: string): Promise&lt;void&gt; {
+    try {
+      await apiClient.delete(`/api/jobs/${id}`);
+    } catch (error: unknown) {
+      const apiError = parseApiError(error);
+      throw apiError;
+    }
+  }
+};
+</code></pre>
+<h2 id="component-patterns">Component Patterns</h2>
+<h3 id="functional-components-with-typescript">Functional Components with TypeScript</h3>
+<pre><code class="lang-typescript">import React, { useState, useCallback, useMemo } from 'react';
+import type { FC } from 'react';
+
+interface JobCardProps {
+  job: Job;
+  onSelect?: (id: string) =&gt; void;
+  onCancel?: (id: string) =&gt; void;
+  disabled?: boolean;
+}
+
+const JobCard: FC&lt;JobCardProps&gt; = ({ 
+  job, 
+  onSelect, 
+  onCancel, 
+  disabled = false 
+}) =&gt; {
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const handleSelect = useCallback(() =&gt; {
+    onSelect?.(job.id);
+  }, [job.id, onSelect]);
+  
+  const handleCancel = useCallback(() =&gt; {
+    onCancel?.(job.id);
+  }, [job.id, onCancel]);
+  
+  const statusColor = useMemo(() =&gt; {
+    switch (job.status) {
+      case 'Completed': return 'success';
+      case 'Failed': return 'danger';
+      case 'Running': return 'warning';
+      default: return 'neutral';
+    }
+  }, [job.status]);
+  
+  return (
+    &lt;Card
+      onMouseEnter={() =&gt; setIsHovered(true)}
+      onMouseLeave={() =&gt; setIsHovered(false)}
+      onClick={handleSelect}
+    &gt;
+      &lt;CardHeader&gt;
+        &lt;Text weight=&quot;semibold&quot;&gt;{job.id}&lt;/Text&gt;
+        &lt;Badge color={statusColor}&gt;{job.status}&lt;/Badge&gt;
+      &lt;/CardHeader&gt;
+      &lt;CardBody&gt;
+        &lt;ProgressBar value={job.progress} /&gt;
+      &lt;/CardBody&gt;
+      {isHovered &amp;&amp; job.status === 'Running' &amp;&amp; (
+        &lt;CardFooter&gt;
+          &lt;Button 
+            onClick={handleCancel} 
+            disabled={disabled}
+          &gt;
+            Cancel
+          &lt;/Button&gt;
+        &lt;/CardFooter&gt;
+      )}
+    &lt;/Card&gt;
+  );
+};
+
+export default JobCard;
+</code></pre>
+<h3 id="custom-hooks">Custom Hooks</h3>
+<pre><code class="lang-typescript">// src/hooks/useJobProgress.ts
+import { useState, useEffect } from 'react';
+
+export function useJobProgress(jobId: string) {
+  const [progress, setProgress] = useState(0);
+  const [stage, setStage] = useState('');
+  
+  useEffect(() =&gt; {
+    const eventSource = new EventSource(`/api/jobs/${jobId}/events`);
+    
+    eventSource.addEventListener('step-progress', (event) =&gt; {
+      const data = JSON.parse(event.data);
+      setProgress(data.progress);
+      setStage(data.stage);
+    });
+    
+    eventSource.addEventListener('job-completed', () =&gt; {
+      setProgress(100);
+      eventSource.close();
+    });
+    
+    return () =&gt; {
+      eventSource.close();
+    };
+  }, [jobId]);
+  
+  return { progress, stage };
+}
+
+// Usage
+function JobProgressBar({ jobId }: { jobId: string }) {
+  const { progress, stage } = useJobProgress(jobId);
+  
+  return (
+    &lt;div&gt;
+      &lt;Text&gt;{stage}&lt;/Text&gt;
+      &lt;ProgressBar value={progress} /&gt;
+    &lt;/div&gt;
+  );
+}
+</code></pre>
+<h2 id="performance-optimization">Performance Optimization</h2>
+<h3 id="memoization">Memoization</h3>
+<pre><code class="lang-typescript">// Expensive calculations
+const sortedJobs = useMemo(() =&gt; {
+  return jobs.sort((a, b) =&gt; 
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}, [jobs]);
+
+// Callback stability
+const handleJobUpdate = useCallback((id: string, updates: Partial&lt;Job&gt;) =&gt; {
+  updateJob(id, updates);
+}, [updateJob]);
+</code></pre>
+<h3 id="component-memoization">Component Memoization</h3>
+<pre><code class="lang-typescript">import React, { memo } from 'react';
+
+const JobCard = memo&lt;JobCardProps&gt;(({ job, onSelect }) =&gt; {
+  return (
+    &lt;Card&gt;
+      {/* Component content */}
+    &lt;/Card&gt;
+  );
+}, (prevProps, nextProps) =&gt; {
+  // Custom comparison
+  return prevProps.job.id === nextProps.job.id &amp;&amp;
+         prevProps.job.status === nextProps.job.status;
+});
+</code></pre>
+<h3 id="virtualization">Virtualization</h3>
+<p>For long lists, use react-virtuoso or react-window:</p>
+<pre><code class="lang-typescript">import { Virtuoso } from 'react-virtuoso';
+
+function JobList({ jobs }: { jobs: Job[] }) {
+  return (
+    &lt;Virtuoso
+      style={{ height: '600px' }}
+      data={jobs}
+      itemContent={(index, job) =&gt; (
+        &lt;JobCard key={job.id} job={job} /&gt;
+      )}
+    /&gt;
+  );
+}
+</code></pre>
+<h2 id="typescript-best-practices">TypeScript Best Practices</h2>
+<h3 id="strict-mode">Strict Mode</h3>
+<p>All code uses TypeScript strict mode:</p>
+<pre><code class="lang-json">{
+  &quot;compilerOptions&quot;: {
+    &quot;strict&quot;: true,
+    &quot;noUncheckedIndexedAccess&quot;: true,
+    &quot;noImplicitAny&quot;: true
+  }
+}
+</code></pre>
+<h3 id="type-safety">Type Safety</h3>
+<pre><code class="lang-typescript">// ✅ Good - explicit types
+function processJob(job: Job): void {
+  console.log(job.id);
+}
+
+// ❌ Bad - implicit any
+function processJob(job) {  // Error in strict mode
+  console.log(job.id);
+}
+
+// ✅ Good - error handling
+try {
+  await fetchData();
+} catch (error: unknown) {
+  const errorObj = error instanceof Error ? error : new Error(String(error));
+  console.error(errorObj.message);
+}
+
+// ❌ Bad - any in catch
+try {
+  await fetchData();
+} catch (error: any) {  // Forbidden
+  console.error(error.message);
+}
+</code></pre>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li><a href="../development/testing.html">Testing Guide</a></li>
+<li><a href="../development/FRONTEND_API_INTEGRATION_GUIDE.html">API Integration Guide</a></li>
+<li><a href="../TYPESCRIPT_GUIDELINES.html">TypeScript Guidelines</a></li>
+<li><a href="../development/PERFORMANCE_OPTIMIZATION_GUIDE.html">Performance Optimization</a></li>
+</ul>
+<hr>
+<p>Last updated: 2025-11-18</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/frontend.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

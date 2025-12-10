@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Architecture Decisions | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Architecture Decisions | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/ARCHITECTURE_DECISIONS.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="architecture-decisions">Architecture Decisions</h1>
+
+<p>This document captures key architectural decisions made in the Aura Video Studio project to prevent anti-patterns and ensure maintainability.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#ollama-integration-pattern">Ollama Integration Pattern</a></li>
+<li><a href="#video-export-job-state-management">Video Export Job State Management</a></li>
+<li><a href="#react-component-refs-vs-query-selectors">React Component Refs vs Query Selectors</a></li>
+<li><a href="#video-preview-synchronization">Video Preview Synchronization</a></li>
+</ol>
+<hr>
+<h2 id="ollama-integration-pattern">Ollama Integration Pattern</h2>
+<h3 id="decision">Decision</h3>
+<p><strong>Use <code>IOllamaDirectClient</code> with proper dependency injection instead of reflection to access Ollama provider internals.</strong></p>
+<h3 id="context">Context</h3>
+<p>Previous implementation in <code>IdeationService.cs</code> used reflection to access private fields of <code>OllamaLlmProvider</code>:</p>
+<pre><code class="lang-csharp">// ❌ OLD APPROACH (DO NOT USE)
+var httpClientField = providerType.GetField(&quot;_httpClient&quot;, BindingFlags.NonPublic | BindingFlags.Instance);
+var httpClient = (HttpClient?)httpClientField.GetValue(_llmProvider);
+</code></pre>
+<p>This approach had several critical problems:</p>
+<ol>
+<li><strong>Fragile</strong>: Breaks when field names change</li>
+<li><strong>Untestable</strong>: Cannot mock private field access</li>
+<li><strong>Violates encapsulation</strong>: Bypasses intended provider interface</li>
+<li><strong>Fails with decorators</strong>: Doesn't work when provider is wrapped</li>
+</ol>
+<h3 id="solution">Solution</h3>
+<p>Created a clean interface and implementation:</p>
+<pre><code class="lang-csharp">// ✅ NEW APPROACH (USE THIS)
+public interface IOllamaDirectClient
+{
+    Task&lt;string&gt; GenerateAsync(string model, string prompt, ...);
+    Task&lt;bool&gt; IsAvailableAsync(CancellationToken ct);
+    Task&lt;IReadOnlyList&lt;string&gt;&gt; ListModelsAsync(CancellationToken ct);
+}
+
+public class OllamaDirectClient : IOllamaDirectClient
+{
+    // Injected via IHttpClientFactory with proper lifetime management
+    private readonly HttpClient _httpClient;
+    private readonly OllamaSettings _settings;
+    
+    // Implementation with retry logic and timeout handling
+}
+</code></pre>
+<p>Registered in DI container:</p>
+<pre><code class="lang-csharp">// Program.cs
+builder.Services.AddHttpClient&lt;IOllamaDirectClient, OllamaDirectClient&gt;(client =&gt;
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
+</code></pre>
+<h3 id="benefits">Benefits</h3>
+<ul>
+<li><strong>Testable</strong>: Easy to mock <code>IOllamaDirectClient</code> in tests</li>
+<li><strong>Maintainable</strong>: Changes to Ollama provider don't break ideation service</li>
+<li><strong>Proper lifetime management</strong>: HttpClient managed by <code>IHttpClientFactory</code></li>
+<li><strong>Retry logic</strong>: Built-in exponential backoff for transient failures</li>
+<li><strong>Heartbeat logging</strong>: Tracks long-running requests to detect hangs</li>
+</ul>
+<h3 id="files-affected">Files Affected</h3>
+<ul>
+<li><code>Aura.Core/Providers/IOllamaDirectClient.cs</code> - Interface definition</li>
+<li><code>Aura.Core/Providers/OllamaDirectClient.cs</code> - Implementation</li>
+<li><code>Aura.Core/Services/Ideation/IdeationService.cs</code> - Refactored to use interface</li>
+<li><code>Aura.Api/Program.cs</code> - DI registration</li>
+</ul>
+<hr>
+<h2 id="video-export-job-state-management">Video Export Job State Management</h2>
+<h3 id="decision-1">Decision</h3>
+<p><strong>Require <code>outputPath</code> to be set atomically with &quot;completed&quot; status, and reject completion without it.</strong></p>
+<h3 id="context-1">Context</h3>
+<p>Jobs were completing (status=&quot;completed&quot;, progress=100%) but <code>outputPath</code> was null, causing frontend polling to fail at 72%. This was a race condition where:</p>
+<ol>
+<li>Job runner set status to &quot;completed&quot;</li>
+<li>But didn't set <code>outputPath</code> in the same update</li>
+<li>Frontend saw &quot;completed&quot; status and stopped polling</li>
+<li>But had no file to download</li>
+</ol>
+<h3 id="solution-1">Solution</h3>
+<h4 id="backend-exportjobservicecs">Backend (<code>ExportJobService.cs</code>)</h4>
+<pre><code class="lang-csharp">public Task UpdateJobStatusAsync(string jobId, string status, int percent, string? outputPath = null, ...)
+{
+    // CRITICAL: Require outputPath when status is &quot;completed&quot;
+    if (status == &quot;completed&quot; &amp;&amp; string.IsNullOrWhiteSpace(outputPath))
+    {
+        _logger.LogError(
+            &quot;CRITICAL: Job {JobId} attempted to transition to 'completed' without outputPath. &quot; +
+            &quot;This will cause frontend polling to fail. Rejecting status update.&quot;, 
+            jobId);
+        return Task.CompletedTask; // Don't update - force caller to provide outputPath
+    }
+    
+    // Atomic update of both status and outputPath
+    var updatedJob = job with
+    {
+        Status = status,
+        OutputPath = outputPath ?? job.OutputPath, // Preserve existing if not provided
+        ...
+    };
+}
+</code></pre>
+<h4 id="frontend-finalexporttsx">Frontend (<code>FinalExport.tsx</code>)</h4>
+<pre><code class="lang-typescript">// ARCHITECTURAL FIX: Only consider completed if BOTH conditions met
+function checkJobCompletion(jobData: JobStatusData): boolean {
+  if (status === 'completed') {
+    const hasOutput = jobData.outputPath || (jobData.artifacts?.length &gt; 0);
+    
+    if (!hasOutput) {
+      // Job says completed but no output - backend bug, keep polling
+      console.error('[FinalExport] Job completed but outputPath missing - backend bug');
+      return false; // NOT truly completed
+    }
+    
+    return true; // Truly completed with output
+  }
+  return false;
+}
+</code></pre>
+<p>Removed the 2-second <code>JOB_REGISTRATION_DELAY_MS</code> that was causing race conditions. SSE now connects immediately.</p>
+<h3 id="benefits-1">Benefits</h3>
+<ul>
+<li><strong>No more &quot;72% stuck&quot; bug</strong>: Jobs cannot complete without an output file</li>
+<li><strong>Atomic updates</strong>: Status and outputPath change together</li>
+<li><strong>Better error detection</strong>: Backend logs when update is rejected</li>
+<li><strong>No race conditions</strong>: Removed artificial delay before SSE connection</li>
+</ul>
+<h3 id="files-affected-1">Files Affected</h3>
+<ul>
+<li><code>Aura.Core/Services/Export/ExportJobService.cs</code> - Validation and atomic updates</li>
+<li><code>Aura.Web/src/components/VideoWizard/steps/FinalExport.tsx</code> - Fixed completion check</li>
+<li><code>Aura.Core/Services/Export/JobStateManager.cs</code> - State machine (created but not yet integrated)</li>
+</ul>
+<hr>
+<h2 id="react-component-refs-vs-query-selectors">React Component Refs vs Query Selectors</h2>
+<h3 id="decision-2">Decision</h3>
+<p><strong>Always use refs to access DOM elements within React components. Never use <code>querySelector</code> with Fluent UI class names.</strong></p>
+<h3 id="context-2">Context</h3>
+<p>Previous implementation in <code>Timeline.tsx</code> used <code>querySelector</code> with Fluent UI class names:</p>
+<pre><code class="lang-tsx">// ❌ OLD APPROACH (DO NOT USE)
+const rulerScrollable = containerRef.current?.querySelector('[class*=&quot;rulerScrollable&quot;]');
+</code></pre>
+<p><strong>Problem</strong>: Fluent UI's <code>makeStyles</code> generates hashed class names (e.g., <code>rulerScrollable-abc123</code>) that change between builds. This breaks the selector.</p>
+<h3 id="solution-2">Solution</h3>
+<p>Use React refs instead:</p>
+<pre><code class="lang-tsx">// ✅ NEW APPROACH (USE THIS)
+// 1. Create ref at component level
+const rulerScrollableRef = useRef&lt;HTMLDivElement&gt;(null);
+
+// 2. Use ref in event handlers
+const handleMouseMove = (e: globalThis.MouseEvent) =&gt; {
+  const rulerScrollable = rulerScrollableRef.current;
+  if (!rulerScrollable) return;
+  // ... use rulerScrollable
+};
+
+// 3. Attach ref to element
+&lt;div className={styles.rulerScrollable} ref={rulerScrollableRef}&gt;
+  ...
+&lt;/div&gt;
+</code></pre>
+<h3 id="benefits-2">Benefits</h3>
+<ul>
+<li><strong>Stable references</strong>: Refs don't change between builds</li>
+<li><strong>Type-safe</strong>: TypeScript knows the element type</li>
+<li><strong>Performance</strong>: Direct reference, no DOM traversal</li>
+<li><strong>Maintainable</strong>: Survives CSS framework changes</li>
+</ul>
+<h3 id="files-affected-2">Files Affected</h3>
+<ul>
+<li><code>Aura.Web/src/components/OpenCut/Timeline.tsx</code> - Fixed playhead drag</li>
+</ul>
+<hr>
+<h2 id="video-preview-synchronization">Video Preview Synchronization</h2>
+<h3 id="decision-3">Decision</h3>
+<p><strong>Always sync video element time from playback store, not just when playing.</strong></p>
+<h3 id="context-3">Context</h3>
+<p>Previous implementation only updated video position during playback:</p>
+<pre><code class="lang-tsx">// ❌ OLD APPROACH (DO NOT USE)
+const handleTimeUpdate = () =&gt; {
+  if (!playbackStore.isPlaying) return; // BUG: Ignores seeks when paused
+  playbackStore.setCurrentTime(video.currentTime);
+};
+</code></pre>
+<p><strong>Problem</strong>: Dragging the playhead while paused didn't update the video preview because <code>isPlaying</code> was false.</p>
+<h3 id="solution-3">Solution</h3>
+<p>Two-way synchronization:</p>
+<pre><code class="lang-tsx">// ✅ NEW APPROACH (USE THIS)
+
+// 1. Video → Store: Always sync, even when paused
+const handleTimeUpdate = () =&gt; {
+  playbackStore.setCurrentTime(video.currentTime); // Removed isPlaying check
+};
+
+// 2. Store → Video: Sync when playhead is dragged
+useEffect(() =&gt; {
+  const video = videoRef.current;
+  if (!video || !videoSrc) return;
+  
+  // Only sync if significant difference (avoid feedback loop)
+  if (Math.abs(video.currentTime - playbackStore.currentTime) &gt; 0.1) {
+    video.currentTime = playbackStore.currentTime;
+  }
+}, [playbackStore.currentTime, videoSrc]);
+</code></pre>
+<h3 id="benefits-3">Benefits</h3>
+<ul>
+<li><strong>Seeking works when paused</strong>: Dragging playhead updates preview</li>
+<li><strong>Smooth synchronization</strong>: 0.1s threshold prevents jitter</li>
+<li><strong>No feedback loops</strong>: Threshold prevents infinite updates</li>
+</ul>
+<h3 id="files-affected-3">Files Affected</h3>
+<ul>
+<li><code>Aura.Web/src/components/OpenCut/PreviewPanel.tsx</code> - Fixed video sync</li>
+</ul>
+<hr>
+<h2 id="future-considerations">Future Considerations</h2>
+<h3 id="performance-monitoring">Performance Monitoring</h3>
+<p>Consider adding performance tracking for:</p>
+<ul>
+<li>Video render pipeline stages</li>
+<li>Ollama API call durations</li>
+<li>Job state transition timing</li>
+</ul>
+<h3 id="state-machine-integration">State Machine Integration</h3>
+<p>The <code>JobStateManager</code> class was created but not yet fully integrated. Future work should:</p>
+<ul>
+<li>Replace string-based status checks with enum-based state machine</li>
+<li>Add state transition validation</li>
+<li>Emit events for SSE subscribers</li>
+</ul>
+<h3 id="error-recovery">Error Recovery</h3>
+<p>Implement circuit breaker pattern for:</p>
+<ul>
+<li>Ollama API calls (prevent cascading failures)</li>
+<li>Video rendering pipeline (auto-retry with backoff)</li>
+<li>SSE connections (graceful degradation to polling)</li>
+</ul>
+<hr>
+<h2 id="references">References</h2>
+<ul>
+<li>PR #XXX: Comprehensive architectural fixes</li>
+<li>Issue #XXX: Video export fails at 72%</li>
+<li>Issue #XXX: Ideation timeout errors</li>
+<li>Issue #XXX: OpenCut playhead not draggable</li>
+</ul>
+<h2 id="change-log">Change Log</h2>
+<ul>
+<li>2024-12-06: Initial version documenting architectural fixes</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/ARCHITECTURE_DECISIONS.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

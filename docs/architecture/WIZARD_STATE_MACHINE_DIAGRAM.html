@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>First-Run Wizard State Machine Diagram | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="First-Run Wizard State Machine Diagram | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/WIZARD_STATE_MACHINE_DIAGRAM.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="first-run-wizard-state-machine-diagram">First-Run Wizard State Machine Diagram</h1>
+
+<h2 id="state-diagram">State Diagram</h2>
+<pre><code>┌──────────────────────────────────────────────────────────────────────┐
+│                      First-Run Wizard State Machine                  │
+└──────────────────────────────────────────────────────────────────────┘
+
+                                   ┌─────┐
+                                   │START│
+                                   └──┬──┘
+                                      │
+                                      ▼
+                              ┌──────────────┐
+                              │              │
+                              │     IDLE     │◄────────────────┐
+                              │              │                 │
+                              └──────┬───────┘                 │
+                                     │                         │
+                   Click &quot;Validate&quot;  │                         │
+                                     │                         │
+                                     ▼                         │
+                              ┌──────────────┐                 │
+                              │              │                 │
+                              │  VALIDATING  │                 │
+                              │              │                 │
+                              └──────┬───────┘                 │
+                                     │                         │
+                          ┌──────────┴──────────┐              │
+                          │                     │              │
+            API Success   │                     │   API Fail   │
+                          ▼                     ▼              │
+                   ┌──────────────┐      ┌──────────────┐     │
+                   │              │      │              │     │
+                   │    VALID     │      │   INVALID    │─────┘
+                   │              │      │              │ Reset/Retry
+                   └──────┬───────┘      └──────────────┘
+                          │                     ▲
+           Auto-advance   │                     │
+           (step 3 only)  │                     │ User fixes
+                          │                     │ and retries
+                          ▼                     │
+                   ┌──────────────┐             │
+                   │              │             │
+                   │    READY     │─────────────┘
+                   │              │
+                   └──────┬───────┘
+                          │
+            Complete/     │
+            Continue      │
+                          ▼
+                   ┌──────────────┐
+                   │              │
+                   │   COMPLETE   │
+                   │   (Exit)     │
+                   │              │
+                   └──────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│                      Installation Sub-Flow                            │
+└──────────────────────────────────────────────────────────────────────┘
+
+                   ┌──────────────┐
+                   │              │
+                   │     IDLE     │
+                   │              │
+                   └──────┬───────┘
+                          │
+         Click &quot;Install&quot;  │
+                          │
+                          ▼
+                   ┌──────────────┐
+                   │              │
+                   │  INSTALLING  │
+                   │              │
+                   └──────┬───────┘
+                          │
+                 ┌────────┴────────┐
+                 │                 │
+     Success     │                 │     Failure
+                 ▼                 ▼
+          ┌──────────────┐  ┌──────────────┐
+          │              │  │              │
+          │  INSTALLED   │  │     IDLE     │
+          │              │  │   (w/error)  │
+          └──────────────┘  └──────────────┘
+</code></pre>
+<h2 id="state-transitions">State Transitions</h2>
+<h3 id="states">States</h3>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Description</th>
+<th>Button Label</th>
+<th>Button Disabled</th>
+<th>Can Advance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>idle</strong></td>
+<td>Initial/waiting state</td>
+<td>&quot;Validate&quot; (step 3) or &quot;Next&quot;</td>
+<td>No</td>
+<td>No (except non-validation steps)</td>
+</tr>
+<tr>
+<td><strong>validating</strong></td>
+<td>Running preflight checks</td>
+<td>&quot;Validating…&quot;</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>valid</strong></td>
+<td>Validation passed</td>
+<td>&quot;Next&quot;</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>invalid</strong></td>
+<td>Validation failed</td>
+<td>&quot;Fix Issues&quot;</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>installing</strong></td>
+<td>Installing dependencies</td>
+<td>&quot;Installing…&quot;</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>installed</strong></td>
+<td>Installation complete</td>
+<td>&quot;Validate&quot;</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td><strong>ready</strong></td>
+<td>All checks passed</td>
+<td>&quot;Continue&quot;</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="actions">Actions</h3>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>From State</th>
+<th>To State</th>
+<th>Trigger</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>START_VALIDATION</strong></td>
+<td>idle, installed</td>
+<td>validating</td>
+<td>User clicks Validate</td>
+</tr>
+<tr>
+<td><strong>VALIDATION_SUCCESS</strong></td>
+<td>validating</td>
+<td>valid</td>
+<td>API returns ok: true</td>
+</tr>
+<tr>
+<td><strong>VALIDATION_FAILED</strong></td>
+<td>validating</td>
+<td>invalid</td>
+<td>API returns ok: false</td>
+</tr>
+<tr>
+<td><strong>RESET_VALIDATION</strong></td>
+<td>valid, invalid</td>
+<td>idle</td>
+<td>User goes back</td>
+</tr>
+<tr>
+<td><strong>START_INSTALL</strong></td>
+<td>idle</td>
+<td>installing</td>
+<td>User clicks Install</td>
+</tr>
+<tr>
+<td><strong>INSTALL_COMPLETE</strong></td>
+<td>installing</td>
+<td>installed</td>
+<td>Download completes</td>
+</tr>
+<tr>
+<td><strong>INSTALL_FAILED</strong></td>
+<td>installing</td>
+<td>idle</td>
+<td>Download fails</td>
+</tr>
+<tr>
+<td><strong>MARK_READY</strong></td>
+<td>valid</td>
+<td>ready</td>
+<td>Auto on step 3</td>
+</tr>
+</tbody>
+</table>
+<h2 id="button-state-matrix">Button State Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Wizard Step</th>
+<th>State</th>
+<th>Button Label</th>
+<th>Icon</th>
+<th>Action on Click</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0-2</td>
+<td>Any</td>
+<td>&quot;Next&quot;</td>
+<td>ChevronRight</td>
+<td>Advance to next step</td>
+</tr>
+<tr>
+<td>3</td>
+<td>idle</td>
+<td>&quot;Validate&quot;</td>
+<td>Play</td>
+<td>Start validation</td>
+</tr>
+<tr>
+<td>3</td>
+<td>validating</td>
+<td>&quot;Validating…&quot;</td>
+<td>Spinner</td>
+<td>Disabled</td>
+</tr>
+<tr>
+<td>3</td>
+<td>valid</td>
+<td>&quot;Next&quot;</td>
+<td>ChevronRight</td>
+<td>Auto-advance to ready</td>
+</tr>
+<tr>
+<td>3</td>
+<td>invalid</td>
+<td>&quot;Fix Issues&quot;</td>
+<td>Warning</td>
+<td>Show fix actions</td>
+</tr>
+<tr>
+<td>3</td>
+<td>installing</td>
+<td>&quot;Installing…&quot;</td>
+<td>Spinner</td>
+<td>Disabled</td>
+</tr>
+<tr>
+<td>3</td>
+<td>installed</td>
+<td>&quot;Validate&quot;</td>
+<td>Play</td>
+<td>Retry validation</td>
+</tr>
+<tr>
+<td>3</td>
+<td>ready</td>
+<td>&quot;Continue&quot;</td>
+<td>VideoClip</td>
+<td>Complete wizard</td>
+</tr>
+</tbody>
+</table>
+<h2 id="error-recovery-flows">Error Recovery Flows</h2>
+<h3 id="validation-failure--retry">Validation Failure → Retry</h3>
+<pre><code>IDLE → VALIDATING → INVALID
+  ▲                    │
+  │    Fix issues      │
+  │    Click Validate  │
+  └────────────────────┘
+</code></pre>
+<h3 id="installation-failure--retry">Installation Failure → Retry</h3>
+<pre><code>IDLE → INSTALLING → IDLE (w/error)
+  ▲                      │
+  │    Click Install     │
+  └──────────────────────┘
+</code></pre>
+<h3 id="user-navigation-back-button">User Navigation (Back Button)</h3>
+<pre><code>ANY_STATE → RESET → IDLE (previous step)
+</code></pre>
+<h2 id="fix-actions-flow">Fix Actions Flow</h2>
+<p>When validation fails (INVALID state):</p>
+<pre><code>┌──────────────────────────────────────────────────┐
+│           INVALID STATE - Fix Actions             │
+├──────────────────────────────────────────────────┤
+│                                                   │
+│  Failed Stage: Script (OpenAI)                   │
+│  Message: API key not configured                 │
+│  Hint: Configure OpenAI key in Settings          │
+│                                                   │
+│  Suggestions:                                     │
+│  • Get key from platform.openai.com              │
+│  • Add key in Settings → API Keys                │
+│                                                   │
+│  Quick Fixes:                                     │
+│  ┌──────────────┐  ┌──────────────┐             │
+│  │ Add API Key  │  │ Get API Key  │             │
+│  │ (OpenSettings)│  │   (Help)     │             │
+│  └──────────────┘  └──────────────┘             │
+│                                                   │
+└──────────────────────────────────────────────────┘
+                       │
+                       ▼
+              User clicks action
+                       │
+         ┌─────────────┴─────────────┐
+         │                           │
+         ▼                           ▼
+   Navigate to         Open external
+   /settings?tab=      help URL
+   api-keys            
+         │                           │
+         └─────────────┬─────────────┘
+                       │
+            User completes action
+                       │
+                       ▼
+             Return to wizard
+                       │
+                       ▼
+             Click &quot;Validate&quot; again
+                       │
+                       ▼
+              IDLE → VALIDATING → VALID
+</code></pre>
+<h2 id="auto-advance-logic">Auto-Advance Logic</h2>
+<p>On step 3 (validation step) only:</p>
+<pre><code>VALIDATING → VALID ──(useEffect)──&gt; MARK_READY → READY
+                                           │
+                                           ▼
+                              Show success screen
+                              with completion buttons
+</code></pre>
+<h2 id="hardware-detection-sub-flow">Hardware Detection Sub-Flow</h2>
+<pre><code>Step 1: Hardware Detection
+         │
+         ▼
+  User clicks Next
+         │
+         ▼
+  START_HARDWARE_DETECTION
+         │
+         ▼
+  isDetectingHardware: true
+         │
+    API Call
+         │
+    ┌────┴────┐
+    │         │
+Success     Fail
+    │         │
+    ▼         ▼
+HARDWARE_   HARDWARE_
+DETECTED    DETECTION_
+            FAILED
+    │         │
+    └────┬────┘
+         │
+         ▼
+  isDetectingHardware: false
+         │
+         ▼
+  Display results
+</code></pre>
+<h2 id="state-persistence">State Persistence</h2>
+<ul>
+<li><strong>step</strong>: Tracked in state, not persisted</li>
+<li><strong>mode</strong>: Tracked in state, not persisted</li>
+<li><strong>status</strong>: Tracked in state, not persisted</li>
+<li><strong>lastValidation</strong>: Tracked in state, includes correlationId</li>
+<li><strong>hasSeenOnboarding</strong>: Stored in localStorage on completion</li>
+</ul>
+<h2 id="edge-cases-handled">Edge Cases Handled</h2>
+<ol>
+<li><strong>Network failure during validation</strong>: Synthetic error report created</li>
+<li><strong>User goes back after validation</strong>: State resets to idle</li>
+<li><strong>Multiple rapid clicks</strong>: Button disabled during async operations</li>
+<li><strong>Validation succeeds on non-final step</strong>: Doesn't auto-advance</li>
+<li><strong>Page refresh</strong>: Returns to step 0 (onboarding not persisted)</li>
+<li><strong>Already completed onboarding</strong>: Redirects to home page</li>
+</ol>
+<h2 id="testing-coverage">Testing Coverage</h2>
+<h3 id="unit-tests-37-tests">Unit Tests (37 tests)</h3>
+<ul>
+<li>All state transitions</li>
+<li>Button label mapping</li>
+<li>Button disabled logic</li>
+<li>Error handling</li>
+<li>Complete state machine flows</li>
+</ul>
+<h3 id="e2e-tests-8-tests">E2E Tests (8 tests)</h3>
+<ul>
+<li>Happy path (Free-Only)</li>
+<li>Error path (Pro without keys)</li>
+<li>Navigation (Back/Forward)</li>
+<li>Skip flow</li>
+<li>Button states</li>
+<li>Already completed check</li>
+</ul>
+<h2 id="future-considerations">Future Considerations</h2>
+<ol>
+<li><strong>Persistence</strong>: Save wizard progress to localStorage</li>
+<li><strong>Retry logic</strong>: Automatic retry with exponential backoff</li>
+<li><strong>Real-time updates</strong>: WebSocket for install progress</li>
+<li><strong>Telemetry</strong>: Track wizard completion metrics</li>
+<li><strong>Animations</strong>: Smooth transitions between states</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/WIZARD_STATE_MACHINE_DIAGRAM.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

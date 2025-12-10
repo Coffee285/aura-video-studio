@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>FFmpeg Detection and Configuration API | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="FFmpeg Detection and Configuration API | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/setup/ffmpeg-detection-api.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="ffmpeg-detection-and-configuration-api">FFmpeg Detection and Configuration API</h1>
+
+<p>This document describes the API endpoints for detecting and configuring FFmpeg installations during the setup wizard.</p>
+<h2 id="overview">Overview</h2>
+<p>The setup wizard provides endpoints to:</p>
+<ol>
+<li>Check if FFmpeg exists at a specific path and validate it</li>
+<li>Save validated FFmpeg paths to persistent configuration</li>
+</ol>
+<p>These endpoints complement the comprehensive FFmpeg management endpoints in <code>FFmpegController</code>.</p>
+<h2 id="endpoints">Endpoints</h2>
+<h3 id="post-apisetupcheck-ffmpeg">POST /api/setup/check-ffmpeg</h3>
+<p>Validates that FFmpeg exists at the specified path and is executable.</p>
+<h4 id="request">Request</h4>
+<pre><code class="lang-json">{
+  &quot;path&quot;: &quot;/path/to/ffmpeg&quot;
+}
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>path</code> (string, required): Absolute path to FFmpeg executable</li>
+</ul>
+<h4 id="response---success">Response - Success</h4>
+<pre><code class="lang-json">{
+  &quot;found&quot;: true,
+  &quot;path&quot;: &quot;/usr/local/bin/ffmpeg&quot;,
+  &quot;version&quot;: &quot;6.0.1&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h4 id="response---not-found">Response - Not Found</h4>
+<pre><code class="lang-json">{
+  &quot;found&quot;: false,
+  &quot;error&quot;: &quot;File not found at: /invalid/path/ffmpeg&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h4 id="response---invalid">Response - Invalid</h4>
+<pre><code class="lang-json">{
+  &quot;found&quot;: false,
+  &quot;error&quot;: &quot;FFmpeg validation failed with exit code 1&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<p><strong>HTTP Status:</strong> Always returns 200 OK (even for not found cases)</p>
+<h4 id="usage-example">Usage Example</h4>
+<pre><code class="lang-typescript">const checkFFmpeg = async (path: string) =&gt; {
+  const response = await fetch('/api/setup/check-ffmpeg', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  });
+  
+  const data = await response.json();
+  if (data.found) {
+    console.log(`FFmpeg ${data.version} found at ${data.path}`);
+  } else {
+    console.error(`FFmpeg not found: ${data.error}`);
+  }
+};
+</code></pre>
+<hr>
+<h3 id="post-apisetupsave-ffmpeg-path">POST /api/setup/save-ffmpeg-path</h3>
+<p>Persists the FFmpeg path to configuration after validation.</p>
+<h4 id="request-1">Request</h4>
+<pre><code class="lang-json">{
+  &quot;path&quot;: &quot;/usr/local/bin/ffmpeg&quot;
+}
+</code></pre>
+<p><strong>Parameters:</strong></p>
+<ul>
+<li><code>path</code> (string, required): Absolute path to validated FFmpeg executable</li>
+</ul>
+<h4 id="response---success-1">Response - Success</h4>
+<pre><code class="lang-json">{
+  &quot;success&quot;: true,
+  &quot;path&quot;: &quot;/usr/local/bin/ffmpeg&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<h4 id="response---error">Response - Error</h4>
+<pre><code class="lang-json">{
+  &quot;success&quot;: false,
+  &quot;error&quot;: &quot;File not found at: /invalid/path/ffmpeg&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<p><strong>HTTP Status:</strong></p>
+<ul>
+<li>200 OK - Path saved successfully</li>
+<li>400 Bad Request - Invalid or non-existent path</li>
+<li>500 Internal Server Error - Configuration save failed</li>
+</ul>
+<h4 id="configuration-details">Configuration Details</h4>
+<p>When a path is saved:</p>
+<ul>
+<li>Mode is set to <code>FFmpegMode.Custom</code></li>
+<li>Source is set to <code>&quot;Configured&quot;</code></li>
+<li>Path is persisted to FFmpegConfigurationStore</li>
+<li>Configuration survives application restarts</li>
+</ul>
+<h4 id="usage-example-1">Usage Example</h4>
+<pre><code class="lang-typescript">const saveFFmpegPath = async (path: string) =&gt; {
+  const response = await fetch('/api/setup/save-ffmpeg-path', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path })
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to save FFmpeg path');
+  }
+  
+  const data = await response.json();
+  console.log(`FFmpeg path saved: ${data.path}`);
+};
+</code></pre>
+<hr>
+<h2 id="managed-ffmpeg-detection">Managed FFmpeg Detection</h2>
+<p>The setup wizard checks for managed FFmpeg installations in these locations (in order):</p>
+<ol>
+<li><code>./ffmpeg/bin/ffmpeg.exe</code> (Windows)</li>
+<li><code>./ffmpeg/bin/ffmpeg</code> (Unix/Linux/macOS)</li>
+<li><code>../ffmpeg/bin/ffmpeg.exe</code> (Electron app.asar.unpacked on Windows)</li>
+<li><code>../ffmpeg/bin/ffmpeg</code> (Electron app.asar.unpacked on Unix)</li>
+</ol>
+<p>If none are found, it falls back to system PATH detection via <code>/api/health/ffmpeg</code>.</p>
+<h3 id="frontend-implementation">Frontend Implementation</h3>
+<pre><code class="lang-typescript">const detectFFmpeg = async (): Promise&lt;{ found: boolean; path: string; version: string }&gt; =&gt; {
+  // Check managed installation first
+  const managedPaths = [
+    './ffmpeg/bin/ffmpeg.exe',
+    './ffmpeg/bin/ffmpeg',
+    '../ffmpeg/bin/ffmpeg.exe',
+    '../ffmpeg/bin/ffmpeg',
+  ];
+
+  for (const path of managedPaths) {
+    try {
+      const response = await fetch('/api/setup/check-ffmpeg', {
+        method: 'POST',
+        body: JSON.stringify({ path }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.found) {
+          return { found: true, path: data.path, version: data.version };
+        }
+      }
+    } catch {
+      // Continue to next path
+    }
+  }
+
+  // Fallback to system PATH check
+  try {
+    const response = await fetch('/api/health/ffmpeg');
+    const data = await response.json();
+    if (data.isAvailable &amp;&amp; data.path) {
+      return { found: true, path: data.path, version: data.version || 'unknown' };
+    }
+  } catch {
+    // No FFmpeg found
+  }
+
+  return { found: false, path: '', version: '' };
+};
+</code></pre>
+<hr>
+<h2 id="related-endpoints">Related Endpoints</h2>
+<p>For more comprehensive FFmpeg management, see:</p>
+<ul>
+<li><strong>GET /api/ffmpeg/status</strong> - Get current FFmpeg status with validation details</li>
+<li><strong>POST /api/ffmpeg/detect</strong> - Force re-detection with auto-persistence</li>
+<li><strong>POST /api/ffmpeg/use-existing</strong> - Validate and configure custom FFmpeg path</li>
+<li><strong>POST /api/ffmpeg/install</strong> - Install managed FFmpeg from trusted sources</li>
+<li><strong>POST /api/ffmpeg/rescan</strong> - Rescan system for FFmpeg installations</li>
+</ul>
+<hr>
+<h2 id="error-handling">Error Handling</h2>
+<p>All endpoints include a <code>correlationId</code> field for tracing requests through logs. Include this in error reports.</p>
+<h3 id="common-errors">Common Errors</h3>
+<p><strong>Empty Path:</strong></p>
+<pre><code class="lang-json">{
+  &quot;found&quot;: false,
+  &quot;error&quot;: &quot;Path cannot be empty&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<p><strong>File Not Found:</strong></p>
+<pre><code class="lang-json">{
+  &quot;found&quot;: false,
+  &quot;error&quot;: &quot;File not found at: /path/to/ffmpeg&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<p><strong>Validation Failed:</strong></p>
+<pre><code class="lang-json">{
+  &quot;found&quot;: false,
+  &quot;error&quot;: &quot;FFmpeg validation failed with exit code 1&quot;,
+  &quot;correlationId&quot;: &quot;abc123&quot;
+}
+</code></pre>
+<hr>
+<h2 id="testing">Testing</h2>
+<p>Integration tests are available in <code>Aura.Tests/SetupControllerIntegrationTests.cs</code>:</p>
+<ul>
+<li><code>CheckFFmpegPath_WithNonExistentPath_ReturnsNotFound</code></li>
+<li><code>CheckFFmpegPath_WithEmptyPath_ReturnsNotFound</code></li>
+<li><code>SaveFFmpegPath_WithEmptyPath_ReturnsBadRequest</code></li>
+<li><code>SaveFFmpegPath_WithNonExistentPath_ReturnsBadRequest</code></li>
+</ul>
+<p>Run tests:</p>
+<pre><code class="lang-bash">dotnet test Aura.Tests/Aura.Tests.csproj --filter &quot;FullyQualifiedName~SetupControllerIntegrationTests.CheckFFmpegPath&quot;
+dotnet test Aura.Tests/Aura.Tests.csproj --filter &quot;FullyQualifiedName~SetupControllerIntegrationTests.SaveFFmpegPath&quot;
+</code></pre>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/setup/ffmpeg-detection-api.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

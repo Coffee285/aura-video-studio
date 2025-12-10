@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Database Schema Documentation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Database Schema Documentation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/DATABASE_SCHEMA.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-database-schema-documentation">Aura Database Schema Documentation</h1>
+
+<h2 id="overview">Overview</h2>
+<p>The Aura database uses <strong>SQLite</strong> with Entity Framework Core for data persistence. The schema is designed to support:</p>
+<ul>
+<li>Project state management and recovery</li>
+<li>Version control and snapshots</li>
+<li>User configuration and setup tracking</li>
+<li>Export history and templates</li>
+<li>Audit trails and soft delete</li>
+<li>Content deduplication</li>
+</ul>
+<h2 id="database-technology">Database Technology</h2>
+<ul>
+<li><strong>Database</strong>: SQLite 3.x</li>
+<li><strong>ORM</strong>: Entity Framework Core 8.0</li>
+<li><strong>Migration Tool</strong>: EF Core Migrations</li>
+<li><strong>Connection String</strong>: Configured in <code>appsettings.json</code></li>
+</ul>
+<h2 id="schema-design-principles">Schema Design Principles</h2>
+<ol>
+<li><strong>Audit Trails</strong>: All entities implement <code>IAuditableEntity</code> for automatic timestamp tracking</li>
+<li><strong>Soft Delete</strong>: Entities implement <code>ISoftDeletable</code> to preserve data integrity</li>
+<li><strong>Optimistic Concurrency</strong>: Version columns prevent concurrent update conflicts</li>
+<li><strong>Indexed Queries</strong>: Strategic indexes for common query patterns</li>
+<li><strong>Content Deduplication</strong>: Blobs are content-addressed using SHA-256 hashing</li>
+</ol>
+<h2 id="core-tables">Core Tables</h2>
+<h3 id="1-projectstates">1. ProjectStates</h3>
+<p>Primary table for video generation projects.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (GUID, PK): Unique project identifier</li>
+<li><code>Title</code> (string, required): Project title</li>
+<li><code>Description</code> (string, nullable): Project description</li>
+<li><code>CurrentWizardStep</code> (int): Current step in wizard (0-based)</li>
+<li><code>Status</code> (string): InProgress, Completed, Failed, Cancelled</li>
+<li><code>CreatedAt</code>, <code>UpdatedAt</code> (DateTime): Audit timestamps</li>
+<li><code>CompletedAt</code> (DateTime, nullable): When project completed</li>
+<li><code>IsDeleted</code>, <code>DeletedAt</code>, <code>DeletedBy</code>: Soft delete support</li>
+<li><code>CreatedBy</code>, <code>ModifiedBy</code>: User tracking</li>
+<li><code>CurrentStage</code> (string): Script, TTS, Images, Composition, Render</li>
+<li><code>ProgressPercent</code> (int): Overall progress (0-100)</li>
+<li><code>JobId</code> (string, nullable): Associated background job</li>
+<li><code>BriefJson</code>, <code>PlanSpecJson</code>, <code>VoiceSpecJson</code>, <code>RenderSpecJson</code> (TEXT): JSON data</li>
+<li><code>ErrorMessage</code> (TEXT, nullable): Last error if failed</li>
+</ul>
+<p><strong>Relationships:</strong></p>
+<ul>
+<li>One-to-Many with <code>SceneStates</code></li>
+<li>One-to-Many with <code>AssetStates</code></li>
+<li>One-to-Many with <code>RenderCheckpoints</code></li>
+<li>One-to-Many with <code>ProjectVersions</code></li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>Status</code></li>
+<li><code>UpdatedAt</code></li>
+<li><code>Status, UpdatedAt</code> (composite)</li>
+<li><code>JobId</code></li>
+<li><code>IsDeleted</code></li>
+<li><code>IsDeleted, DeletedAt</code> (composite)</li>
+</ul>
+<hr>
+<h3 id="2-scenestates">2. SceneStates</h3>
+<p>Stores individual scenes within a project.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (GUID, PK): Unique scene identifier</li>
+<li><code>ProjectId</code> (GUID, FK): Parent project</li>
+<li><code>SceneIndex</code> (int): Scene order (0-based)</li>
+<li><code>ScriptText</code> (TEXT, required): Scene script</li>
+<li><code>AudioFilePath</code> (string, nullable): Generated audio file</li>
+<li><code>ImageFilePath</code> (string, nullable): Generated image file</li>
+<li><code>DurationSeconds</code> (double): Scene duration</li>
+<li><code>IsCompleted</code> (bool): Scene processing complete</li>
+<li><code>CreatedAt</code> (DateTime): Creation timestamp</li>
+</ul>
+<p><strong>Relationships:</strong></p>
+<ul>
+<li>Many-to-One with <code>ProjectStates</code> (cascade delete)</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>ProjectId</code></li>
+<li><code>ProjectId, SceneIndex</code> (composite)</li>
+</ul>
+<hr>
+<h3 id="3-assetstates">3. AssetStates</h3>
+<p>Tracks files (audio, images, videos) associated with projects.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (GUID, PK): Unique asset identifier</li>
+<li><code>ProjectId</code> (GUID, FK): Parent project</li>
+<li><code>AssetType</code> (string, required): Audio, Image, Video, Subtitle</li>
+<li><code>FilePath</code> (string, required): File system path</li>
+<li><code>FileSizeBytes</code> (long): File size</li>
+<li><code>MimeType</code> (string, nullable): MIME type</li>
+<li><code>IsTemporary</code> (bool): Cleanup flag</li>
+<li><code>CreatedAt</code> (DateTime): Creation timestamp</li>
+</ul>
+<p><strong>Relationships:</strong></p>
+<ul>
+<li>Many-to-One with <code>ProjectStates</code> (cascade delete)</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>ProjectId</code></li>
+<li><code>ProjectId, AssetType</code> (composite)</li>
+<li><code>IsTemporary</code></li>
+</ul>
+<hr>
+<h3 id="4-rendercheckpoints">4. RenderCheckpoints</h3>
+<p>Recovery checkpoints during video rendering.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (GUID, PK): Unique checkpoint identifier</li>
+<li><code>ProjectId</code> (GUID, FK): Parent project</li>
+<li><code>StageName</code> (string, required): Stage name</li>
+<li><code>CheckpointTime</code> (DateTime, required): When checkpoint was created</li>
+<li><code>CompletedScenes</code> (int): Number of completed scenes</li>
+<li><code>TotalScenes</code> (int): Total number of scenes</li>
+<li><code>CheckpointData</code> (TEXT, nullable): JSON checkpoint data</li>
+<li><code>OutputFilePath</code> (string, nullable): Intermediate output file</li>
+<li><code>IsValid</code> (bool): Checkpoint validity flag</li>
+</ul>
+<p><strong>Relationships:</strong></p>
+<ul>
+<li>Many-to-One with <code>ProjectStates</code> (cascade delete)</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>ProjectId</code></li>
+<li><code>ProjectId, StageName</code> (composite)</li>
+<li><code>CheckpointTime</code></li>
+</ul>
+<hr>
+<h3 id="5-projectversions">5. ProjectVersions</h3>
+<p>Version control and snapshots for projects.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (GUID, PK): Unique version identifier</li>
+<li><code>ProjectId</code> (GUID, FK): Parent project</li>
+<li><code>VersionNumber</code> (int, required): Auto-incremented version number</li>
+<li><code>Name</code> (string, nullable): User-provided name</li>
+<li><code>Description</code> (string, nullable): Version description</li>
+<li><code>VersionType</code> (string, required): Manual, Autosave, RestorePoint</li>
+<li><code>Trigger</code> (string, nullable): What triggered this version</li>
+<li><code>CreatedAt</code> (DateTime, required): Creation timestamp</li>
+<li><code>CreatedByUserId</code> (string, nullable): User who created version</li>
+<li><code>BriefJson</code>, <code>PlanSpecJson</code>, <code>VoiceSpecJson</code>, <code>RenderSpecJson</code>, <code>TimelineJson</code> (TEXT): Versioned data</li>
+<li><code>BriefHash</code>, <code>PlanHash</code>, <code>VoiceHash</code>, <code>RenderHash</code>, <code>TimelineHash</code> (string): Content hashes for deduplication</li>
+<li><code>StorageSizeBytes</code> (long): Total storage used</li>
+<li><code>IsMarkedImportant</code> (bool): Protected from auto-pruning</li>
+<li><code>IsDeleted</code>, <code>DeletedAt</code>, <code>DeletedBy</code>: Soft delete support</li>
+<li><code>UpdatedAt</code>, <code>CreatedBy</code>, <code>ModifiedBy</code>: Audit fields</li>
+</ul>
+<p><strong>Relationships:</strong></p>
+<ul>
+<li>Many-to-One with <code>ProjectStates</code> (cascade delete)</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>ProjectId</code></li>
+<li><code>ProjectId, VersionNumber</code> (composite, unique)</li>
+<li><code>VersionType</code></li>
+<li><code>CreatedAt</code></li>
+<li><code>ProjectId, CreatedAt</code> (composite)</li>
+<li><code>IsDeleted</code></li>
+<li><code>IsDeleted, DeletedAt</code> (composite)</li>
+<li><code>IsMarkedImportant</code></li>
+</ul>
+<hr>
+<h3 id="6-contentblobs">6. ContentBlobs</h3>
+<p>Deduplicated content storage using content-addressable storage.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>ContentHash</code> (string, PK): SHA-256 hash of content</li>
+<li><code>Content</code> (TEXT, required): Actual content</li>
+<li><code>ContentType</code> (string, required): Brief, Plan, Voice, Render, Timeline, Asset</li>
+<li><code>SizeBytes</code> (long, required): Content size</li>
+<li><code>CreatedAt</code> (DateTime, required): First created</li>
+<li><code>LastReferencedAt</code> (DateTime, required): Last referenced by a version</li>
+<li><code>ReferenceCount</code> (int, required): Number of versions referencing this</li>
+<li><code>UpdatedAt</code>, <code>CreatedBy</code>, <code>ModifiedBy</code>: Audit fields</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>ContentType</code></li>
+<li><code>LastReferencedAt</code></li>
+<li><code>ReferenceCount</code></li>
+</ul>
+<hr>
+<h3 id="7-usersetups">7. UserSetups</h3>
+<p>Tracks first-run wizard completion status.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (string, PK): Unique setup identifier</li>
+<li><code>UserId</code> (string, required, unique): User identifier</li>
+<li><code>Completed</code> (bool, required): Wizard completed flag</li>
+<li><code>CompletedAt</code> (DateTime, nullable): Completion timestamp</li>
+<li><code>Version</code> (string, nullable): Wizard version</li>
+<li><code>LastStep</code> (int): Last completed step</li>
+<li><code>UpdatedAt</code> (DateTime, required): Last update time</li>
+<li><code>SelectedTier</code> (string, nullable): Selected pricing tier</li>
+<li><code>WizardState</code> (TEXT, nullable): JSON state blob</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>UserId</code> (unique)</li>
+<li><code>Completed</code></li>
+<li><code>UpdatedAt</code></li>
+</ul>
+<hr>
+<h3 id="8-systemconfiguration">8. SystemConfiguration</h3>
+<p>System-wide configuration (single row table).</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (int, PK): Always 1</li>
+<li><code>IsSetupComplete</code> (bool, required): Initial setup complete</li>
+<li><code>FFmpegPath</code> (string, nullable): Path to FFmpeg executable</li>
+<li><code>OutputDirectory</code> (string, required): Default output directory</li>
+<li><code>CreatedAt</code>, <code>UpdatedAt</code> (DateTime, required): Audit timestamps</li>
+</ul>
+<p><strong>Seeded Data:</strong></p>
+<ul>
+<li>Default record with <code>IsSetupComplete = false</code></li>
+</ul>
+<hr>
+<h3 id="9-configurations">9. Configurations</h3>
+<p>Key-value configuration storage.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Key</code> (string, PK): Configuration key</li>
+<li><code>Value</code> (TEXT, required): Configuration value (JSON)</li>
+<li><code>Category</code> (string, required): Grouping category</li>
+<li><code>ValueType</code> (string, required): string, json, boolean, number</li>
+<li><code>Description</code> (string, nullable): Configuration description</li>
+<li><code>IsSensitive</code> (bool): Sensitive data flag (API keys, etc.)</li>
+<li><code>Version</code> (int): Schema version</li>
+<li><code>CreatedAt</code>, <code>UpdatedAt</code> (DateTime, required): Audit timestamps</li>
+<li><code>CreatedBy</code>, <code>ModifiedBy</code> (string, nullable): User tracking</li>
+<li><code>IsActive</code> (bool): Active flag</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>Category</code></li>
+<li><code>IsSensitive</code></li>
+<li><code>IsActive</code></li>
+<li><code>UpdatedAt</code></li>
+<li><code>Category, IsActive</code> (composite)</li>
+<li><code>Category, UpdatedAt</code> (composite)</li>
+</ul>
+<hr>
+<h3 id="10-templates">10. Templates</h3>
+<p>System and community project templates.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (string, PK): Unique template identifier</li>
+<li><code>Name</code> (string, required): Template name</li>
+<li><code>Description</code> (string, required): Template description</li>
+<li><code>Category</code> (string, required): Template category</li>
+<li><code>SubCategory</code> (string): Sub-category</li>
+<li><code>PreviewImage</code>, <code>PreviewVideo</code> (string): Preview media paths</li>
+<li><code>Tags</code> (string): Comma-separated tags</li>
+<li><code>TemplateData</code> (TEXT, required): JSON template data</li>
+<li><code>CreatedAt</code>, <code>UpdatedAt</code> (DateTime, required): Audit timestamps</li>
+<li><code>Author</code> (string, required): Template author</li>
+<li><code>IsSystemTemplate</code>, <code>IsCommunityTemplate</code> (bool): Template type flags</li>
+<li><code>UsageCount</code> (int): Number of times used</li>
+<li><code>Rating</code> (double): Average rating</li>
+<li><code>RatingCount</code> (int): Number of ratings</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>Category</code></li>
+<li><code>IsSystemTemplate</code></li>
+<li><code>IsCommunityTemplate</code></li>
+<li><code>Category, SubCategory</code> (composite)</li>
+</ul>
+<hr>
+<h3 id="11-customtemplates">11. CustomTemplates</h3>
+<p>User-created custom templates.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (string, PK): Unique template identifier</li>
+<li><code>Name</code> (string, required): Template name</li>
+<li><code>Description</code> (string): Template description</li>
+<li><code>Category</code> (string, required): Template category</li>
+<li><code>Tags</code> (string): Comma-separated tags</li>
+<li><code>CreatedAt</code>, <code>UpdatedAt</code> (DateTime, required): Audit timestamps</li>
+<li><code>CreatedBy</code>, <code>ModifiedBy</code> (string, nullable): User tracking</li>
+<li><code>Author</code> (string, required): Template author</li>
+<li><code>IsDefault</code> (bool): Default template flag</li>
+<li><code>IsDeleted</code>, <code>DeletedAt</code>, <code>DeletedBy</code>: Soft delete support</li>
+<li><code>ScriptStructureJson</code>, <code>VideoStructureJson</code>, <code>LLMPipelineJson</code>, <code>VisualPreferencesJson</code> (TEXT): JSON configurations</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>Category</code></li>
+<li><code>IsDefault</code></li>
+<li><code>CreatedAt</code></li>
+<li><code>Category, CreatedAt</code> (composite)</li>
+<li><code>IsDeleted</code></li>
+<li><code>IsDeleted, DeletedAt</code> (composite)</li>
+</ul>
+<hr>
+<h3 id="12-exporthistory">12. ExportHistory</h3>
+<p>Export job history and status.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (string, PK): Unique export identifier</li>
+<li><code>InputFile</code> (string, required): Source file path</li>
+<li><code>OutputFile</code> (string, required): Output file path</li>
+<li><code>PresetName</code> (string, required): Export preset name</li>
+<li><code>Status</code> (string, required): Queued, InProgress, Completed, Failed</li>
+<li><code>Progress</code> (double): Progress percentage</li>
+<li><code>CreatedAt</code> (DateTime, required): Job creation time</li>
+<li><code>StartedAt</code>, <code>CompletedAt</code> (DateTime, nullable): Job timing</li>
+<li><code>ErrorMessage</code> (string, nullable): Error message if failed</li>
+<li><code>FileSize</code> (long, nullable): Output file size</li>
+<li><code>DurationSeconds</code> (double, nullable): Video duration</li>
+<li><code>Platform</code> (string, nullable): Target platform</li>
+<li><code>Resolution</code> (string, nullable): Video resolution</li>
+<li><code>Codec</code> (string, nullable): Video codec</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>Status</code></li>
+<li><code>CreatedAt</code></li>
+<li><code>Status, CreatedAt</code> (composite)</li>
+</ul>
+<hr>
+<h3 id="13-actionlogs">13. ActionLogs</h3>
+<p>Server-side undo/redo action log.</p>
+<p><strong>Columns:</strong></p>
+<ul>
+<li><code>Id</code> (GUID, PK): Unique action identifier</li>
+<li><code>UserId</code> (string, required): User who performed action</li>
+<li><code>ActionType</code> (string, required): Action type name</li>
+<li><code>Description</code> (string, required): Human-readable description</li>
+<li><code>Timestamp</code> (DateTime, required): When action occurred</li>
+<li><code>Status</code> (string, required): Applied, Undone, Failed, Expired</li>
+<li><code>AffectedResourceIds</code> (string, nullable): Comma-separated resource IDs</li>
+<li><code>PayloadJson</code> (TEXT, nullable): Action payload</li>
+<li><code>InverseActionType</code> (string, nullable): Undo action type</li>
+<li><code>InversePayloadJson</code> (TEXT, nullable): Undo payload</li>
+<li><code>CanBatch</code> (bool): Batchable flag</li>
+<li><code>IsPersistent</code> (bool): Persistence flag</li>
+<li><code>UndoneAt</code> (DateTime, nullable): When action was undone</li>
+<li><code>UndoneByUserId</code> (string, nullable): User who undone action</li>
+<li><code>ExpiresAt</code> (DateTime, nullable): Expiration for cleanup</li>
+<li><code>ErrorMessage</code> (TEXT, nullable): Error message if failed</li>
+<li><code>CorrelationId</code> (string, nullable): Correlation ID for tracking</li>
+</ul>
+<p><strong>Indexes:</strong></p>
+<ul>
+<li><code>UserId</code></li>
+<li><code>ActionType</code></li>
+<li><code>Status</code></li>
+<li><code>Timestamp</code></li>
+<li><code>UserId, Timestamp</code> (composite)</li>
+<li><code>Status, Timestamp</code> (composite)</li>
+<li><code>CorrelationId</code></li>
+<li><code>ExpiresAt</code></li>
+</ul>
+<hr>
+<h2 id="entity-relationships">Entity Relationships</h2>
+<pre><code>ProjectStates (1) ─┬─ (*) SceneStates
+                   ├─ (*) AssetStates
+                   ├─ (*) RenderCheckpoints
+                   └─ (*) ProjectVersions
+
+ProjectVersions (*) ──→ ContentBlobs (content-addressed)
+</code></pre>
+<h2 id="audit-trail-features">Audit Trail Features</h2>
+<p>All entities implementing <code>IAuditableEntity</code> automatically track:</p>
+<ul>
+<li><code>CreatedAt</code>: Set on entity creation</li>
+<li><code>UpdatedAt</code>: Updated on every modification</li>
+<li><code>CreatedBy</code>: User who created entity (optional)</li>
+<li><code>ModifiedBy</code>: User who last modified entity (optional)</li>
+</ul>
+<h2 id="soft-delete-features">Soft Delete Features</h2>
+<p>All entities implementing <code>ISoftDeletable</code> support:</p>
+<ul>
+<li><code>IsDeleted</code>: Soft delete flag</li>
+<li><code>DeletedAt</code>: When entity was deleted</li>
+<li><code>DeletedBy</code>: User who deleted entity</li>
+</ul>
+<p><strong>Global Query Filter</strong>: Soft-deleted entities are automatically excluded from queries unless explicitly requested with <code>IgnoreQueryFilters()</code>.</p>
+<h2 id="concurrency-control">Concurrency Control</h2>
+<p>EF Core's built-in optimistic concurrency is used. If row version conflicts occur, a <code>DbUpdateConcurrencyException</code> is thrown and handled by the application.</p>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="indexed-columns">Indexed Columns</h3>
+<p>All frequently queried columns have indexes:</p>
+<ul>
+<li>Foreign keys</li>
+<li>Status/state columns</li>
+<li>Timestamp columns</li>
+<li>Composite indexes for common query patterns</li>
+</ul>
+<h3 id="query-tips">Query Tips</h3>
+<ol>
+<li><p><strong>Include related entities</strong> when needed to avoid N+1 queries:</p>
+<pre><code class="lang-csharp">var project = await context.ProjectStates
+    .Include(p =&gt; p.Scenes)
+    .Include(p =&gt; p.Assets)
+    .FirstOrDefaultAsync(p =&gt; p.Id == projectId);
+</code></pre>
+</li>
+<li><p><strong>Use projections</strong> to select only needed columns:</p>
+<pre><code class="lang-csharp">var projectTitles = await context.ProjectStates
+    .Select(p =&gt; new { p.Id, p.Title })
+    .ToListAsync();
+</code></pre>
+</li>
+<li><p><strong>Paginate large result sets</strong>:</p>
+<pre><code class="lang-csharp">var page = await context.ProjectStates
+    .OrderByDescending(p =&gt; p.UpdatedAt)
+    .Skip(pageSize * pageNumber)
+    .Take(pageSize)
+    .ToListAsync();
+</code></pre>
+</li>
+</ol>
+<h2 id="backup-and-restore">Backup and Restore</h2>
+<h3 id="backup">Backup</h3>
+<pre><code class="lang-bash">./Scripts/backup-database.sh [db-path] [backup-dir]
+</code></pre>
+<h3 id="restore">Restore</h3>
+<pre><code class="lang-bash">./Scripts/restore-database.sh &lt;backup-file&gt; [db-path]
+</code></pre>
+<h2 id="migration-management">Migration Management</h2>
+<p>See <a href="MIGRATION_GUIDE.html">MIGRATION_GUIDE.md</a> for detailed migration instructions.</p>
+<h2 id="security-considerations">Security Considerations</h2>
+<ol>
+<li><strong>Sensitive Data</strong>: Configurations with <code>IsSensitive = true</code> should be encrypted</li>
+<li><strong>Row-Level Security</strong>: Implement in application layer (SQLite has limited built-in support)</li>
+<li><strong>SQL Injection</strong>: EF Core uses parameterized queries automatically</li>
+<li><strong>Connection String</strong>: Store securely in <code>appsettings.json</code> or environment variables</li>
+</ol>
+<h2 id="gdpr-compliance">GDPR Compliance</h2>
+<ul>
+<li><strong>Soft Delete</strong>: Preserves data integrity while allowing &quot;deletion&quot;</li>
+<li><strong>Audit Trails</strong>: Track who accessed/modified what data</li>
+<li><strong>Data Export</strong>: Repository methods support exporting user data</li>
+<li><strong>Right to be Forgotten</strong>: Use <code>DeleteAsync</code> with <code>forceDelete: true</code> for hard deletes</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="connection-issues">Connection Issues</h3>
+<ol>
+<li>Check database file permissions</li>
+<li>Verify connection string in <code>appsettings.json</code></li>
+<li>Ensure SQLite native binaries are installed</li>
+</ol>
+<h3 id="migration-failures">Migration Failures</h3>
+<ol>
+<li>Check for conflicting migrations</li>
+<li>Review migration logs</li>
+<li>Use rollback scripts if needed</li>
+</ol>
+<h3 id="performance-issues">Performance Issues</h3>
+<ol>
+<li>Review query execution plans</li>
+<li>Check for missing indexes</li>
+<li>Enable SQL logging for debugging</li>
+</ol>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<ul>
+<li>[ ] Add full-text search indexes</li>
+<li>[ ] Implement database sharding for large datasets</li>
+<li>[ ] Add database replication for high availability</li>
+<li>[ ] Implement column-level encryption for PII</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/database/DATABASE_SCHEMA.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

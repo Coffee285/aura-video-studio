@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Aura Monitoring and Alerting | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Aura Monitoring and Alerting | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/monitoring/README.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="aura-monitoring-and-alerting">Aura Monitoring and Alerting</h1>
+
+<h2 id="overview">Overview</h2>
+<p>This directory contains comprehensive monitoring and alerting documentation for Aura production operations. The implementation provides full observability, proactive alerting, operational dashboards, and incident response capabilities.</p>
+<h2 id="quick-start">Quick Start</h2>
+<h3 id="for-operators">For Operators</h3>
+<ol>
+<li><p><strong>Configure Notification Channels</strong> in <code>appsettings.Production.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;NotificationChannels&quot;: {
+      &quot;Slack&quot;: {
+        &quot;Enabled&quot;: true,
+        &quot;WebhookUrl&quot;: &quot;https://hooks.slack.com/...&quot;,
+        &quot;Channel&quot;: &quot;#aura-alerts&quot;
+      }
+    }
+  }
+}
+</code></pre>
+</li>
+<li><p><strong>Start Monitoring Services</strong>:</p>
+<pre><code class="lang-bash">cd Aura.Api
+dotnet run
+</code></pre>
+</li>
+<li><p><strong>Access Monitoring Endpoints</strong>:</p>
+<ul>
+<li>Metrics: <code>http://localhost:5005/api/monitoring/metrics</code></li>
+<li>Alerts: <code>http://localhost:5005/api/monitoring/alerts</code></li>
+<li>Health: <code>http://localhost:5005/api/monitoring/health/synthetic</code></li>
+</ul>
+</li>
+</ol>
+<h3 id="for-developers">For Developers</h3>
+<ol>
+<li><p><strong>Record Business Metrics</strong>:</p>
+<pre><code class="lang-csharp">_businessMetrics.RecordJobCompleted(&quot;video_generation&quot;, true, duration, cost);
+</code></pre>
+</li>
+<li><p><strong>Measure Operations</strong>:</p>
+<pre><code class="lang-csharp">using var timer = _metrics.MeasureDuration(&quot;operation_name&quot;);
+// Your code here
+</code></pre>
+</li>
+<li><p><strong>Track Errors</strong>:</p>
+<pre><code class="lang-csharp">_metrics.IncrementCounter(&quot;errors&quot;, 1, new Dictionary&lt;string, string&gt;
+{
+    [&quot;error_type&quot;] = &quot;provider_timeout&quot;
+});
+</code></pre>
+</li>
+</ol>
+<h3 id="for-on-call-engineers">For On-Call Engineers</h3>
+<ol>
+<li><p><strong>Check Firing Alerts</strong>:</p>
+<pre><code class="lang-bash">curl http://localhost:5005/api/monitoring/alerts/firing
+</code></pre>
+</li>
+<li><p><strong>Follow Runbooks</strong> in <code>/docs/runbooks/</code>:</p>
+<ul>
+<li><a href="../runbooks/api-availability.html">API Availability</a></li>
+<li><a href="../runbooks/high-error-rate.html">High Error Rate</a></li>
+<li><a href="../runbooks/high-latency.html">High Latency</a></li>
+</ul>
+</li>
+<li><p><strong>Follow Incident Response</strong> procedures in <a href="INCIDENT_RESPONSE.html">INCIDENT_RESPONSE.md</a></p>
+</li>
+</ol>
+<h2 id="documentation-structure">Documentation Structure</h2>
+<pre><code>docs/monitoring/
+├── README.md                          # This file
+├── MONITORING_PHILOSOPHY.md           # Monitoring principles and best practices
+├── ALERT_CREATION_GUIDE.md            # Guide for creating effective alerts
+├── INCIDENT_RESPONSE.md               # Incident response procedures
+└── DASHBOARD_CREATION_GUIDE.md        # Dashboard design guide (TBD)
+
+docs/runbooks/
+├── api-availability.md                # API availability incident response
+├── high-error-rate.md                 # High error rate troubleshooting
+├── high-latency.md                    # Performance degradation response
+└── ...                                # Additional runbooks
+
+Aura.Api/Monitoring/
+├── DashboardDefinitions.json          # Dashboard configurations
+├── AlertRules.json                    # Alert rule definitions
+└── LogAnalyticsQueries.kql            # KQL queries for Azure Log Analytics
+
+Aura.Core/Monitoring/
+├── MetricsCollector.cs                # Core metrics collection
+├── BusinessMetricsCollector.cs        # Business KPI tracking
+├── SliSloConfiguration.cs             # SLI/SLO definitions
+└── AlertingEngine.cs                  # Alert evaluation engine
+</code></pre>
+<h2 id="key-features">Key Features</h2>
+<h3 id="-comprehensive-metrics-collection">✅ Comprehensive Metrics Collection</h3>
+<ul>
+<li>Business KPIs (jobs, costs, usage)</li>
+<li>System metrics (latency, errors, throughput)</li>
+<li>Resource utilization (CPU, memory, disk)</li>
+</ul>
+<h3 id="-service-level-objectives-slos">✅ Service Level Objectives (SLOs)</h3>
+<ul>
+<li>API Availability: 99.9%</li>
+<li>API Latency P95: &lt; 2 seconds</li>
+<li>Job Success Rate: 95%</li>
+<li>Error Rate: &lt; 1%</li>
+</ul>
+<h3 id="-proactive-alerting">✅ Proactive Alerting</h3>
+<ul>
+<li>Critical alerts to PagerDuty</li>
+<li>Warning alerts to Slack</li>
+<li>Auto-resolution when metrics return to normal</li>
+<li>Flapping protection (3 consecutive violations)</li>
+</ul>
+<h3 id="-rich-dashboards">✅ Rich Dashboards</h3>
+<ul>
+<li>Operational Dashboard (real-time system health)</li>
+<li>Business Metrics Dashboard (KPIs and trends)</li>
+<li>Performance Dashboard (resource utilization)</li>
+<li>Cost Tracking Dashboard (budget monitoring)</li>
+</ul>
+<h3 id="-incident-response">✅ Incident Response</h3>
+<ul>
+<li>Detailed runbooks for common issues</li>
+<li>Escalation procedures</li>
+<li>Post-mortem templates</li>
+<li>On-call rotation support</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="monitoring-options">Monitoring Options</h3>
+<p>All monitoring features can be configured in <code>appsettings.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;EnableApplicationInsights&quot;: true,
+    &quot;EnableCustomMetrics&quot;: true,
+    &quot;EnableBusinessMetrics&quot;: true,
+    &quot;EnableSliSloMonitoring&quot;: true,
+    &quot;EnableAlerting&quot;: true,
+    &quot;SloEvaluationIntervalSeconds&quot;: 60,
+    &quot;AlertEvaluationIntervalSeconds&quot;: 60,
+    &quot;MetricRetentionDays&quot;: 90
+  }
+}
+</code></pre>
+<h3 id="notification-channels">Notification Channels</h3>
+<p>Four notification channels are supported:</p>
+<ol>
+<li><strong>Slack</strong>: Team notifications (warnings)</li>
+<li><strong>PagerDuty</strong>: On-call alerts (critical)</li>
+<li><strong>Email</strong>: Digest reports (non-urgent)</li>
+<li><strong>Webhook</strong>: Custom integrations</li>
+</ol>
+<p>See <a href="#configuration-examples">Configuration Examples</a> below for setup details.</p>
+<h2 id="metrics-reference">Metrics Reference</h2>
+<h3 id="business-metrics">Business Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jobs.completed</code></td>
+<td>Counter</td>
+<td>Job completions (tagged by status)</td>
+</tr>
+<tr>
+<td><code>jobs.duration_seconds</code></td>
+<td>Histogram</td>
+<td>Job processing time</td>
+</tr>
+<tr>
+<td><code>jobs.cost_usd</code></td>
+<td>Histogram</td>
+<td>Job cost</td>
+</tr>
+<tr>
+<td><code>video.generated</code></td>
+<td>Counter</td>
+<td>Videos created</td>
+</tr>
+<tr>
+<td><code>video.scenes_per_video</code></td>
+<td>Histogram</td>
+<td>Scene count per video</td>
+</tr>
+<tr>
+<td><code>llm.requests</code></td>
+<td>Counter</td>
+<td>LLM API calls</td>
+</tr>
+<tr>
+<td><code>llm.latency_ms</code></td>
+<td>Histogram</td>
+<td>LLM response time</td>
+</tr>
+<tr>
+<td><code>llm.cost_usd</code></td>
+<td>Histogram</td>
+<td>LLM cost</td>
+</tr>
+<tr>
+<td><code>tts.requests</code></td>
+<td>Counter</td>
+<td>TTS generations</td>
+</tr>
+<tr>
+<td><code>tts.cost_usd</code></td>
+<td>Histogram</td>
+<td>TTS cost</td>
+</tr>
+<tr>
+<td><code>image.generated</code></td>
+<td>Counter</td>
+<td>Images created</td>
+</tr>
+<tr>
+<td><code>cache.access</code></td>
+<td>Counter</td>
+<td>Cache hits/misses</td>
+</tr>
+<tr>
+<td><code>cost.usd</code></td>
+<td>Histogram</td>
+<td>Total costs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="system-metrics">System Metrics</h3>
+<table>
+<thead>
+<tr>
+<th>Metric Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>api.requests</code></td>
+<td>Counter</td>
+<td>API request count</td>
+</tr>
+<tr>
+<td><code>api.request_duration_ms</code></td>
+<td>Histogram</td>
+<td>API latency</td>
+</tr>
+<tr>
+<td><code>api.errors.4xx</code></td>
+<td>Counter</td>
+<td>Client errors</td>
+</tr>
+<tr>
+<td><code>api.errors.5xx</code></td>
+<td>Counter</td>
+<td>Server errors</td>
+</tr>
+<tr>
+<td><code>queue.depth</code></td>
+<td>Gauge</td>
+<td>Job queue backlog</td>
+</tr>
+<tr>
+<td><code>provider.healthy</code></td>
+<td>Gauge</td>
+<td>Provider health status</td>
+</tr>
+</tbody>
+</table>
+<h2 id="api-endpoints">API Endpoints</h2>
+<h3 id="metrics">Metrics</h3>
+<ul>
+<li><code>GET /api/monitoring/metrics</code> - Full metrics snapshot</li>
+<li><code>GET /api/monitoring/metrics/gauge/{name}</code> - Specific gauge value</li>
+<li><code>GET /api/monitoring/metrics/histogram/{name}</code> - Histogram statistics</li>
+</ul>
+<h3 id="alerts">Alerts</h3>
+<ul>
+<li><code>GET /api/monitoring/alerts</code> - All alert states</li>
+<li><code>GET /api/monitoring/alerts/firing</code> - Only firing alerts</li>
+</ul>
+<h3 id="health">Health</h3>
+<ul>
+<li><code>GET /api/monitoring/health/synthetic</code> - Synthetic monitoring endpoint</li>
+</ul>
+<h2 id="dashboards">Dashboards</h2>
+<p>Four pre-configured dashboards are available:</p>
+<h3 id="1-operational-dashboard">1. Operational Dashboard</h3>
+<p><strong>Purpose</strong>: Real-time system health monitoring<br>
+<strong>Refresh</strong>: 1 minute<br>
+<strong>Widgets</strong>: Availability, latency, error rate, active alerts, queue depth</p>
+<h3 id="2-business-metrics-dashboard">2. Business Metrics Dashboard</h3>
+<p><strong>Purpose</strong>: Business KPI tracking<br>
+<strong>Refresh</strong>: 5 minutes<br>
+<strong>Widgets</strong>: Job success rate, video generation, LLM usage, cache hit rate, costs</p>
+<h3 id="3-performance-dashboard">3. Performance Dashboard</h3>
+<p><strong>Purpose</strong>: System performance and resources<br>
+<strong>Refresh</strong>: 1 minute<br>
+<strong>Widgets</strong>: CPU/memory usage, latency distribution, database performance, provider health</p>
+<h3 id="4-cost-tracking-dashboard">4. Cost Tracking Dashboard</h3>
+<p><strong>Purpose</strong>: Cost analysis and budgeting<br>
+<strong>Refresh</strong>: 15 minutes<br>
+<strong>Widgets</strong>: Total cost, cost by category, LLM/TTS/image costs, budget tracking</p>
+<h2 id="alert-rules">Alert Rules</h2>
+<p>12 pre-configured alert rules covering:</p>
+<p><strong>Critical Alerts</strong> (PagerDuty):</p>
+<ul>
+<li>API availability below 99.9%</li>
+<li>Error rate exceeds 1%</li>
+<li>High exception rate</li>
+</ul>
+<p><strong>Warning Alerts</strong> (Slack):</p>
+<ul>
+<li>API latency P95 &gt; 2s</li>
+<li>Job failure rate &gt; 5%</li>
+<li>Queue depth &gt; 100</li>
+<li>Provider health degraded</li>
+<li>High CPU/memory usage</li>
+<li>Database slow queries</li>
+<li>Daily cost exceeded</li>
+<li>Disk space low</li>
+</ul>
+<h2 id="runbooks">Runbooks</h2>
+<p>Detailed runbooks are available for common incidents:</p>
+<ul>
+<li><a href="../runbooks/api-availability.html">API Availability</a> - Complete service outage or degradation</li>
+<li><a href="../runbooks/high-error-rate.html">High Error Rate</a> - Increased 5xx errors</li>
+<li><a href="../runbooks/high-latency.html">High Latency</a> - Slow API responses</li>
+</ul>
+<p>Each runbook includes:</p>
+<ul>
+<li>Alert details and symptoms</li>
+<li>Quick diagnostic commands</li>
+<li>Common causes and resolutions</li>
+<li>Escalation procedures</li>
+<li>Post-incident actions</li>
+</ul>
+<h2 id="configuration-examples">Configuration Examples</h2>
+<h3 id="application-insights-setup">Application Insights Setup</h3>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;EnableApplicationInsights&quot;: true,
+    &quot;ApplicationInsightsConnectionString&quot;: &quot;InstrumentationKey=...;IngestionEndpoint=https://...;LiveEndpoint=https://...&quot;
+  }
+}
+</code></pre>
+<h3 id="slack-integration">Slack Integration</h3>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;NotificationChannels&quot;: {
+      &quot;Slack&quot;: {
+        &quot;Enabled&quot;: true,
+        &quot;WebhookUrl&quot;: &quot;https://hooks.slack.com/services/YOUR/WEBHOOK/URL&quot;,
+        &quot;Channel&quot;: &quot;#aura-alerts&quot;,
+        &quot;MentionUsers&quot;: [&quot;@oncall&quot;, &quot;@team-lead&quot;]
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="pagerduty-integration">PagerDuty Integration</h3>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;NotificationChannels&quot;: {
+      &quot;PagerDuty&quot;: {
+        &quot;Enabled&quot;: true,
+        &quot;IntegrationKey&quot;: &quot;YOUR_INTEGRATION_KEY&quot;,
+        &quot;ServiceKey&quot;: &quot;YOUR_SERVICE_KEY&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h3 id="email-notifications">Email Notifications</h3>
+<pre><code class="lang-json">{
+  &quot;Monitoring&quot;: {
+    &quot;NotificationChannels&quot;: {
+      &quot;Email&quot;: {
+        &quot;Enabled&quot;: true,
+        &quot;SmtpServer&quot;: &quot;smtp.sendgrid.net&quot;,
+        &quot;SmtpPort&quot;: 587,
+        &quot;FromAddress&quot;: &quot;alerts@aura.studio&quot;,
+        &quot;ToAddresses&quot;: [&quot;oncall@aura.studio&quot;, &quot;team@aura.studio&quot;],
+        &quot;Username&quot;: &quot;apikey&quot;,
+        &quot;Password&quot;: &quot;YOUR_SENDGRID_API_KEY&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-bash">cd Aura.Tests
+dotnet test --filter &quot;FullyQualifiedName~Monitoring&quot;
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-bash"># Test metrics collection
+curl http://localhost:5005/api/monitoring/metrics
+
+# Test alert firing
+# (Inject test failures and verify alerts)
+
+# Test notifications
+# (Verify Slack/PagerDuty receives alerts)
+</code></pre>
+<h3 id="synthetic-monitoring">Synthetic Monitoring</h3>
+<p>Set up external monitoring (e.g., Pingdom, UptimeRobot) to check:</p>
+<pre><code>GET https://api.aura.studio/api/monitoring/health/synthetic
+Expect: 200 OK with {&quot;status&quot;: &quot;healthy&quot;}
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="metrics-not-collecting">Metrics Not Collecting</h3>
+<ol>
+<li>Check monitoring is enabled: <code>&quot;EnableCustomMetrics&quot;: true</code></li>
+<li>Verify services are running: Check logs for <code>MetricsExporterService</code> and <code>AlertEvaluationService</code></li>
+<li>Check for errors: <code>tail -f logs/errors-*.log</code></li>
+</ol>
+<h3 id="alerts-not-firing">Alerts Not Firing</h3>
+<ol>
+<li>Verify alerting enabled: <code>&quot;EnableAlerting&quot;: true</code></li>
+<li>Check SLO evaluation: <code>curl /api/monitoring/alerts</code></li>
+<li>Verify thresholds: Metrics may not be violating SLOs</li>
+<li>Check evaluation interval: Default is 60 seconds</li>
+</ol>
+<h3 id="notifications-not-sending">Notifications Not Sending</h3>
+<ol>
+<li>Verify channel configuration (webhook URLs, API keys)</li>
+<li>Check network connectivity to external services</li>
+<li>Review logs for notification errors</li>
+<li>Test webhook URLs manually with curl</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="-do">✅ DO</h3>
+<ul>
+<li>Monitor user-impacting metrics (availability, latency)</li>
+<li>Create actionable alerts with clear runbooks</li>
+<li>Tune alert thresholds to minimize false positives</li>
+<li>Review and update runbooks after incidents</li>
+<li>Conduct regular fire drills</li>
+</ul>
+<h3 id="-dont">❌ DON'T</h3>
+<ul>
+<li>Alert on everything (causes alert fatigue)</li>
+<li>Set and forget thresholds (they drift over time)</li>
+<li>Skip post-mortems (miss learning opportunities)</li>
+<li>Page for non-urgent issues (save PagerDuty for real emergencies)</li>
+</ul>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="MONITORING_PHILOSOPHY.html">Monitoring Philosophy</a> - Core principles and best practices</li>
+<li><a href="ALERT_CREATION_GUIDE.html">Alert Creation Guide</a> - How to create effective alerts</li>
+<li><a href="INCIDENT_RESPONSE.html">Incident Response</a> - Detailed incident procedures</li>
+<li><a href="../../MONITORING_ALERTING_IMPLEMENTATION.md">Implementation Summary</a> - Technical details</li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For questions or issues:</p>
+<ol>
+<li>Check runbooks in <code>/docs/runbooks/</code></li>
+<li>Review documentation in <code>/docs/monitoring/</code></li>
+<li>Contact platform team: platform@aura.studio</li>
+<li>File an issue: GitHub Issues</li>
+</ol>
+<h2 id="changelog">Changelog</h2>
+<h3 id="2025-11-10---initial-release-pr-14">2025-11-10 - Initial Release (PR #14)</h3>
+<ul>
+<li>✅ Core metrics collection infrastructure</li>
+<li>✅ Business KPI tracking</li>
+<li>✅ SLI/SLO monitoring</li>
+<li>✅ Alert evaluation engine</li>
+<li>✅ Four operational dashboards</li>
+<li>✅ 12 pre-configured alert rules</li>
+<li>✅ Notification channels (Slack, PagerDuty, Email, Webhook)</li>
+<li>✅ Application Insights integration</li>
+<li>✅ Comprehensive documentation</li>
+<li>✅ Runbooks for common incidents</li>
+<li>✅ Unit and integration tests</li>
+</ul>
+<hr>
+<p><strong>Maintained by</strong>: Platform Engineering Team<br>
+<strong>Last Updated</strong>: 2025-11-10<br>
+<strong>Version</strong>: 1.0.0</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/monitoring/README.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

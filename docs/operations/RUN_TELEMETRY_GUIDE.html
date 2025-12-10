@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>RunTelemetry v1 - Unified Telemetry Schema | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="RunTelemetry v1 - Unified Telemetry Schema | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/RUN_TELEMETRY_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="runtelemetry-v1---unified-telemetry-schema">RunTelemetry v1 - Unified Telemetry Schema</h1>
+
+<h2 id="overview">Overview</h2>
+<p>RunTelemetry v1 provides a standardized, versioned schema for capturing detailed telemetry data from video generation runs. It unifies cost tracking, performance metrics, and diagnostics into a single, consistent format.</p>
+<h2 id="features">Features</h2>
+<h3 id="unified-schema">Unified Schema</h3>
+<ul>
+<li><strong>Version 1.0</strong> with JSON Schema definition</li>
+<li>Captures all pipeline stages: brief, plan, script, ssml, tts, visuals, render, post</li>
+<li>Per-stage and per-scene granularity</li>
+<li>Provider selection tracking (default, pinned, cli, fallback)</li>
+<li>Comprehensive cost and performance metrics</li>
+</ul>
+<h3 id="automatic-data-collection">Automatic Data Collection</h3>
+<ul>
+<li><strong>Per-run persistence</strong>: JSON file saved alongside job artifacts</li>
+<li><strong>Thread-safe collection</strong>: Safe for concurrent operations</li>
+<li><strong>Automatic PII masking</strong>: API keys, tokens, and secrets are redacted</li>
+<li><strong>Summary statistics</strong>: Aggregated metrics for quick analysis</li>
+</ul>
+<h3 id="data-captured-per-stage">Data Captured Per Stage</h3>
+<p>Each telemetry record includes:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>job_id</code></td>
+<td>string</td>
+<td>Unique job identifier</td>
+</tr>
+<tr>
+<td><code>correlation_id</code></td>
+<td>string</td>
+<td>Request correlation ID</td>
+</tr>
+<tr>
+<td><code>project_id</code></td>
+<td>string?</td>
+<td>Optional project identifier</td>
+</tr>
+<tr>
+<td><code>stage</code></td>
+<td>enum</td>
+<td>Pipeline stage (brief, plan, script, etc.)</td>
+</tr>
+<tr>
+<td><code>scene_index</code></td>
+<td>int?</td>
+<td>Scene number for per-scene operations</td>
+</tr>
+<tr>
+<td><code>model_id</code></td>
+<td>string?</td>
+<td>Model identifier (e.g., &quot;gpt-4&quot;)</td>
+</tr>
+<tr>
+<td><code>provider</code></td>
+<td>string?</td>
+<td>Provider name (e.g., &quot;OpenAI&quot;)</td>
+</tr>
+<tr>
+<td><code>selection_source</code></td>
+<td>enum?</td>
+<td>How provider was selected</td>
+</tr>
+<tr>
+<td><code>fallback_reason</code></td>
+<td>string?</td>
+<td>Reason if fallback was used</td>
+</tr>
+<tr>
+<td><code>tokens_in</code></td>
+<td>int?</td>
+<td>Input tokens (LLM operations)</td>
+</tr>
+<tr>
+<td><code>tokens_out</code></td>
+<td>int?</td>
+<td>Output tokens (LLM operations)</td>
+</tr>
+<tr>
+<td><code>cache_hit</code></td>
+<td>bool?</td>
+<td>Whether cache was hit</td>
+</tr>
+<tr>
+<td><code>retries</code></td>
+<td>int</td>
+<td>Number of retry attempts</td>
+</tr>
+<tr>
+<td><code>latency_ms</code></td>
+<td>int</td>
+<td>Operation latency in milliseconds</td>
+</tr>
+<tr>
+<td><code>cost_estimate</code></td>
+<td>decimal?</td>
+<td>Estimated cost</td>
+</tr>
+<tr>
+<td><code>currency</code></td>
+<td>string</td>
+<td>Currency code (default: USD)</td>
+</tr>
+<tr>
+<td><code>pricing_version</code></td>
+<td>string?</td>
+<td>Pricing data version</td>
+</tr>
+<tr>
+<td><code>result_status</code></td>
+<td>enum</td>
+<td>ok, warn, or error</td>
+</tr>
+<tr>
+<td><code>error_code</code></td>
+<td>string?</td>
+<td>Error code if failed</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>string?</td>
+<td>Human-readable message</td>
+</tr>
+<tr>
+<td><code>started_at</code></td>
+<td>datetime</td>
+<td>ISO 8601 start timestamp</td>
+</tr>
+<tr>
+<td><code>ended_at</code></td>
+<td>datetime</td>
+<td>ISO 8601 end timestamp</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>object?</td>
+<td>Stage-specific metadata</td>
+</tr>
+</tbody>
+</table>
+<h2 id="usage">Usage</h2>
+<h3 id="backend-integration">Backend Integration</h3>
+<h4 id="1-start-collection">1. Start Collection</h4>
+<pre><code class="lang-csharp">var collector = serviceProvider.GetRequiredService&lt;RunTelemetryCollector&gt;();
+collector.StartCollection(jobId, correlationId);
+</code></pre>
+<h4 id="2-record-telemetry">2. Record Telemetry</h4>
+<p><strong>Using TelemetryBuilder (recommended)</strong>:</p>
+<pre><code class="lang-csharp">var telemetry = TelemetryBuilder.Start(jobId, correlationId, RunStage.Script)
+    .WithModel(&quot;gpt-4&quot;, &quot;OpenAI&quot;)
+    .WithTokens(500, 1000)
+    .WithCost(0.045m)
+    .WithStatus(ResultStatus.Ok, message: &quot;Script generated successfully&quot;)
+    .Build();
+
+collector.Record(telemetry);
+</code></pre>
+<p><strong>Using Extension Methods</strong>:</p>
+<pre><code class="lang-csharp">// For LLM operations
+var llmRecord = TelemetryExtensions.CreateLlmTelemetry(
+    jobId, correlationId, RunStage.Script,
+    &quot;gpt-4&quot;, &quot;OpenAI&quot;, 500, 1000, 2500, 0.045m);
+collector.Record(llmRecord);
+
+// For TTS operations
+var ttsRecord = TelemetryExtensions.CreateTtsTelemetry(
+    jobId, correlationId, sceneIndex: 0,
+    &quot;ElevenLabs&quot;, characters: 150, 
+    durationSeconds: 8.5, latencyMs: 3000, cost: 0.045m);
+collector.Record(ttsRecord);
+</code></pre>
+<p><strong>Using TelemetryIntegration</strong> (for existing LlmTelemetry):</p>
+<pre><code class="lang-csharp">var integration = serviceProvider.GetRequiredService&lt;TelemetryIntegration&gt;();
+integration.RecordLlmOperation(jobId, correlationId, RunStage.Script, llmTelemetry);
+</code></pre>
+<h4 id="3-end-collection">3. End Collection</h4>
+<pre><code class="lang-csharp">var filePath = collector.EndCollection();
+// Telemetry is now persisted to: {jobDir}/telemetry.json
+</code></pre>
+<h3 id="api-endpoints">API Endpoints</h3>
+<h4 id="get-job-telemetry">Get Job Telemetry</h4>
+<pre><code class="lang-http">GET /api/telemetry/{jobId}
+</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;version&quot;: &quot;1.0&quot;,
+  &quot;job_id&quot;: &quot;abc123&quot;,
+  &quot;correlation_id&quot;: &quot;xyz789&quot;,
+  &quot;collection_started_at&quot;: &quot;2024-01-15T10:00:00Z&quot;,
+  &quot;collection_ended_at&quot;: &quot;2024-01-15T10:05:30Z&quot;,
+  &quot;records&quot;: [...],
+  &quot;summary&quot;: {
+    &quot;total_operations&quot;: 12,
+    &quot;successful_operations&quot;: 11,
+    &quot;failed_operations&quot;: 1,
+    &quot;total_cost&quot;: 0.245,
+    &quot;currency&quot;: &quot;USD&quot;,
+    &quot;total_latency_ms&quot;: 45000,
+    &quot;total_tokens_in&quot;: 2500,
+    &quot;total_tokens_out&quot;: 5000,
+    &quot;cache_hits&quot;: 3,
+    &quot;total_retries&quot;: 2,
+    &quot;cost_by_stage&quot;: {
+      &quot;script&quot;: 0.045,
+      &quot;tts&quot;: 0.135,
+      &quot;visuals&quot;: 0.050,
+      &quot;render&quot;: 0.015
+    },
+    &quot;operations_by_provider&quot;: {
+      &quot;OpenAI&quot;: 4,
+      &quot;ElevenLabs&quot;: 3,
+      &quot;StableDiffusion&quot;: 3
+    }
+  }
+}
+</code></pre>
+<h4 id="get-schema-info">Get Schema Info</h4>
+<pre><code class="lang-http">GET /api/telemetry/schema
+</code></pre>
+<p><strong>Response</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;version&quot;: &quot;1.0&quot;,
+  &quot;schemaUrl&quot;: &quot;https://aura.studio/schemas/run-telemetry/v1&quot;,
+  &quot;description&quot;: &quot;Unified telemetry schema for video generation run stages&quot;,
+  &quot;stages&quot;: [&quot;brief&quot;, &quot;plan&quot;, &quot;script&quot;, &quot;ssml&quot;, &quot;tts&quot;, &quot;visuals&quot;, &quot;render&quot;, &quot;post&quot;],
+  &quot;resultStatuses&quot;: [&quot;ok&quot;, &quot;warn&quot;, &quot;error&quot;],
+  &quot;selectionSources&quot;: [&quot;default&quot;, &quot;pinned&quot;, &quot;cli&quot;, &quot;fallback&quot;]
+}
+</code></pre>
+<h3 id="frontend-usage">Frontend Usage</h3>
+<h4 id="1-fetch-telemetry">1. Fetch Telemetry</h4>
+<pre><code class="lang-typescript">import { getJobTelemetry } from '@/api/telemetryClient';
+
+const telemetry = await getJobTelemetry(jobId);
+</code></pre>
+<h4 id="2-display-run-details">2. Display Run Details</h4>
+<pre><code class="lang-typescript">// Navigate to run details page
+navigate(`/jobs/${jobId}/telemetry`);
+</code></pre>
+<p>The RunDetailsPage component displays:</p>
+<ul>
+<li>Summary metrics (operations, cost, latency, success rate)</li>
+<li>Stage breakdown table</li>
+<li>Cost by stage</li>
+<li>Operations by provider</li>
+</ul>
+<h2 id="security-and-privacy">Security and Privacy</h2>
+<h3 id="automatic-pii-masking">Automatic PII Masking</h3>
+<p>The telemetry collector automatically masks:</p>
+<ul>
+<li>API keys (patterns like <code>sk-...</code>)</li>
+<li>Bearer tokens</li>
+<li>Secret values in metadata</li>
+<li>Any field containing &quot;key&quot;, &quot;token&quot;, &quot;secret&quot;, or &quot;password&quot;</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code class="lang-csharp">// Input
+Message = &quot;API error: sk-1234567890abcdef failed&quot;
+
+// Output (masked)
+Message = &quot;API error: [REDACTED] failed&quot;
+</code></pre>
+<h3 id="no-sensitive-data">No Sensitive Data</h3>
+<p>Telemetry records <strong>NEVER</strong> include:</p>
+<ul>
+<li>API keys or credentials</li>
+<li>User passwords</li>
+<li>Personal identifiable information (PII)</li>
+<li>Prompt content (only metadata like token counts)</li>
+<li>Generated script text (only metadata)</li>
+</ul>
+<h2 id="file-structure">File Structure</h2>
+<p>Telemetry files are stored in the job artifacts directory:</p>
+<pre><code>%LOCALAPPDATA%/Aura/jobs/{jobId}/
+├── job.json                 # Job state
+├── telemetry.json          # RunTelemetry collection (this file)
+├── output.mp4              # Generated video
+└── ...                     # Other artifacts
+</code></pre>
+<h2 id="schema-versioning">Schema Versioning</h2>
+<p>The schema follows semantic versioning:</p>
+<ul>
+<li><strong>v1.0</strong>: Initial release (current)</li>
+<li><strong>v1.x</strong>: Backward-compatible additions</li>
+<li><strong>v2.0</strong>: Breaking changes (future)</li>
+</ul>
+<p>The <code>version</code> field in every record ensures consumers can handle multiple schema versions gracefully.</p>
+<h2 id="integration-with-existing-systems">Integration with Existing Systems</h2>
+<h3 id="cost-analytics">Cost Analytics</h3>
+<p>Cost analytics services should read telemetry records instead of maintaining separate cost logs:</p>
+<pre><code class="lang-csharp">var telemetry = collector.LoadTelemetry(jobId);
+var totalCost = telemetry.Summary.TotalCost;
+var costByStage = telemetry.Summary.CostByStage;
+</code></pre>
+<h3 id="diagnostics">Diagnostics</h3>
+<p>Diagnostics can analyze failed stages:</p>
+<pre><code class="lang-csharp">var failedStages = telemetry.Records
+    .Where(r =&gt; r.ResultStatus == ResultStatus.Error)
+    .Select(r =&gt; new { r.Stage, r.ErrorCode, r.Message });
+</code></pre>
+<h3 id="performance-monitoring">Performance Monitoring</h3>
+<p>Track latency and retries:</p>
+<pre><code class="lang-csharp">var avgLatency = telemetry.Summary.TotalLatencyMs / telemetry.Summary.TotalOperations;
+var highRetryStages = telemetry.Records
+    .Where(r =&gt; r.Retries &gt; 2)
+    .Select(r =&gt; r.Stage);
+</code></pre>
+<h2 id="testing">Testing</h2>
+<h3 id="unit-tests">Unit Tests</h3>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~RunTelemetryTests&quot;
+</code></pre>
+<h3 id="integration-tests">Integration Tests</h3>
+<pre><code class="lang-bash">dotnet test --filter &quot;FullyQualifiedName~TelemetryIntegrationTests&quot;
+</code></pre>
+<h2 id="migration-from-existing-telemetry">Migration from Existing Telemetry</h2>
+<p>Existing systems using <code>LlmOperationTelemetry</code> can migrate using <code>TelemetryIntegration</code>:</p>
+<pre><code class="lang-csharp">// Old way (still works)
+var llmTelemetry = new LlmOperationTelemetry { ... };
+llmTelemetryCollector.Record(llmTelemetry);
+
+// New way (unified)
+var integration = serviceProvider.GetRequiredService&lt;TelemetryIntegration&gt;();
+integration.RecordLlmOperation(jobId, correlationId, RunStage.Script, llmTelemetry);
+</code></pre>
+<p>Both systems can coexist during migration.</p>
+<h2 id="future-enhancements">Future Enhancements</h2>
+<p>Potential additions to v1.x (backward-compatible):</p>
+<ul>
+<li>Real-time streaming telemetry via SignalR</li>
+<li>Export to external analytics platforms (Prometheus, DataDog)</li>
+<li>Alerting based on cost thresholds or error rates</li>
+<li>Machine learning insights from historical telemetry</li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For issues or questions:</p>
+<ul>
+<li>GitHub Issues: <a href="https://github.com/Saiyan9001/aura-video-studio/issues">aura-video-studio/issues</a></li>
+<li>Schema Documentation: See <code>Aura.Core/Telemetry/RunTelemetry.schema.json</code></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/operations/RUN_TELEMETRY_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

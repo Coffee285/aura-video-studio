@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Provider API Key Validation Patience Strategy | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Provider API Key Validation Patience Strategy | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/VALIDATION_PATIENCE_STRATEGY.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="provider-api-key-validation-patience-strategy">Provider API Key Validation Patience Strategy</h1>
+
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio implements a patient, latency-aware validation strategy for API keys that respects the performance characteristics of different provider types. This approach prevents premature failures for slow providers while maintaining fast validation for responsive services.</p>
+<h2 id="validation-status-states">Validation Status States</h2>
+<h3 id="1-not-validated">1. <strong>Not Validated</strong></h3>
+<ul>
+<li><strong>What it means</strong>: API key has been configured but not yet tested</li>
+<li><strong>What to do</strong>: Click &quot;Revalidate&quot; to test the connection</li>
+<li><strong>Icon</strong>: Clock (gray)</li>
+</ul>
+<h3 id="2-validating-normal">2. <strong>Validating</strong> (Normal)</h3>
+<ul>
+<li><strong>What it means</strong>: Validation in progress, within normal timeout threshold</li>
+<li><strong>What to do</strong>: Wait for completion (typically 15-30 seconds)</li>
+<li><strong>Icon</strong>: Clock (blue)</li>
+<li><strong>Duration</strong>: Up to normal threshold (e.g., 15s for cloud APIs, 30s for local)</li>
+</ul>
+<h3 id="3-validating-extended">3. <strong>Validating Extended</strong></h3>
+<ul>
+<li><strong>What it means</strong>: Validation taking longer than usual but still acceptable</li>
+<li><strong>What to do</strong>: Continue waiting - this is normal for some providers</li>
+<li><strong>Icon</strong>: Clock (orange)</li>
+<li><strong>Duration</strong>: Between normal and extended threshold (e.g., 15-60s)</li>
+<li><strong>Note</strong>: Common for local LLMs (Ollama), complex TTS requests, or slow networks</li>
+</ul>
+<h3 id="4-validating-max-wait">4. <strong>Validating Max Wait</strong></h3>
+<ul>
+<li><strong>What it means</strong>: Validation approaching maximum patience threshold</li>
+<li><strong>What to do</strong>: Wait for completion or manually cancel if needed</li>
+<li><strong>Icon</strong>: Clock (red)</li>
+<li><strong>Duration</strong>: Between extended and maximum threshold (e.g., 60-180s)</li>
+<li><strong>Note</strong>: Rare, indicates very slow provider or network issues</li>
+</ul>
+<h3 id="5-valid">5. <strong>Valid</strong></h3>
+<ul>
+<li><strong>What it means</strong>: API key successfully validated and working</li>
+<li><strong>What to do</strong>: Nothing - key is ready to use</li>
+<li><strong>Icon</strong>: Checkmark (green)</li>
+<li><strong>Cache</strong>: Status cached until manual revalidation</li>
+</ul>
+<h3 id="6-slow-but-working">6. <strong>Slow But Working</strong></h3>
+<ul>
+<li><strong>What it means</strong>: Provider is slow but responding correctly</li>
+<li><strong>What to do</strong>: Consider checking network connectivity or provider status</li>
+<li><strong>Icon</strong>: Warning (yellow)</li>
+<li><strong>Note</strong>: Key works but performance may impact generation speed</li>
+</ul>
+<h3 id="7-invalid">7. <strong>Invalid</strong></h3>
+<ul>
+<li><strong>What it means</strong>: API key failed validation</li>
+<li><strong>What to do</strong>: Check the key for typos, verify it's active, try revalidating</li>
+<li><strong>Icon</strong>: Error (red)</li>
+<li><strong>Reasons</strong>: Incorrect key, expired key, rate limit, or provider issues</li>
+</ul>
+<h3 id="8-timed-out">8. <strong>Timed Out</strong></h3>
+<ul>
+<li><strong>What it means</strong>: Validation exceeded maximum patience threshold</li>
+<li><strong>What to do</strong>: Check provider status, network connectivity, or try again later</li>
+<li><strong>Icon</strong>: Error (red)</li>
+<li><strong>Note</strong>: Does NOT mean key is invalid - provider may be down or unreachable</li>
+</ul>
+<h2 id="provider-specific-timeouts">Provider-Specific Timeouts</h2>
+<h3 id="cloud-llm-apis-openai-anthropic-gemini-azure">Cloud LLM APIs (OpenAI, Anthropic, Gemini, Azure)</h3>
+<ul>
+<li><strong>Normal</strong>: 15 seconds</li>
+<li><strong>Extended</strong>: 60 seconds</li>
+<li><strong>Maximum</strong>: 120 seconds</li>
+<li><strong>Rationale</strong>: Generally fast with good infrastructure</li>
+</ul>
+<h3 id="local-llm-ollama">Local LLM (Ollama)</h3>
+<ul>
+<li><strong>Normal</strong>: 30 seconds</li>
+<li><strong>Extended</strong>: 180 seconds (3 minutes)</li>
+<li><strong>Maximum</strong>: 300 seconds (5 minutes)</li>
+<li><strong>Rationale</strong>: Local processing, may need model loading, CPU-intensive</li>
+</ul>
+<h3 id="tts-services-elevenlabs-playht">TTS Services (ElevenLabs, PlayHT)</h3>
+<ul>
+<li><strong>Normal</strong>: 20 seconds</li>
+<li><strong>Extended</strong>: 60 seconds</li>
+<li><strong>Maximum</strong>: 120 seconds</li>
+<li><strong>Rationale</strong>: Audio processing takes time, scales with text length</li>
+</ul>
+<h3 id="fallback-providers-rulebased-local-utilities">Fallback Providers (RuleBased, local utilities)</h3>
+<ul>
+<li><strong>Normal</strong>: 5 seconds</li>
+<li><strong>Extended</strong>: 15 seconds</li>
+<li><strong>Maximum</strong>: 30 seconds</li>
+<li><strong>Rationale</strong>: Should be very fast, minimal latency</li>
+</ul>
+<h2 id="patience-philosophy">Patience Philosophy</h2>
+<h3 id="why-we-wait">Why We Wait</h3>
+<ol>
+<li><p><strong>Local Models Need Time</strong>: Ollama and other local LLMs may need to:</p>
+<ul>
+<li>Load models into memory (can take 30-60 seconds)</li>
+<li>Process validation request</li>
+<li>First-run initialization</li>
+</ul>
+</li>
+<li><p><strong>Network Variability</strong>: Slow networks shouldn't fail validation</p>
+<ul>
+<li>Users on slower connections need more time</li>
+<li>International requests have higher latency</li>
+<li>VPNs and proxies add overhead</li>
+</ul>
+</li>
+<li><p><strong>Provider Spikes</strong>: Occasional slowness shouldn't disable providers</p>
+<ul>
+<li>API rate limiting may cause delays</li>
+<li>Provider infrastructure issues are temporary</li>
+<li>Retry with backoff gives providers recovery time</li>
+</ul>
+</li>
+</ol>
+<h3 id="user-control">User Control</h3>
+<p><strong>We never auto-cycle away from a slow provider</strong> - the user chose it for a reason:</p>
+<ul>
+<li><strong>Manual Revalidation</strong>: User explicitly triggers validation</li>
+<li><strong>Manual Fallback</strong>: User decides when to switch providers</li>
+<li><strong>Clear Status</strong>: UI shows what's happening and why</li>
+<li><strong>Actionable Guidance</strong>: Tooltips explain next steps</li>
+</ul>
+<h2 id="configuration">Configuration</h2>
+<p>Timeout thresholds are configured in <code>providerTimeoutProfiles.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;profiles&quot;: {
+    &quot;local_llm&quot;: {
+      &quot;normalThresholdMs&quot;: 30000,
+      &quot;extendedThresholdMs&quot;: 180000,
+      &quot;deepWaitThresholdMs&quot;: 300000,
+      &quot;heartbeatIntervalMs&quot;: 15000,
+      &quot;description&quot;: &quot;Local LLM models (Ollama)&quot;
+    }
+  }
+}
+</code></pre>
+<h3 id="customization">Customization</h3>
+<p>Administrators can adjust timeouts per deployment:</p>
+<ol>
+<li>Edit <code>providerTimeoutProfiles.json</code></li>
+<li>Modify threshold values for specific provider categories</li>
+<li>Add new provider mappings as needed</li>
+<li>Restart application to reload configuration</li>
+</ol>
+<h2 id="best-practices">Best Practices</h2>
+<h3 id="for-users">For Users</h3>
+<ol>
+<li><strong>First Validation</strong>: First-time validation may take longer (model loading)</li>
+<li><strong>Patience Pays</strong>: Wait for &quot;Extended&quot; status before cancelling</li>
+<li><strong>Network Check</strong>: If multiple providers timeout, check your connection</li>
+<li><strong>Revalidate Sparingly</strong>: Only revalidate when necessary (keys rarely change)</li>
+</ol>
+<h3 id="for-administrators">For Administrators</h3>
+<ol>
+<li><strong>Adjust Thresholds</strong>: Increase timeouts if users frequently see &quot;Timed Out&quot;</li>
+<li><strong>Monitor Patterns</strong>: Look for providers that consistently hit extended timeouts</li>
+<li><strong>Provider Status</strong>: Check provider status pages if timeouts increase</li>
+<li><strong>Network Analysis</strong>: Investigate network path if specific providers are slow</li>
+</ol>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="provider-always-times-out">Provider Always Times Out</h3>
+<ul>
+<li><strong>Check</strong>: Provider status page for outages</li>
+<li><strong>Check</strong>: Network connectivity and firewall rules</li>
+<li><strong>Check</strong>: API key is valid and active</li>
+<li><strong>Try</strong>: Increase timeout threshold in configuration</li>
+</ul>
+<h3 id="validation-stuck-at-validating">Validation Stuck at &quot;Validating&quot;</h3>
+<ul>
+<li><strong>Wait</strong>: Allow full timeout period (check remaining time)</li>
+<li><strong>Cancel</strong>: Click &quot;Revalidate&quot; again to restart</li>
+<li><strong>Check</strong>: Application logs for detailed error messages</li>
+</ul>
+<h3 id="slow-but-working-status">&quot;Slow But Working&quot; Status</h3>
+<ul>
+<li><strong>Accept</strong>: Key is valid, just slow</li>
+<li><strong>Investigate</strong>: Network speed, provider load</li>
+<li><strong>Consider</strong>: Alternative provider if speed is critical</li>
+</ul>
+<h2 id="security-considerations">Security Considerations</h2>
+<ul>
+<li><strong>No Auto-Rotation</strong>: Slow providers are never auto-disabled</li>
+<li><strong>Integrity Checks</strong>: All validation state is integrity-verified</li>
+<li><strong>Audit Trail</strong>: All manual revalidation actions are logged</li>
+<li><strong>Rate Limiting</strong>: Revalidation respects provider rate limits</li>
+</ul>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><a href="../PROVIDER_INTEGRATION_GUIDE.md">Provider Configuration Guide</a></li>
+<li><a href="../LLM_LATENCY_MANAGEMENT.md">Latency Management</a></li>
+<li>Timeout Profiles Configuration</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/VALIDATION_PATIENCE_STRATEGY.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

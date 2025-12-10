@@ -1,0 +1,2699 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Provider Integration Guide | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Provider Integration Guide | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PROVIDER_INTEGRATION_GUIDE.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="provider-integration-guide">Provider Integration Guide</h1>
+
+<p>Comprehensive guide for integrating and using providers in Aura Video Studio's video generation pipeline.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#provider-profiles">Provider Profiles</a></li>
+<li><a href="#llm-providers">LLM Providers</a></li>
+<li><a href="#tts-providers">TTS Providers</a></li>
+<li><a href="#image-providers">Image Providers</a></li>
+<li><a href="#fallback-strategies">Fallback Strategies</a></li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#performance-considerations">Performance Considerations</a></li>
+</ol>
+<h2 id="overview">Overview</h2>
+<p>Aura Video Studio uses a modular provider system for:</p>
+<ul>
+<li><strong>LLM (Large Language Models)</strong>: Script generation</li>
+<li><strong>TTS (Text-to-Speech)</strong>: Audio narration synthesis</li>
+<li><strong>Image Generation</strong>: Visual content creation</li>
+<li><strong>Stock Images</strong>: Ready-made visual assets</li>
+</ul>
+<p>Each provider implements a common interface, enabling fallback chains and easy swapping.</p>
+<h2 id="provider-profiles">Provider Profiles</h2>
+<p>Aura Video Studio includes three pre-configured provider profiles that balance cost, quality, and API requirements.</p>
+<h3 id="free-only-profile">Free-Only Profile</h3>
+<p><strong>Description</strong>: Uses only free and offline providers. No API keys required.</p>
+<p><strong>Ideal for</strong>:</p>
+<ul>
+<li>Testing and development</li>
+<li>Offline environments</li>
+<li>Learning the platform</li>
+<li>Personal projects with no budget</li>
+</ul>
+<p><strong>Providers</strong>:</p>
+<ul>
+<li><strong>LLM</strong>: Ollama (local, free) with fallback to rule-based</li>
+<li><strong>TTS</strong>: Windows SAPI or Piper TTS (local, free)</li>
+<li><strong>Images</strong>: Local stock images</li>
+<li><strong>Video</strong>: Software encoding with hardware acceleration when available</li>
+</ul>
+<p><strong>Quality</strong>: Acceptable for internal videos and prototypes</p>
+<p><strong>Cost</strong>: $0</p>
+<h3 id="balanced-mix-profile">Balanced Mix Profile</h3>
+<p><strong>Description</strong>: Combines free and premium providers for good quality at reasonable cost.</p>
+<p><strong>Ideal for</strong>:</p>
+<ul>
+<li>Small businesses</li>
+<li>Content creators on budget</li>
+<li>Regular video production</li>
+<li>Testing premium features</li>
+</ul>
+<p><strong>Providers</strong>:</p>
+<ul>
+<li><strong>LLM</strong>: OpenAI GPT-3.5-turbo with Ollama fallback</li>
+<li><strong>TTS</strong>: ElevenLabs (if configured) with SAPI fallback</li>
+<li><strong>Images</strong>: Pexels/Pixabay (free API) with local stock fallback</li>
+<li><strong>Video</strong>: Hardware-accelerated encoding when available</li>
+</ul>
+<p><strong>Required API Keys</strong>: OpenAI (GPT-3.5 is cost-effective)</p>
+<p><strong>Quality</strong>: Professional quality for most use cases</p>
+<p><strong>Cost</strong>: ~$0.10 - $0.50 per video</p>
+<h3 id="pro-max-profile">Pro-Max Profile</h3>
+<p><strong>Description</strong>: Premium providers for highest quality. Multiple paid API keys required.</p>
+<p><strong>Ideal for</strong>:</p>
+<ul>
+<li>Production environments</li>
+<li>Marketing teams</li>
+<li>High-quality content requirements</li>
+<li>Client-facing videos</li>
+</ul>
+<p><strong>Providers</strong>:</p>
+<ul>
+<li><strong>LLM</strong>: OpenAI GPT-4-turbo with Anthropic Claude fallback</li>
+<li><strong>TTS</strong>: ElevenLabs premium voices with PlayHT fallback</li>
+<li><strong>Images</strong>: Stable Diffusion WebUI or Stability AI with Pexels fallback</li>
+<li><strong>Video</strong>: Hardware-accelerated encoding (NVENC preferred)</li>
+</ul>
+<p><strong>Required API Keys</strong>: OpenAI, ElevenLabs, Stability AI or SD WebUI URL</p>
+<p><strong>Quality</strong>: Maximum quality, suitable for professional production</p>
+<p><strong>Cost</strong>: ~$1 - $5 per video (varies with length and complexity)</p>
+<h3 id="managing-profiles">Managing Profiles</h3>
+<h4 id="via-settings-ui">Via Settings UI</h4>
+<ol>
+<li>Navigate to <strong>Settings</strong> → <strong>Provider Profiles</strong></li>
+<li>View available profiles with tier badges and descriptions</li>
+<li>Click <strong>Validate</strong> to check if all required API keys are configured</li>
+<li>Select desired profile and click <strong>Apply Profile</strong></li>
+<li>View <strong>Smart Recommendation</strong> for AI-suggested profile based on your setup</li>
+</ol>
+<h4 id="via-api">Via API</h4>
+<pre><code class="lang-bash"># Get all profiles
+GET /api/provider-profiles
+
+# Get active profile
+GET /api/provider-profiles/active
+
+# Set active profile
+POST /api/provider-profiles/active
+{
+  &quot;profileId&quot;: &quot;balanced-mix&quot;
+}
+
+# Validate a profile
+POST /api/provider-profiles/{profileId}/validate
+
+# Get recommended profile
+GET /api/provider-profiles/recommend
+</code></pre>
+<h4 id="validation">Validation</h4>
+<p>Each profile can be validated to check if:</p>
+<ul>
+<li>All required API keys are present</li>
+<li>Keys are properly formatted</li>
+<li>Providers are accessible (optional connectivity test)</li>
+</ul>
+<p>Validation results show:</p>
+<ul>
+<li>✅ Valid: All requirements met</li>
+<li>❌ Invalid: Missing keys or configuration issues</li>
+<li>Specific missing keys listed for easy troubleshooting</li>
+</ul>
+<h3 id="api-key-management">API Key Management</h3>
+<h4 id="secure-storage">Secure Storage</h4>
+<ul>
+<li><strong>Windows</strong>: API keys encrypted using Data Protection API (DPAPI)</li>
+<li><strong>Linux/macOS</strong>: Keys stored in user directory with file system permissions</li>
+<li>All keys masked in logs and diagnostics</li>
+<li>Never exposed in error messages or telemetry</li>
+</ul>
+<h4 id="adding-api-keys">Adding API Keys</h4>
+<pre><code class="lang-bash"># Via API
+POST /api/provider-profiles/keys
+{
+  &quot;keys&quot;: {
+    &quot;openai&quot;: &quot;sk-...&quot;,
+    &quot;elevenlabs&quot;: &quot;...&quot;,
+    &quot;stabilityai&quot;: &quot;sk-...&quot;
+  }
+}
+
+# Via Settings UI
+1. Navigate to Settings → API Keys
+2. Enter API key for desired provider
+3. Click &quot;Test&quot; to validate connectivity
+4. Click &quot;Save API Keys&quot;
+</code></pre>
+<h4 id="testing-api-keys">Testing API Keys</h4>
+<p>Individual provider API keys can be tested before saving:</p>
+<pre><code class="lang-bash">POST /api/provider-profiles/test
+{
+  &quot;provider&quot;: &quot;openai&quot;,
+  &quot;apiKey&quot;: &quot;sk-...&quot;
+}
+</code></pre>
+<p>Response indicates:</p>
+<ul>
+<li>Success: Key is valid and provider is accessible</li>
+<li>Failure: Key invalid or provider unreachable</li>
+<li>Error message with troubleshooting guidance</li>
+</ul>
+<h2 id="llm-providers">LLM Providers</h2>
+<h3 id="openai-gpt-4-gpt-35">OpenAI (GPT-4, GPT-3.5)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Llm/OpenAiLlmProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Llm&quot;: {
+      &quot;OpenAI&quot;: {
+        &quot;ApiKey&quot;: &quot;sk-...&quot;,
+        &quot;Model&quot;: &quot;gpt-4-turbo-preview&quot;,
+        &quot;BaseUrl&quot;: &quot;https://api.openai.com/v1&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Models</strong>:</p>
+<ul>
+<li><code>gpt-4-turbo-preview</code>: Best quality, highest cost</li>
+<li><code>gpt-4</code>: Excellent quality, high cost</li>
+<li><code>gpt-3.5-turbo</code>: Good quality, low cost</li>
+</ul>
+<p><strong>Rate Limits</strong>:</p>
+<ul>
+<li>Tier 1: 3 requests/min, 40k tokens/min</li>
+<li>Tier 2: 60 requests/min, 1M tokens/min</li>
+<li>Check your quota at <a href="https://platform.openai.com/account/rate-limits">https://platform.openai.com/account/rate-limits</a></li>
+</ul>
+<p><strong>Error Handling</strong>:</p>
+<ul>
+<li>429 (Rate Limit): Retry with exponential backoff</li>
+<li>401 (Auth): Invalid API key - check configuration</li>
+<li>500 (Server): Transient error - retry</li>
+</ul>
+<p><strong>Cost</strong>: ~$0.03 per 30-second script (GPT-4)</p>
+<h3 id="anthropic-claude">Anthropic (Claude)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Llm/AnthropicLlmProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Llm&quot;: {
+      &quot;Anthropic&quot;: {
+        &quot;ApiKey&quot;: &quot;sk-ant-...&quot;,
+        &quot;Model&quot;: &quot;claude-3-opus-20240229&quot;,
+        &quot;BaseUrl&quot;: &quot;https://api.anthropic.com&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Models</strong>:</p>
+<ul>
+<li><code>claude-3-opus-20240229</code>: Highest quality</li>
+<li><code>claude-3-sonnet-20240229</code>: Balanced</li>
+<li><code>claude-3-haiku-20240307</code>: Fast and economical</li>
+</ul>
+<p><strong>Rate Limits</strong>:</p>
+<ul>
+<li>Tier 1: 5 requests/min, 10k tokens/min</li>
+<li>Tier 2: 50 requests/min, 100k tokens/min</li>
+</ul>
+<p><strong>Unique Features</strong>:</p>
+<ul>
+<li>100K context window (vs 8K for GPT-3.5)</li>
+<li>Strong instruction following</li>
+<li>Excellent creative writing</li>
+</ul>
+<p><strong>Cost</strong>: ~$0.045 per 30-second script (Opus)</p>
+<h3 id="google-gemini">Google Gemini</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Llm/GeminiLlmProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Llm&quot;: {
+      &quot;Gemini&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;,
+        &quot;Model&quot;: &quot;gemini-pro&quot;,
+        &quot;BaseUrl&quot;: &quot;https://generativelanguage.googleapis.com&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Models</strong>:</p>
+<ul>
+<li><code>gemini-pro</code>: General purpose, competitive with GPT-3.5</li>
+<li><code>gemini-pro-vision</code>: Multimodal (not yet used in Aura)</li>
+</ul>
+<p><strong>Rate Limits</strong>:</p>
+<ul>
+<li>Free tier: 60 requests/min</li>
+<li>Paid tier: Custom limits</li>
+</ul>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Generous free tier</li>
+<li>Fast response times</li>
+<li>Strong reasoning capabilities</li>
+</ul>
+<p><strong>Cost</strong>: Free (with usage limits), ~$0.01 per script when paid</p>
+<h3 id="ollama-local-llms">Ollama (Local LLMs)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Llm/OllamaLlmProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Llm&quot;: {
+      &quot;Ollama&quot;: {
+        &quot;BaseUrl&quot;: &quot;http://localhost:11434&quot;,
+        &quot;Model&quot;: &quot;mistral:7b&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Prerequisites</strong>:</p>
+<ol>
+<li>Install Ollama: <a href="https://ollama.ai">https://ollama.ai</a></li>
+<li>Pull model: <code>ollama pull mistral:7b</code></li>
+<li>Ensure service is running</li>
+</ol>
+<p><strong>Recommended Models</strong>:</p>
+<ul>
+<li><code>mistral:7b</code>: Best balance of quality/speed (4GB VRAM)</li>
+<li><code>llama2:13b</code>: Higher quality (8GB VRAM)</li>
+<li><code>codellama:7b</code>: Good for technical content</li>
+</ul>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Completely offline</li>
+<li>No API costs</li>
+<li>Privacy-preserving</li>
+<li>No rate limits</li>
+</ul>
+<p><strong>Limitations</strong>:</p>
+<ul>
+<li>Requires local GPU (8GB+ VRAM recommended)</li>
+<li>Slower than cloud providers</li>
+<li>Quality varies by model</li>
+</ul>
+<p><strong>Performance</strong>: ~30-60s for script generation on RTX 3060</p>
+<h3 id="rulebased-fallback">RuleBased (Fallback)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Llm/RuleBasedLlmProvider.cs</code></p>
+<p><strong>Configuration</strong>: No configuration required (always available)</p>
+<p><strong>Use Case</strong>: Automatic fallback when all other providers fail</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Template-based script generation</li>
+<li>Deterministic output</li>
+<li>Always succeeds</li>
+<li>No external dependencies</li>
+</ul>
+<p><strong>Quality</strong>: Basic but functional - suitable for demos and testing</p>
+<h2 id="tts-providers">TTS Providers</h2>
+<h3 id="elevenlabs-premium">ElevenLabs (Premium)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Tts/ElevenLabsTtsProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Tts&quot;: {
+      &quot;ElevenLabs&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;,
+        &quot;VoiceId&quot;: &quot;21m00Tcm4TlvDq8ikWAM&quot;, // Rachel
+        &quot;Model&quot;: &quot;eleven_multilingual_v2&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Voice Selection</strong>:</p>
+<ul>
+<li>Browse: <a href="https://elevenlabs.io/voice-library">https://elevenlabs.io/voice-library</a></li>
+<li>Top voices: Rachel, Adam, Bella, Antoni</li>
+<li>Custom voice cloning available (paid)</li>
+</ul>
+<p><strong>Models</strong>:</p>
+<ul>
+<li><code>eleven_multilingual_v2</code>: 28 languages, highest quality</li>
+<li><code>eleven_monolingual_v1</code>: English only, faster</li>
+</ul>
+<p><strong>Rate Limits</strong>:</p>
+<ul>
+<li>Free: 10k characters/month</li>
+<li>Starter: 30k characters/month ($5/mo)</li>
+<li>Creator: 100k characters/month ($22/mo)</li>
+</ul>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Exceptional naturalness</li>
+<li>Emotional range</li>
+<li>Voice cloning capability</li>
+</ul>
+<p><strong>Cost</strong>: ~$0.30 per minute of audio (Starter tier)</p>
+<h3 id="playht-premium">PlayHT (Premium)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Tts/PlayHTTtsProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Tts&quot;: {
+      &quot;PlayHT&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;,
+        &quot;UserId&quot;: &quot;...&quot;,
+        &quot;VoiceId&quot;: &quot;larry&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>High-quality voices</li>
+<li>Ultra-realistic cloning</li>
+<li>SSML support</li>
+<li>Good pronunciation</li>
+</ul>
+<p><strong>Rate Limits</strong>:</p>
+<ul>
+<li>Free: 12.5k words/month</li>
+<li>Creator: 500k words/month ($19/mo)</li>
+</ul>
+<p><strong>Cost</strong>: ~$0.18 per minute of audio</p>
+<h3 id="azure-tts">Azure TTS</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Tts/AzureTtsProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Tts&quot;: {
+      &quot;Azure&quot;: {
+        &quot;SubscriptionKey&quot;: &quot;...&quot;,
+        &quot;Region&quot;: &quot;eastus&quot;,
+        &quot;VoiceName&quot;: &quot;en-US-JennyNeural&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Voice Selection</strong>:</p>
+<ul>
+<li>Browse: <a href="https://speech.microsoft.com/portal/voicegallery">https://speech.microsoft.com/portal/voicegallery</a></li>
+<li>Neural voices: High quality</li>
+<li>Standard voices: Lower quality, cheaper</li>
+</ul>
+<p><strong>Rate Limits</strong>:</p>
+<ul>
+<li>Free: 0.5M characters/month</li>
+<li>Standard: Pay per use</li>
+</ul>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Enterprise-grade reliability</li>
+<li>Many languages and voices</li>
+<li>SSML support</li>
+<li>Tunable styles (newscast, cheerful, sad)</li>
+</ul>
+<p><strong>Cost</strong>: $16 per million characters</p>
+<h3 id="windows-sapi-free">Windows SAPI (Free)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Tts/WindowsTtsProvider.cs</code></p>
+<p><strong>Configuration</strong>: No configuration required (Windows only)</p>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Completely free</li>
+<li>No API keys</li>
+<li>Works offline</li>
+<li>No rate limits</li>
+</ul>
+<p><strong>Limitations</strong>:</p>
+<ul>
+<li>Windows only</li>
+<li>Lower quality (robotic)</li>
+<li>Limited voice selection</li>
+<li>Basic SSML only</li>
+</ul>
+<p><strong>Use Case</strong>: Demo, testing, offline mode</p>
+<h3 id="piper-free-offline">Piper (Free, Offline)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Tts/PiperTtsProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Tts&quot;: {
+      &quot;Piper&quot;: {
+        &quot;ExecutablePath&quot;: &quot;C:/path/to/piper.exe&quot;,
+        &quot;ModelPath&quot;: &quot;C:/path/to/en_US-lessac-medium.onnx&quot;,
+        &quot;ConfigPath&quot;: &quot;C:/path/to/en_US-lessac-medium.onnx.json&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Prerequisites</strong>:</p>
+<ol>
+<li>Download Piper: <a href="https://github.com/rhasspy/piper">https://github.com/rhasspy/piper</a></li>
+<li>Download voice models</li>
+<li>Place in accessible directory</li>
+</ol>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Completely offline</li>
+<li>Neural TTS quality</li>
+<li>Fast inference</li>
+<li>No costs</li>
+</ul>
+<p><strong>Quality</strong>: Good (better than Windows SAPI, not as good as ElevenLabs)</p>
+<p><strong>Performance</strong>: ~10x faster than realtime on modern CPU</p>
+<h3 id="mimic3-free-offline">Mimic3 (Free, Offline)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Tts/Mimic3TtsProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Tts&quot;: {
+      &quot;Mimic3&quot;: {
+        &quot;ServerUrl&quot;: &quot;http://localhost:59125&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Prerequisites</strong>:</p>
+<ol>
+<li>Install Mimic3 server</li>
+<li>Start server: <code>mimic3-server</code></li>
+</ol>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Open source</li>
+<li>Offline</li>
+<li>Multiple voices</li>
+<li>Active development</li>
+</ul>
+<p><strong>Quality</strong>: Moderate (comparable to Piper)</p>
+<h2 id="image-providers">Image Providers</h2>
+<h3 id="stable-diffusion-webui-local">Stable Diffusion WebUI (Local)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Images/StableDiffusionWebUiProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Images&quot;: {
+      &quot;StableDiffusionWebUI&quot;: {
+        &quot;ApiUrl&quot;: &quot;http://localhost:7860&quot;,
+        &quot;Model&quot;: &quot;sd_xl_base_1.0.safetensors&quot;,
+        &quot;Steps&quot;: 30,
+        &quot;CfgScale&quot;: 7.5
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Prerequisites</strong>:</p>
+<ol>
+<li>Install AUTOMATIC1111 WebUI</li>
+<li>Download model checkpoint</li>
+<li>Start with --api flag</li>
+<li>Requires 8GB+ VRAM</li>
+</ol>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Complete control</li>
+<li>No API costs</li>
+<li>Offline capable</li>
+<li>Custom models</li>
+</ul>
+<p><strong>Performance</strong>: ~10-30s per image (RTX 3060)</p>
+<h3 id="stability-ai-cloud">Stability AI (Cloud)</h3>
+<p><strong>Location</strong>: <code>Aura.Providers/Images/StabilityImageProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Images&quot;: {
+      &quot;Stability&quot;: {
+        &quot;ApiKey&quot;: &quot;sk-...&quot;,
+        &quot;Engine&quot;: &quot;stable-diffusion-xl-1024-v1-0&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Cost</strong>: ~$0.02 per image</p>
+<h3 id="stock-media-providers-images-and-videos">Stock Media Providers (Images and Videos)</h3>
+<p>Aura Video Studio integrates with leading stock media platforms to provide high-quality images and videos alongside AI-generated content.</p>
+<h4 id="pexels-images--videos">Pexels (Images + Videos)</h4>
+<p><strong>Location</strong>: <code>Aura.Providers/Images/EnhancedPexelsProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Images&quot;: {
+      &quot;Pexels&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Free API with 200 requests/hour</li>
+<li>Images and videos supported</li>
+<li>Commercial use allowed, no attribution required</li>
+<li>High-resolution downloads</li>
+<li>Orientation and color filters</li>
+</ul>
+<p><strong>Get API Key</strong>: <a href="https://www.pexels.com/api/">https://www.pexels.com/api/</a></p>
+<p><strong>Licensing</strong>: Pexels License - Free for commercial use, attribution appreciated but not required</p>
+<h5 id="intelligent-scene-matching">Intelligent Scene Matching</h5>
+<p>When using Pexels, Aura Video Studio can leverage intelligent scene matching to find more contextually relevant images:</p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Images&quot;: {
+      &quot;Pexels&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;,
+        &quot;Matching&quot;: {
+          &quot;EnableSemanticMatching&quot;: true,
+          &quot;MinimumRelevanceScore&quot;: 60.0,
+          &quot;MaxCandidatesPerScene&quot;: 8,
+          &quot;UseOrientationFiltering&quot;: true,
+          &quot;FallbackToBasicSearch&quot;: true,
+          &quot;MaxKeywordsInQuery&quot;: 5
+        }
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Configuration Options</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EnableSemanticMatching</code></td>
+<td><code>true</code></td>
+<td>Enable keyword extraction and intelligent query building</td>
+</tr>
+<tr>
+<td><code>MinimumRelevanceScore</code></td>
+<td><code>60.0</code></td>
+<td>Minimum score (0-100) for image inclusion</td>
+</tr>
+<tr>
+<td><code>MaxCandidatesPerScene</code></td>
+<td><code>8</code></td>
+<td>Number of candidates to fetch per scene</td>
+</tr>
+<tr>
+<td><code>UseOrientationFiltering</code></td>
+<td><code>true</code></td>
+<td>Apply Pexels orientation filter (16:9 → landscape, 9:16 → portrait)</td>
+</tr>
+<tr>
+<td><code>FallbackToBasicSearch</code></td>
+<td><code>true</code></td>
+<td>Fall back to basic search if semantic search returns no results</td>
+</tr>
+<tr>
+<td><code>MaxKeywordsInQuery</code></td>
+<td><code>5</code></td>
+<td>Maximum keywords to include in search query</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How It Works</strong>:</p>
+<ol>
+<li><strong>Keyword Extraction</strong>: Analyzes scene heading and narration to extract relevant visual keywords</li>
+<li><strong>Stop Word Filtering</strong>: Removes common words (the, a, and, etc.) that don't improve search quality</li>
+<li><strong>Visual Term Boosting</strong>: Prioritizes visually-descriptive terms like &quot;landscape&quot;, &quot;modern&quot;, &quot;technology&quot;</li>
+<li><strong>Query Building</strong>: Combines keywords with style and context for optimized Pexels queries</li>
+<li><strong>Orientation Filtering</strong>: Maps video aspect ratio to Pexels orientation (16:9 → landscape, 9:16 → portrait)</li>
+<li><strong>Relevance Scoring</strong>: Scores each candidate image for keyword matches and context alignment</li>
+<li><strong>Threshold Filtering</strong>: Returns only images that meet the minimum relevance score</li>
+</ol>
+<p><strong>Example</strong>:</p>
+<pre><code>Scene: &quot;Exploring the future of artificial intelligence in healthcare&quot;
+
+Without intelligent matching:
+- Search: &quot;artificial intelligence&quot;
+- Returns: Generic tech images
+
+With intelligent matching:
+- Extracted keywords: healthcare, technology, artificial, intelligence, future
+- Built query: &quot;healthcare technology artificial intelligence professional&quot;
+- Orientation: landscape (for 16:9 video)
+- Returns: Contextually relevant healthcare + technology images
+- Scoring: Images with medical/tech elements rank higher
+</code></pre>
+<p><strong>Performance</strong>: Adds ~10-20ms overhead per scene for keyword extraction and scoring.</p>
+<p><strong>Backward Compatibility</strong>: Existing configurations without the <code>Matching</code> section continue to work with default values.</p>
+<h4 id="unsplash-images-only">Unsplash (Images Only)</h4>
+<p><strong>Location</strong>: <code>Aura.Providers/Images/EnhancedUnsplashProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Images&quot;: {
+      &quot;Unsplash&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Free API with 50 requests/hour</li>
+<li>Images only (no video)</li>
+<li>Commercial use allowed, attribution required</li>
+<li>High-quality curated content</li>
+<li>Download tracking required per API guidelines</li>
+</ul>
+<p><strong>Get API Key</strong>: <a href="https://unsplash.com/developers">https://unsplash.com/developers</a></p>
+<p><strong>Licensing</strong>: Unsplash License - Free for commercial use, attribution required</p>
+<p><strong>Important</strong>: Unsplash requires download tracking per their API guidelines. The provider automatically handles this.</p>
+<h4 id="pixabay-images--videos">Pixabay (Images + Videos)</h4>
+<p><strong>Location</strong>: <code>Aura.Providers/Images/EnhancedPixabayProvider.cs</code></p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Images&quot;: {
+      &quot;Pixabay&quot;: {
+        &quot;ApiKey&quot;: &quot;...&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Free API with generous limits</li>
+<li>Images and videos supported</li>
+<li>Commercial use allowed, no attribution required</li>
+<li>Large content library</li>
+<li>Safe search filters</li>
+</ul>
+<p><strong>Get API Key</strong>: <a href="https://pixabay.com/api/docs/">https://pixabay.com/api/docs/</a></p>
+<p><strong>Licensing</strong>: Pixabay License - Free for commercial use, attribution not required</p>
+<h3 id="unified-stock-media-search">Unified Stock Media Search</h3>
+<p><strong>Location</strong>: <code>Aura.Core/Services/StockMedia/UnifiedStockMediaService.cs</code></p>
+<p>The unified stock media service searches across multiple providers simultaneously, merges results, removes duplicates, and applies content safety filters.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Multi-provider search with unified results</li>
+<li>Perceptual hashing for duplicate detection</li>
+<li>Content safety filtering</li>
+<li>Relevance scoring</li>
+<li>Rate limit monitoring</li>
+<li>Licensing metadata capture</li>
+</ul>
+<p><strong>API Endpoints</strong>:</p>
+<pre><code class="lang-bash"># Search across multiple providers
+POST /api/stock-media/search
+{
+  &quot;query&quot;: &quot;mountain landscape&quot;,
+  &quot;mediaType&quot;: &quot;Image&quot;,  # or &quot;Video&quot;
+  &quot;providers&quot;: [&quot;Pexels&quot;, &quot;Unsplash&quot;, &quot;Pixabay&quot;],
+  &quot;count&quot;: 20,
+  &quot;safeSearchEnabled&quot;: true,
+  &quot;orientation&quot;: &quot;landscape&quot;
+}
+
+# Compose optimized query using LLM
+POST /api/stock-media/compose-query
+{
+  &quot;sceneDescription&quot;: &quot;Serene mountain vista at sunrise&quot;,
+  &quot;keywords&quot;: [&quot;mountain&quot;, &quot;sunrise&quot;, &quot;landscape&quot;],
+  &quot;targetProvider&quot;: &quot;Pexels&quot;,
+  &quot;mediaType&quot;: &quot;Image&quot;,
+  &quot;style&quot;: &quot;cinematic&quot;,
+  &quot;mood&quot;: &quot;peaceful&quot;
+}
+
+# Get blend recommendation (stock vs generative)
+POST /api/stock-media/recommend-blend
+{
+  &quot;sceneDescriptions&quot;: [&quot;Mountain landscape&quot;, &quot;City skyline&quot;],
+  &quot;videoGoal&quot;: &quot;Travel documentary&quot;,
+  &quot;videoStyle&quot;: &quot;cinematic&quot;,
+  &quot;budget&quot;: 50,
+  &quot;allowGenerative&quot;: true,
+  &quot;allowStock&quot;: true
+}
+
+# Check rate limits
+GET /api/stock-media/rate-limits
+
+# Validate API keys
+POST /api/stock-media/validate-providers
+</code></pre>
+<h3 id="llm-assisted-query-composition">LLM-Assisted Query Composition</h3>
+<p><strong>Location</strong>: <code>Aura.Core/Services/StockMedia/QueryCompositionService.cs</code></p>
+<p>The LLM-assisted query composition service uses AI to generate optimized search queries for each provider based on scene descriptions and context.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Provider-specific query optimization</li>
+<li>Alternative query suggestions</li>
+<li>Negative filter recommendations</li>
+<li>Confidence scoring</li>
+<li>Fallback query generation</li>
+</ul>
+<p><strong>Example</strong>:</p>
+<pre><code>Input: &quot;A person walking through a busy city street at sunset&quot;
+Pexels Query: &quot;urban sunset pedestrian street&quot;
+Unsplash Query: &quot;city sunset walking&quot;
+Pixabay Query: &quot;busy street golden hour&quot;
+</code></pre>
+<h3 id="blend-set-recommendations">Blend Set Recommendations</h3>
+<p>The system can recommend an optimal mix of stock media vs AI-generated content for each scene based on:</p>
+<ul>
+<li>Budget constraints</li>
+<li>Content availability</li>
+<li>Scene requirements</li>
+<li>Narrative coverage</li>
+<li>Visual consistency</li>
+</ul>
+<p><strong>Strategy Examples</strong>:</p>
+<ul>
+<li>Generic scenes (landscapes, objects) → prefer stock (cheaper, faster)</li>
+<li>Unique/specific concepts → prefer generative (more control)</li>
+<li>Mixed approach for optimal cost/quality balance</li>
+</ul>
+<h3 id="content-safety-filtering">Content Safety Filtering</h3>
+<p><strong>Location</strong>: <code>Aura.Core/Services/StockMedia/ContentSafetyFilterService.cs</code></p>
+<p>Stock media results can be filtered for inappropriate content:</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Keyword-based filtering</li>
+<li>Sensitive content detection</li>
+<li>Custom blocked/allowed lists</li>
+<li>Query sanitization</li>
+<li>Safety level configuration</li>
+</ul>
+<p><strong>Safety Levels</strong>:</p>
+<ul>
+<li>0-3: Minimal filtering</li>
+<li>4-6: Moderate filtering (default)</li>
+<li>7-9: Strict filtering</li>
+<li>10: Maximum filtering</li>
+</ul>
+<h3 id="licensing-metadata">Licensing Metadata</h3>
+<p>All stock media results include comprehensive licensing information:</p>
+<pre><code class="lang-json">{
+  &quot;licenseType&quot;: &quot;Pexels License&quot;,
+  &quot;attribution&quot;: &quot;Photo by John Doe on Pexels&quot;,
+  &quot;licenseUrl&quot;: &quot;https://www.pexels.com/license/&quot;,
+  &quot;commercialUseAllowed&quot;: true,
+  &quot;attributionRequired&quot;: false,
+  &quot;creatorName&quot;: &quot;John Doe&quot;,
+  &quot;creatorUrl&quot;: &quot;https://www.pexels.com/@john&quot;,
+  &quot;sourcePlatform&quot;: &quot;Pexels&quot;
+}
+</code></pre>
+<p><strong>Export Options</strong>:</p>
+<ul>
+<li>CSV export for spreadsheet tracking</li>
+<li>JSON export for programmatic access</li>
+<li>Formatted attribution text for video credits</li>
+<li>Licensing summary with warnings</li>
+</ul>
+<h3 id="perceptual-hashing-and-deduplication">Perceptual Hashing and Deduplication</h3>
+<p><strong>Location</strong>: <code>Aura.Core/Services/StockMedia/PerceptualHashService.cs</code></p>
+<p>The service automatically detects and removes duplicate images across providers using perceptual hashing:</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>URL-based hash generation</li>
+<li>Dimension-aware comparison</li>
+<li>Configurable similarity threshold (default 90%)</li>
+<li>Duplicate detection across providers</li>
+</ul>
+<h3 id="best-practices">Best Practices</h3>
+<ol>
+<li><strong>Always capture licensing metadata</strong> during content selection</li>
+<li><strong>Export licensing reports</strong> with each video delivery</li>
+<li><strong>Validate commercial use</strong> before finalizing videos for clients</li>
+<li><strong>Track attribution requirements</strong> per provider guidelines</li>
+<li><strong>Monitor rate limits</strong> to avoid API throttling</li>
+<li><strong>Use blend recommendations</strong> to optimize cost and quality</li>
+<li><strong>Enable content safety filters</strong> for brand-safe content</li>
+<li><strong>Compose queries with LLM</strong> for better search results</li>
+</ol>
+<h3 id="visual-asset-selection-workflow">Visual Asset Selection Workflow</h3>
+<p><strong>Overview</strong>: After image generation, Aura provides a comprehensive selection UI for choosing and managing visual assets with licensing tracking.</p>
+<p><strong>Components</strong>:</p>
+<ul>
+<li><strong>VisualCandidateGallery</strong>: Displays multiple candidates per scene with scoring</li>
+<li><strong>LicensingInfoPanel</strong>: Summarizes licensing requirements and provides exports</li>
+<li><strong>VisualSelectionService</strong>: Manages selection state and persistence</li>
+</ul>
+<p><strong>Selection Process</strong>:</p>
+<ol>
+<li>Generate 3-5 candidates per scene with different providers/prompts</li>
+<li>Score each candidate on:
+<ul>
+<li>Aesthetic quality (40% weight)</li>
+<li>Keyword coverage (40% weight)</li>
+<li>Technical quality (20% weight)</li>
+</ul>
+</li>
+<li>Display candidates in responsive grid with scores</li>
+<li>User can:
+<ul>
+<li><strong>Accept</strong>: Mark candidate as selected</li>
+<li><strong>Reject</strong>: Provide reason for rejection (tracked for analytics)</li>
+<li><strong>Regenerate</strong>: Generate new candidates</li>
+<li><strong>Suggest Better</strong>: Use LLM to refine prompt for better results</li>
+</ul>
+</li>
+<li>Track selection metadata:
+<ul>
+<li>Timestamp and user ID</li>
+<li>Regeneration count</li>
+<li>Auto-selection confidence</li>
+<li>LLM-assisted refinement flag</li>
+</ul>
+</li>
+</ol>
+<p><strong>Auto-Selection Logic</strong>:</p>
+<pre><code>Confidence = min(topScore, topScore + (gap × 0.1))
+ShouldAutoSelect = confidence &gt;= 85% AND topScore &gt;= 75% AND gap &gt;= 15 points
+</code></pre>
+<p><strong>LLM-Assisted Refinement</strong>:</p>
+<ul>
+<li>Analyzes current candidates and scores</li>
+<li>Suggests improvements to:
+<ul>
+<li>Subject clarity and framing</li>
+<li>Composition guidelines</li>
+<li>Lighting and mood</li>
+<li>Style keywords</li>
+<li>Narrative keyword coverage</li>
+</ul>
+</li>
+<li>Returns refined prompt with confidence score</li>
+</ul>
+<p><strong>Licensing Capture</strong>:
+Each selected candidate includes:</p>
+<ul>
+<li>License type (e.g., &quot;Pexels License&quot;, &quot;CC0&quot;, &quot;Commercial&quot;)</li>
+<li>Commercial use allowed (boolean)</li>
+<li>Attribution required (boolean)</li>
+<li>Creator name and profile URL</li>
+<li>Source platform</li>
+<li>License URL</li>
+<li>Generated attribution text</li>
+</ul>
+<p><strong>Export Options</strong>:</p>
+<ol>
+<li><strong>CSV Export</strong>: All licensing fields in spreadsheet format</li>
+<li><strong>JSON Export</strong>: Structured data with scene and image details</li>
+<li><strong>Attribution Text</strong>: Formatted credits for video end screen</li>
+<li><strong>Licensing Summary</strong>: Statistics and warnings for review</li>
+</ol>
+<p><strong>Commercial Use Validation</strong>:</p>
+<ul>
+<li>Checks all selections for commercial compatibility</li>
+<li>Identifies scenes requiring attribution</li>
+<li>Warns about missing licensing information</li>
+<li>Provides actionable recommendations</li>
+</ul>
+<p><strong>API Endpoints</strong>:</p>
+<pre><code>GET  /api/visual-selection/{jobId}/scene/{sceneIndex}
+POST /api/visual-selection/{jobId}/scene/{sceneIndex}/accept
+POST /api/visual-selection/{jobId}/scene/{sceneIndex}/reject
+POST /api/visual-selection/{jobId}/scene/{sceneIndex}/regenerate
+POST /api/visual-selection/{jobId}/scene/{sceneIndex}/suggest-refinement
+GET  /api/visual-selection/{jobId}/licensing/summary
+GET  /api/visual-selection/{jobId}/export/licensing/csv
+GET  /api/visual-selection/{jobId}/export/licensing/json
+</code></pre>
+<p><strong>Integration Example</strong>:</p>
+<pre><code class="lang-typescript">import { visualSelectionService } from '@/services/visualSelectionService';
+import VisualCandidateGallery from '@/components/VisualCandidateGallery';
+
+// In your video creation workflow
+const selection = await visualSelectionService.getSelection(jobId, sceneIndex);
+
+&lt;VisualCandidateGallery
+  selection={selection}
+  onAccept={(candidate) =&gt; {
+    await visualSelectionService.acceptCandidate(jobId, sceneIndex, candidate);
+  }}
+  onReject={(reason) =&gt; {
+    await visualSelectionService.rejectSelection(jobId, sceneIndex, reason);
+  }}
+  onRegenerate={async () =&gt; {
+    await visualSelectionService.regenerateCandidates(jobId, sceneIndex);
+  }}
+  onSuggestRefinement={async () =&gt; {
+    const refinement = await visualSelectionService.suggestRefinement(
+      jobId, sceneIndex, { currentPrompt, currentCandidates, issuesDetected }
+    );
+    // Apply refined prompt
+  }}
+/&gt;
+
+// Export licensing before final render
+const summary = await visualSelectionService.getLicensingSummary(jobId);
+const csvBlob = await visualSelectionService.exportLicensingCsv(jobId);
+visualSelectionService.downloadFile(csvBlob, `${jobId}-licensing.csv`);
+</code></pre>
+<p><strong>Best Practices</strong>:</p>
+<ol>
+<li>Always capture licensing information during generation</li>
+<li>Validate commercial use before finalizing video</li>
+<li>Export licensing report with each video delivery</li>
+<li>Track rejection reasons to improve generation quality</li>
+<li>Use LLM refinement for scenes with low scores (&lt;60)</li>
+<li>Set auto-selection threshold based on project requirements</li>
+<li>Preserve selection history for auditing</li>
+</ol>
+<h2 id="fallback-strategies">Fallback Strategies</h2>
+<h3 id="llm-fallback-chain">LLM Fallback Chain</h3>
+<pre><code>OpenAI/Anthropic/Gemini → Ollama → RuleBased
+</code></pre>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Llm&quot;: {
+      &quot;Primary&quot;: &quot;OpenAI&quot;,
+      &quot;Fallback&quot;: [&quot;Ollama&quot;, &quot;RuleBased&quot;]
+    }
+  }
+}
+</code></pre>
+<h3 id="tts-fallback-chain">TTS Fallback Chain</h3>
+<pre><code>ElevenLabs/PlayHT → Azure → Piper/Mimic3 → Windows SAPI
+</code></pre>
+<p><strong>Rationale</strong>:</p>
+<ol>
+<li>Premium providers for best quality</li>
+<li>Cloud fallback for reliability</li>
+<li>Offline providers for robustness</li>
+<li>Always-available fallback (Windows SAPI)</li>
+</ol>
+<h3 id="image-fallback-chain">Image Fallback Chain</h3>
+<p>The image provider fallback chain ensures videos can always be generated, even when no image providers are configured:</p>
+<pre><code>StableDiffusion → Stability API → Stock Images (Pexels, Unsplash, Pixabay, Local) → Placeholder Visuals
+</code></pre>
+<p><strong>Automatic fallback</strong> on:</p>
+<ul>
+<li>Provider unavailable</li>
+<li>API error</li>
+<li>Quota exceeded</li>
+<li>Validation failure</li>
+<li>No image provider configured</li>
+</ul>
+<p><strong>Graceful Degradation</strong>:</p>
+<ul>
+<li><strong>Videos always render</strong>, even when no image provider is configured</li>
+<li>When all image providers fail, the pipeline continues with placeholder visuals</li>
+<li>Placeholder visuals can be solid colors, default backgrounds, or bundled fallback images</li>
+<li>The video rendering pipeline never fails due to missing images</li>
+<li>This ensures core functionality (script generation, TTS, FFmpeg rendering) always works</li>
+</ul>
+<p><strong>Example Scenarios</strong>:</p>
+<ul>
+<li><strong>Free-Only Profile with no image providers</strong>: Video renders with placeholder visuals</li>
+<li><strong>Temporary API outage</strong>: Falls back to stock images or placeholders</li>
+<li><strong>Quota exhausted</strong>: Uses local stock or placeholders</li>
+<li><strong>Network offline</strong>: Uses local providers and placeholders</li>
+</ul>
+<h2 id="error-handling">Error Handling</h2>
+<h3 id="common-errors-and-solutions">Common Errors and Solutions</h3>
+<p><strong>401 Unauthorized</strong>:</p>
+<ul>
+<li><strong>Cause</strong>: Invalid API key</li>
+<li><strong>Solution</strong>: Check configuration, regenerate key</li>
+<li><strong>Fallback</strong>: Try next provider in chain</li>
+</ul>
+<p><strong>429 Rate Limit</strong>:</p>
+<ul>
+<li><strong>Cause</strong>: Exceeded quota</li>
+<li><strong>Solution</strong>: Wait and retry (exponential backoff)</li>
+<li><strong>Fallback</strong>: Switch to different provider</li>
+</ul>
+<p><strong>503 Service Unavailable</strong>:</p>
+<ul>
+<li><strong>Cause</strong>: Provider maintenance or outage</li>
+<li><strong>Solution</strong>: Retry after delay</li>
+<li><strong>Fallback</strong>: Use fallback provider</li>
+</ul>
+<p><strong>Validation Failed</strong>:</p>
+<ul>
+<li><strong>Cause</strong>: Output doesn't meet quality standards</li>
+<li><strong>Solution</strong>: Retry with adjusted parameters</li>
+<li><strong>Fallback</strong>: Try different provider</li>
+</ul>
+<h3 id="retry-logic">Retry Logic</h3>
+<p><strong>ProviderRetryWrapper</strong> handles:</p>
+<ul>
+<li>Maximum 3 retries per provider</li>
+<li>Exponential backoff (1s, 2s, 4s)</li>
+<li>Transient error detection</li>
+<li>Automatic provider switching</li>
+</ul>
+<h2 id="performance-considerations">Performance Considerations</h2>
+<h3 id="optimization-tips">Optimization Tips</h3>
+<ol>
+<li><strong>Cache Results</strong>: Store scripts/audio for repeated briefs</li>
+<li><strong>Parallel Execution</strong>: Generate audio and images simultaneously</li>
+<li><strong>Batch Processing</strong>: Queue multiple jobs</li>
+<li><strong>Hardware Acceleration</strong>: Use GPU for local inference</li>
+<li><strong>Pre-warm Providers</strong>: Initialize connections at startup</li>
+</ol>
+<h3 id="resource-management">Resource Management</h3>
+<p><strong>Memory</strong>:</p>
+<ul>
+<li>LLM inference: 4-16GB VRAM (local)</li>
+<li>Stable Diffusion: 8-12GB VRAM</li>
+<li>TTS synthesis: &lt; 1GB RAM</li>
+</ul>
+<p><strong>Disk Space</strong>:</p>
+<ul>
+<li>Model storage: 10-50GB (local providers)</li>
+<li>Temp files: 1-5GB per job (cleaned up automatically)</li>
+</ul>
+<p><strong>Network</strong>:</p>
+<ul>
+<li>Script generation: &lt; 10KB</li>
+<li>TTS audio: 1-5MB per minute</li>
+<li>Images: 0.5-2MB per image</li>
+</ul>
+<h3 id="monitoring">Monitoring</h3>
+<p><strong>Key Metrics</strong>:</p>
+<ul>
+<li>Provider success rate</li>
+<li>Average latency per stage</li>
+<li>Cost per video</li>
+<li>Fallback trigger frequency</li>
+</ul>
+<p><strong>Logging</strong>:</p>
+<ul>
+<li>All provider calls logged with correlation IDs</li>
+<li>Errors logged with full context</li>
+<li>Performance metrics captured</li>
+</ul>
+<h2 id="provider-selection-guidelines">Provider Selection Guidelines</h2>
+<h3 id="quality-priority">Quality Priority</h3>
+<pre><code>LLM: GPT-4 &gt; Claude Opus &gt; Gemini Pro &gt; Ollama &gt; RuleBased
+TTS: ElevenLabs &gt; PlayHT &gt; Azure &gt; Piper &gt; Windows SAPI
+Images: SD WebUI &gt; Stability API &gt; Stock &gt; Solid Color
+</code></pre>
+<h3 id="cost-priority">Cost Priority</h3>
+<pre><code>LLM: RuleBased &gt; Ollama &gt; Gemini &gt; GPT-3.5 &gt; Claude
+TTS: Windows SAPI &gt; Piper &gt; Azure &gt; PlayHT &gt; ElevenLabs
+Images: Solid Color &gt; Stock &gt; SD WebUI &gt; Stability
+</code></pre>
+<h3 id="speed-priority">Speed Priority</h3>
+<pre><code>LLM: Gemini &gt; GPT-3.5 &gt; Claude &gt; Ollama &gt; RuleBased
+TTS: Azure &gt; Piper &gt; ElevenLabs &gt; PlayHT &gt; Mimic3
+Images: Stock &gt; Stability API &gt; SD WebUI
+</code></pre>
+<h3 id="offline-priority">Offline Priority</h3>
+<pre><code>LLM: Ollama &gt; RuleBased
+TTS: Piper &gt; Mimic3 &gt; Windows SAPI
+Images: SD WebUI (if available) &gt; Solid Color
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="provider-not-working">Provider Not Working</h3>
+<ol>
+<li><strong>Check configuration</strong>: Validate API keys, URLs, paths</li>
+<li><strong>Test connectivity</strong>: Ping provider endpoints</li>
+<li><strong>Review logs</strong>: Check for specific error messages</li>
+<li><strong>Verify quota</strong>: Ensure not rate limited</li>
+<li><strong>Update provider</strong>: Check for API version changes</li>
+</ol>
+<h3 id="poor-quality-output">Poor Quality Output</h3>
+<ol>
+<li><strong>Adjust parameters</strong>: Increase quality settings</li>
+<li><strong>Try different model</strong>: Some models work better for specific content</li>
+<li><strong>Upgrade tier</strong>: Free tiers may have quality limitations</li>
+<li><strong>Use premium provider</strong>: Consider paid options</li>
+</ol>
+<h3 id="slow-performance">Slow Performance</h3>
+<ol>
+<li><strong>Enable hardware acceleration</strong>: Use NVENC/AMF/QSV</li>
+<li><strong>Optimize provider selection</strong>: Choose faster providers</li>
+<li><strong>Reduce quality</strong>: Lower settings for faster processing</li>
+<li><strong>Use caching</strong>: Avoid regenerating identical content</li>
+<li><strong>Upgrade hardware</strong>: More RAM/VRAM helps</li>
+</ol>
+<h2 id="best-practices-1">Best Practices</h2>
+<ol>
+<li><strong>Always configure fallbacks</strong>: Never rely on single provider</li>
+<li><strong>Monitor costs</strong>: Track API usage and expenses</li>
+<li><strong>Test providers</strong>: Validate quality before production</li>
+<li><strong>Secure API keys</strong>: Use environment variables, never commit</li>
+<li><strong>Handle errors gracefully</strong>: Provide user-friendly messages</li>
+<li><strong>Log everything</strong>: Correlation IDs for debugging</li>
+<li><strong>Update regularly</strong>: Keep providers and libraries current</li>
+<li><strong>Respect rate limits</strong>: Implement proper backoff</li>
+<li><strong>Clean up resources</strong>: Delete temp files after use</li>
+<li><strong>Document changes</strong>: Note provider version and config</li>
+</ol>
+<h2 id="music-and-sound-effects-providers">Music and Sound Effects Providers</h2>
+<h3 id="overview-1">Overview</h3>
+<p>Aura Video Studio provides intelligent music and sound effects selection with full licensing tracking. The system supports both stock libraries and optional generative providers.</p>
+<h3 id="music-providers">Music Providers</h3>
+<h4 id="localstock-music-provider">LocalStock Music Provider</h4>
+<p><strong>Location</strong>: <code>Aura.Providers/Music/LocalStockMusicProvider.cs</code></p>
+<p><strong>Description</strong>: Uses pre-downloaded royalty-free music from local library.</p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Music&quot;: {
+    &quot;LocalLibraryPath&quot;: &quot;C:/ProgramData/Aura/Music&quot;
+  }
+}
+</code></pre>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Automatic metadata inference from filenames</li>
+<li>Genre, mood, energy level, and BPM detection</li>
+<li>Supports MP3, WAV, and OGG formats</li>
+<li>Mock library fallback when no files present</li>
+<li>Zero API costs</li>
+</ul>
+<p><strong>File Naming Convention</strong>:</p>
+<ul>
+<li>Include descriptors in filename: <code>upbeat_corporate_128bpm.mp3</code></li>
+<li>Supported keywords: energetic, calm, dramatic, ambient, corporate, cinematic</li>
+<li>BPM inferred from energy level if not in filename</li>
+</ul>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Completely offline</li>
+<li>No API keys required</li>
+<li>Instant search and access</li>
+<li>Perfect for development and testing</li>
+</ul>
+<p><strong>Limitations</strong>:</p>
+<ul>
+<li>Manual library management</li>
+<li>Limited selection without downloaded content</li>
+<li>No automatic content discovery</li>
+</ul>
+<h4 id="freesound-sfx">Freesound (SFX)</h4>
+<p><strong>Location</strong>: <code>Aura.Providers/Sfx/FreesoundSfxProvider.cs</code></p>
+<p><strong>Description</strong>: Freesound.org API integration for community-sourced sound effects.</p>
+<p><strong>Configuration</strong>:</p>
+<pre><code class="lang-json">{
+  &quot;Providers&quot;: {
+    &quot;Sfx&quot;: {
+      &quot;Freesound&quot;: {
+        &quot;ApiKey&quot;: &quot;your-freesound-api-key&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<p><strong>Getting API Key</strong>:</p>
+<ol>
+<li>Register at <a href="https://freesound.org">https://freesound.org</a></li>
+<li>Apply for API key at <a href="https://freesound.org/apiv2/apply/">https://freesound.org/apiv2/apply/</a></li>
+<li>Wait for approval (usually instant)</li>
+</ol>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>500,000+ sound effects</li>
+<li>Tag-based search</li>
+<li>Duration filtering</li>
+<li>License tracking (CC0, CC-BY, CC-BY-NC, etc.)</li>
+<li>HQ preview MP3s</li>
+<li>Commercial use filtering</li>
+</ul>
+<p><strong>Advantages</strong>:</p>
+<ul>
+<li>Massive library of sounds</li>
+<li>High-quality recordings</li>
+<li>Free with API key</li>
+<li>Active community</li>
+<li>Clear licensing information</li>
+</ul>
+<p><strong>Rate Limits</strong>:</p>
+<ul>
+<li>60 requests per minute (authenticated)</li>
+<li>2000 requests per day</li>
+</ul>
+<p><strong>Licensing</strong>:</p>
+<ul>
+<li>Multiple Creative Commons licenses</li>
+<li>License info included in metadata</li>
+<li>Attribution text automatically generated</li>
+<li>Commercial use flag per asset</li>
+</ul>
+<h3 id="audio-intelligence-services">Audio Intelligence Services</h3>
+<h4 id="music-recommendation-service">Music Recommendation Service</h4>
+<p><strong>Location</strong>: <code>Aura.Core/Services/AudioIntelligence/MusicRecommendationService.cs</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>LLM-assisted genre/BPM/intensity recommendations</li>
+<li>Mood-based search (Happy, Calm, Energetic, Dramatic, etc.)</li>
+<li>Energy level matching (VeryLow to VeryHigh)</li>
+<li>Scene-specific recommendations with emotional arc</li>
+<li>Relevance scoring and ranking</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">var recommendations = await musicService.RecommendMusicAsync(
+    mood: MusicMood.Uplifting,
+    preferredGenre: MusicGenre.Corporate,
+    energy: EnergyLevel.High,
+    duration: TimeSpan.FromMinutes(3),
+    context: &quot;product launch video&quot;,
+    maxResults: 10
+);
+</code></pre>
+<h4 id="sound-effect-service">Sound Effect Service</h4>
+<p><strong>Location</strong>: <code>Aura.Core/Services/AudioIntelligence/SoundEffectService.cs</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Script-based SFX suggestions</li>
+<li>Keyword detection (click, reveal, whoosh, impact, etc.)</li>
+<li>Precise timing cues from scene analysis</li>
+<li>Transition effects between scenes</li>
+<li>Type classification (UI, Impact, Ambient, etc.)</li>
+</ul>
+<p><strong>Automatic Detection</strong>:</p>
+<ul>
+<li>Technology/UI: &quot;click&quot;, &quot;button&quot;, &quot;select&quot;</li>
+<li>Reveals: &quot;unveil&quot;, &quot;present&quot;, &quot;introduce&quot;</li>
+<li>Motion: &quot;move&quot;, &quot;fly&quot;, &quot;zoom&quot;, &quot;slide&quot;</li>
+<li>Completion: &quot;done&quot;, &quot;success&quot;, &quot;achieve&quot;</li>
+<li>Action: &quot;hit&quot;, &quot;strike&quot;, &quot;impact&quot;</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">var suggestions = await sfxService.SuggestSoundEffectsAsync(
+    script: scriptText,
+    sceneDurations: sceneDurations,
+    contentType: &quot;tutorial&quot;
+);
+</code></pre>
+<h4 id="audio-normalization-service">Audio Normalization Service</h4>
+<p><strong>Location</strong>: <code>Aura.Core/Services/AudioIntelligence/AudioNormalizationService.cs</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>EBU R128 loudness normalization (target LUFS)</li>
+<li>Intelligent ducking with configurable attack/release</li>
+<li>Audio compression for dynamic range control</li>
+<li>Voice EQ with high-pass, presence boost, de-esser</li>
+<li>Multi-track mixing with volume control</li>
+<li>Complete processing pipeline</li>
+</ul>
+<p><strong>Normalization Example</strong>:</p>
+<pre><code class="lang-csharp">await normalizationService.NormalizeToLUFSAsync(
+    inputPath: &quot;audio.wav&quot;,
+    outputPath: &quot;normalized.wav&quot;,
+    targetLUFS: -14.0  // YouTube standard
+);
+</code></pre>
+<p><strong>Ducking Example</strong>:</p>
+<pre><code class="lang-csharp">var duckingSettings = new DuckingSettings(
+    DuckDepthDb: -12.0,
+    AttackTime: TimeSpan.FromMilliseconds(100),
+    ReleaseTime: TimeSpan.FromMilliseconds(500),
+    Threshold: 0.02
+);
+
+await normalizationService.ApplyDuckingAsync(
+    musicPath: &quot;music.wav&quot;,
+    narrationPath: &quot;voice.wav&quot;,
+    outputPath: &quot;ducked.wav&quot;,
+    settings: duckingSettings
+);
+</code></pre>
+<p><strong>LUFS Targets</strong>:</p>
+<ul>
+<li>YouTube: -14 LUFS</li>
+<li>Spotify: -14 LUFS</li>
+<li>Apple Music: -16 LUFS</li>
+<li>Podcasts: -16 to -19 LUFS</li>
+<li>Broadcast TV: -23 to -24 LUFS</li>
+</ul>
+<h4 id="licensing-service">Licensing Service</h4>
+<p><strong>Location</strong>: <code>Aura.Core/Services/AudioIntelligence/LicensingService.cs</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Asset usage tracking per job</li>
+<li>Commercial use validation</li>
+<li>Attribution requirement identification</li>
+<li>Multiple export formats (CSV, JSON, HTML, Text)</li>
+<li>License URL collection</li>
+<li>Per-scene asset tracking</li>
+</ul>
+<p><strong>Tracking Usage</strong>:</p>
+<pre><code class="lang-csharp">licensingService.TrackAssetUsage(
+    jobId: &quot;job-123&quot;,
+    asset: musicAsset,
+    sceneIndex: 0,
+    startTime: TimeSpan.Zero,
+    duration: TimeSpan.FromSeconds(30),
+    isSelected: true
+);
+</code></pre>
+<p><strong>Export Formats</strong>:</p>
+<ul>
+<li><strong>CSV</strong>: Spreadsheet-compatible for record keeping</li>
+<li><strong>JSON</strong>: Structured data for programmatic access</li>
+<li><strong>HTML</strong>: Formatted report for video credits</li>
+<li><strong>Text</strong>: Human-readable licensing summary</li>
+</ul>
+<p><strong>Validation</strong>:</p>
+<pre><code class="lang-csharp">var (isValid, issues) = await licensingService.ValidateForCommercialUseAsync(jobId);
+
+if (!isValid)
+{
+    // Handle licensing restrictions
+    foreach (var issue in issues)
+    {
+        Console.WriteLine(issue);
+    }
+}
+</code></pre>
+<h3 id="audio-mixing-service">Audio Mixing Service</h3>
+<p><strong>Location</strong>: <code>Aura.Core/Services/AudioIntelligence/AudioMixingService.cs</code></p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Content-type aware mixing suggestions</li>
+<li>Automatic volume level calculation</li>
+<li>Ducking configuration for narration clarity</li>
+<li>EQ settings for voice clarity</li>
+<li>Compression settings by content type</li>
+<li>Frequency conflict detection</li>
+</ul>
+<p><strong>Content Types</strong>:</p>
+<ul>
+<li>Educational/Tutorial: Voice-forward (narration 100%, music 25%)</li>
+<li>Corporate/Promotional: Balanced (narration 95%, music 40%)</li>
+<li>Gaming/Action: Effects-heavy (narration 90%, music 60%, SFX 70%)</li>
+<li>Music Video: Music-forward (narration 70%, music 90%)</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">var mixing = await mixingService.GenerateMixingSuggestionsAsync(
+    contentType: &quot;educational&quot;,
+    hasNarration: true,
+    hasMusic: true,
+    hasSoundEffects: true,
+    targetLUFS: -14.0
+);
+</code></pre>
+<h3 id="api-endpoints">API Endpoints</h3>
+<h4 id="music-library">Music Library</h4>
+<pre><code class="lang-bash"># Search for music
+POST /api/music-library/music/search
+{
+  &quot;mood&quot;: &quot;Uplifting&quot;,
+  &quot;genre&quot;: &quot;Corporate&quot;,
+  &quot;energy&quot;: &quot;High&quot;,
+  &quot;minBPM&quot;: 120,
+  &quot;maxBPM&quot;: 140,
+  &quot;commercialUseOnly&quot;: true,
+  &quot;pageSize&quot;: 20
+}
+
+# Get specific track
+GET /api/music-library/music/{provider}/{assetId}
+
+# Get preview URL
+GET /api/music-library/music/{provider}/{assetId}/preview
+
+# Search SFX
+POST /api/music-library/sfx/search
+{
+  &quot;type&quot;: &quot;Impact&quot;,
+  &quot;tags&quot;: [&quot;click&quot;, &quot;ui&quot;],
+  &quot;maxDuration&quot;: &quot;00:00:02&quot;,
+  &quot;commercialUseOnly&quot;: true
+}
+
+# Find SFX by tags
+POST /api/music-library/sfx/find-by-tags
+[&quot;whoosh&quot;, &quot;transition&quot;]
+
+# Get licensing summary
+GET /api/music-library/licensing/{jobId}
+
+# Export licensing
+POST /api/music-library/licensing/export
+{
+  &quot;jobId&quot;: &quot;job-123&quot;,
+  &quot;format&quot;: &quot;HTML&quot;,
+  &quot;includeUnused&quot;: false
+}
+
+# Validate for commercial use
+GET /api/music-library/licensing/{jobId}/validate
+
+# List providers
+GET /api/music-library/providers/music
+GET /api/music-library/providers/sfx
+</code></pre>
+<h3 id="best-practices-for-music-and-sfx">Best Practices for Music and SFX</h3>
+<ol>
+<li><strong>Always Track Licensing</strong>: Use <code>LicensingService.TrackAssetUsage()</code> for every asset</li>
+<li><strong>Validate Before Export</strong>: Check commercial use permissions before finalizing</li>
+<li><strong>Export Licensing Info</strong>: Include licensing report with every video delivery</li>
+<li><strong>Use Appropriate LUFS</strong>: Match target platform standards (-14 for YouTube/Spotify)</li>
+<li><strong>Apply Ducking</strong>: Music should duck -10 to -15 dB when narration plays</li>
+<li><strong>Test Preview URLs</strong>: Verify previews work before showing to users</li>
+<li><strong>Handle Freesound Rate Limits</strong>: Implement exponential backoff</li>
+<li><strong>Cache Search Results</strong>: Avoid repeated API calls for same searches</li>
+<li><strong>Provide Attribution</strong>: Always include required attributions in video credits</li>
+<li><strong>Filter by Commercial Use</strong>: When producing commercial content, filter assets upfront</li>
+</ol>
+<h3 id="troubleshooting-music-and-sfx">Troubleshooting Music and SFX</h3>
+<h4 id="no-music-providers-available">No Music Providers Available</h4>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Check LocalStock library path exists</li>
+<li>Verify Freesound API key is configured</li>
+<li>Check provider availability via <code>/api/music-library/providers/music</code></li>
+<li>Review logs for provider initialization errors</li>
+</ul>
+<h4 id="freesound-api-errors">Freesound API Errors</h4>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Verify API key is valid at <a href="https://freesound.org/apiv2/">https://freesound.org/apiv2/</a></li>
+<li>Check rate limits (60 req/min, 2000 req/day)</li>
+<li>Ensure network connectivity to freesound.org</li>
+<li>Review Freesound API status page</li>
+</ul>
+<h4 id="licensing-validation-failures">Licensing Validation Failures</h4>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Review licensing summary to identify non-commercial assets</li>
+<li>Replace restricted assets with commercial-friendly alternatives</li>
+<li>Consider upgrading to premium providers (if available)</li>
+<li>Export licensing report to verify all attributions</li>
+</ul>
+<h4 id="audio-normalization-issues">Audio Normalization Issues</h4>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Ensure FFmpeg is installed and in PATH</li>
+<li>Verify input files exist and are valid audio formats</li>
+<li>Check disk space for temporary processing files</li>
+<li>Review FFmpeg logs for specific error messages</li>
+<li>Validate target LUFS is reasonable (-24 to -10)</li>
+</ul>
+<h4 id="ducking-not-working">Ducking Not Working</h4>
+<p><strong>Solutions</strong>:</p>
+<ul>
+<li>Verify both music and narration files exist</li>
+<li>Check ducking settings (attack/release times)</li>
+<li>Ensure duck depth is negative (-10 to -15 dB typical)</li>
+<li>Test with shorter audio clips first</li>
+<li>Check FFmpeg sidechain compression support</li>
+</ul>
+<h2 id="additional-resources">Additional Resources</h2>
+<ul>
+<li>OpenAI Documentation: <a href="https://platform.openai.com/docs">https://platform.openai.com/docs</a></li>
+<li>Anthropic Documentation: <a href="https://docs.anthropic.com">https://docs.anthropic.com</a></li>
+<li>Google AI Studio: <a href="https://makersuite.google.com">https://makersuite.google.com</a></li>
+<li>Ollama Models: <a href="https://ollama.ai/library">https://ollama.ai/library</a></li>
+<li>ElevenLabs Voice Library: <a href="https://elevenlabs.io/voice-library">https://elevenlabs.io/voice-library</a></li>
+<li>Azure TTS Documentation: <a href="https://learn.microsoft.com/azure/ai-services/speech-service/">https://learn.microsoft.com/azure/ai-services/speech-service/</a></li>
+<li>Piper TTS: <a href="https://github.com/rhasspy/piper">https://github.com/rhasspy/piper</a></li>
+<li>AUTOMATIC1111 WebUI: <a href="https://github.com/AUTOMATIC1111/stable-diffusion-webui">https://github.com/AUTOMATIC1111/stable-diffusion-webui</a></li>
+<li>Freesound API Documentation: <a href="https://freesound.org/docs/api/">https://freesound.org/docs/api/</a></li>
+<li>EBU R128 Loudness Standard: <a href="https://tech.ebu.ch/docs/r/r128.pdf">https://tech.ebu.ch/docs/r/r128.pdf</a></li>
+<li>FFmpeg Audio Filters: <a href="https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters">https://ffmpeg.org/ffmpeg-filters.html#Audio-Filters</a></li>
+</ul>
+<h2 id="support">Support</h2>
+<p>For provider-specific issues:</p>
+<ul>
+<li>Check provider's status page</li>
+<li>Review provider documentation</li>
+<li>Contact provider support</li>
+<li>Ask in Aura community forums</li>
+</ul>
+<p>For Aura-specific integration issues:</p>
+<ul>
+<li>Check logs in <code>logs/</code> directory</li>
+<li>Enable debug logging</li>
+<li>File issue on GitHub with correlation ID</li>
+<li>Include provider name and configuration (sanitized)</li>
+</ul>
+<h2 id="render-engine-integration">Render Engine Integration</h2>
+<h3 id="hardware-encoder-selection">Hardware Encoder Selection</h3>
+<p>Aura's render engine automatically selects the optimal encoder based on available hardware:</p>
+<h4 id="encoder-selection-algorithm">Encoder Selection Algorithm</h4>
+<ol>
+<li><p><strong>Detect Hardware Capabilities</strong></p>
+<ul>
+<li>Query FFmpeg for available encoders</li>
+<li>Check for NVENC (NVIDIA), AMF (AMD), QSV (Intel), VideoToolbox (Apple)</li>
+<li>Cache results to avoid repeated detection</li>
+</ul>
+</li>
+<li><p><strong>Select Best Encoder</strong></p>
+<ul>
+<li>If hardware acceleration preferred and available: Use hardware encoder</li>
+<li>If user override specified: Use specified encoder</li>
+<li>Otherwise: Fall back to software encoding (libx264/libx265)</li>
+</ul>
+</li>
+<li><p><strong>Configure Encoder Parameters</strong></p>
+<ul>
+<li>Quality preset (ultrafast/fast/medium/slow/veryslow)</li>
+<li>Bitrate and max bitrate</li>
+<li>Rate control (CRF for software, VBR for hardware)</li>
+<li>Pixel format</li>
+</ul>
+</li>
+</ol>
+<h4 id="example-encoder-selection-with-override">Example: Encoder Selection with Override</h4>
+<pre><code class="lang-csharp">using Aura.Core.Services.Render;
+
+// Let system auto-select encoder
+var encoder = await hardwareEncoder.SelectBestEncoderAsync(preset, preferHardware: true);
+
+// Or force specific encoder
+var nvencEncoder = await hardwareEncoder.SelectBestEncoderAsync(preset, preferHardware: true);
+// Then override in preflight request
+var preflightResult = await preflightService.ValidateRenderAsync(
+    preset,
+    videoDuration,
+    outputDirectory,
+    encoderOverride: &quot;h264_nvenc&quot;,
+    preferHardware: true
+);
+</code></pre>
+<h3 id="preset-recommendation-service">Preset Recommendation Service</h3>
+<p>The preset recommendation service suggests optimal presets based on project requirements:</p>
+<h4 id="rule-based-recommendation">Rule-Based Recommendation</h4>
+<p>When LLM provider is unavailable, uses rule-based logic:</p>
+<pre><code class="lang-csharp">var request = new PresetRecommendationRequest
+{
+    TargetPlatform = &quot;YouTube&quot;,
+    ContentType = &quot;tutorial&quot;,
+    AspectRatioPreference = &quot;16:9&quot;,
+    VideoDuration = TimeSpan.FromMinutes(10),
+    RequireHighQuality = true
+};
+
+var recommendation = await presetService.RecommendPresetAsync(request);
+
+Console.WriteLine($&quot;Recommended: {recommendation.PresetName}&quot;);
+Console.WriteLine($&quot;Reasoning: {recommendation.Reasoning}&quot;);
+Console.WriteLine($&quot;Alternatives: {string.Join(&quot;, &quot;, recommendation.AlternativePresets)}&quot;);
+</code></pre>
+<h4 id="llm-assisted-recommendation">LLM-Assisted Recommendation</h4>
+<p>When LLM provider is available, generates contextual recommendations:</p>
+<pre><code class="lang-csharp">// LLM will analyze project requirements and recommend best preset
+// considering factors like:
+// - Platform requirements (duration limits, aspect ratios)
+// - Content type (tutorial, vlog, short-form, etc.)
+// - Target audience
+// - Quality requirements
+// - Hardware capabilities
+
+var request = new PresetRecommendationRequest
+{
+    TargetPlatform = &quot;TikTok&quot;,
+    ContentType = &quot;comedy sketch&quot;,
+    ProjectGoal = &quot;viral content&quot;,
+    Audience = &quot;Gen Z&quot;,
+    VideoDuration = TimeSpan.FromSeconds(45),
+    RequireHighQuality = false  // Prioritize speed over quality
+};
+
+var recommendation = await presetService.RecommendPresetAsync(request);
+// LLM explains why TikTok preset is optimal for this use case
+</code></pre>
+<h3 id="render-preflight-validation">Render Preflight Validation</h3>
+<p>Comprehensive validation before starting render:</p>
+<h4 id="validation-checks">Validation Checks</h4>
+<ol>
+<li><p><strong>Disk Space Validation</strong></p>
+<ul>
+<li>Output directory: 2.5x estimated file size</li>
+<li>Temp directory: 1.5x estimated file size</li>
+<li>Warns if low disk space (&lt; 2 GB)</li>
+</ul>
+</li>
+<li><p><strong>Write Permission Validation</strong></p>
+<ul>
+<li>Tests write access to output directory</li>
+<li>Tests write access to temp directory</li>
+<li>Creates directories if they don't exist</li>
+</ul>
+</li>
+<li><p><strong>Encoder Selection</strong></p>
+<ul>
+<li>Selects optimal encoder (hardware vs software)</li>
+<li>Respects user preferences and overrides</li>
+<li>Provides fallback encoder</li>
+</ul>
+</li>
+<li><p><strong>Duration Estimation</strong></p>
+<ul>
+<li>Estimates render time based on:
+<ul>
+<li>Hardware tier (A/B/C/D)</li>
+<li>Quality preset</li>
+<li>Hardware acceleration availability</li>
+<li>Video duration and resolution</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h4 id="example-full-preflight-check">Example: Full Preflight Check</h4>
+<pre><code class="lang-csharp">var preflightRequest = new RenderPreflightRequest
+{
+    PresetName = &quot;YouTube 1080p&quot;,
+    VideoDuration = TimeSpan.FromMinutes(5),
+    OutputDirectory = @&quot;C:\Videos\Output&quot;,
+    EncoderOverride = null,  // Auto-select
+    PreferHardware = true
+};
+
+var result = await preflightService.ValidateRenderAsync(
+    preset,
+    preflightRequest.VideoDuration,
+    preflightRequest.OutputDirectory,
+    preflightRequest.EncoderOverride,
+    preflightRequest.PreferHardware,
+    correlationId: Guid.NewGuid().ToString()
+);
+
+if (!result.CanProceed)
+{
+    Console.WriteLine(&quot;Preflight failed:&quot;);
+    foreach (var error in result.Errors)
+    {
+        Console.WriteLine($&quot;  ERROR: {error}&quot;);
+    }
+}
+else
+{
+    Console.WriteLine(&quot;Preflight passed:&quot;);
+    Console.WriteLine($&quot;  Encoder: {result.EncoderSelection.EncoderName}&quot;);
+    Console.WriteLine($&quot;  Hardware Accelerated: {result.EncoderSelection.IsHardwareAccelerated}&quot;);
+    Console.WriteLine($&quot;  Estimated Duration: {result.Estimates.EstimatedDurationMinutes:F1} minutes&quot;);
+    Console.WriteLine($&quot;  Estimated File Size: {result.Estimates.EstimatedFileSizeMB:F1} MB&quot;);
+}
+</code></pre>
+<h3 id="ffmpeg-command-logging">FFmpeg Command Logging</h3>
+<p>All FFmpeg commands are logged for debugging and support:</p>
+<h4 id="log-structure">Log Structure</h4>
+<pre><code class="lang-json">{
+  &quot;jobId&quot;: &quot;job-12345&quot;,
+  &quot;correlationId&quot;: &quot;abc-def-ghi&quot;,
+  &quot;timestamp&quot;: &quot;2024-01-15T10:30:00Z&quot;,
+  &quot;command&quot;: &quot;ffmpeg&quot;,
+  &quot;arguments&quot;: [
+    &quot;-i&quot;, &quot;input.mp4&quot;,
+    &quot;-c:v&quot;, &quot;h264_nvenc&quot;,
+    &quot;-preset&quot;, &quot;medium&quot;,
+    &quot;-b:v&quot;, &quot;8000k&quot;,
+    &quot;-c:a&quot;, &quot;aac&quot;,
+    &quot;output.mp4&quot;
+  ],
+  &quot;workingDirectory&quot;: &quot;/tmp/aura-render&quot;,
+  &quot;environment&quot;: {
+    &quot;PATH&quot;: &quot;...&quot;,
+    &quot;CUDA_VISIBLE_DEVICES&quot;: &quot;0&quot;
+  },
+  &quot;encoder&quot;: {
+    &quot;name&quot;: &quot;h264_nvenc&quot;,
+    &quot;isHardwareAccelerated&quot;: true,
+    &quot;description&quot;: &quot;NVIDIA NVENC GPU acceleration&quot;
+  },
+  &quot;exitCode&quot;: 0,
+  &quot;duration&quot;: &quot;00:02:34&quot;,
+  &quot;success&quot;: true,
+  &quot;outputPath&quot;: &quot;/output/video.mp4&quot;
+}
+</code></pre>
+<h4 id="retrieving-logs">Retrieving Logs</h4>
+<pre><code class="lang-csharp">// Get logs for specific job
+var logs = await commandLogger.GetCommandsByJobIdAsync(&quot;job-12345&quot;);
+
+// Get logs by correlation ID (across multiple jobs)
+var correlatedLogs = await commandLogger.GetCommandsByCorrelationIdAsync(&quot;abc-def-ghi&quot;);
+
+// Generate support report
+var report = await commandLogger.GenerateSupportReportAsync(&quot;job-12345&quot;);
+Console.WriteLine(report);
+</code></pre>
+<h4 id="support-report-example">Support Report Example</h4>
+<pre><code>=== FFmpeg Support Report ===
+Job ID: job-12345
+Generated: 2024-01-15 10:35:00 UTC
+Total Commands: 3
+
+--- Command #1 ---
+Timestamp: 2024-01-15 10:30:15
+Correlation ID: abc-def-ghi
+Success: True
+Exit Code: 0
+Duration: 154.23s
+Encoder: h264_nvenc (Hardware)
+Working Directory: /tmp/aura-render
+Output Path: /output/video.mp4
+
+Command:
+  ffmpeg
+Arguments:
+  -i
+  input.mp4
+  -c:v
+  h264_nvenc
+  -preset
+  medium
+  -b:v
+  8000k
+  ...
+</code></pre>
+<h3 id="error-handling-with-problemdetails">Error Handling with ProblemDetails</h3>
+<p>Render engine uses ProblemDetails (RFC 7807) for consistent error responses:</p>
+<h4 id="example-error-response">Example Error Response</h4>
+<pre><code class="lang-json">{
+  &quot;type&quot;: &quot;https://github.com/Coffee285/aura-video-studio/blob/main/docs/errors/README.md#render/insufficient-disk-space&quot;,
+  &quot;title&quot;: &quot;Insufficient Disk Space&quot;,
+  &quot;status&quot;: 400,
+  &quot;detail&quot;: &quot;Insufficient disk space. Required: 2500 MB, Available: 1200 MB in C:\\Videos\\Output&quot;,
+  &quot;correlationId&quot;: &quot;abc-def-ghi&quot;,
+  &quot;recommendedActions&quot;: [
+    &quot;Free up disk space by deleting unnecessary files&quot;,
+    &quot;Choose a different output directory with more space&quot;,
+    &quot;Reduce video quality or resolution to decrease file size&quot;
+  ]
+}
+</code></pre>
+<h4 id="error-categories">Error Categories</h4>
+<ol>
+<li><p><strong>Preflight Failures (400)</strong></p>
+<ul>
+<li>Insufficient disk space</li>
+<li>No write permissions</li>
+<li>Invalid preset configuration</li>
+</ul>
+</li>
+<li><p><strong>Encoder Failures (500)</strong></p>
+<ul>
+<li>FFmpeg not found</li>
+<li>Encoder not available</li>
+<li>Encoding errors</li>
+</ul>
+</li>
+<li><p><strong>Service Unavailable (503)</strong></p>
+<ul>
+<li>Service not configured</li>
+<li>Dependencies missing</li>
+</ul>
+</li>
+</ol>
+<h3 id="integration-with-videoorchestrator">Integration with VideoOrchestrator</h3>
+<p>The render engine integrates with VideoOrchestrator for end-to-end video generation:</p>
+<pre><code class="lang-csharp">public class VideoOrchestrator
+{
+    private readonly RenderPreflightService _preflightService;
+    private readonly FFmpegCommandLogger _commandLogger;
+    
+    public async Task&lt;string&gt; RenderVideoAsync(
+        RenderSpecification spec,
+        IProgress&lt;RenderProgress&gt; progress,
+        CancellationToken ct)
+    {
+        // 1. Run preflight validation
+        var preflightResult = await _preflightService.ValidateRenderAsync(
+            spec.Preset,
+            spec.Duration,
+            spec.OutputDirectory,
+            spec.EncoderOverride,
+            spec.PreferHardware,
+            correlationId: spec.CorrelationId,
+            ct
+        );
+        
+        if (!preflightResult.CanProceed)
+        {
+            throw new RenderException(
+                &quot;Preflight validation failed&quot;,
+                preflightResult.Errors
+            );
+        }
+        
+        // 2. Prepare FFmpeg command with selected encoder
+        var encoder = preflightResult.EncoderSelection;
+        var ffmpegArgs = BuildFFmpegCommand(spec, encoder);
+        
+        // 3. Execute FFmpeg with progress reporting
+        var startTime = DateTimeOffset.UtcNow;
+        var ffmpegResult = await ExecuteFFmpegAsync(
+            ffmpegArgs,
+            progress,
+            ct
+        );
+        
+        // 4. Log FFmpeg command for support
+        await _commandLogger.LogCommandAsync(new FFmpegCommandRecord
+        {
+            JobId = spec.JobId,
+            CorrelationId = spec.CorrelationId,
+            Timestamp = startTime,
+            Command = &quot;ffmpeg&quot;,
+            Arguments = ffmpegArgs,
+            Encoder = new EncoderInfo
+            {
+                Name = encoder.EncoderName,
+                IsHardwareAccelerated = encoder.IsHardwareAccelerated,
+                Description = encoder.Description
+            },
+            ExitCode = ffmpegResult.ExitCode,
+            Duration = DateTimeOffset.UtcNow - startTime,
+            Success = ffmpegResult.Success,
+            OutputPath = spec.OutputPath
+        });
+        
+        if (!ffmpegResult.Success)
+        {
+            throw new RenderException(
+                &quot;FFmpeg execution failed&quot;,
+                ffmpegResult.ErrorMessage
+            );
+        }
+        
+        return spec.OutputPath;
+    }
+}
+</code></pre>
+<h3 id="best-practices-2">Best Practices</h3>
+<ol>
+<li><p><strong>Always Run Preflight</strong></p>
+<ul>
+<li>Prevents mid-render failures</li>
+<li>Provides early error detection with actionable guidance</li>
+<li>Estimates render time for user expectations</li>
+</ul>
+</li>
+<li><p><strong>Use Correlation IDs</strong></p>
+<ul>
+<li>Track related operations across services</li>
+<li>Enable end-to-end debugging</li>
+<li>Link FFmpeg commands to jobs</li>
+</ul>
+</li>
+<li><p><strong>Handle Encoder Fallbacks</strong></p>
+<ul>
+<li>Hardware encoders may fail (driver issues, GPU in use)</li>
+<li>Always have software fallback configured</li>
+<li>Log encoder selection for debugging</li>
+</ul>
+</li>
+<li><p><strong>Monitor Disk Space</strong></p>
+<ul>
+<li>Check before render (preflight)</li>
+<li>Monitor during render (temp files grow)</li>
+<li>Clean up temp files after render</li>
+</ul>
+</li>
+<li><p><strong>Log All Commands</strong></p>
+<ul>
+<li>Essential for debugging production issues</li>
+<li>Helps users provide support information</li>
+<li>Enables command replay for testing</li>
+</ul>
+</li>
+<li><p><strong>Provide User Guidance</strong></p>
+<ul>
+<li>Clear error messages with solutions</li>
+<li>Recommended actions for common issues</li>
+<li>Links to documentation</li>
+</ul>
+</li>
+</ol>
+<p>See <a href="BUILD_GUIDE.md">BUILD_GUIDE.md</a> for hardware acceleration setup and troubleshooting.</p>
+<h2 id="provider-profile-lock-sticky-provider-alignment">Provider Profile Lock (Sticky Provider Alignment)</h2>
+<p>Provider Profile Lock ensures your chosen provider remains active throughout the entire pipeline, preventing automatic provider switching unless explicitly requested by the user.</p>
+<h3 id="overview-2">Overview</h3>
+<p><strong>ProfileLock</strong> guarantees provider continuity across:</p>
+<ul>
+<li>Planning</li>
+<li>Script generation</li>
+<li>Refinement</li>
+<li>TTS synthesis</li>
+<li>Visual prompt generation</li>
+<li>Rendering</li>
+</ul>
+<h3 id="key-features">Key Features</h3>
+<ol>
+<li><strong>Session-Level Locks</strong>: Persist across app restarts</li>
+<li><strong>Project-Level Locks</strong>: Embedded in project metadata</li>
+<li><strong>Offline Mode Enforcement</strong>: Restrict to offline-compatible providers</li>
+<li><strong>Manual Fallback Control</strong>: User explicitly triggers provider switches</li>
+<li><strong>Extended Wait Patience</strong>: Surface status during slow provider responses</li>
+</ol>
+<h3 id="enabling-profilelock">Enabling ProfileLock</h3>
+<h4 id="via-api-1">Via API</h4>
+<pre><code class="lang-typescript">import { setProfileLock } from './api/profileLockClient';
+
+// Lock Ollama for entire pipeline
+await setProfileLock({
+  jobId: 'video-123',
+  providerName: 'Ollama',
+  providerType: 'local_llm',
+  isEnabled: true,
+  offlineModeEnabled: true, // Only allow offline providers
+  isSessionLevel: true
+});
+</code></pre>
+<h4 id="via-settings">Via Settings</h4>
+<p>Navigate to <strong>Settings</strong> → <strong>Providers</strong> → <strong>Profile Lock</strong>:</p>
+<ol>
+<li>Select primary provider (e.g., Ollama, OpenAI, RuleBased)</li>
+<li>Enable &quot;Lock provider for entire pipeline&quot;</li>
+<li>Optionally enable &quot;Offline mode&quot; to restrict network access</li>
+<li>Choose applicable stages or leave empty for all stages</li>
+</ol>
+<h3 id="offline-mode">Offline Mode</h3>
+<p>When <code>offlineModeEnabled: true</code>, only these providers are allowed:</p>
+<p><strong>LLM Providers:</strong></p>
+<ul>
+<li>RuleBased (always available, offline)</li>
+<li>Ollama (local AI, requires installation)</li>
+</ul>
+<p><strong>TTS Providers:</strong></p>
+<ul>
+<li>Windows SAPI (Windows only, always available)</li>
+<li>Piper (local neural TTS, requires installation)</li>
+<li>Mimic3 (local neural TTS, requires installation)</li>
+</ul>
+<p><strong>Image Providers:</strong></p>
+<ul>
+<li>Stock (curated stock images, bundled)</li>
+<li>LocalSD (Stable Diffusion WebUI, requires NVIDIA GPU)</li>
+</ul>
+<p>Attempting to use network-only providers (OpenAI, ElevenLabs, etc.) with offline mode enabled will result in a clear error message.</p>
+<h3 id="provider-status-states">Provider Status States</h3>
+<p>ProfileLock tracks provider status and displays appropriate UI:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Duration</th>
+<th>UI Display</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Active</strong></td>
+<td>0-30s</td>
+<td>Spinner + &quot;Processing...&quot;</td>
+</tr>
+<tr>
+<td><strong>Waiting</strong></td>
+<td>30-180s</td>
+<td>Elapsed time + &quot;Still working...&quot;</td>
+</tr>
+<tr>
+<td><strong>Extended Wait</strong></td>
+<td>180s+</td>
+<td>Elapsed time + progress (if available) + &quot;Manual Fallback&quot; button</td>
+</tr>
+<tr>
+<td><strong>Stall Suspected</strong></td>
+<td>No heartbeat</td>
+<td>Warning + &quot;Provider may be stalled&quot; + &quot;Manual Fallback&quot; button</td>
+</tr>
+<tr>
+<td><strong>Error</strong></td>
+<td>Fatal error</td>
+<td>Error message + &quot;Manual Fallback&quot; or &quot;Retry&quot; options</td>
+</tr>
+</tbody>
+</table>
+<h3 id="manual-fallback">Manual Fallback</h3>
+<p>ProfileLock <strong>never</strong> automatically switches providers. User must explicitly choose:</p>
+<ol>
+<li><strong>Provider Status Drawer</strong> appears during extended waits</li>
+<li>Shows elapsed time, heartbeat count, progress (tokens/chunks if available)</li>
+<li>User clicks <strong>&quot;Switch Provider&quot;</strong> button</li>
+<li>Confirmation dialog: &quot;Switch from Ollama to OpenAI?&quot;</li>
+<li>User confirms</li>
+<li>ProfileLock is unlocked, new provider selected</li>
+<li>Operation continues with new provider</li>
+</ol>
+<h3 id="api-endpoints-1">API Endpoints</h3>
+<p><strong>Get Status:</strong></p>
+<pre><code class="lang-typescript">GET /api/provider-lock/status?jobId=video-123
+
+Response:
+{
+  &quot;jobId&quot;: &quot;video-123&quot;,
+  &quot;hasActiveLock&quot;: true,
+  &quot;activeLock&quot;: {
+    &quot;jobId&quot;: &quot;video-123&quot;,
+    &quot;providerName&quot;: &quot;Ollama&quot;,
+    &quot;providerType&quot;: &quot;local_llm&quot;,
+    &quot;isEnabled&quot;: true,
+    &quot;offlineModeEnabled&quot;: true,
+    &quot;applicableStages&quot;: [],
+    &quot;createdAt&quot;: &quot;2024-01-15T10:30:00Z&quot;
+  },
+  &quot;statistics&quot;: {
+    &quot;totalSessionLocks&quot;: 1,
+    &quot;enabledSessionLocks&quot;: 1,
+    &quot;offlineModeLocksCount&quot;: 1
+  }
+}
+</code></pre>
+<p><strong>Set Lock:</strong></p>
+<pre><code class="lang-typescript">POST /api/provider-lock/set
+
+Request:
+{
+  &quot;jobId&quot;: &quot;video-123&quot;,
+  &quot;providerName&quot;: &quot;Ollama&quot;,
+  &quot;providerType&quot;: &quot;local_llm&quot;,
+  &quot;isEnabled&quot;: true,
+  &quot;offlineModeEnabled&quot;: true,
+  &quot;isSessionLevel&quot;: true
+}
+</code></pre>
+<p><strong>Unlock:</strong></p>
+<pre><code class="lang-typescript">POST /api/provider-lock/unlock
+
+Request:
+{
+  &quot;jobId&quot;: &quot;video-123&quot;,
+  &quot;reason&quot;: &quot;USER_REQUEST&quot;
+}
+</code></pre>
+<p><strong>Check Offline Compatibility:</strong></p>
+<pre><code class="lang-typescript">GET /api/provider-lock/offline-compatible?providerName=OpenAI
+
+Response:
+{
+  &quot;providerName&quot;: &quot;OpenAI&quot;,
+  &quot;isCompatible&quot;: false,
+  &quot;message&quot;: &quot;Provider OpenAI requires network access...&quot;,
+  &quot;offlineCompatibleProviders&quot;: [&quot;RuleBased&quot;, &quot;Ollama&quot;, &quot;Windows&quot;, &quot;Piper&quot;, &quot;Mimic3&quot;, &quot;LocalSD&quot;, &quot;Stock&quot;]
+}
+</code></pre>
+<h3 id="troubleshooting-1">Troubleshooting</h3>
+<h4 id="issue-provider-seems-stuck">Issue: Provider seems stuck</h4>
+<p><strong>Symptoms:</strong> No progress for 3+ minutes, no heartbeat detected</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Check <strong>Provider Status Drawer</strong> for elapsed time and heartbeat count</li>
+<li>If heartbeats are updating → Provider is working, be patient</li>
+<li>If no heartbeats for 2+ minutes → Stall suspected:
+<ul>
+<li>Click <strong>&quot;Switch Provider&quot;</strong> for manual fallback</li>
+<li>Or <strong>&quot;Cancel Job&quot;</strong> and retry</li>
+</ul>
+</li>
+<li>Check provider logs in Settings → Diagnostics</li>
+</ol>
+<h4 id="issue-offline-mode-blocks-my-preferred-provider">Issue: Offline mode blocks my preferred provider</h4>
+<p><strong>Symptoms:</strong> Error: &quot;Provider OpenAI requires network access but offline mode is enforced&quot;</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Disable offline mode in ProfileLock settings</li>
+<li>Or switch to offline-compatible provider (Ollama, RuleBased)</li>
+<li>Verify network connectivity if you intended to use cloud providers</li>
+</ol>
+<h4 id="issue-profilelock-prevents-automatic-fallback">Issue: ProfileLock prevents automatic fallback</h4>
+<p><strong>Symptoms:</strong> Job waiting indefinitely, no automatic switch to fallback provider</p>
+<p><strong>Explanation:</strong> This is intentional! ProfileLock ensures your chosen provider remains active.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li>Use <strong>Provider Status Drawer</strong> to monitor progress</li>
+<li>If provider is slow but working → Be patient, progress will complete</li>
+<li>If truly stuck → Manually switch via &quot;Switch Provider&quot; button</li>
+<li>To restore automatic fallback → Disable ProfileLock in settings</li>
+</ol>
+<h4 id="issue-how-long-should-i-wait">Issue: How long should I wait?</h4>
+<p><strong>General Guidelines:</strong></p>
+<ul>
+<li><p><strong>Script Generation (LLM):</strong></p>
+<ul>
+<li>Fast (GPT-4, Claude): 10-30 seconds</li>
+<li>Medium (Ollama 7B): 30-120 seconds</li>
+<li>Slow (Ollama 70B, CPU): 2-5 minutes</li>
+</ul>
+</li>
+<li><p><strong>TTS Synthesis:</strong></p>
+<ul>
+<li>Fast (ElevenLabs, Windows SAPI): 5-15 seconds per minute of audio</li>
+<li>Medium (Piper): 10-30 seconds per minute</li>
+<li>Slow (Mimic3): 30-60 seconds per minute</li>
+</ul>
+</li>
+<li><p><strong>Image Generation:</strong></p>
+<ul>
+<li>Fast (Stock): instant</li>
+<li>Medium (Local SD, 6GB VRAM): 5-15 seconds per image</li>
+<li>Slow (Local SD, CPU): 30-120 seconds per image</li>
+</ul>
+</li>
+</ul>
+<p>If elapsed time exceeds 2× expected time and no heartbeats → Consider manual fallback.</p>
+<h3 id="best-practices-3">Best Practices</h3>
+<ol>
+<li><p><strong>Choose Provider Wisely</strong>: Match provider to your use case and hardware</p>
+<ul>
+<li>Development/testing: Use free providers (RuleBased, Ollama)</li>
+<li>Production: Use premium providers (GPT-4, ElevenLabs)</li>
+<li>Offline: Enable offline mode and choose compatible providers</li>
+</ul>
+</li>
+<li><p><strong>Enable ProfileLock for Consistency</strong>: Especially important for:</p>
+<ul>
+<li>Multi-stage pipelines where provider consistency matters</li>
+<li>Offline environments where network access is restricted</li>
+<li>Scenarios where automatic fallback would degrade quality</li>
+</ul>
+</li>
+<li><p><strong>Monitor Provider Status</strong>: Use the Provider Status Drawer during long operations</p>
+<ul>
+<li>Check heartbeat count to confirm provider is responsive</li>
+<li>View progress indicators (tokens, chunks, percentage) when available</li>
+<li>Be patient during legitimate extended waits</li>
+</ul>
+</li>
+<li><p><strong>Manual Fallback as Last Resort</strong>: Only switch providers when:</p>
+<ul>
+<li>Stall is confirmed (no heartbeat for 2+ minutes)</li>
+<li>Provider error is fatal and unrecoverable</li>
+<li>You explicitly want to try a different provider</li>
+</ul>
+</li>
+<li><p><strong>Test Offline Mode</strong>: Before relying on offline capabilities:</p>
+<ul>
+<li>Verify offline providers are installed (Ollama, Piper, etc.)</li>
+<li>Test full pipeline with <code>offlineModeEnabled: true</code></li>
+<li>Ensure quality meets your requirements</li>
+</ul>
+</li>
+</ol>
+<h2 id="configuration-ownership">Configuration Ownership</h2>
+<h3 id="unified-configuration-model">Unified Configuration Model</h3>
+<p>Aura Video Studio uses a <strong>unified configuration model</strong> to ensure consistency across the stack and avoid configuration drift between frontend, Electron, and backend.</p>
+<h4 id="single-source-of-truth-auracore-providersettings">Single Source of Truth: Aura.Core ProviderSettings</h4>
+<p><code>Aura.Core.Configuration.ProviderSettings</code> is the authoritative source for all provider configuration:</p>
+<ul>
+<li><strong>Provider URLs</strong>: OpenAI endpoint, Ollama URL, Stable Diffusion URL</li>
+<li><strong>Provider Settings</strong>: Model selections, default voices, regional settings</li>
+<li><strong>API Keys</strong>: Securely stored, never exposed in GET responses</li>
+</ul>
+<h4 id="backend-api-surface">Backend API Surface</h4>
+<p><code>Aura.Api</code> exposes consistent REST endpoints for provider configuration:</p>
+<p><strong>GET /api/ProviderConfiguration/config</strong></p>
+<ul>
+<li>Returns current provider configuration (URLs, endpoints, model selections)</li>
+<li><strong>Never returns API keys or secrets</strong> for security</li>
+<li>Used by frontend to display current settings</li>
+</ul>
+<p><strong>POST /api/ProviderConfiguration/config</strong></p>
+<ul>
+<li>Updates non-secret provider configuration (URLs, endpoints, models)</li>
+<li>Changes are persisted to disk by ProviderSettings</li>
+<li>Use for updating provider URLs, Ollama models, etc.</li>
+</ul>
+<p><strong>POST /api/ProviderConfiguration/config/secrets</strong></p>
+<ul>
+<li>Updates provider API keys securely</li>
+<li>Separate endpoint for clear security boundary</li>
+<li>Keys are logged (sanitized) but never returned in responses</li>
+</ul>
+<h4 id="frontend-integration">Frontend Integration</h4>
+<p><code>Aura.Web</code> reads and writes provider settings <strong>exclusively through backend APIs</strong>:</p>
+<pre><code class="lang-typescript">import { 
+  getProviderConfiguration, 
+  updateProviderConfiguration, 
+  updateProviderSecrets 
+} from '@/services/api/providerConfigClient';
+
+// Load current configuration
+const config = await getProviderConfiguration();
+console.log(config.ollama.url); // e.g., &quot;http://127.0.0.1:11434&quot;
+
+// Update provider URL
+await updateProviderConfiguration({
+  ollama: { url: 'http://192.168.1.100:11434' }
+});
+
+// Update API key
+await updateProviderSecrets({
+  openAiApiKey: 'sk-...'
+});
+</code></pre>
+<p><strong>Key principles:</strong></p>
+<ul>
+<li>Frontend never persists provider URLs in Electron or browser storage</li>
+<li>All configuration reads go through <code>getProviderConfiguration()</code></li>
+<li>All configuration writes go through <code>updateProviderConfiguration()</code> or <code>updateProviderSecrets()</code></li>
+<li>No conflicting configuration between frontend and backend</li>
+</ul>
+<h4 id="electron-desktop-integration">Electron Desktop Integration</h4>
+<p><code>Aura.Desktop</code> handles <strong>secure storage of secrets only</strong> for desktop convenience:</p>
+<p><strong>What Electron Stores:</strong></p>
+<ul>
+<li>API keys in encrypted <code>aura-secure</code> store (OpenAI, Anthropic, Gemini, ElevenLabs, etc.)</li>
+<li>UI preferences and window state in <code>aura-config</code> store</li>
+</ul>
+<p><strong>What Electron Does NOT Store:</strong></p>
+<ul>
+<li>Provider URLs (managed by backend ProviderSettings)</li>
+<li>Provider endpoint configuration (managed by backend)</li>
+<li>Model selections (managed by backend)</li>
+</ul>
+<p><strong>Workflow:</strong></p>
+<ol>
+<li>User enters API key in Settings UI</li>
+<li>Frontend sends key to backend via <code>POST /api/ProviderConfiguration/config/secrets</code></li>
+<li>Backend persists to ProviderSettings</li>
+<li>Optionally, Electron stores a copy in secure storage for convenience</li>
+<li>Backend is always the source of truth for provider readiness checks</li>
+</ol>
+<h4 id="benefits-of-unified-configuration">Benefits of Unified Configuration</h4>
+<p><strong>No Configuration Drift:</strong></p>
+<ul>
+<li>Frontend, Electron, and backend always see the same provider URLs</li>
+<li>No risk of &quot;it works locally but not in production&quot; scenarios</li>
+</ul>
+<p><strong>Simpler Provider Validation:</strong></p>
+<ul>
+<li><code>/api/providers/status</code> checks use the same configuration the UI is editing</li>
+<li>No need to reconcile multiple sources of truth</li>
+</ul>
+<p><strong>Diagnostics and Troubleshooting:</strong></p>
+<ul>
+<li><code>GET /api/system/diagnostics/ffmpeg-config</code> - FFmpeg configuration status</li>
+<li><code>GET /api/system/diagnostics/providers-config</code> - Provider configuration snapshot (non-secret)</li>
+<li>Available in all environments for debugging configuration issues</li>
+<li>See <a href="FFMPEG_CONFIGURATION_UNIFIED.md">FFMPEG_CONFIGURATION_UNIFIED.md</a> and <a href="PROVIDER_CONFIG_UNIFICATION_SUMMARY.md">PROVIDER_CONFIG_UNIFICATION_SUMMARY.md</a> for details</li>
+</ul>
+<p><strong>Easier to Add New Providers:</strong></p>
+<ul>
+<li>Add getters/setters to <code>ProviderSettings</code></li>
+<li>Add fields to API DTOs</li>
+<li>Update frontend client</li>
+<li>Single flow, no duplication</li>
+</ul>
+<p><strong>Clear Security Boundaries:</strong></p>
+<ul>
+<li>Secrets go through dedicated <code>/config/secrets</code> endpoint</li>
+<li>Non-secret config goes through <code>/config</code> endpoint</li>
+<li>API keys never returned in GET responses</li>
+</ul>
+<h3 id="configuration-persistence">Configuration Persistence</h3>
+<p><strong>Backend Storage:</strong></p>
+<ul>
+<li>Configuration stored in <code>{AURA_DATA_PATH}/AuraData/settings.json</code></li>
+<li>Reloaded on demand via <code>ProviderSettings.Reload()</code></li>
+<li>Thread-safe updates via <code>ProviderSettings.UpdateAsync()</code></li>
+</ul>
+<p><strong>Electron Secure Storage:</strong></p>
+<ul>
+<li>API keys in <code>%APPDATA%/Roaming/aura-video-studio/aura-secure.json</code> (encrypted)</li>
+<li>Encryption key derived from machine-specific data</li>
+<li>Not synced between machines (intentional security feature)</li>
+</ul>
+<p><strong>Frontend:</strong></p>
+<ul>
+<li>No persistent provider configuration storage</li>
+<li>All state loaded from backend on startup</li>
+<li>Configuration changes sent immediately to backend</li>
+</ul>
+<h3 id="migration-from-old-model">Migration from Old Model</h3>
+<p>If you have existing code that:</p>
+<ul>
+<li>Stores provider URLs in Electron config</li>
+<li>Reads provider settings from local storage</li>
+<li>Manages provider state independently</li>
+</ul>
+<p><strong>Action Required:</strong></p>
+<ol>
+<li>Remove Electron config writes for provider URLs</li>
+<li>Update Settings UI to use new <code>providerConfigClient</code> methods</li>
+<li>Remove any <code>localStorage.setItem()</code> calls for provider config</li>
+<li>Ensure all reads go through <code>getProviderConfiguration()</code></li>
+</ol>
+<h3 id="related-documentation">Related Documentation</h3>
+<ul>
+<li><a href="LLM_INTEGRATION_AUDIT.md">LLM_INTEGRATION_AUDIT.md</a> - LLM provider details</li>
+<li><a href="TTS_PROVIDER_IMPLEMENTATION_SUMMARY.md">TTS_PROVIDER_IMPLEMENTATION_SUMMARY.md</a> - TTS provider details</li>
+<li><a href="LATENCY_PATIENCE_POLICY.md">LATENCY_PATIENCE_POLICY.md</a> - Provider patience thresholds</li>
+<li><a href="PROVIDER_STICKINESS_IMPLEMENTATION_SUMMARY.md">PROVIDER_STICKINESS_IMPLEMENTATION_SUMMARY.md</a> - Technical implementation details</li>
+<li><a href="PROVIDER_INTEGRATION_IMPLEMENTATION.md">PROVIDER_INTEGRATION_IMPLEMENTATION.md</a> - Implementation guide</li>
+</ul>
+<hr>
+<h2 id="llm-first-orchestration-services">LLM-First Orchestration Services</h2>
+<p>Aura Video Studio now deeply integrates LLMs across all video generation stages, not just script generation. These services provide AI-powered creative assistance and optimization throughout the pipeline.</p>
+<h3 id="orchestration-context">Orchestration Context</h3>
+<p><strong>File</strong>: <code>Aura.Core/Orchestrator/Models/OrchestrationContext.cs</code></p>
+<p><strong>Purpose</strong>: Provides comprehensive context to all LLM-driven stages for optimal decision-making.</p>
+<p><strong>Contents</strong>:</p>
+<ul>
+<li>Brief (topic, audience, goal, tone)</li>
+<li>PlanSpec (duration, pacing, density)</li>
+<li>ProviderProfile (which providers are available)</li>
+<li>SystemProfile (hardware capabilities)</li>
+<li>Target platform (YouTube, TikTok, LinkedIn, etc.)</li>
+<li>Language preferences (primary and secondary)</li>
+<li>Budget sensitivity and feature flags</li>
+</ul>
+<p><strong>Usage</strong>:</p>
+<pre><code class="lang-csharp">var context = new OrchestrationContext(
+    brief: userBrief,
+    planSpec: planSpec,
+    activeProfile: providerProfile,
+    hardware: systemProfile,
+    providerSettings: providerSettings)
+{
+    TargetPlatform = &quot;YouTube&quot;,
+    PrimaryLanguage = &quot;en-US&quot;,
+    UseAdvancedVisuals = true,
+    BudgetSensitive = false
+};
+
+// Pass to any LLM-enhanced service
+var suggestions = await visualService.SuggestVisualsAsync(script, context, ct);
+</code></pre>
+<h3 id="pacing-stage">Pacing Stage</h3>
+<p><strong>File</strong>: <code>Aura.Core/Orchestrator/Stages/PacingStage.cs</code></p>
+<p><strong>Purpose</strong>: LLM-assisted script pacing and scene restructuring for platform-optimized content.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Normalizes scene lengths to avoid too-short (&lt;3s) or too-long scenes</li>
+<li>Suggests merging brief related scenes</li>
+<li>Recommends splitting overly complex scenes</li>
+<li>Marks &quot;peak attention&quot; moments for viewer engagement</li>
+<li>Optimizes call-to-action placement based on platform</li>
+<li>Adapts to platform-specific attention spans (TikTok: 3-5s, YouTube: 10-30s)</li>
+</ul>
+<p><strong>LLM Mode</strong>: Uses LLM to provide intelligent restructuring recommendations</p>
+<p><strong>Fallback Mode</strong>: Deterministic pacing normalization when LLM unavailable</p>
+<p><strong>Integration</strong>:</p>
+<pre><code class="lang-csharp">var pacingStage = new PacingStage(logger, llmProvider);
+var refinedScript = await pacingStage.RefineScriptPacingAsync(script, context, ct);
+</code></pre>
+<h3 id="visual-suggestion-service">Visual Suggestion Service</h3>
+<p><strong>File</strong>: <code>Aura.Core/Services/StockMedia/VisualSuggestionService.cs</code></p>
+<p><strong>Purpose</strong>: LLM-driven recommendations for optimal visual strategy per scene.</p>
+<p><strong>Visual Strategies</strong>:</p>
+<ol>
+<li><strong>Stock</strong>: Free or paid stock images (cost-effective, reliable)</li>
+<li><strong>Generative</strong>: AI-generated images via Stable Diffusion or DALL-E (unique, customizable)</li>
+<li><strong>SolidColor</strong>: Simple colored backgrounds (minimalist, professional)</li>
+</ol>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Analyzes scene content and context</li>
+<li>Recommends best visual strategy per scene</li>
+<li>Generates optimized prompts for stock search or generative AI</li>
+<li>Provides rationale for each recommendation</li>
+<li>Batch processing for budget-conscious operations</li>
+</ul>
+<p><strong>Output</strong>: <code>List&lt;VisualSuggestion&gt;</code> with strategy, queries/prompts, colors, and rationale</p>
+<p><strong>Integration</strong>:</p>
+<pre><code class="lang-csharp">var visualService = new VisualSuggestionService(logger, llmProvider);
+var suggestions = await visualService.SuggestVisualsAsync(script, context, ct);
+
+foreach (var suggestion in suggestions)
+{
+    if (suggestion.Strategy == &quot;Generative&quot; &amp;&amp; sdProvider != null)
+    {
+        var image = await sdProvider.GenerateAsync(suggestion.SdPrompt, ct);
+    }
+    else if (suggestion.Strategy == &quot;Stock&quot;)
+    {
+        var images = await stockProvider.SearchAsync(suggestion.StockQuery, ct);
+    }
+    // Use suggestion.ColorHex as fallback
+}
+</code></pre>
+<h3 id="thumbnail-prompt-service">Thumbnail Prompt Service</h3>
+<p><strong>File</strong>: <code>Aura.Core/Services/Thumbnails/ThumbnailPromptService.cs</code></p>
+<p><strong>Purpose</strong>: Generates compelling thumbnail concepts optimized for platform and engagement.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Analyzes strongest scenes for thumbnail potential</li>
+<li>Generates 3 alternative thumbnail concepts</li>
+<li>Platform-specific guidelines (YouTube: 1280x720, TikTok: vertical, etc.)</li>
+<li>Visual prompts for image generation or stock search</li>
+<li>Text overlay suggestions</li>
+<li>Layout and composition recommendations</li>
+<li>Color palette suggestions</li>
+</ul>
+<p><strong>Output</strong>: <code>ThumbnailSuggestion</code> with multiple concepts, layouts, and rationale</p>
+<p><strong>Platform Guidelines</strong>:</p>
+<ul>
+<li><strong>YouTube</strong>: Bold text, high contrast, faces work well</li>
+<li><strong>TikTok</strong>: Vertical format, minimal text, action/intrigue</li>
+<li><strong>LinkedIn</strong>: Professional aesthetic, data visualizations, corporate appropriate</li>
+<li><strong>Instagram</strong>: Square format, aesthetic appeal, brand colors</li>
+</ul>
+<p><strong>Integration</strong>:</p>
+<pre><code class="lang-csharp">var thumbnailService = new ThumbnailPromptService(logger, llmProvider);
+var suggestion = await thumbnailService.GenerateThumbnailPromptAsync(script, context, ct);
+
+// Use first concept (or let user choose)
+var bestConcept = suggestion.Concepts[0];
+Console.WriteLine($&quot;Generate thumbnail: {bestConcept.VisualPrompt}&quot;);
+Console.WriteLine($&quot;Add text overlay: {bestConcept.TextOverlay}&quot;);
+Console.WriteLine($&quot;Color palette: {string.Join(&quot;, &quot;, bestConcept.ColorPalette)}&quot;);
+</code></pre>
+<h3 id="title-and-description-suggestion-service">Title and Description Suggestion Service</h3>
+<p><strong>File</strong>: <code>Aura.Core/Services/Metadata/TitleDescriptionSuggestionService.cs</code></p>
+<p><strong>Purpose</strong>: SEO-aware metadata generation for video publishing platforms.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Generates 3-5 title alternatives optimized for clicks and SEO</li>
+<li>Short descriptions for previews (1-2 sentences)</li>
+<li>Long descriptions with full context and keywords</li>
+<li>Platform-specific character limits and guidelines</li>
+<li>Keyword/tag suggestions</li>
+<li>Rationale for each variant</li>
+</ul>
+<p><strong>Platform Optimization</strong>:</p>
+<ul>
+<li><strong>YouTube</strong>: First 60 chars visible, keywords early, timestamps, CTAs</li>
+<li><strong>TikTok</strong>: Shorter is better, curiosity hooks, trending hashtags</li>
+<li><strong>LinkedIn</strong>: Professional tone, business value, avoid clickbait</li>
+<li><strong>Instagram</strong>: First line hooks viewers, 5-10 hashtags</li>
+</ul>
+<p><strong>Output</strong>: <code>MetadataSuggestion</code> with multiple variants and recommendation</p>
+<p><strong>Integration</strong>:</p>
+<pre><code class="lang-csharp">var metadataService = new TitleDescriptionSuggestionService(logger, llmProvider);
+var suggestion = await metadataService.GenerateMetadataAsync(script, context, ct);
+
+// Present alternatives to user or use recommended variant
+foreach (var variant in suggestion.Alternatives)
+{
+    Console.WriteLine($&quot;Title: {variant.Title}&quot;);
+    Console.WriteLine($&quot;Description: {variant.ShortDescription}&quot;);
+    Console.WriteLine($&quot;Keywords: {string.Join(&quot;, &quot;, variant.Keywords)}&quot;);
+    Console.WriteLine($&quot;Why: {variant.Rationale}\n&quot;);
+}
+</code></pre>
+<h3 id="language-naturalization-service">Language Naturalization Service</h3>
+<p><strong>File</strong>: <code>Aura.Core/Services/Localization/LanguageNaturalizationService.cs</code></p>
+<p><strong>Purpose</strong>: LLM-powered translation and cultural adaptation for global audiences.</p>
+<p><strong>Features</strong>:</p>
+<ul>
+<li>Supports <strong>hundreds of languages and dialects</strong> via LLM capabilities</li>
+<li>Not limited to common languages - works with less common languages and regional dialects</li>
+<li>Cultural adaptation (idioms, references, examples)</li>
+<li>Maintains technical accuracy and tone</li>
+<li>Natural, conversational phrasing appropriate for locale</li>
+<li>Batch processing for efficiency</li>
+</ul>
+<p><strong>Supported Locales</strong>: Any language or dialect the LLM can handle, including:</p>
+<ul>
+<li>Standard locales: en-US, es-MX, ja-JP, fr-FR, de-DE, pt-BR, zh-CN, ar-SA, hi-IN, etc.</li>
+<li>Regional dialects: en-AU (Australian), es-AR (Argentine Spanish), fr-CA (Canadian French)</li>
+<li>Less common languages: yi (Yiddish), gd (Scottish Gaelic), cy (Welsh), mi (Maori)</li>
+<li>Historical/specialized variants: Any linguistic variant supported by the LLM</li>
+</ul>
+<p><strong>Output</strong>: <code>LocalizedScript</code> with naturalized scenes and application notes</p>
+<p><strong>Integration</strong>:</p>
+<pre><code class="lang-csharp">var localizationService = new LanguageNaturalizationService(logger, llmProvider);
+
+// Naturalize to any locale
+var localized = await localizationService.NaturalizeScriptAsync(
+    script, 
+    targetLocale: &quot;es-MX&quot;,  // Mexican Spanish
+    context, 
+    ct);
+
+if (localized.NaturalizationApplied)
+{
+    // Use localized.Scenes for TTS and rendering
+    Console.WriteLine($&quot;Naturalized to {localized.Locale}&quot;);
+    Console.WriteLine($&quot;Notes: {localized.Notes}&quot;);
+}
+</code></pre>
+<p><strong>Multi-Language Workflow</strong>:</p>
+<pre><code class="lang-csharp">// Generate video in multiple locales
+var targetLocales = new[] { &quot;es-MX&quot;, &quot;pt-BR&quot;, &quot;ja-JP&quot;, &quot;de-DE&quot;, &quot;hi-IN&quot; };
+
+foreach (var locale in targetLocales)
+{
+    var localizedScript = await localizationService.NaturalizeScriptAsync(
+        originalScript, locale, context, ct);
+    
+    // Generate video with localized script and locale-specific TTS voice
+    var video = await GenerateLocalizedVideoAsync(localizedScript, locale, ct);
+}
+</code></pre>
+<h3 id="fallback-behavior">Fallback Behavior</h3>
+<p>All LLM-first orchestration services include <strong>deterministic fallbacks</strong> when LLM providers are unavailable:</p>
+<ul>
+<li><strong>PacingStage</strong>: Applies basic scene length normalization</li>
+<li><strong>VisualSuggestionService</strong>: Uses keyword extraction for stock queries</li>
+<li><strong>ThumbnailPromptService</strong>: Generates standard concepts based on topic</li>
+<li><strong>TitleDescriptionSuggestionService</strong>: Creates descriptive metadata from topic</li>
+<li><strong>LanguageNaturalizationService</strong>: Returns original script with locale marker</li>
+</ul>
+<p>This ensures the pipeline <strong>never fails</strong> due to LLM unavailability, though quality may be reduced.</p>
+<h3 id="provider-detection">Provider Detection</h3>
+<p>Services automatically detect provider type:</p>
+<pre><code class="lang-csharp">if (_llmProvider.GetType().Name.Contains(&quot;RuleBased&quot;) || 
+    _llmProvider.GetType().Name.Contains(&quot;Mock&quot;))
+{
+    // Use deterministic fallback
+}
+else
+{
+    // Use LLM-enhanced processing
+}
+</code></pre>
+<h3 id="best-practices-4">Best Practices</h3>
+<p><strong>Context Construction</strong>:</p>
+<ul>
+<li>Always provide complete <code>OrchestrationContext</code> for best results</li>
+<li>Set <code>TargetPlatform</code> to optimize for specific platforms</li>
+<li>Enable <code>UseAdvancedVisuals</code> only if SD/DALL-E providers available</li>
+<li>Set <code>BudgetSensitive</code> to true for cost-conscious batch processing</li>
+</ul>
+<p><strong>Batch Processing</strong>:</p>
+<ul>
+<li>Visual and localization services use batch processing to reduce LLM API costs</li>
+<li>Batch sizes adjust based on <code>BudgetSensitive</code> flag</li>
+<li>Balance between API costs and processing speed</li>
+</ul>
+<p><strong>Error Handling</strong>:</p>
+<ul>
+<li>All services log warnings and gracefully fall back on errors</li>
+<li>Never throws on LLM failures - returns deterministic alternatives</li>
+<li>Check <code>NaturalizationApplied</code> or similar flags to know if LLM was used</li>
+</ul>
+<p><strong>Integration with Existing Services</strong>:</p>
+<ul>
+<li><code>VisualSuggestionService</code> complements <code>QueryCompositionService</code></li>
+<li>Thumbnail prompts can feed into image generation or stock search</li>
+<li>Metadata suggestions integrate with publishing workflows</li>
+<li>Localized scripts work with all TTS providers</li>
+</ul>
+<h3 id="related-documentation-1">Related Documentation</h3>
+<ul>
+<li><a href="LLM_INTEGRATION_AUDIT.md">LLM_INTEGRATION_AUDIT.md</a> - LLM provider technical details</li>
+<li><a href="UNIFIED_LLM_ORCHESTRATOR_GUIDE.md">UNIFIED_LLM_ORCHESTRATOR_GUIDE.md</a> - LLM orchestration patterns</li>
+<li><a href="TRANSLATION_USER_GUIDE.html">TRANSLATION_USER_GUIDE.md</a> - Localization features</li>
+<li><a href="PROMPT_ENGINEERING_API.md">PROMPT_ENGINEERING_API.md</a> - Prompt customization</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/user-guide/PROVIDER_INTEGRATION_GUIDE.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Log Query Examples | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Log Query Examples | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/LOG_QUERY_EXAMPLES.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="log-query-examples">Log Query Examples</h1>
+
+<p>This guide provides practical examples for querying and analyzing logs from the Aura application.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#using-grep">Using grep</a></li>
+<li><a href="#using-log-aggregation-tools">Using Log Aggregation Tools</a></li>
+<li><a href="#common-queries">Common Queries</a></li>
+<li><a href="#performance-analysis">Performance Analysis</a></li>
+<li><a href="#security-auditing">Security Auditing</a></li>
+</ul>
+<h2 id="using-grep">Using grep</h2>
+<h3 id="basic-searches">Basic Searches</h3>
+<pre><code class="lang-bash"># Find all errors in today's logs
+grep &quot;ERROR&quot; logs/aura-api-$(date +%Y-%m-%d).log
+
+# Find logs for a specific user
+grep &quot;UserId.*user_123&quot; logs/*.log
+
+# Find logs for a specific project
+grep &quot;ProjectId.*proj_456&quot; logs/*.log
+
+# Case-insensitive search
+grep -i &quot;timeout&quot; logs/*.log
+
+# Count occurrences
+grep -c &quot;ERROR&quot; logs/*.log
+</code></pre>
+<h3 id="with-context">With Context</h3>
+<pre><code class="lang-bash"># Show 5 lines before and after match
+grep -B 5 -A 5 &quot;OutOfMemoryException&quot; logs/*.log
+
+# Show 10 lines of context
+grep -C 10 &quot;Failed to generate video&quot; logs/*.log
+
+# Show filename with matches
+grep -H &quot;ERROR&quot; logs/*.log
+</code></pre>
+<h3 id="multiple-patterns">Multiple Patterns</h3>
+<pre><code class="lang-bash"># Match multiple patterns (OR)
+grep -E &quot;ERROR|WARN&quot; logs/*.log
+
+# Match pattern and exclude another
+grep &quot;ERROR&quot; logs/*.log | grep -v &quot;Ignore&quot;
+
+# Match multiple files
+grep &quot;proj_123&quot; logs/aura-api-*.log logs/errors-*.log
+</code></pre>
+<h3 id="time-based-searches">Time-Based Searches</h3>
+<pre><code class="lang-bash"># Find logs from a specific hour
+grep &quot;2024-01-15 14:&quot; logs/aura-api-*.log
+
+# Find logs in a time range (14:00-15:00)
+grep &quot;2024-01-15 14:&quot; logs/aura-api-*.log
+
+# Find logs from the last hour
+grep &quot;$(date -u -d '1 hour ago' '+%Y-%m-%d %H'):&quot; logs/aura-api-$(date +%Y-%m-%d).log
+
+# Find logs between specific times
+grep -E &quot;2024-01-15 (14:3[0-9]|14:4[0-9]|14:50)&quot; logs/aura-api-*.log
+</code></pre>
+<h3 id="performance-queries">Performance Queries</h3>
+<pre><code class="lang-bash"># Find slow requests (&gt;5 seconds)
+grep &quot;Duration.*[5-9][0-9]{3,}&quot; logs/aura-api-*.log
+
+# Find slow database queries
+grep &quot;DatabaseQuery.*Duration&quot; logs/performance-*.log | \
+  awk '$NF &gt; 1000'
+
+# Find all performance warnings
+grep &quot;SLOW&quot; logs/warnings-*.log
+
+# Find specific slow operations
+grep &quot;VideoGeneration.*Duration&quot; logs/performance-*.log
+</code></pre>
+<h3 id="error-analysis">Error Analysis</h3>
+<pre><code class="lang-bash"># Group errors by type
+grep &quot;ERROR&quot; logs/errors-*.log | \
+  grep -oP &quot;ExceptionType.*?},&quot; | \
+  sort | uniq -c | sort -nr
+
+# Find stack traces
+grep -A 20 &quot;ERROR&quot; logs/errors-*.log | \
+  grep &quot;   at &quot;
+
+# Find errors with specific message
+grep &quot;ERROR.*DatabaseConnectionFailed&quot; logs/errors-*.log
+</code></pre>
+<h3 id="correlation-tracking">Correlation Tracking</h3>
+<pre><code class="lang-bash"># Find all logs for a correlation ID
+CORR_ID=&quot;abc123def456&quot;
+grep &quot;$CORR_ID&quot; logs/*.log | sort
+
+# Find all logs for a trace ID
+TRACE_ID=&quot;7f8e9d0c1b2a&quot;
+grep &quot;TraceId.*$TRACE_ID&quot; logs/*.log | sort
+
+# Visualize request flow
+CORR_ID=&quot;abc123def456&quot;
+grep &quot;$CORR_ID&quot; logs/*.log | \
+  grep -E &quot;(Request|Response|Duration)&quot; | \
+  sort
+</code></pre>
+<h2 id="using-log-aggregation-tools">Using Log Aggregation Tools</h2>
+<h3 id="azure-log-analytics-kql">Azure Log Analytics (KQL)</h3>
+<h4 id="basic-queries">Basic Queries</h4>
+<pre><code class="lang-kusto">// All errors in the last hour
+AuraLogs
+| where Timestamp &gt; ago(1h)
+| where Level == &quot;ERROR&quot;
+| project Timestamp, Message, Component, Context
+
+// Logs for a specific correlation ID
+AuraLogs
+| where CorrelationId == &quot;abc123&quot;
+| project Timestamp, Level, Message, TraceId, SpanId
+| order by Timestamp asc
+
+// Logs for a specific user
+AuraLogs
+| where Context contains &quot;user_123&quot;
+| project Timestamp, Level, Message, Action
+</code></pre>
+<h4 id="performance-analysis">Performance Analysis</h4>
+<pre><code class="lang-kusto">// Top 10 slowest operations
+AuraLogs
+| where Level == &quot;Performance&quot;
+| project OperationName, DurationMs, Context
+| top 10 by DurationMs desc
+
+// Average duration by operation
+AuraLogs
+| where Level == &quot;Performance&quot;
+| summarize avg(DurationMs) by OperationName
+| order by avg_DurationMs desc
+
+// Performance over time
+AuraLogs
+| where Level == &quot;Performance&quot;
+| summarize avg(DurationMs) by OperationName, bin(Timestamp, 1h)
+| render timechart
+
+// 95th percentile latency
+AuraLogs
+| where Level == &quot;Performance&quot;
+| summarize percentile(DurationMs, 95) by OperationName
+| order by percentile_DurationMs desc
+</code></pre>
+<h4 id="error-analysis-1">Error Analysis</h4>
+<pre><code class="lang-kusto">// Error frequency
+AuraLogs
+| where Level == &quot;ERROR&quot;
+| summarize count() by ExceptionType
+| order by count_ desc
+
+// Errors by component
+AuraLogs
+| where Level == &quot;ERROR&quot;
+| summarize count() by Component, bin(Timestamp, 1h)
+| render columnchart
+
+// Error messages
+AuraLogs
+| where Level == &quot;ERROR&quot;
+| project Timestamp, Message, Component, StackTrace
+| order by Timestamp desc
+| take 100
+</code></pre>
+<h4 id="trace-analysis">Trace Analysis</h4>
+<pre><code class="lang-kusto">// Complete trace view
+let traceId = &quot;abc123&quot;;
+AuraLogs
+| where TraceId == traceId
+| project Timestamp, Level, SpanId, ParentSpanId, Message, DurationMs
+| order by Timestamp asc
+
+// Trace hierarchy visualization
+let traceId = &quot;abc123&quot;;
+AuraLogs
+| where TraceId == traceId
+| project SpanId, ParentSpanId, OperationName, DurationMs
+| render tree
+
+// Trace timeline
+let traceId = &quot;abc123&quot;;
+AuraLogs
+| where TraceId == traceId
+| project Timestamp, OperationName, DurationMs
+| render timechart
+</code></pre>
+<h3 id="splunk">Splunk</h3>
+<h4 id="basic-queries-1">Basic Queries</h4>
+<pre><code class="lang-spl"># All errors
+index=aura Level=ERROR
+
+# Specific correlation ID
+index=aura CorrelationId=&quot;abc123&quot;
+
+# Time range
+index=aura earliest=-1h latest=now
+
+# User activity
+index=aura UserId=&quot;user_123&quot;
+| table _time, Message, Action, Component
+</code></pre>
+<h4 id="performance-queries-1">Performance Queries</h4>
+<pre><code class="lang-spl"># Top slow operations
+index=aura Level=Performance
+| stats avg(DurationMs) as AvgDuration by OperationName
+| sort -AvgDuration
+| head 10
+
+# Performance trend
+index=aura Level=Performance OperationName=&quot;VideoGeneration&quot;
+| timechart avg(DurationMs) as AvgDuration span=1h
+
+# Percentiles
+index=aura Level=Performance
+| stats perc95(DurationMs) as P95 by OperationName
+| sort -P95
+</code></pre>
+<h4 id="error-analysis-2">Error Analysis</h4>
+<pre><code class="lang-spl"># Error count by type
+index=aura Level=ERROR
+| stats count by ExceptionType
+| sort -count
+
+# Error rate over time
+index=aura
+| timechart count(eval(Level=&quot;ERROR&quot;)) as Errors span=5m
+
+# Top error messages
+index=aura Level=ERROR
+| top Message
+</code></pre>
+<h3 id="elasticsearch-elk-stack">Elasticsearch (ELK Stack)</h3>
+<h4 id="basic-queries-2">Basic Queries</h4>
+<pre><code class="lang-json">// All errors
+{
+  &quot;query&quot;: {
+    &quot;term&quot;: { &quot;Level&quot;: &quot;ERROR&quot; }
+  }
+}
+
+// Correlation ID
+{
+  &quot;query&quot;: {
+    &quot;term&quot;: { &quot;CorrelationId&quot;: &quot;abc123&quot; }
+  },
+  &quot;sort&quot;: [{ &quot;Timestamp&quot;: &quot;asc&quot; }]
+}
+
+// Time range
+{
+  &quot;query&quot;: {
+    &quot;range&quot;: {
+      &quot;Timestamp&quot;: {
+        &quot;gte&quot;: &quot;now-1h&quot;,
+        &quot;lte&quot;: &quot;now&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<h4 id="aggregations">Aggregations</h4>
+<pre><code class="lang-json">// Error count by type
+{
+  &quot;size&quot;: 0,
+  &quot;aggs&quot;: {
+    &quot;error_types&quot;: {
+      &quot;terms&quot;: {
+        &quot;field&quot;: &quot;ExceptionType.keyword&quot;,
+        &quot;size&quot;: 10
+      }
+    }
+  }
+}
+
+// Average duration by operation
+{
+  &quot;size&quot;: 0,
+  &quot;aggs&quot;: {
+    &quot;operations&quot;: {
+      &quot;terms&quot;: {
+        &quot;field&quot;: &quot;OperationName.keyword&quot;
+      },
+      &quot;aggs&quot;: {
+        &quot;avg_duration&quot;: {
+          &quot;avg&quot;: { &quot;field&quot;: &quot;DurationMs&quot; }
+        }
+      }
+    }
+  }
+}
+
+// Performance histogram
+{
+  &quot;size&quot;: 0,
+  &quot;aggs&quot;: {
+    &quot;duration_histogram&quot;: {
+      &quot;histogram&quot;: {
+        &quot;field&quot;: &quot;DurationMs&quot;,
+        &quot;interval&quot;: 100
+      }
+    }
+  }
+}
+</code></pre>
+<h2 id="common-queries">Common Queries</h2>
+<h3 id="find-recent-errors">Find Recent Errors</h3>
+<pre><code class="lang-bash"># Last 100 errors
+grep &quot;ERROR&quot; logs/errors-*.log | tail -100
+
+# Errors in the last hour
+find logs/ -name &quot;errors-*.log&quot; -mmin -60 -exec grep &quot;ERROR&quot; {} \;
+
+# Unique error messages
+grep &quot;ERROR&quot; logs/errors-*.log | \
+  cut -d']' -f4- | \
+  sort -u
+</code></pre>
+<h3 id="track-user-activity">Track User Activity</h3>
+<pre><code class="lang-bash"># All actions by a user
+USER_ID=&quot;user_123&quot;
+grep &quot;UserId.*$USER_ID&quot; logs/*.log | \
+  grep -E &quot;(Action|Operation)&quot; | \
+  sort
+
+# User login history
+grep &quot;UserId.*$USER_ID&quot; logs/audit-*.log | \
+  grep &quot;Login&quot;
+
+# User's recent errors
+grep &quot;UserId.*$USER_ID&quot; logs/*.log | \
+  grep &quot;ERROR&quot;
+</code></pre>
+<h3 id="monitor-system-health">Monitor System Health</h3>
+<pre><code class="lang-bash"># Count log levels
+for level in DEBUG INFO WARN ERROR; do
+  echo &quot;$level: $(grep -c &quot;$level&quot; logs/aura-api-$(date +%Y-%m-%d).log)&quot;
+done
+
+# Recent warnings and errors
+grep -E &quot;WARN|ERROR&quot; logs/aura-api-$(date +%Y-%m-%d).log | tail -50
+
+# Check for repeated errors
+grep &quot;ERROR&quot; logs/errors-*.log | \
+  cut -d']' -f4 | \
+  sort | uniq -c | \
+  sort -nr | \
+  head -10
+</code></pre>
+<h2 id="performance-analysis-1">Performance Analysis</h2>
+<h3 id="identify-bottlenecks">Identify Bottlenecks</h3>
+<pre><code class="lang-bash"># Top 10 slowest operations
+grep &quot;Performance&quot; logs/performance-*.log | \
+  grep -oP &quot;OperationName\&quot;:\&quot;[^\&quot;]*\&quot;|DurationMs\&quot;:\d+&quot; | \
+  paste -d' ' - - | \
+  sort -t':' -k2 -nr | \
+  head -10
+
+# Operations taking more than 5 seconds
+grep &quot;Performance.*DurationMs&quot; logs/performance-*.log | \
+  awk -F'DurationMs&quot;:' '{print $2}' | \
+  awk '{if ($1 &gt; 5000) print $0}'
+</code></pre>
+<h3 id="response-time-analysis">Response Time Analysis</h3>
+<pre><code class="lang-bash"># Average response time by endpoint
+grep &quot;Request completed&quot; logs/aura-api-*.log | \
+  awk '{print $5, $NF}' | \
+  awk '{sum[$1]+=$2; count[$1]++} END {for (i in sum) print i, sum[i]/count[i]}' | \
+  sort -k2 -nr
+
+# Slow requests by hour
+grep &quot;Duration.*ms&quot; logs/aura-api-*.log | \
+  grep -oP &quot;\d{4}-\d{2}-\d{2} \d{2}:\d{2}&quot; | \
+  cut -d':' -f1 | \
+  sort | uniq -c
+</code></pre>
+<h2 id="security-auditing">Security Auditing</h2>
+<h3 id="authentication-events">Authentication Events</h3>
+<pre><code class="lang-bash"># Failed login attempts
+grep &quot;LoginAttempt.*false&quot; logs/audit-*.log
+
+# Successful logins by IP
+grep &quot;LoginAttempt.*true&quot; logs/audit-*.log | \
+  grep -oP &quot;IpAddress.*?,&quot; | \
+  sort | uniq -c
+
+# Multiple failed logins from same IP
+grep &quot;LoginAttempt.*false&quot; logs/audit-*.log | \
+  grep -oP &quot;IpAddress\&quot;:\&quot;[^\&quot;]*&quot; | \
+  sort | uniq -c | \
+  awk '$1 &gt; 5'
+</code></pre>
+<h3 id="access-patterns">Access Patterns</h3>
+<pre><code class="lang-bash"># API key usage
+grep &quot;ApiKey&quot; logs/audit-*.log | \
+  grep -oP &quot;ApiKey\&quot;:\&quot;[^\&quot;]*&quot; | \
+  sort | uniq -c
+
+# Unauthorized access attempts
+grep &quot;Unauthorized&quot; logs/audit-*.log
+
+# Admin actions
+grep &quot;Admin&quot; logs/audit-*.log | \
+  grep &quot;Action&quot;
+</code></pre>
+<h3 id="data-access">Data Access</h3>
+<pre><code class="lang-bash"># Project access by user
+grep &quot;ProjectAccess&quot; logs/audit-*.log | \
+  grep &quot;user_123&quot;
+
+# Sensitive operations
+grep -E &quot;Delete|Export|Admin&quot; logs/audit-*.log | \
+  tail -100
+
+# Bulk operations
+grep &quot;Bulk&quot; logs/audit-*.log
+</code></pre>
+<h2 id="tips-and-tricks">Tips and Tricks</h2>
+<h3 id="creating-log-aliases">Creating Log Aliases</h3>
+<pre><code class="lang-bash"># Add to .bashrc or .zshrc
+alias log-errors='grep &quot;ERROR&quot; logs/errors-$(date +%Y-%m-%d).log'
+alias log-slow='grep &quot;SLOW&quot; logs/warnings-$(date +%Y-%m-%d).log'
+alias log-corr='f(){ grep &quot;$1&quot; logs/*.log | sort; }; f'
+alias log-user='f(){ grep &quot;UserId.*$1&quot; logs/*.log; }; f'
+</code></pre>
+<h3 id="log-monitoring-scripts">Log Monitoring Scripts</h3>
+<pre><code class="lang-bash">#!/bin/bash
+# monitor-errors.sh - Alert on new errors
+
+LAST_CHECK=$(cat /tmp/last_error_check 2&gt;/dev/null || echo &quot;1 hour ago&quot;)
+ERRORS=$(grep &quot;ERROR&quot; logs/errors-$(date +%Y-%m-%d).log | \
+         awk -v d=&quot;$LAST_CHECK&quot; '$1 &gt; d')
+
+if [ ! -z &quot;$ERRORS&quot; ]; then
+    echo &quot;New errors detected:&quot;
+    echo &quot;$ERRORS&quot;
+    # Send alert (email, Slack, etc.)
+fi
+
+date &gt; /tmp/last_error_check
+</code></pre>
+<h3 id="log-rotation">Log Rotation</h3>
+<pre><code class="lang-bash"># Compress old logs
+find logs/ -name &quot;*.log&quot; -mtime +7 -exec gzip {} \;
+
+# Delete very old logs
+find logs/ -name &quot;*.log.gz&quot; -mtime +90 -delete
+
+# Check log sizes
+du -sh logs/*.log | sort -h
+</code></pre>
+<h2 id="further-reading">Further Reading</h2>
+<ul>
+<li><a href="LOGGING_BEST_PRACTICES.html">Logging Best Practices</a></li>
+<li><a href="DEBUGGING_WITH_TRACES.html">Debugging with Traces</a></li>
+<li><a href="LOCAL_LOGGING_SETUP.html">Local Logging Setup</a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/logging/LOG_QUERY_EXAMPLES.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Service Initialization Order Documentation | Aura Video Studio </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Service Initialization Order Documentation | Aura Video Studio ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/SERVICE_INITIALIZATION_ORDER.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Aura Video Studio">
+            Aura Video Studio
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="service-initialization-order-documentation">Service Initialization Order Documentation</h1>
+
+<p>This document describes the deterministic initialization and shutdown order for Aura Video Studio services.</p>
+<h2 id="overview">Overview</h2>
+<p>The application follows a phased initialization approach to ensure services start in the correct order and dependencies are resolved properly.</p>
+<h2 id="initialization-phases">Initialization Phases</h2>
+<h3 id="phase-1-service-registration-builder-phase">Phase 1: Service Registration (Builder Phase)</h3>
+<p><strong>Location</strong>: <code>Aura.Api/Program.cs</code> lines 39-625</p>
+<p>Services are registered with the DI container in dependency order:</p>
+<ol>
+<li><p><strong>Core Infrastructure</strong></p>
+<ul>
+<li>Serilog logging</li>
+<li>Controllers, Swagger, CORS</li>
+<li>JSON serialization with enum converters</li>
+</ul>
+</li>
+<li><p><strong>Hardware &amp; System</strong></p>
+<ul>
+<li><code>HardwareDetector</code></li>
+<li><code>DiagnosticsHelper</code></li>
+<li><code>ProviderSettings</code></li>
+</ul>
+</li>
+<li><p><strong>FFmpeg &amp; Media</strong></p>
+<ul>
+<li><code>IFfmpegLocator</code></li>
+<li><code>FfmpegInstaller</code></li>
+<li><code>FfmpegLocator</code></li>
+<li><code>HttpDownloader</code></li>
+</ul>
+</li>
+<li><p><strong>LLM &amp; Providers</strong></p>
+<ul>
+<li><code>LlmProviderFactory</code></li>
+<li><code>ProviderMixer</code></li>
+<li><code>ScriptOrchestrator</code></li>
+<li>Provider instances (Ollama, GPT, Gemini, etc.)</li>
+</ul>
+</li>
+<li><p><strong>TTS Providers</strong></p>
+<ul>
+<li><code>TtsProviderFactory</code></li>
+<li><code>NullTtsProvider</code> (fallback)</li>
+<li><code>WindowsTtsProvider</code> (Windows only)</li>
+<li><code>AzureTtsProvider</code></li>
+<li><code>AzureVoiceDiscovery</code></li>
+</ul>
+</li>
+<li><p><strong>Image &amp; Video Providers</strong></p>
+<ul>
+<li><code>ImageProviderFactory</code></li>
+<li><code>IVideoComposer</code> (FfmpegVideoComposer)</li>
+</ul>
+</li>
+<li><p><strong>Validation Services</strong></p>
+<ul>
+<li><code>PreGenerationValidator</code></li>
+<li><code>ScriptValidator</code></li>
+<li><code>TtsOutputValidator</code></li>
+<li><code>ImageOutputValidator</code></li>
+<li><code>LlmOutputValidator</code></li>
+</ul>
+</li>
+<li><p><strong>Pipeline &amp; Health Services</strong></p>
+<ul>
+<li><code>ProviderHealthMonitor</code></li>
+<li><code>ProviderRetryWrapper</code></li>
+<li><code>ResourceCleanupManager</code></li>
+<li><code>TemporaryFileCleanupService</code></li>
+<li><code>DiskSpaceChecker</code></li>
+</ul>
+</li>
+<li><p><strong>Orchestration Services</strong></p>
+<ul>
+<li><code>ResourceMonitor</code></li>
+<li><code>StrategySelector</code></li>
+<li><code>VideoGenerationOrchestrator</code></li>
+<li><code>VideoOrchestrator</code></li>
+</ul>
+</li>
+<li><p><strong>AI &amp; Analytics Services</strong></p>
+<ul>
+<li>Pacing services (RhythmDetector, RetentionOptimizer, etc.)</li>
+<li>Performance analytics</li>
+<li>Timeline editor services</li>
+</ul>
+</li>
+<li><p><strong>Context &amp; Profile Management</strong></p>
+<ul>
+<li><code>ContextPersistence</code></li>
+<li><code>ConversationContextManager</code></li>
+<li><code>ProjectContextManager</code></li>
+<li><code>ConversationalLlmService</code></li>
+<li><code>ProfilePersistence</code></li>
+<li><code>ProfileService</code></li>
+</ul>
+</li>
+<li><p><strong>Learning &amp; Ideation</strong></p>
+<ul>
+<li><code>LearningPersistence</code></li>
+<li>Learning analysis engines</li>
+<li><code>IdeationService</code></li>
+</ul>
+</li>
+<li><p><strong>Content &amp; Assets</strong></p>
+<ul>
+<li>Content analyzers and enhancers</li>
+<li>Asset library services</li>
+<li>Stock image services</li>
+</ul>
+</li>
+<li><p><strong>Engine &amp; Dependencies</strong></p>
+<ul>
+<li><code>DependencyManager</code></li>
+<li><code>EngineManifestLoader</code></li>
+<li><code>EngineInstaller</code></li>
+<li><code>ModelInstaller</code></li>
+<li><code>ExternalProcessManager</code></li>
+<li><code>LocalEnginesRegistry</code></li>
+<li><code>EngineLifecycleManager</code></li>
+<li><code>EngineDetector</code></li>
+</ul>
+</li>
+<li><p><strong>Setup &amp; Health Check Services</strong></p>
+<ul>
+<li><code>HealthCheckService</code></li>
+<li><code>StartupValidator</code></li>
+<li><code>FirstRunDiagnostics</code></li>
+</ul>
+</li>
+<li><p><strong>Background Services (Hosted Services)</strong></p>
+<ul>
+<li><code>ProviderWarmupService</code> (warms up providers in background)</li>
+<li><code>HealthCheckBackgroundService</code> (runs scheduled health checks)</li>
+</ul>
+</li>
+</ol>
+<h3 id="phase-2-startup-validation">Phase 2: Startup Validation</h3>
+<p><strong>Location</strong>: <code>Aura.Api/Program.cs</code> lines 639-651</p>
+<p>After building the application but before starting the web server:</p>
+<ol>
+<li><p><strong>Startup Validator</strong> runs to check:</p>
+<ul>
+<li>File system permissions</li>
+<li>Required directories exist</li>
+<li>Critical configuration is valid</li>
+</ul>
+</li>
+<li><p><strong>Result</strong>: Logs warnings but continues even if validation fails (graceful degradation)</p>
+</li>
+</ol>
+<h3 id="phase-3-application-started-event">Phase 3: Application Started Event</h3>
+<p><strong>Location</strong>: <code>Aura.Api/Program.cs</code> lines 2453-2525</p>
+<p>When the application starts (after web server is listening):</p>
+<ol>
+<li><p><strong>Engine Lifecycle Manager</strong> (First Priority)</p>
+<ul>
+<li>Starts asynchronously via <code>Task.Run</code></li>
+<li>Manages local AI engine instances</li>
+<li>Logs success/failure but doesn't block startup</li>
+</ul>
+</li>
+<li><p><strong>Provider Health Monitor</strong> (Second Priority)</p>
+<ul>
+<li>Waits 2 seconds for Engine Lifecycle Manager to initialize</li>
+<li>Starts periodic health checks in background</li>
+<li>Automatically restarts after errors with 1-minute delay</li>
+</ul>
+</li>
+</ol>
+<h3 id="phase-4-background-services-initialization">Phase 4: Background Services Initialization</h3>
+<p><strong>Location</strong>: Various hosted services</p>
+<p>Hosted services registered in DI start automatically:</p>
+<ol>
+<li><code>ProviderWarmupService</code> - Pre-initializes providers</li>
+<li><code>HealthCheckBackgroundService</code> - Schedules health checks</li>
+</ol>
+<h2 id="shutdown-order-deterministic-reverse-order">Shutdown Order (Deterministic Reverse Order)</h2>
+<p><strong>Location</strong>: <code>Aura.Api/Program.cs</code> lines 2527-2548</p>
+<h3 id="shutdown-phase-1-stop-background-services">Shutdown Phase 1: Stop Background Services</h3>
+<p>Services stop in reverse order of startup:</p>
+<ol>
+<li><p><strong>Provider Health Monitor</strong></p>
+<ul>
+<li>Automatically stops via cancellation token</li>
+<li>No explicit shutdown needed</li>
+</ul>
+</li>
+<li><p><strong>Engine Lifecycle Manager</strong></p>
+<ul>
+<li>Explicitly stops all managed engines</li>
+<li>Waits for clean shutdown</li>
+<li>Logs any errors</li>
+</ul>
+</li>
+</ol>
+<h3 id="shutdown-phase-2-framework-cleanup">Shutdown Phase 2: Framework Cleanup</h3>
+<p>ASP.NET Core automatically:</p>
+<ul>
+<li>Stops hosted services</li>
+<li>Disposes singleton services</li>
+<li>Closes network connections</li>
+</ul>
+<h2 id="key-design-decisions">Key Design Decisions</h2>
+<h3 id="1-graceful-degradation">1. Graceful Degradation</h3>
+<ul>
+<li>Services log errors but don't crash the application</li>
+<li>Background services can fail without affecting core functionality</li>
+<li>Startup validation warns but doesn't block</li>
+</ul>
+<h3 id="2-deterministic-ordering">2. Deterministic Ordering</h3>
+<ul>
+<li>Engine Lifecycle Manager starts first (manages dependencies)</li>
+<li>Provider Health Monitor starts second (depends on engines)</li>
+<li>2-second delay ensures proper ordering</li>
+</ul>
+<h3 id="3-state-tracking">3. State Tracking</h3>
+<ul>
+<li>Flags track which services started successfully</li>
+<li>Shutdown only stops services that actually started</li>
+<li>Prevents errors from attempting to stop non-started services</li>
+</ul>
+<h3 id="4-comprehensive-logging">4. Comprehensive Logging</h3>
+<ul>
+<li>Each phase is logged with clear labels</li>
+<li>Success and failure paths both log</li>
+<li>Helps diagnose initialization issues</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="service-not-starting">Service Not Starting</h3>
+<p>Check logs for:</p>
+<ol>
+<li>Phase 1 completion: &quot;Service Registration Complete&quot;</li>
+<li>Phase 2 validation: &quot;Startup validation completed successfully&quot;</li>
+<li>Phase 3 start: &quot;Background services initialization started&quot;</li>
+<li>Individual service messages: &quot;Engine Lifecycle Manager started successfully&quot;</li>
+</ol>
+<h3 id="services-starting-out-of-order">Services Starting Out of Order</h3>
+<p>Look for:</p>
+<ul>
+<li>Missing 2-second delay between Engine and Health Monitor</li>
+<li>Task.Run not being used (synchronous initialization)</li>
+<li>Exceptions during earlier service initialization</li>
+</ul>
+<h3 id="shutdown-hangs">Shutdown Hangs</h3>
+<p>Check:</p>
+<ul>
+<li>Engine Lifecycle Manager is properly stopping</li>
+<li>Cancellation tokens are being respected</li>
+<li>No infinite loops in service cleanup</li>
+</ul>
+<h2 id="future-improvements">Future Improvements</h2>
+<ol>
+<li><strong>Service Dependencies</strong>: Could use a more explicit dependency graph</li>
+<li><strong>Initialization Timeout</strong>: Add timeouts for background service startup</li>
+<li><strong>Health Checks</strong>: Expose service health status via API</li>
+<li><strong>Retry Logic</strong>: More sophisticated retry for transient failures</li>
+</ol>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/Coffee285/aura-video-studio/blob/main/docs/architecture/SERVICE_INITIALIZATION_ORDER.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          © 2025 Aura Video Studio. Documentation built with DocFX.
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
