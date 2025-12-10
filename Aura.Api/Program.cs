@@ -64,12 +64,17 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     WebRootPath = Path.Combine(AppContext.BaseDirectory, "wwwroot")
 });
 
-// Configure Kestrel for long-running LLM requests (15 minutes)
-// This prevents Kestrel from killing connections before the LLM completes processing
+// Configure Kestrel for long-running LLM requests and large file uploads
+// - KeepAliveTimeout: 15 minutes for long-running LLM operations
+// - RequestHeadersTimeout: 15 minutes to match KeepAlive
+// - MaxRequestBodySize: 100GB for large file uploads
+// - AddServerHeader: false for security
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(15);
     serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(15);
+    serverOptions.Limits.MaxRequestBodySize = 100L * 1024L * 1024L * 1024L; // 100GB max request size
+    serverOptions.AddServerHeader = false; // Reduce attack surface
 });
 
 // Check for reset flag
@@ -2236,17 +2241,6 @@ var apiUrl = Environment.GetEnvironmentVariable("AURA_API_URL")
     ?? Environment.GetEnvironmentVariable("ASPNETCORE_URLS")
     ?? "http://127.0.0.1:5005";
 builder.WebHost.UseUrls(apiUrl);
-
-// Configure Kestrel for large file uploads
-builder.WebHost.ConfigureKestrel(serverOptions =>
-{
-    serverOptions.Limits.MaxRequestBodySize = 100L * 1024L * 1024L * 1024L; // 100GB max request size
-    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(10); // Increased timeout for large uploads
-    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromSeconds(30); // Reduced from 10 minutes to prevent lingering connections
-
-    // Configure server to properly close connections on shutdown
-    serverOptions.AddServerHeader = false; // Reduce attack surface
-});
 
 var app = builder.Build();
 
