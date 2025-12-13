@@ -641,7 +641,7 @@ public partial class JobRunner
 
             if (string.IsNullOrEmpty(generationResult.OutputPath))
             {
-                var errorMsg = "Video generation completed but no output file was produced.  " +
+                var errorMsg = "Video generation completed but no output file was produced. " +
                                "This typically indicates FFmpeg never executed due to missing timeline prerequisites. ";
 
                 _logger.LogError("[Job {JobId}] {Error}", jobId, errorMsg);

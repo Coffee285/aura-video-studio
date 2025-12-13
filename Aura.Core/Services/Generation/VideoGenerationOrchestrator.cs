@@ -695,13 +695,14 @@ public class VideoGenerationOrchestrator
             {
                 if (node.TaskType == GenerationTaskType.AudioGeneration)
                 {
-                    silentGenerator ??= new SilentWavGenerator(NullLogger<SilentWavGenerator>.Instance);
+                    silentGenerator ??= new SilentWavGenerator(NullLoggerFactory.Instance.CreateLogger<SilentWavGenerator>());
                     var recoveryBaseDir = Path.Combine(Path.GetTempPath(), RecoveryRootFolderName, "Recovery");
                     var silentAudioDir = Path.Combine(recoveryBaseDir, "Audio");
                     Directory.CreateDirectory(silentAudioDir);
 
                     var duration = planSpec.TargetDuration;
-                    var silentAudioPath = Path.Combine(silentAudioDir, $"silent-{failed.TaskId}-{Guid.NewGuid()}.wav");
+                    var silentAudioPath = Path.Combine(silentAudioDir, $"silent-{failed.TaskId}-{DateTime.UtcNow:yyyyMMddHHmmssfff}.wav");
+                    _logger.LogInformation("[Recovery] Generating silent audio for task {TaskId} at {Path}", failed.TaskId, silentAudioPath);
                     await silentGenerator.GenerateAsync(silentAudioPath, duration, ct: ct).ConfigureAwait(false);
 
                     node.Status = TaskStatus.Completed;

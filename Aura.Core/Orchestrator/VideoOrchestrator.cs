@@ -1946,11 +1946,14 @@ public class VideoOrchestrator
                         ? recoveryAudioValue
                         : RecoveryAudioNotFound;
 
-                    _logger.LogInformation("[Composition] Narration path resolution: state.NarrationPath={StateNarration}, RecoveryResults={Recovery}, Closure={Closure}, Final={Final}",
+                    _logger.LogInformation(
+                        "[Composition] Narration path sources - state={StateNarration}, recovery={Recovery}, closure={Closure}",
                         state.NarrationPath ?? "NULL",
                         recoveryAudio,
-                        narrationPath ?? "NULL",
-                        compositionNarrationPath ?? "NULL");
+                        narrationPath ?? "NULL");
+
+                    _logger.LogInformation("[Composition] Narration path resolved to {FinalNarration}",
+                        compositionNarrationPath ?? RecoveryAudioNotFound);
 
                     if (string.IsNullOrEmpty(compositionNarrationPath))
                     {
