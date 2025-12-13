@@ -639,6 +639,34 @@ public partial class JobRunner
             imageProviderOverride
             ).ConfigureAwait(false);
 
+            if (string.IsNullOrEmpty(generationResult.OutputPath))
+            {
+                var errorMsg = "Video generation completed but no output file was produced.  " +
+                               "This typically indicates FFmpeg never executed due to missing timeline prerequisites. ";
+
+                _logger.LogError("[Job {JobId}] {Error}", jobId, errorMsg);
+
+                job = UpdateJob(job,
+                    status: JobStatus.Failed,
+                    percent: job.Percent,
+                    errorMessage: errorMsg,
+                    failureDetails: new JobFailure
+                    {
+                        ErrorCode = "E305-OUTPUT_NULL",
+                        Message = errorMsg,
+                        Stage = "Composition",
+                        SuggestedActions = new[]
+                        {
+                            "Check if TTS provider is configured and working",
+                            "Verify image generation completed successfully",
+                            "Check FFmpeg logs at C:\\Users\\User\\AppData\\Local\\Aura\\logs",
+                            "Ensure FFmpeg path is correctly configured"
+                        }
+                    });
+
+                throw new InvalidOperationException(errorMsg);
+            }
+
             // Add final artifact
             var artifact = _artifactManager.CreateArtifact(jobId, "video.mp4", generationResult.OutputPath, "video/mp4");
             var artifacts = new List<JobArtifact>(job.Artifacts) { artifact };

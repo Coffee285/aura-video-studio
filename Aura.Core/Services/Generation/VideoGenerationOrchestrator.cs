@@ -2,13 +2,16 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Aura.Core.Audio;
 using Aura.Core.Models;
 using Aura.Core.Models.Generation;
 using Aura.Core.Orchestrator;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using TaskStatus = Aura.Core.Models.Generation.TaskStatus;
 
 namespace Aura.Core.Services.Generation;
@@ -65,7 +68,8 @@ public class VideoGenerationOrchestrator
         SystemProfile systemProfile,
         Func<GenerationNode, CancellationToken, Task<object>> taskExecutor,
         IProgress<OrchestrationProgress>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        Action<string, object>? recoveryResultsCallback = null)
     {
         ArgumentNullException.ThrowIfNull(brief);
         ArgumentNullException.ThrowIfNull(planSpec);
@@ -185,7 +189,7 @@ public class VideoGenerationOrchestrator
                 {
                     _logger.LogError("Critical task failures detected, attempting recovery");
 
-                    if (!await AttemptRecoveryAsync(batchResults, graph, strategy, taskExecutor, ct).ConfigureAwait(false))
+                    if (!await AttemptRecoveryAsync(batchResults, graph, planSpec, strategy, taskExecutor, recoveryResultsCallback, ct).ConfigureAwait(false))
                     {
                         _logger.LogError("Recovery failed, aborting orchestration");
                         throw new OrchestrationException("Critical task failures could not be recovered");
@@ -652,8 +656,10 @@ public class VideoGenerationOrchestrator
     private async Task<bool> AttemptRecoveryAsync(
         List<TaskResult> failedResults,
         AssetDependencyGraph graph,
+        PlanSpec planSpec,
         GenerationStrategy strategy,
         Func<GenerationNode, CancellationToken, Task<object>> taskExecutor,
+        Action<string, object>? recoveryResultsCallback,
         CancellationToken ct)
     {
         _logger.LogInformation("Attempting recovery from {Count} failed tasks", failedResults.Count(r => !r.Succeeded));
@@ -685,6 +691,29 @@ public class VideoGenerationOrchestrator
             // For critical tasks, attempt actual retry
             try
             {
+                if (node.TaskType == GenerationTaskType.AudioGeneration)
+                {
+                    var silentGenerator = new SilentWavGenerator(NullLogger<SilentWavGenerator>.Instance);
+                    var silentAudioDir = Path.Combine(Path.GetTempPath(), "AuraVideoStudio", "Recovery", "Audio");
+                    Directory.CreateDirectory(silentAudioDir);
+
+                    var duration = planSpec.TargetDuration;
+                    var silentAudioPath = Path.GetFullPath(Path.Combine(silentAudioDir, $"silent-{Guid.NewGuid()}.wav"));
+                    await silentGenerator.GenerateAsync(silentAudioPath, duration, ct: ct).ConfigureAwait(false);
+
+                    node.Status = TaskStatus.Completed;
+                    node.Result = silentAudioPath;
+                    node.ErrorMessage = null;
+                    node.CompletedAt = DateTime.UtcNow;
+
+                    _taskResults[node.TaskId] = new TaskResult(node.TaskId, true, node.Result, null);
+                    recoveryResultsCallback?.Invoke("audio", silentAudioPath);
+
+                    _logger.LogWarning("[Recovery] Silent audio generated at: {Path}", silentAudioPath);
+                    anyRecovered = true;
+                    continue;
+                }
+
                 _logger.LogInformation("Retrying critical task: {TaskId}", failed.TaskId);
 
                 // Reset node state

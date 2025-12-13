@@ -502,6 +502,7 @@ public class VideoOrchestrator
                 correlationId,
                 activeImageProvider);
             var taskExecutor = executorContext.Executor;
+            var recoveryResults = executorContext.RecoveryResults;
 
             // Map progress events from orchestration to both string and detailed progress
             var orchestrationProgress = new Progress<OrchestrationProgress>(p =>
@@ -524,7 +525,15 @@ public class VideoOrchestrator
 
             // Execute smart orchestration
             var result = await _smartOrchestrator.OrchestrateGenerationAsync(
-                brief, planSpec, systemProfile, taskExecutor, orchestrationProgress, ct
+                brief, planSpec, systemProfile, taskExecutor, orchestrationProgress, ct,
+                recoveryResultsCallback: (key, value) =>
+                {
+                    recoveryResults[key] = value;
+                    if (string.Equals(key, "audio", StringComparison.OrdinalIgnoreCase) && value is string recoveredAudioPath)
+                    {
+                        executorContext.NarrationPath ??= recoveredAudioPath;
+                    }
+                }
             ).ConfigureAwait(false);
 
             if (!result.Succeeded)
@@ -1711,6 +1720,7 @@ public class VideoOrchestrator
     {
         var state = new TaskExecutorState();
         // Shared state for task results
+        var recoveryResults = state.RecoveryResults;
         string? generatedScript = null;
         List<Scene>? parsedScenes = null;
         string? narrationPath = null;
@@ -1922,9 +1932,34 @@ public class VideoOrchestrator
 
                 case GenerationTaskType.VideoComposition:
                     // Final render combining all assets
-                    if (parsedScenes == null || narrationPath == null)
+                    if (parsedScenes == null)
                     {
                         throw new InvalidOperationException("Script and audio must be generated before composition");
+                    }
+
+                    var compositionNarrationPath = state.NarrationPath
+                        ?? (recoveryResults.TryGetValue("audio", out var recoveredAudio) ? recoveredAudio as string : null)
+                        ?? narrationPath;
+
+                    _logger.LogInformation("[Composition] Narration path resolution: state.NarrationPath={StateNarration}, RecoveryResults={Recovery}, Closure={Closure}, Final={Final}",
+                        state.NarrationPath ?? "NULL",
+                        recoveryResults.ContainsKey("audio") ? recoveryResults["audio"] : "NOT_FOUND",
+                        narrationPath ?? "NULL",
+                        compositionNarrationPath ?? "NULL");
+
+                    if (string.IsNullOrEmpty(compositionNarrationPath))
+                    {
+                        throw new InvalidOperationException(
+                            "Cannot render video:  No narration audio available. " +
+                            "TTS failed and no recovery audio was generated.  " +
+                            "Check TTS provider configuration or enable silent audio fallback.");
+                    }
+
+                    if (!File.Exists(compositionNarrationPath))
+                    {
+                        throw new InvalidOperationException(
+                            $"Cannot render video: Narration file not found at '{compositionNarrationPath}'. " +
+                            "The audio file may have been cleaned up prematurely.");
                     }
 
                     // Report progress BEFORE starting render - this ensures frontend sees the transition
@@ -1939,22 +1974,17 @@ public class VideoOrchestrator
                         "Scenes: {SceneCount}, Assets: {AssetCount}, NarrationPath: {NarrationPath}",
                         parsedScenes.Count,
                         sceneAssets.Values.Sum(assets => assets.Count),
-                        narrationPath);
-
-                    // Validate all required inputs exist before starting render
-                    if (!File.Exists(narrationPath))
-                    {
-                        throw new InvalidOperationException($"Narration file not found at: {narrationPath}");
-                    }
+                        compositionNarrationPath);
 
                     var timeline = new Providers.Timeline(
                         Scenes: parsedScenes,
                         SceneAssets: sceneAssets,
-                        NarrationPath: narrationPath,
+                        NarrationPath: compositionNarrationPath,
                         MusicPath: string.Empty,
                         SubtitlesPath: null
                     );
                     state.Timeline = timeline;
+                    state.NarrationPath = compositionNarrationPath;
 
                     // Report timeline creation progress
                     var timelineCreatedMsg = "Timeline created, preparing FFmpeg render...";
@@ -2003,22 +2033,38 @@ public class VideoOrchestrator
                     _logger.LogInformation("[Render Start] Beginning FFmpeg render operation");
                     progress?.Report("Executing FFmpeg render...");
 
-                    var outputPath = await _videoComposer.RenderAsync(timeline, renderSpec, renderProgress, ct).ConfigureAwait(false);
+                    try
+                    {
+                        var outputPath = await _videoComposer.RenderAsync(timeline, renderSpec, renderProgress, ct).ConfigureAwait(false);
 
-                    _logger.LogInformation("[Render Complete] Video rendered successfully to: {Path}", outputPath);
-                    progress?.Report("Video rendering complete");
-                    detailedProgress?.Report(ProgressBuilder.CreateRenderProgress(100, "Video rendering complete", correlationId: correlationId));
+                        _logger.LogInformation("[Render Complete] Video rendered successfully to: {Path}", outputPath);
+                        progress?.Report("Video rendering complete");
+                        detailedProgress?.Report(ProgressBuilder.CreateRenderProgress(100, "Video rendering complete", correlationId: correlationId));
 
-                    // Store final video path in state for reliable fallback extraction
-                    state.FinalVideoPath = outputPath;
+                        // Store final video path in state for reliable fallback extraction
+                        state.FinalVideoPath = outputPath;
+                        state.RenderOutput = outputPath;
 
-                    // CRITICAL FIX: Log the output path being returned to ensure it's captured
-                    // The return value should automatically be stored in TaskResults["composition"]
-                    _logger.LogInformation(
-                        "[Composition Complete] Output path: {Path}, Exists: {Exists}, Length: {Length} bytes",
-                        outputPath, File.Exists(outputPath), File.Exists(outputPath) ? new FileInfo(outputPath).Length : 0);
+                        // CRITICAL FIX: Log the output path being returned to ensure it's captured
+                        // The return value should automatically be stored in TaskResults["composition"]
+                        _logger.LogInformation(
+                            "[Composition Complete] Output path: {Path}, Exists: {Exists}, Length: {Length} bytes",
+                            outputPath, File.Exists(outputPath), File.Exists(outputPath) ? new FileInfo(outputPath).Length : 0);
 
-                    return outputPath;
+                        return outputPath;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[Composition] RenderAsync FAILED for job {JobId}:  {Message}", renderSpec.JobId ?? "unknown", ex.Message);
+
+                        state.FinalVideoPath = null;
+                        state.RenderOutput = null;
+                        state.RenderError = ex.Message;
+
+                        throw new InvalidOperationException(
+                            $"Video composition failed: {ex.Message}. " +
+                            "Check FFmpeg logs and asset validation errors.", ex);
+                    }
 
                 default:
                     throw new NotSupportedException($"Task type {node.TaskType} not supported");
@@ -2034,6 +2080,9 @@ public class VideoOrchestrator
         public Providers.Timeline? Timeline { get; set; }
         public string? NarrationPath { get; set; }
         public string? FinalVideoPath { get; set; }
+        public Dictionary<string, object> RecoveryResults { get; } = new();
+        public string? RenderOutput { get; set; }
+        public string? RenderError { get; set; }
     }
 
     /// <summary>
