@@ -845,9 +845,26 @@ public class FfmpegVideoComposer : IVideoComposer
 
         if (visualAssets.Count == 0)
         {
-            var sceneAssetSummary = string.Join(", ",
-                timeline.Scenes.Select(s =>
-                    $"[{s.Index}:{(timeline.SceneAssets.TryGetValue(s.Index, out var assetsForScene) ? assetsForScene.Count : 0)} assets]"));
+            var sceneAssetSummaryBuilder = new StringBuilder();
+            foreach (var scene in timeline.Scenes)
+            {
+                var assetCount = timeline.SceneAssets.TryGetValue(scene.Index, out var assetsForScene)
+                    ? assetsForScene.Count
+                    : 0;
+
+                if (sceneAssetSummaryBuilder.Length > 0)
+                {
+                    sceneAssetSummaryBuilder.Append(", ");
+                }
+
+                sceneAssetSummaryBuilder.Append('[')
+                    .Append(scene.Index)
+                    .Append(':')
+                    .Append(assetCount)
+                    .Append(" assets]");
+            }
+
+            var sceneAssetSummary = sceneAssetSummaryBuilder.ToString();
 
             throw new InvalidOperationException(
                 "Cannot render: No visual assets found in timeline. " +

@@ -40,6 +40,7 @@ public class VideoOrchestrator
     private const string OutputDirectoryName = "AuraVideoStudio";
     private const string OutputSubdirectoryName = "Output";
     private const int RecentFileThresholdMinutes = 10;
+    private const string RecoveryAudioNotFound = "NOT_FOUND";
 
     private readonly ILogger<VideoOrchestrator> _logger;
     private readonly ILlmProvider _llmProvider;
@@ -1943,7 +1944,7 @@ public class VideoOrchestrator
 
                     var recoveryAudio = recoveryResults.TryGetValue("audio", out var recoveryAudioValue)
                         ? recoveryAudioValue
-                        : "NOT_FOUND";
+                        : RecoveryAudioNotFound;
 
                     _logger.LogInformation("[Composition] Narration path resolution: state.NarrationPath={StateNarration}, RecoveryResults={Recovery}, Closure={Closure}, Final={Final}",
                         state.NarrationPath ?? "NULL",
