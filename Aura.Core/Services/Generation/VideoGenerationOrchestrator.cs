@@ -666,6 +666,7 @@ public class VideoGenerationOrchestrator
 
         var failedTasks = failedResults.Where(r => !r.Succeeded).ToList();
         bool anyRecovered = false;
+        SilentWavGenerator? silentGenerator = null;
 
         foreach (var failed in failedTasks)
         {
@@ -693,7 +694,7 @@ public class VideoGenerationOrchestrator
             {
                 if (node.TaskType == GenerationTaskType.AudioGeneration)
                 {
-                    var silentGenerator = new SilentWavGenerator(NullLogger<SilentWavGenerator>.Instance);
+                    silentGenerator ??= new SilentWavGenerator(NullLogger<SilentWavGenerator>.Instance);
                     var silentAudioDir = Path.Combine(Path.GetTempPath(), "AuraVideoStudio", "Recovery", "Audio");
                     Directory.CreateDirectory(silentAudioDir);
 
