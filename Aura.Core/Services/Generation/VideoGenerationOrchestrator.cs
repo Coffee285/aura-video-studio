@@ -28,6 +28,7 @@ public class VideoGenerationOrchestrator
     private const string CompositionTaskId = "composition";
     private const string CaptionsTaskId = "captions";
     private const string VisualTaskIdPrefix = "visual_";
+    private const string RecoveryRootFolderName = "AuraVideoStudio";
 
     private readonly ILogger<VideoGenerationOrchestrator> _logger;
     private readonly ResourceMonitor _resourceMonitor;
@@ -695,7 +696,8 @@ public class VideoGenerationOrchestrator
                 if (node.TaskType == GenerationTaskType.AudioGeneration)
                 {
                     silentGenerator ??= new SilentWavGenerator(NullLogger<SilentWavGenerator>.Instance);
-                    var silentAudioDir = Path.Combine(Path.GetTempPath(), "AuraVideoStudio", "Recovery", "Audio");
+                    var recoveryBaseDir = Path.Combine(Path.GetTempPath(), RecoveryRootFolderName, "Recovery");
+                    var silentAudioDir = Path.Combine(recoveryBaseDir, "Audio");
                     Directory.CreateDirectory(silentAudioDir);
 
                     var duration = planSpec.TargetDuration;

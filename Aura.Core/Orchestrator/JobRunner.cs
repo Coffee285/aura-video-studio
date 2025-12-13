@@ -646,6 +646,11 @@ public partial class JobRunner
 
                 _logger.LogError("[Job {JobId}] {Error}", jobId, errorMsg);
 
+                var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var ffmpegLogPath = string.IsNullOrEmpty(localAppData)
+                    ? Path.Combine(Path.GetTempPath(), "Aura", "logs")
+                    : Path.Combine(localAppData, "Aura", "logs");
+
                 job = UpdateJob(job,
                     status: JobStatus.Failed,
                     percent: job.Percent,
@@ -659,7 +664,7 @@ public partial class JobRunner
                         {
                             "Check if TTS provider is configured and working",
                             "Verify image generation completed successfully",
-                            "Check FFmpeg logs at C:\\Users\\User\\AppData\\Local\\Aura\\logs",
+                            $"Check FFmpeg logs at {ffmpegLogPath}",
                             "Ensure FFmpeg path is correctly configured"
                         }
                     });

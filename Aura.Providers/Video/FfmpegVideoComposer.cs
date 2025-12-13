@@ -845,10 +845,14 @@ public class FfmpegVideoComposer : IVideoComposer
 
         if (visualAssets.Count == 0)
         {
+            var sceneAssetSummary = string.Join(", ",
+                timeline.Scenes.Select(s =>
+                    $"[{s.Index}:{(timeline.SceneAssets.TryGetValue(s.Index, out var assetsForScene) ? assetsForScene.Count : 0)} assets]"));
+
             throw new InvalidOperationException(
                 "Cannot render: No visual assets found in timeline. " +
                 "Image generation may have failed or returned placeholder references.  " +
-                $"Scenes: {string.Join(", ", timeline.Scenes.Select(s => $"[{s.Index}:{(timeline.SceneAssets.TryGetValue(s.Index, out var assetsForScene) ? assetsForScene.Count : 0)} assets]"))}");
+                $"Scenes: {sceneAssetSummary}");
         }
 
         foreach (var asset in visualAssets)
