@@ -695,7 +695,7 @@ public class VideoGenerationOrchestrator
             {
                 if (node.TaskType == GenerationTaskType.AudioGeneration)
                 {
-                    silentGenerator ??= new SilentWavGenerator(NullLoggerFactory.Instance.CreateLogger<SilentWavGenerator>());
+                    silentGenerator ??= new SilentWavGenerator(new ForwardingLogger<SilentWavGenerator>(_logger));
                     var recoveryBaseDir = Path.Combine(Path.GetTempPath(), RecoveryRootFolderName, "Recovery");
                     var silentAudioDir = Path.Combine(recoveryBaseDir, "Audio");
                     Directory.CreateDirectory(silentAudioDir);
@@ -763,6 +763,25 @@ public class VideoGenerationOrchestrator
         _logger.LogInformation("Setting max concurrency to {Concurrency}", maxConcurrency);
         // Note: SemaphoreSlim doesn't support dynamic resizing, so this is a simplified version
         // In production, we'd need to recreate the semaphore or use a different synchronization mechanism
+    }
+
+    private sealed class ForwardingLogger<TCategory> : ILogger<TCategory>
+    {
+        private readonly ILogger _inner;
+
+        public ForwardingLogger(ILogger inner)
+        {
+            _inner = inner;
+        }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => _inner.BeginScope(state);
+
+        public bool IsEnabled(LogLevel logLevel) => _inner.IsEnabled(logLevel);
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) where TState : notnull
+        {
+            _inner.Log(logLevel, eventId, state, exception, formatter);
+        }
     }
 }
 
