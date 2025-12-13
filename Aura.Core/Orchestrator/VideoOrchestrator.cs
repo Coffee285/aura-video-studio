@@ -1941,16 +1941,15 @@ public class VideoOrchestrator
                         ?? (recoveryResults.TryGetValue("audio", out var recoveredAudio) ? recoveredAudio as string : null)
                         ?? narrationPath;
 
-                    var stateNarration = state.NarrationPath ?? "NULL";
-                    var recoveryAudio = recoveryResults.ContainsKey("audio") ? recoveryResults["audio"] : "NOT_FOUND";
-                    var closureNarration = narrationPath ?? "NULL";
-                    var finalNarration = compositionNarrationPath ?? "NULL";
+                    var recoveryAudio = recoveryResults.TryGetValue("audio", out var recoveryAudioValue)
+                        ? recoveryAudioValue
+                        : "NOT_FOUND";
 
                     _logger.LogInformation("[Composition] Narration path resolution: state.NarrationPath={StateNarration}, RecoveryResults={Recovery}, Closure={Closure}, Final={Final}",
-                        stateNarration,
+                        state.NarrationPath ?? "NULL",
                         recoveryAudio,
-                        closureNarration,
-                        finalNarration);
+                        narrationPath ?? "NULL",
+                        compositionNarrationPath ?? "NULL");
 
                     if (string.IsNullOrEmpty(compositionNarrationPath))
                     {

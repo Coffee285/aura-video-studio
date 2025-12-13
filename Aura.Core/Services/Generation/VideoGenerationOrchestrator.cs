@@ -701,7 +701,7 @@ public class VideoGenerationOrchestrator
                     Directory.CreateDirectory(silentAudioDir);
 
                     var duration = planSpec.TargetDuration;
-                    var silentAudioPath = Path.GetFullPath(Path.Combine(silentAudioDir, $"silent-{Guid.NewGuid()}.wav"));
+                    var silentAudioPath = Path.GetFullPath(Path.Combine(silentAudioDir, $"silent-{failed.TaskId}-{Guid.NewGuid()}.wav"));
                     await silentGenerator.GenerateAsync(silentAudioPath, duration, ct: ct).ConfigureAwait(false);
 
                     node.Status = TaskStatus.Completed;
