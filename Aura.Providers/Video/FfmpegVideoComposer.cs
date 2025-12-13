@@ -814,7 +814,7 @@ public class FfmpegVideoComposer : IVideoComposer
         if (timeline.Scenes == null || timeline.Scenes.Count == 0)
         {
             throw new InvalidOperationException(
-                "Cannot render:  Timeline has zero scenes. " +
+                "Cannot render: Timeline has zero scenes. " +
                 "Script parsing or visual asset generation may have failed.");
         }
 
@@ -828,7 +828,7 @@ public class FfmpegVideoComposer : IVideoComposer
         if (!File.Exists(timeline.NarrationPath))
         {
             throw new InvalidOperationException(
-                $"Cannot render: Narration file not found:  {timeline.NarrationPath}");
+                $"Cannot render: Narration file not found: {timeline.NarrationPath}");
         }
 
         _logger.LogInformation("Building FFmpeg command for render spec: {Codec} @ {Width}x{Height}, {Fps}fps, {VideoBitrate}kbps",
@@ -846,7 +846,7 @@ public class FfmpegVideoComposer : IVideoComposer
         if (visualAssets.Count == 0)
         {
             throw new InvalidOperationException(
-                "Cannot render:  No visual assets found in timeline. " +
+                "Cannot render: No visual assets found in timeline. " +
                 "Image generation may have failed or returned placeholder references.  " +
                 $"Scenes: {string.Join(", ", timeline.Scenes.Select(s => $"[{s.Index}:{(timeline.SceneAssets.TryGetValue(s.Index, out var assetsForScene) ? assetsForScene.Count : 0)} assets]"))}");
         }
@@ -856,7 +856,7 @@ public class FfmpegVideoComposer : IVideoComposer
             if (!File.Exists(asset.Path))
             {
                 throw new InvalidOperationException(
-                    $"Cannot render:  Visual asset not found:  {asset.Path}");
+                    $"Cannot render: Visual asset not found: {asset.Path}");
             }
         }
 

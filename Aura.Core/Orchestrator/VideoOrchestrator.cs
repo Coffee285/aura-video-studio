@@ -1950,7 +1950,7 @@ public class VideoOrchestrator
                     if (string.IsNullOrEmpty(compositionNarrationPath))
                     {
                         throw new InvalidOperationException(
-                            "Cannot render video:  No narration audio available. " +
+                            "Cannot render video: No narration audio available. " +
                             "TTS failed and no recovery audio was generated.  " +
                             "Check TTS provider configuration or enable silent audio fallback.");
                     }
